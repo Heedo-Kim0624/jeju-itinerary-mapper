@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { ExternalLink, MapPin, Star, MessageCircle, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -71,12 +71,14 @@ const PlaceList: React.FC<PlaceListProps> = ({
         검색 결과: {places.length}개의 장소
       </div>
       
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 overflow-y-auto pr-2 h-[calc(100%-60px)]">
         <div className="space-y-2">
           {places.map((place) => (
             <div
               key={place.id}
-              className={`place-item ${selectedPlace?.id === place.id ? 'active' : ''}`}
+              className={`place-item p-3 border rounded hover:bg-gray-50 cursor-pointer transition-colors ${
+                selectedPlace?.id === place.id ? 'bg-blue-50 border-blue-200' : ''
+              }`}
               onClick={() => handlePlaceClick(place)}
             >
               <div className="flex items-start justify-between">
@@ -136,7 +138,7 @@ const PlaceList: React.FC<PlaceListProps> = ({
         </div>
       </ScrollArea>
       
-      <div className="mt-4">
+      <div className="mt-4 pt-2 border-t">
         <Pagination
           currentPage={page}
           totalPages={totalPages}

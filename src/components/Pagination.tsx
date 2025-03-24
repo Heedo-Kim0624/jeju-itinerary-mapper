@@ -16,19 +16,21 @@ export const Pagination: React.FC<PaginationProps> = ({
 }) => {
   // Always show 5 page numbers, centered around the current page
   const getPageNumbers = () => {
-    const pageNumbers: number[] = [];
-    
-    // Calculate start and end page numbers
-    const groupSize = 5;
-    const groupNumber = Math.floor((currentPage - 1) / groupSize);
-    const start = groupNumber * groupSize + 1;
-    const end = Math.min(start + groupSize - 1, totalPages);
-    
-    for (let i = start; i <= end; i++) {
-      pageNumbers.push(i);
+    if (totalPages <= 5) {
+      // If total pages is 5 or less, show all pages
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
     }
     
-    return pageNumbers;
+    // Calculate start and end page numbers
+    let startPage = Math.max(1, currentPage - 2);
+    let endPage = startPage + 4;
+    
+    if (endPage > totalPages) {
+      endPage = totalPages;
+      startPage = Math.max(1, endPage - 4);
+    }
+    
+    return Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i);
   };
 
   const pageNumbers = getPageNumbers();
@@ -38,7 +40,7 @@ export const Pagination: React.FC<PaginationProps> = ({
       <Button
         variant="ghost"
         size="icon"
-        className="pagination-btn"
+        className="h-8 w-8"
         disabled={currentPage === 1}
         onClick={() => onPageChange(currentPage - 1)}
       >
@@ -48,9 +50,9 @@ export const Pagination: React.FC<PaginationProps> = ({
       {pageNumbers.map((number) => (
         <Button
           key={number}
-          variant="ghost"
+          variant={number === currentPage ? "default" : "ghost"}
           size="icon"
-          className={`pagination-btn ${number === currentPage ? 'active' : ''}`}
+          className="h-8 w-8"
           onClick={() => onPageChange(number)}
         >
           {number}
@@ -60,7 +62,7 @@ export const Pagination: React.FC<PaginationProps> = ({
       <Button
         variant="ghost"
         size="icon"
-        className="pagination-btn"
+        className="h-8 w-8"
         disabled={currentPage === totalPages}
         onClick={() => onPageChange(currentPage + 1)}
       >
