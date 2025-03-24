@@ -4,6 +4,7 @@ import { Calendar, Clock, MapPin } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { format, addDays } from 'date-fns';
+import { ko } from 'date-fns/locale';
 
 interface ItineraryViewProps {
   itinerary: ItineraryDay[];
@@ -45,7 +46,7 @@ const ItineraryView: React.FC<ItineraryViewProps> = ({
   // Get day of week
   const getDayOfWeek = (day: number) => {
     const date = addDays(new Date(startDate), day - 1);
-    return format(date, 'EEEE', { locale: require('date-fns/locale/ko') });
+    return format(date, 'EEEE', { locale: ko });
   };
 
   if (!itinerary || itinerary.length === 0) {
