@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { CalendarIcon, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -35,6 +35,23 @@ const DatePicker: React.FC<DatePickerProps> = ({ onDatesSelected }) => {
   const [startTime, setStartTime] = useState<string>('10:00');
   const [endTime, setEndTime] = useState<string>('18:00');
   const [open, setOpen] = useState(false);
+  const [currentDateTime, setCurrentDateTime] = useState<Date>(new Date());
+
+  // Update current date time when component mounts
+  useEffect(() => {
+    setCurrentDateTime(new Date());
+  }, []);
+
+  // Function to check if a date-time combination is in the past
+  const isDateTimeInPast = (date: Date, time: string): boolean => {
+    if (!date) return false;
+    
+    const [hours, minutes] = time.split(':').map(Number);
+    const selectedDateTime = new Date(date);
+    selectedDateTime.setHours(hours, minutes, 0, 0);
+    
+    return selectedDateTime < currentDateTime;
+  };
 
   const handleConfirm = () => {
     if (!startDate || !endDate) {
@@ -44,6 +61,11 @@ const DatePicker: React.FC<DatePickerProps> = ({ onDatesSelected }) => {
 
     if (endDate < startDate) {
       toast.error('도착일은 출발일 이후여야 합니다');
+      return;
+    }
+
+    if (isDateTimeInPast(startDate, startTime)) {
+      toast.error('과거 시간은 선택할 수 없습니다');
       return;
     }
 
@@ -76,9 +98,25 @@ const DatePicker: React.FC<DatePickerProps> = ({ onDatesSelected }) => {
   // Format date for display
   const formatDateRange = () => {
     if (startDate && endDate) {
-      return `${format(startDate, 'yyyy.MM.dd')} - ${format(endDate, 'yyyy.MM.dd')}`;
+      return (
+        <div className="flex flex-col">
+          <div className="flex items-center gap-1">
+            <span>시작: {format(startDate, 'yyyy.MM.dd')} {startTime}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span>종료: {format(endDate, 'yyyy.MM.dd')} {endTime}</span>
+          </div>
+        </div>
+      );
     }
     return '날짜 선택';
+  };
+
+  // Function to disable past dates
+  const isPastDate = (date: Date) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return date < today;
   };
 
   return (
@@ -86,20 +124,16 @@ const DatePicker: React.FC<DatePickerProps> = ({ onDatesSelected }) => {
       <PopoverTrigger asChild>
         <Button 
           variant="outline" 
-          className="date-picker-trigger w-full justify-between"
+          className="date-picker-trigger w-full justify-between h-auto"
         >
           <div className="flex items-center gap-2">
-            <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+            <CalendarIcon className="h-4 w-4 text-muted-foreground shrink-0" />
             <span className={cn(
               "text-sm",
               (!startDate || !endDate) ? "text-muted-foreground" : "text-foreground"
             )}>
               {formatDateRange()}
             </span>
-          </div>
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <Clock className="h-3 w-3" />
-            <span>{startTime} - {endTime}</span>
           </div>
         </Button>
       </PopoverTrigger>
@@ -116,6 +150,7 @@ const DatePicker: React.FC<DatePickerProps> = ({ onDatesSelected }) => {
                   mode="single"
                   selected={startDate}
                   onSelect={setStartDate}
+                  disabled={isPastDate}
                   initialFocus
                   className="p-3 pointer-events-auto"
                 />
@@ -128,6 +163,7 @@ const DatePicker: React.FC<DatePickerProps> = ({ onDatesSelected }) => {
                   mode="single"
                   selected={endDate}
                   onSelect={setEndDate}
+                  disabled={isPastDate}
                   initialFocus
                   className="p-3 pointer-events-auto"
                 />
@@ -147,7 +183,11 @@ const DatePicker: React.FC<DatePickerProps> = ({ onDatesSelected }) => {
                 </SelectTrigger>
                 <SelectContent>
                   {timeOptions.map((time) => (
-                    <SelectItem key={`start-${time}`} value={time}>
+                    <SelectItem 
+                      key={`start-${time}`} 
+                      value={time}
+                      disabled={startDate && isDateTimeInPast(startDate, time)}
+                    >
                       {time}
                     </SelectItem>
                   ))}
