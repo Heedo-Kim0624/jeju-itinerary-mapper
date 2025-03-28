@@ -9,7 +9,7 @@ import PlaceList from '@/components/PlaceList';
 import ItineraryView from '@/components/ItineraryView';
 import { toast } from 'sonner';
 
-const DEFAULT_PROMPT = `사전프롬프트:우리에겐 음식점DB, 숙소DB, 카페DB, 관광지DB가 각 7개씩의 DB가 있어 (rest_nm, rest_xy, rest_review, rest_addr, rest_review_cnt, rest_link, rest_time ..) nm에는 이름과 ID를 기본키로 하는 DB이고 xy는 ID를 외래키로 하고 xy좌표를 가지고 있는 DB이고 reivew는 ID를 외래키로 하고 음식이 맛있어요 등의 키워드리뷰의 종류가 칼럼명으로, 그 개수가 행에 들어있는 DB이고 addr은 ID를 외래키로 하여 주소를 저장하는 DB이고 review_cnt에는 ID를 외래키로 하며 방문자리뷰수, 블로그리뷰수, 평점 이 들어있는 DB이고 time은 ID를 외래키로 하여 월~일 오픈시간과 마감시간, 비고를 저장하는 DB이고 link는 네이버지도 링크와 인스타그램 링크가 들어있어 사용자가 입력한 날짜와 시간, 다음 사용자의 프롬프트를 보고 사용자가 선호할만한 음식점을 순서대로 나열 할수 있는 쿼리를 만들어줘`;
+const DEFAULT_PROMPT = '';
 
 interface Place {
   id: string;
@@ -23,12 +23,20 @@ interface Place {
   category: string;
   x: number;
   y: number;
+  operationTimeData?: {
+    [key: string]: number;
+  };
+  nodeId?: string;
 }
 
 interface ItineraryDay {
   day: number;
   places: Place[];
   totalDistance: number;
+}
+
+interface ScheduleTable {
+  [dayHour: string]: Place | null;
 }
 
 const generateMockPlaces = (category: string, count: number): Place[] => {
@@ -68,9 +76,42 @@ const generateMockPlaces = (category: string, count: number): Place[] => {
   return result;
 };
 
-const createItinerary = (places: Place[], startDate: Date, endDate: Date): ItineraryDay[] => {
+const createEmptyScheduleTable = (startDate: Date, startTime: string, endDate: Date, endTime: string): ScheduleTable => {
+  const days = ['일', '월', '화', '수', '목', '금', '토'];
+  const hours = Array.from({ length: 13 }, (_, i) => i + 9);
+  const table: ScheduleTable = {};
+
+  const startDay = days[startDate.getDay()];
+  const endDay = days[endDate.getDay()];
+  const [startHour] = startTime.split(':').map(Number);
+  const [endHour] = endTime.split(':').map(Number);
+  
+  days.forEach(day => {
+    hours.forEach(hour => {
+      const key = `${day}_${hour}시`;
+      table[key] = null;
+    });
+  });
+  
+  return table;
+};
+
+const sortPlacesByIds = (places: Place[], orderedIds: string[]): Place[] => {
+  const placeMap = places.reduce((map, place) => {
+    map[place.id] = place;
+    return map;
+  }, {} as Record<string, Place>);
+  
+  return orderedIds
+    .filter(id => placeMap[id])
+    .map(id => placeMap[id]);
+};
+
+const createItinerary = (places: Place[], startDate: Date, endDate: Date, startTime: string, endTime: string): ItineraryDay[] => {
   const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
   const numDays = Math.max(1, daysDiff);
+  
+  const scheduleTable = createEmptyScheduleTable(startDate, startTime, endDate, endTime);
   
   const placesByCategory: Record<string, Place[]> = {};
   places.forEach(place => {
@@ -163,7 +204,7 @@ const Index: React.FC = () => {
     endTime: '18:00',
   });
   
-  const [promptText, setPromptText] = useState<string>(DEFAULT_PROMPT);
+  const [promptText, setPromptText] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [places, setPlaces] = useState<Place[]>([]);
   const [filteredPlaces, setFilteredPlaces] = useState<Place[]>([]);
@@ -176,6 +217,8 @@ const Index: React.FC = () => {
   const [itinerary, setItinerary] = useState<ItineraryDay[] | null>(null);
   const [selectedItineraryDay, setSelectedItineraryDay] = useState<number | null>(null);
   const [showItinerary, setShowItinerary] = useState<boolean>(false);
+  
+  const [orderedIds, setOrderedIds] = useState<string[]>([]);
   
   useEffect(() => {
     const allPlaces = [
@@ -226,23 +269,30 @@ const Index: React.FC = () => {
     setCurrentPage(page);
   };
   
-  const handleSearch = () => {
+  const handleSearch = async () => {
     setLoading(true);
-    setTimeout(() => {
-      let result = [...places];
-      
-      if (selectedCategory) {
-        result = result.filter(place => place.category === selectedCategory);
-      }
-      
-      result.sort((a, b) => b.rating - a.rating);
-      
-      setFilteredPlaces(result);
+    
+    try {
+      setTimeout(() => {
+        let result = [...places];
+        
+        if (selectedCategory) {
+          result = result.filter(place => place.category === selectedCategory);
+        }
+        
+        result.sort((a, b) => b.rating - a.rating);
+        
+        setFilteredPlaces(result);
+        setLoading(false);
+        setCurrentPage(1);
+        
+        toast.success('검색이 완료되었습니다');
+      }, 1000);
+    } catch (error) {
+      console.error('Error during search:', error);
+      toast.error('검색 중 오류가 발생했습니다');
       setLoading(false);
-      setCurrentPage(1);
-      
-      toast.success('검색이 완료되었습니다');
-    }, 1000);
+    }
   };
   
   const handleCreateItinerary = () => {
@@ -257,7 +307,9 @@ const Index: React.FC = () => {
       const generatedItinerary = createItinerary(
         filteredPlaces,
         dateRange.startDate,
-        dateRange.endDate
+        dateRange.endDate,
+        dateRange.startTime,
+        dateRange.endTime
       );
       
       setItinerary(generatedItinerary);
