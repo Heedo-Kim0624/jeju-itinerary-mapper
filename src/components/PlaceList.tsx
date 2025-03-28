@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { ExternalLink, MapPin, Star, MessageCircle, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -71,7 +70,7 @@ const PlaceList: React.FC<PlaceListProps> = ({
         검색 결과: {places.length}개의 장소
       </div>
       
-      <ScrollArea className="flex-1 overflow-y-auto pr-2 h-[calc(100%-60px)]">
+      <ScrollArea className="flex-1 overflow-y-auto pr-2">
         <div className="space-y-2">
           {places.map((place) => (
             <div

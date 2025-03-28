@@ -14,26 +14,23 @@ export const Pagination: React.FC<PaginationProps> = ({
   totalPages,
   onPageChange,
 }) => {
-  // Always show 5 page numbers, centered around the current page
+  // Show 5 page numbers at a time
   const getPageNumbers = () => {
-    if (totalPages <= 5) {
-      // If total pages is 5 or less, show all pages
-      return Array.from({ length: totalPages }, (_, i) => i + 1);
-    }
+    // Calculate the starting page number
+    // This will be a multiple of 5, plus 1
+    // For example, if currentPage is 7, we want to start from 6
+    const startPage = Math.floor((currentPage - 1) / 5) * 5 + 1;
     
-    // Calculate start and end page numbers
-    let startPage = Math.max(1, currentPage - 2);
-    let endPage = startPage + 4;
-    
-    if (endPage > totalPages) {
-      endPage = totalPages;
-      startPage = Math.max(1, endPage - 4);
-    }
+    // Calculate the ending page number (start + 4, or totalPages if smaller)
+    const endPage = Math.min(startPage + 4, totalPages);
     
     return Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i);
   };
 
   const pageNumbers = getPageNumbers();
+  const currentGroup = Math.floor((currentPage - 1) / 5);
+  const hasPreviousGroup = currentGroup > 0;
+  const hasNextGroup = (currentGroup + 1) * 5 < totalPages;
 
   return (
     <div className="flex items-center justify-center gap-1">
@@ -43,6 +40,7 @@ export const Pagination: React.FC<PaginationProps> = ({
         className="h-8 w-8"
         disabled={currentPage === 1}
         onClick={() => onPageChange(currentPage - 1)}
+        aria-label="Previous page"
       >
         <ChevronLeft className="h-4 w-4" />
       </Button>
@@ -65,6 +63,7 @@ export const Pagination: React.FC<PaginationProps> = ({
         className="h-8 w-8"
         disabled={currentPage === totalPages}
         onClick={() => onPageChange(currentPage + 1)}
+        aria-label="Next page"
       >
         <ChevronRight className="h-4 w-4" />
       </Button>
