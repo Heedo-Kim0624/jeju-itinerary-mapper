@@ -337,12 +337,6 @@ const Index: React.FC = () => {
     setSelectedItineraryDay(day);
   };
   
-  const getCurrentPlaces = () => {
-    const indexOfLastItem = currentPage * itemsPerPage;
-    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-    return filteredPlaces.slice(indexOfFirstItem, indexOfLastItem);
-  };
-  
   const totalPages = Math.ceil(filteredPlaces.length / itemsPerPage);
   
   return (
