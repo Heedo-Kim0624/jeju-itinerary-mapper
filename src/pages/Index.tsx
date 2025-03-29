@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { CalendarIcon, Search, MapPin, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -221,6 +222,22 @@ const Index: React.FC = () => {
   
   const [orderedIds, setOrderedIds] = useState<string[]>([]);
   
+  // New state variables to track workflow completion
+  const [hasSearched, setHasSearched] = useState<boolean>(false);
+  const [hasCategorySelected, setHasCategorySelected] = useState<boolean>(false);
+  
+  // Check if date selection is complete
+  const isDateSelectionComplete = dateRange.startDate !== null && dateRange.endDate !== null;
+  
+  // Check if prompt search is complete
+  const isSearchComplete = hasSearched;
+  
+  // Check if category selection is complete
+  const isCategorySelectionComplete = hasSearched && (selectedCategory !== null || hasCategorySelected);
+  
+  // Check if place list is displayed and ready for itinerary creation
+  const isPlaceListReady = isCategorySelectionComplete && filteredPlaces.length > 0;
+  
   useEffect(() => {
     const allPlaces = [
       ...generateMockPlaces('restaurant', 200),
@@ -229,7 +246,6 @@ const Index: React.FC = () => {
       ...generateMockPlaces('accommodation', 200)
     ];
     setPlaces(allPlaces);
-    setFilteredPlaces(allPlaces);
   }, []);
   
   const handleDatesSelected = (dates: {
@@ -251,14 +267,19 @@ const Index: React.FC = () => {
   };
   
   const handleCategoryClick = (category: string) => {
+    if (!isSearchComplete) {
+      toast.error('먼저 검색을 해주세요');
+      return;
+    }
+    
     if (selectedCategory === category) {
       setSelectedCategory(null);
-      setFilteredPlaces(places);
     } else {
       setSelectedCategory(category);
       const filtered = places.filter(place => place.category === category);
       setFilteredPlaces(filtered);
     }
+    setHasCategorySelected(true);
     setCurrentPage(1);
   };
   
@@ -280,6 +301,16 @@ const Index: React.FC = () => {
   };
   
   const handleSearch = async () => {
+    if (!isDateSelectionComplete) {
+      toast.error('먼저 날짜를 선택해주세요');
+      return;
+    }
+    
+    if (!promptText.trim()) {
+      toast.error('검색 프롬프트를 입력해주세요');
+      return;
+    }
+    
     setLoading(true);
     
     try {
@@ -295,6 +326,7 @@ const Index: React.FC = () => {
         setFilteredPlaces(result);
         setLoading(false);
         setCurrentPage(1);
+        setHasSearched(true);
         
         toast.success('검색이 완료되었습니다');
       }, 1000);
@@ -306,6 +338,11 @@ const Index: React.FC = () => {
   };
   
   const handleCreateItinerary = () => {
+    if (!isPlaceListReady) {
+      toast.error('먼저 장소 목록을 확인해주세요');
+      return;
+    }
+    
     if (!dateRange.startDate || !dateRange.endDate) {
       toast.error('여행 날짜를 먼저 선택해주세요');
       return;
@@ -355,11 +392,12 @@ const Index: React.FC = () => {
               className="min-h-24 text-sm"
               value={promptText}
               onChange={handlePromptChange}
+              disabled={!isDateSelectionComplete}
             />
             <Button 
               className="w-full mt-2"
               onClick={handleSearch}
-              disabled={loading}
+              disabled={loading || !isDateSelectionComplete || !promptText.trim()}
             >
               <Search className="h-4 w-4 mr-2" />
               검색
@@ -368,26 +406,30 @@ const Index: React.FC = () => {
           
           <div className="flex flex-wrap gap-2 mb-4">
             <button
-              className={`category-btn ${selectedCategory === 'restaurant' ? 'active' : ''}`}
+              className={`category-btn ${selectedCategory === 'restaurant' ? 'active' : ''} ${!isSearchComplete ? 'opacity-50 pointer-events-none' : ''}`}
               onClick={() => handleCategoryClick('restaurant')}
+              disabled={!isSearchComplete}
             >
               음식점
             </button>
             <button
-              className={`category-btn ${selectedCategory === 'cafe' ? 'active' : ''}`}
+              className={`category-btn ${selectedCategory === 'cafe' ? 'active' : ''} ${!isSearchComplete ? 'opacity-50 pointer-events-none' : ''}`}
               onClick={() => handleCategoryClick('cafe')}
+              disabled={!isSearchComplete}
             >
               카페
             </button>
             <button
-              className={`category-btn ${selectedCategory === 'attraction' ? 'active' : ''}`}
+              className={`category-btn ${selectedCategory === 'attraction' ? 'active' : ''} ${!isSearchComplete ? 'opacity-50 pointer-events-none' : ''}`}
               onClick={() => handleCategoryClick('attraction')}
+              disabled={!isSearchComplete}
             >
               관광지
             </button>
             <button
-              className={`category-btn ${selectedCategory === 'accommodation' ? 'active' : ''}`}
+              className={`category-btn ${selectedCategory === 'accommodation' ? 'active' : ''} ${!isSearchComplete ? 'opacity-50 pointer-events-none' : ''}`}
               onClick={() => handleCategoryClick('accommodation')}
+              disabled={!isSearchComplete}
             >
               숙소
             </button>
@@ -399,24 +441,30 @@ const Index: React.FC = () => {
             <>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-medium">장소 목록</h2>
-                {!loading && filteredPlaces.length > 0 && !showItinerary && (
+                {!loading && isPlaceListReady && !showItinerary && (
                   <Button 
                     onClick={handleCreateItinerary}
-                    disabled={!dateRange.startDate || !dateRange.endDate}
+                    disabled={!isPlaceListReady}
                   >
                     일정 생성
                   </Button>
                 )}
               </div>
-              <PlaceList
-                places={filteredPlaces}
-                loading={loading}
-                onSelectPlace={handlePlaceSelect}
-                selectedPlace={selectedPlace}
-                page={currentPage}
-                onPageChange={handlePageChange}
-                totalPages={totalPages}
-              />
+              {isCategorySelectionComplete ? (
+                <PlaceList
+                  places={filteredPlaces}
+                  loading={loading}
+                  onSelectPlace={handlePlaceSelect}
+                  selectedPlace={selectedPlace}
+                  page={currentPage}
+                  onPageChange={handlePageChange}
+                  totalPages={totalPages}
+                />
+              ) : (
+                <div className="w-full flex flex-col items-center justify-center h-[40vh] text-muted-foreground">
+                  <p>카테고리를 선택해주세요</p>
+                </div>
+              )}
             </>
           ) : (
             <>
