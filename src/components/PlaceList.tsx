@@ -144,7 +144,7 @@ const PlaceList: React.FC<PlaceListProps> = ({
         검색 결과: {sortedPlaces.length}개의 장소
       </div>
       
-      <div className="mb-3">
+      <div className="mb-2">
         <Pagination className="justify-start">
           <PaginationContent className="gap-0.5">
             <PaginationItem>
@@ -189,18 +189,18 @@ const PlaceList: React.FC<PlaceListProps> = ({
       </div>
       
       <div className="flex-1 overflow-hidden">
-        <ScrollArea ref={scrollRef} className="h-[calc(100vh-350px)] w-full">
-          <div className="space-y-2 pr-2 pb-6">
+        <ScrollArea ref={scrollRef} className="h-[calc(100vh-400px)] w-full">
+          <div className="space-y-2 pr-2 pb-4">
             {currentPagePlaces.map((place) => (
               <div
                 key={place.id}
-                className={`place-item p-3 border rounded hover:bg-gray-50 cursor-pointer transition-colors ${
+                className={`place-item p-2 border rounded hover:bg-gray-50 cursor-pointer transition-colors ${
                   selectedPlaces[place.id] ? 'bg-blue-50 border-blue-200' : ''
                 }`}
                 onClick={() => handlePlaceClick(place)}
               >
                 <div className="flex items-start justify-between">
-                  <h3 className="font-medium">{place.name}</h3>
+                  <h3 className="font-medium text-sm">{place.name}</h3>
                   <div className="flex items-center gap-1 text-amber-500">
                     <Star className="h-3 w-3 fill-current" />
                     <span className="text-xs">{place.rating.toFixed(1)}</span>
@@ -217,7 +217,7 @@ const PlaceList: React.FC<PlaceListProps> = ({
                   <span>{place.operatingHours}</span>
                 </div>
                 
-                <div className="flex items-center justify-between mt-2">
+                <div className="flex items-center justify-between mt-1">
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
                     <MessageCircle className="h-3 w-3" />
                     <span>리뷰 {place.reviewCount}개</span>
