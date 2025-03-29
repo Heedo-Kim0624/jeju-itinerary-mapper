@@ -1,9 +1,18 @@
+
 import React, { useEffect, useRef } from 'react';
 import { ExternalLink, MapPin, Star, MessageCircle, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Pagination } from './Pagination';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 interface PlaceListProps {
   places: Place[];
@@ -106,6 +115,13 @@ const PlaceList: React.FC<PlaceListProps> = ({
       .map(id => placeMap[id]);
   };
 
+  // 5단위 페이지네이션 구현 (1-5, 6-10, 등)
+  const getPageNumbersToShow = (): number[] => {
+    const startPage = Math.floor((page - 1) / 5) * 5 + 1;
+    const endPage = Math.min(startPage + 4, totalPages);
+    return Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i);
+  };
+
   if (loading) {
     return (
       <div className="w-full h-full flex flex-col items-center justify-center">
@@ -131,6 +147,10 @@ const PlaceList: React.FC<PlaceListProps> = ({
 
   // Display current page's places (20 per page)
   const currentPagePlaces = sortedPlaces.slice((page - 1) * 20, page * 20);
+  const pageNumbers = getPageNumbersToShow();
+  const currentGroup = Math.floor((page - 1) / 5);
+  const hasNextGroup = (currentGroup + 1) * 5 < totalPages;
+  const hasPrevGroup = currentGroup > 0;
 
   return (
     <div className="w-full h-full flex flex-col">
@@ -139,8 +159,8 @@ const PlaceList: React.FC<PlaceListProps> = ({
       </div>
       
       <div className="flex-1 overflow-hidden">
-        <ScrollArea className="h-[calc(100%-50px)] w-full">
-          <div className="space-y-2 pr-4">
+        <ScrollArea className="h-[calc(100vh-350px)] w-full pr-4">
+          <div className="space-y-2 pr-2">
             {currentPagePlaces.map((place) => (
               <div
                 key={place.id}
@@ -208,11 +228,50 @@ const PlaceList: React.FC<PlaceListProps> = ({
       </div>
       
       <div className="mt-4 pt-2 border-t">
-        <Pagination
-          currentPage={page}
-          totalPages={totalPages}
-          onPageChange={onPageChange}
-        />
+        <Pagination>
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious 
+                onClick={() => page > 1 ? onPageChange(page - 1) : null} 
+                className={page === 1 ? "pointer-events-none opacity-50" : ""} 
+              />
+            </PaginationItem>
+            
+            {hasPrevGroup && (
+              <PaginationItem>
+                <PaginationLink onClick={() => onPageChange(currentGroup * 5)}>
+                  ...
+                </PaginationLink>
+              </PaginationItem>
+            )}
+            
+            {pageNumbers.map((pageNum) => (
+              <PaginationItem key={pageNum}>
+                <PaginationLink 
+                  isActive={pageNum === page}
+                  onClick={() => onPageChange(pageNum)}
+                >
+                  {pageNum}
+                </PaginationLink>
+              </PaginationItem>
+            ))}
+            
+            {hasNextGroup && (
+              <PaginationItem>
+                <PaginationLink onClick={() => onPageChange((currentGroup + 1) * 5 + 1)}>
+                  ...
+                </PaginationLink>
+              </PaginationItem>
+            )}
+            
+            <PaginationItem>
+              <PaginationNext 
+                onClick={() => page < totalPages ? onPageChange(page + 1) : null} 
+                className={page === totalPages ? "pointer-events-none opacity-50" : ""} 
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
       </div>
     </div>
   );
