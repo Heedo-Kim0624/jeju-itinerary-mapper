@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef } from 'react';
 import { ExternalLink, MapPin, Star, MessageCircle, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -139,72 +138,74 @@ const PlaceList: React.FC<PlaceListProps> = ({
         검색 결과: {sortedPlaces.length}개의 장소
       </div>
       
-      <ScrollArea className="flex-1">
-        <div className="space-y-2 pr-4">
-          {currentPagePlaces.map((place) => (
-            <div
-              key={place.id}
-              className={`place-item p-3 border rounded hover:bg-gray-50 cursor-pointer transition-colors ${
-                selectedPlace?.id === place.id ? 'bg-blue-50 border-blue-200' : ''
-              }`}
-              onClick={() => handlePlaceClick(place)}
-            >
-              <div className="flex items-start justify-between">
-                <h3 className="font-medium">{place.name}</h3>
-                <div className="flex items-center gap-1 text-amber-500">
-                  <Star className="h-3 w-3 fill-current" />
-                  <span className="text-xs">{place.rating.toFixed(1)}</span>
-                </div>
-              </div>
-              
-              <div className="flex items-center text-xs text-muted-foreground mt-1 gap-1">
-                <MapPin className="h-3 w-3" />
-                <span className="truncate">{place.address}</span>
-              </div>
-              
-              <div className="flex items-center text-xs text-muted-foreground mt-1 gap-1">
-                <Clock className="h-3 w-3" />
-                <span>{place.operatingHours}</span>
-              </div>
-              
-              <div className="flex items-center justify-between mt-2">
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <MessageCircle className="h-3 w-3" />
-                  <span>리뷰 {place.reviewCount}개</span>
+      <div className="flex-1 overflow-hidden">
+        <ScrollArea className="h-[calc(100%-50px)] w-full">
+          <div className="space-y-2 pr-4">
+            {currentPagePlaces.map((place) => (
+              <div
+                key={place.id}
+                className={`place-item p-3 border rounded hover:bg-gray-50 cursor-pointer transition-colors ${
+                  selectedPlace?.id === place.id ? 'bg-blue-50 border-blue-200' : ''
+                }`}
+                onClick={() => handlePlaceClick(place)}
+              >
+                <div className="flex items-start justify-between">
+                  <h3 className="font-medium">{place.name}</h3>
+                  <div className="flex items-center gap-1 text-amber-500">
+                    <Star className="h-3 w-3 fill-current" />
+                    <span className="text-xs">{place.rating.toFixed(1)}</span>
+                  </div>
                 </div>
                 
-                <div className="flex items-center gap-2">
-                  {place.naverLink && (
-                    <a
-                      href={place.naverLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      className="text-xs text-blue-500 hover:underline flex items-center gap-1"
-                    >
-                      <ExternalLink className="h-3 w-3" />
-                      네이버
-                    </a>
-                  )}
+                <div className="flex items-center text-xs text-muted-foreground mt-1 gap-1">
+                  <MapPin className="h-3 w-3" />
+                  <span className="truncate">{place.address}</span>
+                </div>
+                
+                <div className="flex items-center text-xs text-muted-foreground mt-1 gap-1">
+                  <Clock className="h-3 w-3" />
+                  <span>{place.operatingHours}</span>
+                </div>
+                
+                <div className="flex items-center justify-between mt-2">
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <MessageCircle className="h-3 w-3" />
+                    <span>리뷰 {place.reviewCount}개</span>
+                  </div>
                   
-                  {place.instaLink && (
-                    <a
-                      href={place.instaLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      className="text-xs text-purple-500 hover:underline flex items-center gap-1"
-                    >
-                      <ExternalLink className="h-3 w-3" />
-                      인스타
-                    </a>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {place.naverLink && (
+                      <a
+                        href={place.naverLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-xs text-blue-500 hover:underline flex items-center gap-1"
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                        네이버
+                      </a>
+                    )}
+                    
+                    {place.instaLink && (
+                      <a
+                        href={place.instaLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-xs text-purple-500 hover:underline flex items-center gap-1"
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                        인스타
+                      </a>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
-      </ScrollArea>
+            ))}
+          </div>
+        </ScrollArea>
+      </div>
       
       <div className="mt-4 pt-2 border-t">
         <Pagination
@@ -218,4 +219,3 @@ const PlaceList: React.FC<PlaceListProps> = ({
 };
 
 export default PlaceList;
-
