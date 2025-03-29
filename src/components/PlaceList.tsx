@@ -175,6 +175,53 @@ const PlaceList: React.FC<PlaceListProps> = ({
         검색 결과: {sortedPlaces.length}개의 장소
       </div>
       
+      <div className="mb-4">
+        <Pagination>
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious 
+                onClick={() => page > 1 ? onPageChange(page - 1) : null} 
+                className={page === 1 ? "pointer-events-none opacity-50" : ""} 
+              />
+            </PaginationItem>
+            
+            {hasPrevGroup && (
+              <PaginationItem>
+                <PaginationLink onClick={() => onPageChange(currentGroup * 5)}>
+                  ...
+                </PaginationLink>
+              </PaginationItem>
+            )}
+            
+            {pageNumbers.map((pageNum) => (
+              <PaginationItem key={pageNum}>
+                <PaginationLink 
+                  isActive={pageNum === page}
+                  onClick={() => onPageChange(pageNum)}
+                >
+                  {pageNum}
+                </PaginationLink>
+              </PaginationItem>
+            ))}
+            
+            {hasNextGroup && (
+              <PaginationItem>
+                <PaginationLink onClick={() => onPageChange((currentGroup + 1) * 5 + 1)}>
+                  ...
+                </PaginationLink>
+              </PaginationItem>
+            )}
+            
+            <PaginationItem>
+              <PaginationNext 
+                onClick={() => page < totalPages ? onPageChange(page + 1) : null} 
+                className={page === totalPages ? "pointer-events-none opacity-50" : ""} 
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      </div>
+      
       <div className="flex-1 overflow-hidden">
         <ScrollArea ref={scrollRef} className="h-[calc(100vh-350px)] w-full">
           <div className="space-y-2 pr-2 pb-6">
@@ -242,53 +289,6 @@ const PlaceList: React.FC<PlaceListProps> = ({
             ))}
           </div>
         </ScrollArea>
-      </div>
-      
-      <div className="mt-4 pt-2 border-t">
-        <Pagination>
-          <PaginationContent>
-            <PaginationItem>
-              <PaginationPrevious 
-                onClick={() => page > 1 ? onPageChange(page - 1) : null} 
-                className={page === 1 ? "pointer-events-none opacity-50" : ""} 
-              />
-            </PaginationItem>
-            
-            {hasPrevGroup && (
-              <PaginationItem>
-                <PaginationLink onClick={() => onPageChange(currentGroup * 5)}>
-                  ...
-                </PaginationLink>
-              </PaginationItem>
-            )}
-            
-            {pageNumbers.map((pageNum) => (
-              <PaginationItem key={pageNum}>
-                <PaginationLink 
-                  isActive={pageNum === page}
-                  onClick={() => onPageChange(pageNum)}
-                >
-                  {pageNum}
-                </PaginationLink>
-              </PaginationItem>
-            ))}
-            
-            {hasNextGroup && (
-              <PaginationItem>
-                <PaginationLink onClick={() => onPageChange((currentGroup + 1) * 5 + 1)}>
-                  ...
-                </PaginationLink>
-              </PaginationItem>
-            )}
-            
-            <PaginationItem>
-              <PaginationNext 
-                onClick={() => page < totalPages ? onPageChange(page + 1) : null} 
-                className={page === totalPages ? "pointer-events-none opacity-50" : ""} 
-              />
-            </PaginationItem>
-          </PaginationContent>
-        </Pagination>
       </div>
     </div>
   );
