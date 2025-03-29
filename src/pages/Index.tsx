@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { CalendarIcon, Search, MapPin, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -9,6 +8,7 @@ import DatePicker from '@/components/DatePicker';
 import PlaceList from '@/components/PlaceList';
 import ItineraryView from '@/components/ItineraryView';
 import { toast } from 'sonner';
+import { categoryColors, getCategoryName } from '@/utils/categoryColors';
 
 const DEFAULT_PROMPT = '';
 
@@ -405,34 +405,20 @@ const Index: React.FC = () => {
           </div>
           
           <div className="flex flex-wrap gap-2 mb-4">
-            <button
-              className={`category-btn ${selectedCategory === 'restaurant' ? 'active' : ''} ${!isSearchComplete ? 'opacity-50 pointer-events-none' : ''}`}
-              onClick={() => handleCategoryClick('restaurant')}
-              disabled={!isSearchComplete}
-            >
-              음식점
-            </button>
-            <button
-              className={`category-btn ${selectedCategory === 'cafe' ? 'active' : ''} ${!isSearchComplete ? 'opacity-50 pointer-events-none' : ''}`}
-              onClick={() => handleCategoryClick('cafe')}
-              disabled={!isSearchComplete}
-            >
-              카페
-            </button>
-            <button
-              className={`category-btn ${selectedCategory === 'attraction' ? 'active' : ''} ${!isSearchComplete ? 'opacity-50 pointer-events-none' : ''}`}
-              onClick={() => handleCategoryClick('attraction')}
-              disabled={!isSearchComplete}
-            >
-              관광지
-            </button>
-            <button
-              className={`category-btn ${selectedCategory === 'accommodation' ? 'active' : ''} ${!isSearchComplete ? 'opacity-50 pointer-events-none' : ''}`}
-              onClick={() => handleCategoryClick('accommodation')}
-              disabled={!isSearchComplete}
-            >
-              숙소
-            </button>
+            {['restaurant', 'cafe', 'attraction', 'accommodation'].map((category) => (
+              <button
+                key={category}
+                className={`category-btn ${
+                  selectedCategory === category 
+                    ? `${categoryColors[category].bg} ${categoryColors[category].text}` 
+                    : ''
+                } ${!isSearchComplete ? 'opacity-50 pointer-events-none' : ''}`}
+                onClick={() => handleCategoryClick(category)}
+                disabled={!isSearchComplete}
+              >
+                {getCategoryName(category)}
+              </button>
+            ))}
           </div>
         </div>
         

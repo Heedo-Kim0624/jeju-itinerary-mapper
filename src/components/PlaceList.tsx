@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import { ExternalLink, MapPin, Star, MessageCircle, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -13,6 +12,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { categoryColors, getCategoryName } from '@/utils/categoryColors';
 
 interface PlaceListProps {
   places: Place[];
@@ -195,7 +195,7 @@ const PlaceList: React.FC<PlaceListProps> = ({
               <div
                 key={place.id}
                 className={`place-item px-2 py-2 border rounded hover:bg-gray-50 cursor-pointer transition-colors ${
-                  selectedPlaces[place.id] ? 'bg-blue-50 border-blue-200' : ''
+                  selectedPlaces[place.id] ? `bg-${place.category === 'restaurant' ? 'jeju-orange' : place.category === 'cafe' ? 'jeju-green' : place.category === 'attraction' ? 'jeju-blue' : 'purple-500}/10 border-${place.category === 'restaurant' ? 'jeju-orange' : place.category === 'cafe' ? 'jeju-green' : place.category === 'attraction' ? 'jeju-blue' : 'purple-500}/30` : ''
                 }`}
                 onClick={() => handlePlaceClick(place)}
               >
@@ -224,6 +224,12 @@ const PlaceList: React.FC<PlaceListProps> = ({
                   </div>
                   
                   <div className="flex items-center gap-1">
+                    <span 
+                      className={`text-[9px] px-1.5 py-0.5 rounded-full ${categoryColors[place.category]?.bg || 'bg-gray-100'} ${categoryColors[place.category]?.text || 'text-gray-800'}`}
+                    >
+                      {getCategoryName(place.category)}
+                    </span>
+                    
                     {place.naverLink && (
                       <a
                         href={place.naverLink}

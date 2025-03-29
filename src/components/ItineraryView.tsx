@@ -1,10 +1,10 @@
-
 import React, { useState } from 'react';
 import { Calendar, Clock, MapPin } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { format, addDays } from 'date-fns';
 import { ko } from 'date-fns/locale';
+import { categoryColors, getCategoryName } from '@/utils/categoryColors';
 
 interface ItineraryViewProps {
   itinerary: ItineraryDay[];
@@ -37,13 +37,11 @@ const ItineraryView: React.FC<ItineraryViewProps> = ({
     onSelectDay(day);
   };
 
-  // Format the date for a specific day
   const getDateForDay = (day: number) => {
     const date = addDays(new Date(startDate), day - 1);
     return format(date, 'yyyy년 MM월 dd일');
   };
 
-  // Get day of week
   const getDayOfWeek = (day: number) => {
     const date = addDays(new Date(startDate), day - 1);
     return format(date, 'EEEE', { locale: ko });
@@ -93,7 +91,10 @@ const ItineraryView: React.FC<ItineraryViewProps> = ({
                 .find(day => day.day === selectedDay)
                 ?.places.map((place, index) => (
                   <div key={place.id} className="relative z-10 ml-12 bg-white rounded-lg p-3 border animate-fade-in" style={{ animationDelay: `${index * 100}ms` }}>
-                    <div className="absolute left-[-24px] w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center font-bold">
+                    <div 
+                      className={`absolute left-[-24px] w-12 h-12 rounded-full flex items-center justify-center font-bold text-white`} 
+                      style={{ backgroundColor: categoryColors[place.category]?.marker || '#1F1F1F' }}
+                    >
                       {index + 1}
                     </div>
                     
@@ -110,11 +111,10 @@ const ItineraryView: React.FC<ItineraryViewProps> = ({
                     </div>
                     
                     <div className="mt-2">
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100">
-                        {place.category === 'restaurant' && '음식점'}
-                        {place.category === 'cafe' && '카페'}
-                        {place.category === 'attraction' && '관광지'}
-                        {place.category === 'accommodation' && '숙소'}
+                      <span 
+                        className={`text-xs px-2 py-0.5 rounded-full ${categoryColors[place.category]?.bg || 'bg-gray-100'} ${categoryColors[place.category]?.text || 'text-gray-800'}`}
+                      >
+                        {getCategoryName(place.category)}
                       </span>
                     </div>
                   </div>
