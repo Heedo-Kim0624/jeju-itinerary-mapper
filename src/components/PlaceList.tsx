@@ -130,15 +130,18 @@ const PlaceList: React.FC<PlaceListProps> = ({
     );
   }
 
+  // Display current page's places (20 per page)
+  const currentPagePlaces = sortedPlaces.slice((page - 1) * 20, page * 20);
+
   return (
     <div className="w-full h-full flex flex-col">
       <div className="text-sm text-muted-foreground mb-2">
         검색 결과: {sortedPlaces.length}개의 장소
       </div>
       
-      <ScrollArea className="flex-1 pr-2" ref={scrollRef as any}>
-        <div className="space-y-2">
-          {sortedPlaces.slice((page - 1) * 20, page * 20).map((place) => (
+      <ScrollArea className="flex-1">
+        <div className="space-y-2 pr-4">
+          {currentPagePlaces.map((place) => (
             <div
               key={place.id}
               className={`place-item p-3 border rounded hover:bg-gray-50 cursor-pointer transition-colors ${
@@ -215,3 +218,4 @@ const PlaceList: React.FC<PlaceListProps> = ({
 };
 
 export default PlaceList;
+
