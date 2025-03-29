@@ -209,6 +209,7 @@ const Index: React.FC = () => {
   const [places, setPlaces] = useState<Place[]>([]);
   const [filteredPlaces, setFilteredPlaces] = useState<Place[]>([]);
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
+  const [selectedPlaces, setSelectedPlaces] = useState<Place[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -263,6 +264,15 @@ const Index: React.FC = () => {
   
   const handlePlaceSelect = (place: Place) => {
     setSelectedPlace(place);
+    
+    setSelectedPlaces(prev => {
+      const alreadySelected = prev.some(p => p.id === place.id);
+      if (alreadySelected) {
+        return prev.filter(p => p.id !== place.id);
+      } else {
+        return [...prev, place];
+      }
+    });
   };
   
   const handlePageChange = (page: number) => {
@@ -304,8 +314,10 @@ const Index: React.FC = () => {
     setLoading(true);
     
     setTimeout(() => {
+      const placesToUse = selectedPlaces.length > 0 ? selectedPlaces : filteredPlaces;
+      
       const generatedItinerary = createItinerary(
-        filteredPlaces,
+        placesToUse,
         dateRange.startDate,
         dateRange.endDate,
         dateRange.startTime,
@@ -403,7 +415,7 @@ const Index: React.FC = () => {
                 )}
               </div>
               <PlaceList
-                places={getCurrentPlaces()}
+                places={filteredPlaces}
                 loading={loading}
                 onSelectPlace={handlePlaceSelect}
                 selectedPlace={selectedPlace}

@@ -1,5 +1,5 @@
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ExternalLink, MapPin, Star, MessageCircle, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -80,6 +80,8 @@ const PlaceList: React.FC<PlaceListProps> = ({
   orderedIds = [],
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
+  // 다중 선택을 위한 상태 추가
+  const [selectedPlaces, setSelectedPlaces] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     // 페이지 변경 시 스크롤 상단으로 이동
@@ -87,6 +89,16 @@ const PlaceList: React.FC<PlaceListProps> = ({
       scrollRef.current.scrollTop = 0;
     }
   }, [page]);
+
+  useEffect(() => {
+    // selectedPlace가 변경되면 selectedPlaces 상태 업데이트
+    if (selectedPlace) {
+      setSelectedPlaces(prev => ({
+        ...prev,
+        [selectedPlace.id]: true
+      }));
+    }
+  }, [selectedPlace]);
 
   // 프롬프트에서 정렬된 ID 값의 순서대로 장소 정렬
   const sortedPlaces = React.useMemo(() => {
@@ -98,6 +110,11 @@ const PlaceList: React.FC<PlaceListProps> = ({
   }, [places, orderedIds]);
 
   const handlePlaceClick = (place: Place) => {
+    // 다중 선택 상태 토글
+    setSelectedPlaces(prev => ({
+      ...prev,
+      [place.id]: !prev[place.id]
+    }));
     onSelectPlace(place);
   };
 
@@ -159,13 +176,13 @@ const PlaceList: React.FC<PlaceListProps> = ({
       </div>
       
       <div className="flex-1 overflow-hidden">
-        <ScrollArea className="h-[calc(100vh-350px)] w-full pr-4">
-          <div className="space-y-2 pr-2">
+        <ScrollArea ref={scrollRef} className="h-[calc(100vh-350px)] w-full pr-4">
+          <div className="space-y-2 pr-2 pb-2">
             {currentPagePlaces.map((place) => (
               <div
                 key={place.id}
                 className={`place-item p-3 border rounded hover:bg-gray-50 cursor-pointer transition-colors ${
-                  selectedPlace?.id === place.id ? 'bg-blue-50 border-blue-200' : ''
+                  selectedPlaces[place.id] ? 'bg-blue-50 border-blue-200' : ''
                 }`}
                 onClick={() => handlePlaceClick(place)}
               >
