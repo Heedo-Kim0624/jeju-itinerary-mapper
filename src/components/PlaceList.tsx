@@ -113,10 +113,10 @@ const PlaceList: React.FC<PlaceListProps> = ({
     return (
       <div className="w-full h-full flex flex-col items-center justify-center">
         <div className="animate-pulse">
-          <div className="h-6 w-40 bg-gray-200 rounded mb-4"></div>
-          <div className="space-y-4">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-20 w-full bg-gray-200 rounded"></div>
+          <div className="h-6 w-40 bg-gray-200 rounded mb-3"></div>
+          <div className="space-y-3">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="h-16 w-full bg-gray-200 rounded"></div>
             ))}
           </div>
         </div>
@@ -140,11 +140,11 @@ const PlaceList: React.FC<PlaceListProps> = ({
 
   return (
     <div className="w-full h-full flex flex-col">
-      <div className="text-sm text-muted-foreground mb-1">
+      <div className="text-xs text-muted-foreground mb-1">
         검색 결과: {sortedPlaces.length}개의 장소
       </div>
       
-      <div className="mb-2">
+      <div className="mb-1">
         <Pagination className="justify-start">
           <PaginationContent className="gap-0.5">
             <PaginationItem>
@@ -156,7 +156,7 @@ const PlaceList: React.FC<PlaceListProps> = ({
                     onPageChange(currentGroup * 5);
                   }
                 }} 
-                className={`h-7 min-w-7 px-1 text-xs ${page === 1 && !hasPrevGroup ? "pointer-events-none opacity-50" : ""}`} 
+                className={`h-6 min-w-6 px-1 text-xs ${page === 1 && !hasPrevGroup ? "pointer-events-none opacity-50" : ""}`} 
               />
             </PaginationItem>
             
@@ -165,7 +165,7 @@ const PlaceList: React.FC<PlaceListProps> = ({
                 <PaginationLink 
                   isActive={pageNum === page}
                   onClick={() => onPageChange(pageNum)}
-                  className="h-7 w-7 text-xs"
+                  className="h-6 w-6 text-xs"
                 >
                   {pageNum}
                 </PaginationLink>
@@ -181,7 +181,7 @@ const PlaceList: React.FC<PlaceListProps> = ({
                     onPageChange((currentGroup + 1) * 5 + 1);
                   }
                 }} 
-                className={`h-7 min-w-7 px-1 text-xs ${page === totalPages && !hasNextGroup ? "pointer-events-none opacity-50" : ""}`} 
+                className={`h-6 min-w-6 px-1 text-xs ${page === totalPages && !hasNextGroup ? "pointer-events-none opacity-50" : ""}`} 
               />
             </PaginationItem>
           </PaginationContent>
@@ -189,50 +189,50 @@ const PlaceList: React.FC<PlaceListProps> = ({
       </div>
       
       <div className="flex-1 overflow-hidden">
-        <ScrollArea ref={scrollRef} className="h-[calc(100vh-400px)] w-full">
-          <div className="space-y-2 pr-2 pb-4">
+        <ScrollArea ref={scrollRef} className="h-[calc(100vh-430px)] w-full">
+          <div className="space-y-1 pr-2 pb-2">
             {currentPagePlaces.map((place) => (
               <div
                 key={place.id}
-                className={`place-item p-2 border rounded hover:bg-gray-50 cursor-pointer transition-colors ${
+                className={`place-item p-1.5 border rounded hover:bg-gray-50 cursor-pointer transition-colors ${
                   selectedPlaces[place.id] ? 'bg-blue-50 border-blue-200' : ''
                 }`}
                 onClick={() => handlePlaceClick(place)}
               >
                 <div className="flex items-start justify-between">
-                  <h3 className="font-medium text-sm">{place.name}</h3>
-                  <div className="flex items-center gap-1 text-amber-500">
+                  <h3 className="font-medium text-xs">{place.name}</h3>
+                  <div className="flex items-center gap-0.5 text-amber-500">
                     <Star className="h-3 w-3 fill-current" />
                     <span className="text-xs">{place.rating.toFixed(1)}</span>
                   </div>
                 </div>
                 
-                <div className="flex items-center text-xs text-muted-foreground mt-1 gap-1">
+                <div className="flex items-center text-xs text-muted-foreground mt-0.5 gap-0.5">
                   <MapPin className="h-3 w-3" />
                   <span className="truncate">{place.address}</span>
                 </div>
                 
-                <div className="flex items-center text-xs text-muted-foreground mt-1 gap-1">
+                <div className="flex items-center text-xs text-muted-foreground mt-0.5 gap-0.5">
                   <Clock className="h-3 w-3" />
-                  <span>{place.operatingHours}</span>
+                  <span className="truncate">{place.operatingHours}</span>
                 </div>
                 
-                <div className="flex items-center justify-between mt-1">
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <div className="flex items-center justify-between mt-0.5">
+                  <div className="flex items-center gap-0.5 text-xs text-muted-foreground">
                     <MessageCircle className="h-3 w-3" />
                     <span>리뷰 {place.reviewCount}개</span>
                   </div>
                   
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
                     {place.naverLink && (
                       <a
                         href={place.naverLink}
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}
-                        className="text-xs text-blue-500 hover:underline flex items-center gap-1"
+                        className="text-[10px] text-blue-500 hover:underline flex items-center gap-0.5"
                       >
-                        <ExternalLink className="h-3 w-3" />
+                        <ExternalLink className="h-2.5 w-2.5" />
                         네이버
                       </a>
                     )}
@@ -243,9 +243,9 @@ const PlaceList: React.FC<PlaceListProps> = ({
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}
-                        className="text-xs text-purple-500 hover:underline flex items-center gap-1"
+                        className="text-[10px] text-purple-500 hover:underline flex items-center gap-0.5"
                       >
-                        <ExternalLink className="h-3 w-3" />
+                        <ExternalLink className="h-2.5 w-2.5" />
                         인스타
                       </a>
                     )}
