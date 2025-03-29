@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import { ExternalLink, MapPin, Star, MessageCircle, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -43,32 +42,10 @@ interface Place {
   nodeId?: string; // OSM 노드 ID
 }
 
-// 일정 생성을 위한 테이블 타입 정의
 interface ScheduleTable {
   [dayHour: string]: Place | null; // 요일_시간: Place 객체 또는 null
 }
 
-/**
- * 정렬된 ID 순서대로 장소 목록 표시를 위한 컴포넌트
- * 
- * @remarks
- * - 상위 200개 장소를 페이지당 20개씩 장소 표시
- * - 5단위 페이지네이션 지원
- * - 각 장소별로 이름, 주소, 운영시간, 네이버 링크, 인스타 링크, 평점, 리뷰수 표시
- * - 링크는 클릭하면 외부로 이동
- * - 프롬프트에서 정렬된 ID 순서대로 표시 가능
- * 
- * @future
- * - HuggingFace LLM 모델 통합 지점: orderedIds 배열을 LLM에서 생성된 순서로 받아 정렬
- * - 일정 생성 알고리즘은 다음 규칙을 따름:
- *   1. 영업시간 준수 (0=영업안함, 1=영업중, 999=정보없음)
- *   2. 카테고리별 시간 배치:
- *      - 식당: 각 요일 12시/13시, 18시/19시에 배치
- *      - 관광지: 각 요일 9-11시, 14-17시, 20-21시에 2-4칸 배치
- *      - 카페: 각 요일 13시/14시에 배치 
- *   3. 경로 최적화: OSM node, link, turntype 데이터로 최단 경로 계산
- *   4. 점수 계산: 기본 1000점 + (경로길이 × -0.001)
- */
 const PlaceList: React.FC<PlaceListProps> = ({
   places,
   loading,
@@ -80,18 +57,15 @@ const PlaceList: React.FC<PlaceListProps> = ({
   orderedIds = [],
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
-  // 다중 선택을 위한 상태 추가
   const [selectedPlaces, setSelectedPlaces] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
-    // 페이지 변경 시 스크롤 상단으로 이동
     if (scrollRef.current) {
       scrollRef.current.scrollTop = 0;
     }
   }, [page]);
 
   useEffect(() => {
-    // selectedPlace가 변경되면 selectedPlaces 상태 업데이트
     if (selectedPlace) {
       setSelectedPlaces(prev => ({
         ...prev,
@@ -100,17 +74,14 @@ const PlaceList: React.FC<PlaceListProps> = ({
     }
   }, [selectedPlace]);
 
-  // 프롬프트에서 정렬된 ID 값의 순서대로 장소 정렬
   const sortedPlaces = React.useMemo(() => {
     if (orderedIds.length > 0) {
-      // LLM 프롬프트에서 생성된 ID 순서대로 정렬
       return sortPlacesByIds(places, orderedIds);
     }
     return places;
   }, [places, orderedIds]);
 
   const handlePlaceClick = (place: Place) => {
-    // 다중 선택 상태 토글
     setSelectedPlaces(prev => ({
       ...prev,
       [place.id]: !prev[place.id]
@@ -118,24 +89,22 @@ const PlaceList: React.FC<PlaceListProps> = ({
     onSelectPlace(place);
   };
 
-  // ID값 순서대로 정렬하는 함수
   const sortPlacesByIds = (places: Place[], orderedIds: string[]): Place[] => {
-    // 장소 ID와 인덱스 매핑
     const placeMap = places.reduce((map, place) => {
       map[place.id] = place;
       return map;
     }, {} as Record<string, Place>);
     
-    // orderedIds에 있는 ID 순서대로 정렬
     return orderedIds
-      .filter(id => placeMap[id]) // 존재하는 장소만 필터링
+      .filter(id => placeMap[id])
       .map(id => placeMap[id]);
   };
 
-  // 5단위 페이지네이션 구현 (1-5, 6-10, 등)
   const getPageNumbersToShow = (): number[] => {
-    const startPage = Math.floor((page - 1) / 5) * 5 + 1;
-    const endPage = Math.min(startPage + 4, totalPages);
+    const groupSize = 5;
+    const currentGroup = Math.floor((page - 1) / groupSize);
+    const startPage = currentGroup * groupSize + 1;
+    const endPage = Math.min(startPage + groupSize - 1, totalPages);
     return Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i);
   };
 
@@ -162,7 +131,6 @@ const PlaceList: React.FC<PlaceListProps> = ({
     );
   }
 
-  // Display current page's places (20 per page)
   const currentPagePlaces = sortedPlaces.slice((page - 1) * 20, page * 20);
   const pageNumbers = getPageNumbersToShow();
   const currentGroup = Math.floor((page - 1) / 5);
@@ -180,18 +148,16 @@ const PlaceList: React.FC<PlaceListProps> = ({
           <PaginationContent>
             <PaginationItem>
               <PaginationPrevious 
-                onClick={() => page > 1 ? onPageChange(page - 1) : null} 
-                className={page === 1 ? "pointer-events-none opacity-50" : ""} 
+                onClick={() => {
+                  if (page > 1) {
+                    onPageChange(page - 1);
+                  } else if (hasPrevGroup) {
+                    onPageChange(currentGroup * 5);
+                  }
+                }} 
+                className={page === 1 && !hasPrevGroup ? "pointer-events-none opacity-50" : ""} 
               />
             </PaginationItem>
-            
-            {hasPrevGroup && (
-              <PaginationItem>
-                <PaginationLink onClick={() => onPageChange(currentGroup * 5)}>
-                  ...
-                </PaginationLink>
-              </PaginationItem>
-            )}
             
             {pageNumbers.map((pageNum) => (
               <PaginationItem key={pageNum}>
@@ -204,18 +170,16 @@ const PlaceList: React.FC<PlaceListProps> = ({
               </PaginationItem>
             ))}
             
-            {hasNextGroup && (
-              <PaginationItem>
-                <PaginationLink onClick={() => onPageChange((currentGroup + 1) * 5 + 1)}>
-                  ...
-                </PaginationLink>
-              </PaginationItem>
-            )}
-            
             <PaginationItem>
               <PaginationNext 
-                onClick={() => page < totalPages ? onPageChange(page + 1) : null} 
-                className={page === totalPages ? "pointer-events-none opacity-50" : ""} 
+                onClick={() => {
+                  if (page < totalPages) {
+                    onPageChange(page + 1);
+                  } else if (hasNextGroup) {
+                    onPageChange((currentGroup + 1) * 5 + 1);
+                  }
+                }} 
+                className={page === totalPages && !hasNextGroup ? "pointer-events-none opacity-50" : ""} 
               />
             </PaginationItem>
           </PaginationContent>
