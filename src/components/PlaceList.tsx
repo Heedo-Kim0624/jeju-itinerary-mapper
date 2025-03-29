@@ -111,7 +111,7 @@ const PlaceList: React.FC<PlaceListProps> = ({
 
   if (loading) {
     return (
-      <div className="w-full flex flex-col items-center justify-center h-[65vh]">
+      <div className="w-full flex flex-col items-center justify-center h-[45vh]">
         <div className="animate-pulse">
           <div className="h-5 w-32 bg-gray-200 rounded mb-2"></div>
           <div className="space-y-2">
@@ -126,7 +126,7 @@ const PlaceList: React.FC<PlaceListProps> = ({
 
   if (sortedPlaces.length === 0) {
     return (
-      <div className="w-full flex flex-col items-center justify-center h-[65vh] text-muted-foreground">
+      <div className="w-full flex flex-col items-center justify-center h-[45vh] text-muted-foreground">
         <p>장소를 검색하거나 카테고리를 선택해주세요</p>
       </div>
     );
@@ -189,7 +189,7 @@ const PlaceList: React.FC<PlaceListProps> = ({
       </div>
       
       <div className="flex-1 overflow-hidden">
-        <ScrollArea ref={scrollRef} className="h-[calc(100vh-450px)] w-full">
+        <ScrollArea ref={scrollRef} className="h-[calc(100vh-520px)] w-full">
           <div className="space-y-0.5 pr-1 pb-1">
             {currentPagePlaces.map((place) => (
               <div
