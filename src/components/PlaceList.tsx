@@ -177,7 +177,7 @@ const PlaceList: React.FC<PlaceListProps> = ({
       
       <div className="flex-1 overflow-hidden">
         <ScrollArea ref={scrollRef} className="h-[calc(100vh-350px)] w-full">
-          <div className="space-y-2 pr-2 pb-4">
+          <div className="space-y-2 pr-2 pb-6">
             {currentPagePlaces.map((place) => (
               <div
                 key={place.id}
