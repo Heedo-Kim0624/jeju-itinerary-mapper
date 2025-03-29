@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 import { ExternalLink, MapPin, Star, MessageCircle, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -139,13 +140,13 @@ const PlaceList: React.FC<PlaceListProps> = ({
 
   return (
     <div className="w-full h-full flex flex-col">
-      <div className="text-sm text-muted-foreground mb-2">
+      <div className="text-sm text-muted-foreground mb-1">
         검색 결과: {sortedPlaces.length}개의 장소
       </div>
       
-      <div className="mb-4">
-        <Pagination>
-          <PaginationContent>
+      <div className="mb-3">
+        <Pagination className="justify-start">
+          <PaginationContent className="gap-0.5">
             <PaginationItem>
               <PaginationPrevious 
                 onClick={() => {
@@ -155,7 +156,7 @@ const PlaceList: React.FC<PlaceListProps> = ({
                     onPageChange(currentGroup * 5);
                   }
                 }} 
-                className={page === 1 && !hasPrevGroup ? "pointer-events-none opacity-50" : ""} 
+                className={`h-7 min-w-7 px-1 text-xs ${page === 1 && !hasPrevGroup ? "pointer-events-none opacity-50" : ""}`} 
               />
             </PaginationItem>
             
@@ -164,6 +165,7 @@ const PlaceList: React.FC<PlaceListProps> = ({
                 <PaginationLink 
                   isActive={pageNum === page}
                   onClick={() => onPageChange(pageNum)}
+                  className="h-7 w-7 text-xs"
                 >
                   {pageNum}
                 </PaginationLink>
@@ -179,7 +181,7 @@ const PlaceList: React.FC<PlaceListProps> = ({
                     onPageChange((currentGroup + 1) * 5 + 1);
                   }
                 }} 
-                className={page === totalPages && !hasNextGroup ? "pointer-events-none opacity-50" : ""} 
+                className={`h-7 min-w-7 px-1 text-xs ${page === totalPages && !hasNextGroup ? "pointer-events-none opacity-50" : ""}`} 
               />
             </PaginationItem>
           </PaginationContent>
