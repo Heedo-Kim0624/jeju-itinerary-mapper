@@ -91,15 +91,15 @@ const ItineraryView: React.FC<ItineraryViewProps> = ({
               {itinerary
                 .find(day => day.day === selectedDay)
                 ?.places.map((place, index) => (
-                  <div key={place.id} className="relative z-10 ml-12 bg-white rounded-lg p-3 border animate-fade-in" style={{ animationDelay: `${index * 100}ms` }}>
+                  <div key={place.id} className="relative z-10 ml-16 bg-white rounded-lg p-3 border animate-fade-in" style={{ animationDelay: `${index * 100}ms` }}>
                     <div 
-                      className={`absolute left-[-24px] w-12 h-12 rounded-full flex items-center justify-center font-bold text-white z-10`} 
+                      className="absolute left-[-32px] w-12 h-12 rounded-full flex items-center justify-center font-bold text-white z-10" 
                       style={{ backgroundColor: categoryColors[place.category]?.marker || '#1F1F1F' }}
                     >
                       {index + 1}
                     </div>
                     
-                    <div className="pl-2">
+                    <div className="pl-3">
                       <h3 className="font-medium">{place.name}</h3>
                       
                       <div className="flex items-center text-xs text-muted-foreground mt-1 gap-1">
