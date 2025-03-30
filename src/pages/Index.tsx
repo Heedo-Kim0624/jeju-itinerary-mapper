@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CalendarIcon, Search, MapPin, Clock } from 'lucide-react';
+import { CalendarIcon, Search, MapPin, Clock, ArrowLeft, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -9,6 +9,7 @@ import PlaceList from '@/components/PlaceList';
 import ItineraryView from '@/components/ItineraryView';
 import { toast } from 'sonner';
 import { categoryColors, getCategoryName } from '@/utils/categoryColors';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const DEFAULT_PROMPT = '';
 
@@ -225,6 +226,9 @@ const Index: React.FC = () => {
   const [hasSearched, setHasSearched] = useState<boolean>(false);
   const [hasCategorySelected, setHasCategorySelected] = useState<boolean>(false);
   
+  const { isMobile, isPortrait, isLandscape } = useIsMobile();
+  const [mobileStep, setMobileStep] = useState<number>(1);
+  
   const isDateSelectionComplete = dateRange.startDate !== null && dateRange.endDate !== null;
   const isSearchComplete = hasSearched;
   const isCategorySelectionComplete = hasSearched && (selectedCategory !== null || hasCategorySelected);
@@ -367,6 +371,187 @@ const Index: React.FC = () => {
   };
   
   const totalPages = Math.ceil(filteredPlaces.length / itemsPerPage);
+  
+  const goToNextStep = () => {
+    if (mobileStep < 5) {
+      setMobileStep(prevStep => prevStep + 1);
+    }
+  };
+  
+  const goToPrevStep = () => {
+    if (mobileStep > 1) {
+      setMobileStep(prevStep => prevStep - 1);
+    }
+  };
+  
+  const getMobileStepContent = () => {
+    switch (mobileStep) {
+      case 1: // Date selection
+        return (
+          <div className="p-4 bg-white rounded-lg shadow-sm">
+            <h2 className="text-lg font-medium mb-4">날짜 선택</h2>
+            <DatePicker onDatesSelected={handleDatesSelected} />
+            <Button 
+              className="w-full mt-4"
+              onClick={goToNextStep}
+              disabled={!isDateSelectionComplete}
+            >
+              다음 단계로
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
+        );
+      
+      case 2: // Prompt search
+        return (
+          <div className="p-4 bg-white rounded-lg shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <Button variant="ghost" onClick={goToPrevStep} className="p-1">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                이전
+              </Button>
+              <h2 className="text-lg font-medium">검색 프롬프트</h2>
+              <div className="w-10"></div>
+            </div>
+            
+            <Textarea
+              placeholder="검색 프롬프트를 입력하세요"
+              className="min-h-24 text-sm"
+              value={promptText}
+              onChange={handlePromptChange}
+              disabled={!isDateSelectionComplete}
+            />
+            <div className="flex gap-2 mt-4">
+              <Button 
+                className="flex-1"
+                onClick={handleSearch}
+                disabled={loading || !isDateSelectionComplete || !promptText.trim()}
+              >
+                <Search className="h-4 w-4 mr-2" />
+                검색
+              </Button>
+              <Button 
+                className="flex-1"
+                onClick={goToNextStep}
+                disabled={!isSearchComplete}
+              >
+                다음
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        );
+      
+      case 3: // Category and place list selection
+        return (
+          <div className="p-4 bg-white rounded-lg shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <Button variant="ghost" onClick={goToPrevStep} className="p-1">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                이전
+              </Button>
+              <h2 className="text-lg font-medium">카테고리 및 장소</h2>
+              <div className="w-10"></div>
+            </div>
+            
+            <div className="flex flex-wrap gap-2 mb-4">
+              {['restaurant', 'cafe', 'attraction', 'accommodation'].map((category) => (
+                <Button
+                  key={category}
+                  variant="category"
+                  className={`${
+                    selectedCategory === category 
+                      ? categoryColors[category].bg + ' ' + categoryColors[category].text 
+                      : 'bg-jeju-gray text-jeju-black hover:bg-jeju-gray/80'
+                  } ${!isSearchComplete ? 'opacity-50 pointer-events-none' : ''}`}
+                  onClick={() => handleCategoryClick(category)}
+                  disabled={!isSearchComplete}
+                >
+                  {getCategoryName(category)}
+                </Button>
+              ))}
+            </div>
+            
+            <div className="max-h-40 overflow-hidden">
+              <PlaceList
+                places={filteredPlaces}
+                loading={loading}
+                onSelectPlace={handlePlaceSelect}
+                selectedPlace={selectedPlace}
+                page={currentPage}
+                onPageChange={handlePageChange}
+                totalPages={totalPages}
+              />
+            </div>
+            
+            <div className="flex gap-2 mt-4">
+              <Button 
+                className="flex-1"
+                onClick={handleCreateItinerary}
+                disabled={!isPlaceListReady}
+              >
+                일정 생성
+              </Button>
+              <Button 
+                className="flex-1"
+                onClick={goToNextStep}
+                disabled={!itinerary}
+              >
+                다음
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        );
+      
+      case 4: // Itinerary view
+        return (
+          <div className="p-4 bg-white rounded-lg shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <Button variant="ghost" onClick={goToPrevStep} className="p-1">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                이전
+              </Button>
+              <h2 className="text-lg font-medium">일정 확인</h2>
+              <div className="w-10"></div>
+            </div>
+            
+            {itinerary && dateRange.startDate && (
+              <div className="max-h-56 overflow-auto">
+                <ItineraryView
+                  itinerary={itinerary}
+                  startDate={dateRange.startDate}
+                  onSelectDay={handleSelectItineraryDay}
+                  selectedDay={selectedItineraryDay}
+                />
+              </div>
+            )}
+          </div>
+        );
+      
+      default:
+        return null;
+    }
+  };
+  
+  if (isMobile && isPortrait) {
+    return (
+      <div className="flex flex-col h-screen overflow-hidden bg-jeju-light-gray relative">
+        <div className="absolute inset-0 z-0">
+          <Map
+            places={filteredPlaces}
+            selectedPlace={selectedPlace}
+            itinerary={itinerary}
+            selectedDay={selectedItineraryDay}
+          />
+        </div>
+        
+        <div className="relative z-10 w-full h-2/5 bg-jeju-light-gray/95 backdrop-blur-sm rounded-b-xl shadow-lg overflow-hidden">
+          {getMobileStepContent()}
+        </div>
+      </div>
+    );
+  }
   
   return (
     <div className="flex h-screen overflow-hidden bg-jeju-light-gray">
