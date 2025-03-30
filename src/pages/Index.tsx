@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { CalendarIcon, Search, MapPin, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -410,9 +411,9 @@ const Index: React.FC = () => {
                 key={category}
                 className={`category-btn ${
                   selectedCategory === category 
-                    ? `${categoryColors[category].bg} ${categoryColors[category].text}` 
-                    : ''
-                } ${!isSearchComplete ? 'opacity-50 pointer-events-none' : ''}`}
+                    ? categoryColors[category].bg + ' ' + categoryColors[category].text 
+                    : 'bg-jeju-gray text-jeju-black hover:bg-jeju-gray/80'
+                } transition-colors rounded-full px-4 py-2 text-sm font-medium ${!isSearchComplete ? 'opacity-50 pointer-events-none' : ''}`}
                 onClick={() => handleCategoryClick(category)}
                 disabled={!isSearchComplete}
               >
