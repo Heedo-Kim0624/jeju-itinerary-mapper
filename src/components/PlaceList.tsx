@@ -4,6 +4,7 @@ import { ExternalLink, MapPin, Star, MessageCircle, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Pagination,
   PaginationContent,
@@ -202,62 +203,78 @@ const PlaceList: React.FC<PlaceListProps> = ({
                 }`}
                 onClick={() => handlePlaceClick(place)}
               >
-                <div className="flex items-start justify-between">
-                  <h3 className="font-medium text-xs line-clamp-1">{place.name}</h3>
-                  <div className="flex items-center gap-0.5 text-amber-500">
-                    <Star className="h-3 w-3 fill-current" />
-                    <span className="text-[10px]">{place.rating.toFixed(1)}</span>
+                <div className="flex items-start gap-2">
+                  <div className="flex items-center justify-center pt-0.5">
+                    <Checkbox 
+                      checked={selectedPlaces[place.id] || false}
+                      onCheckedChange={() => handlePlaceClick(place)}
+                      className={`${
+                        place.category === 'restaurant' ? 'data-[state=checked]:bg-jeju-orange data-[state=checked]:border-jeju-orange' : 
+                        place.category === 'cafe' ? 'data-[state=checked]:bg-jeju-green data-[state=checked]:border-jeju-green' : 
+                        place.category === 'attraction' ? 'data-[state=checked]:bg-jeju-blue data-[state=checked]:border-jeju-blue' : 
+                        'data-[state=checked]:bg-purple-500 data-[state=checked]:border-purple-500'
+                      } h-3.5 w-3.5`}
+                    />
                   </div>
-                </div>
-                
-                <div className="flex items-center text-[10px] text-muted-foreground mt-1 gap-0.5">
-                  <MapPin className="h-3 w-3" />
-                  <span className="truncate">{place.address}</span>
-                </div>
-                
-                <div className="flex items-center text-[10px] text-muted-foreground mt-0.5 gap-0.5">
-                  <Clock className="h-3 w-3" />
-                  <span className="truncate">{place.operatingHours}</span>
-                </div>
-                
-                <div className="flex items-center justify-between mt-1">
-                  <div className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
-                    <MessageCircle className="h-3 w-3" />
-                    <span>리뷰 {place.reviewCount}개</span>
-                  </div>
-                  
-                  <div className="flex items-center gap-1">
-                    <span 
-                      className={`text-[9px] px-1.5 py-0.5 rounded-full ${categoryColors[place.category]?.bg || 'bg-gray-100'} ${categoryColors[place.category]?.text || 'text-gray-800'}`}
-                    >
-                      {getCategoryName(place.category)}
-                    </span>
+                  <div className="flex-1">
+                    <div className="flex items-start justify-between">
+                      <h3 className="font-medium text-xs line-clamp-1">{place.name}</h3>
+                      <div className="flex items-center gap-0.5 text-amber-500">
+                        <Star className="h-3 w-3 fill-current" />
+                        <span className="text-[10px]">{place.rating.toFixed(1)}</span>
+                      </div>
+                    </div>
                     
-                    {place.naverLink && (
-                      <a
-                        href={place.naverLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        className="text-[9px] text-blue-500 hover:underline flex items-center gap-0.5"
-                      >
-                        <ExternalLink className="h-3 w-3" />
-                        네이버
-                      </a>
-                    )}
+                    <div className="flex items-center text-[10px] text-muted-foreground mt-1 gap-0.5">
+                      <MapPin className="h-3 w-3" />
+                      <span className="truncate">{place.address}</span>
+                    </div>
                     
-                    {place.instaLink && (
-                      <a
-                        href={place.instaLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        className="text-[9px] text-purple-500 hover:underline flex items-center gap-0.5"
-                      >
-                        <ExternalLink className="h-3 w-3" />
-                        인스타
-                      </a>
-                    )}
+                    <div className="flex items-center text-[10px] text-muted-foreground mt-0.5 gap-0.5">
+                      <Clock className="h-3 w-3" />
+                      <span className="truncate">{place.operatingHours}</span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between mt-1">
+                      <div className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
+                        <MessageCircle className="h-3 w-3" />
+                        <span>리뷰 {place.reviewCount}개</span>
+                      </div>
+                      
+                      <div className="flex items-center gap-1">
+                        <span 
+                          className={`text-[9px] px-1.5 py-0.5 rounded-full ${categoryColors[place.category]?.bg || 'bg-gray-100'} ${categoryColors[place.category]?.text || 'text-gray-800'}`}
+                        >
+                          {getCategoryName(place.category)}
+                        </span>
+                        
+                        {place.naverLink && (
+                          <a
+                            href={place.naverLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-[9px] text-blue-500 hover:underline flex items-center gap-0.5"
+                          >
+                            <ExternalLink className="h-3 w-3" />
+                            네이버
+                          </a>
+                        )}
+                        
+                        {place.instaLink && (
+                          <a
+                            href={place.instaLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-[9px] text-purple-500 hover:underline flex items-center gap-0.5"
+                          >
+                            <ExternalLink className="h-3 w-3" />
+                            인스타
+                          </a>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
