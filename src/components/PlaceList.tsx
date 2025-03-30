@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 import { ExternalLink, MapPin, Star, MessageCircle, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -195,7 +196,9 @@ const PlaceList: React.FC<PlaceListProps> = ({
               <div
                 key={place.id}
                 className={`place-item px-2 py-2 border rounded hover:bg-gray-50 cursor-pointer transition-colors ${
-                  selectedPlaces[place.id] ? `bg-${place.category === 'restaurant' ? 'jeju-orange' : place.category === 'cafe' ? 'jeju-green' : place.category === 'attraction' ? 'jeju-blue' : 'purple-500}/10 border-${place.category === 'restaurant' ? 'jeju-orange' : place.category === 'cafe' ? 'jeju-green' : place.category === 'attraction' ? 'jeju-blue' : 'purple-500}/30` : ''
+                  selectedPlaces[place.id] 
+                    ? `bg-${place.category === 'restaurant' ? 'jeju-orange' : place.category === 'cafe' ? 'jeju-green' : place.category === 'attraction' ? 'jeju-blue' : 'purple-500'}/10 border-${place.category === 'restaurant' ? 'jeju-orange' : place.category === 'cafe' ? 'jeju-green' : place.category === 'attraction' ? 'jeju-blue' : 'purple-500'}/30` 
+                    : ''
                 }`}
                 onClick={() => handlePlaceClick(place)}
               >
