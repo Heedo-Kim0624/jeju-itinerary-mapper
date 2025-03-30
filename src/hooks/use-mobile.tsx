@@ -4,7 +4,7 @@ import * as React from "react"
 const MOBILE_BREAKPOINT = 768
 
 export function useIsMobile() {
-  const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)
+  const [isMobile, setIsMobile] = React.useState<boolean>(false)
   const [orientation, setOrientation] = React.useState<'portrait' | 'landscape'>('portrait')
 
   React.useEffect(() => {
@@ -22,7 +22,7 @@ export function useIsMobile() {
   }, [])
 
   return {
-    isMobile: !!isMobile,
+    isMobile,
     orientation,
     isPortrait: orientation === 'portrait',
     isLandscape: orientation === 'landscape'
