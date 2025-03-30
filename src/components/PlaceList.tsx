@@ -146,9 +146,9 @@ const PlaceList: React.FC<PlaceListProps> = ({
         검색 결과: {sortedPlaces.length}개의 장소
       </div>
       
-      <div className="mb-0.5">
+      <div className="mb-2">
         <Pagination className="justify-start">
-          <PaginationContent className="gap-0">
+          <PaginationContent className="gap-2">
             <PaginationItem>
               <PaginationPrevious 
                 onClick={() => {
@@ -158,7 +158,7 @@ const PlaceList: React.FC<PlaceListProps> = ({
                     onPageChange(currentGroup * 5);
                   }
                 }} 
-                className={`h-5 min-w-5 px-0.5 text-[9px] ${page === 1 && !hasPrevGroup ? "pointer-events-none opacity-50" : ""}`} 
+                className={`h-8 min-w-[4rem] text-xs ${page === 1 && !hasPrevGroup ? "pointer-events-none opacity-50" : ""}`} 
               />
             </PaginationItem>
             
@@ -167,7 +167,7 @@ const PlaceList: React.FC<PlaceListProps> = ({
                 <PaginationLink 
                   isActive={pageNum === page}
                   onClick={() => onPageChange(pageNum)}
-                  className="h-5 w-5 text-[9px]"
+                  className="h-8 w-8 text-sm font-medium"
                 >
                   {pageNum}
                 </PaginationLink>
@@ -183,7 +183,7 @@ const PlaceList: React.FC<PlaceListProps> = ({
                     onPageChange((currentGroup + 1) * 5 + 1);
                   }
                 }} 
-                className={`h-5 min-w-5 px-0.5 text-[9px] ${page === totalPages && !hasNextGroup ? "pointer-events-none opacity-50" : ""}`} 
+                className={`h-8 min-w-[4rem] text-xs ${page === totalPages && !hasNextGroup ? "pointer-events-none opacity-50" : ""}`} 
               />
             </PaginationItem>
           </PaginationContent>
