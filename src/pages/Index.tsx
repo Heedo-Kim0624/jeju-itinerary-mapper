@@ -472,7 +472,7 @@ const Index: React.FC = () => {
               ))}
             </div>
             
-            <div className="max-h-40 overflow-hidden">
+            <ScrollArea className="h-[150px] mb-4">
               <PlaceList
                 places={filteredPlaces}
                 loading={loading}
@@ -482,9 +482,9 @@ const Index: React.FC = () => {
                 onPageChange={handlePageChange}
                 totalPages={totalPages}
               />
-            </div>
+            </ScrollArea>
             
-            <div className="flex gap-2 mt-4">
+            <div className="flex gap-2 mt-2">
               <Button 
                 className="flex-1"
                 onClick={handleCreateItinerary}
@@ -517,14 +517,14 @@ const Index: React.FC = () => {
             </div>
             
             {itinerary && dateRange.startDate && (
-              <div className="max-h-56 overflow-auto">
+              <ScrollArea className="h-[200px]">
                 <ItineraryView
                   itinerary={itinerary}
                   startDate={dateRange.startDate}
                   onSelectDay={handleSelectItineraryDay}
                   selectedDay={selectedItineraryDay}
                 />
-              </div>
+              </ScrollArea>
             )}
           </div>
         );
@@ -546,7 +546,7 @@ const Index: React.FC = () => {
           />
         </div>
         
-        <div className="relative z-10 w-full h-2/5 bg-jeju-light-gray/95 backdrop-blur-sm rounded-b-xl shadow-lg overflow-hidden">
+        <div className="fixed top-0 left-0 right-0 z-10 h-2/5 max-h-[40vh] bg-jeju-light-gray/95 backdrop-blur-sm rounded-b-xl shadow-lg overflow-auto">
           {getMobileStepContent()}
         </div>
       </div>
