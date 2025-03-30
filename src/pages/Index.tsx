@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { CalendarIcon, Search, MapPin, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -223,20 +222,12 @@ const Index: React.FC = () => {
   
   const [orderedIds, setOrderedIds] = useState<string[]>([]);
   
-  // New state variables to track workflow completion
   const [hasSearched, setHasSearched] = useState<boolean>(false);
   const [hasCategorySelected, setHasCategorySelected] = useState<boolean>(false);
   
-  // Check if date selection is complete
   const isDateSelectionComplete = dateRange.startDate !== null && dateRange.endDate !== null;
-  
-  // Check if prompt search is complete
   const isSearchComplete = hasSearched;
-  
-  // Check if category selection is complete
   const isCategorySelectionComplete = hasSearched && (selectedCategory !== null || hasCategorySelected);
-  
-  // Check if place list is displayed and ready for itinerary creation
   const isPlaceListReady = isCategorySelectionComplete && filteredPlaces.length > 0;
   
   useEffect(() => {
@@ -407,18 +398,19 @@ const Index: React.FC = () => {
           
           <div className="flex flex-wrap gap-2 mb-4">
             {['restaurant', 'cafe', 'attraction', 'accommodation'].map((category) => (
-              <button
+              <Button
                 key={category}
-                className={`category-btn ${
+                variant="category"
+                className={`${
                   selectedCategory === category 
                     ? categoryColors[category].bg + ' ' + categoryColors[category].text 
                     : 'bg-jeju-gray text-jeju-black hover:bg-jeju-gray/80'
-                } transition-colors rounded-full px-4 py-2 text-sm font-medium ${!isSearchComplete ? 'opacity-50 pointer-events-none' : ''}`}
+                } ${!isSearchComplete ? 'opacity-50 pointer-events-none' : ''}`}
                 onClick={() => handleCategoryClick(category)}
                 disabled={!isSearchComplete}
               >
                 {getCategoryName(category)}
-              </button>
+              </Button>
             ))}
           </div>
         </div>
