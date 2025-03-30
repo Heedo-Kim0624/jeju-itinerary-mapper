@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { CalendarIcon, Clock, ArrowLeft } from 'lucide-react';
@@ -117,15 +116,12 @@ const DatePicker: React.FC<DatePickerProps> = ({ onDatesSelected }) => {
     setMobileStep('end');
   };
 
-  // Generate time options (30 minute intervals)
+  // Generate time options (1 hour intervals)
   const generateTimeOptions = () => {
     const options = [];
     for (let hour = 0; hour < 24; hour++) {
-      for (let minute = 0; minute < 60; minute += 30) {
-        const formattedHour = hour.toString().padStart(2, '0');
-        const formattedMinute = minute.toString().padStart(2, '0');
-        options.push(`${formattedHour}:${formattedMinute}`);
-      }
+      const formattedHour = hour.toString().padStart(2, '0');
+      options.push(`${formattedHour}:00`);
     }
     return options;
   };
