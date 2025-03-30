@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Calendar, Clock, MapPin } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -92,30 +93,32 @@ const ItineraryView: React.FC<ItineraryViewProps> = ({
                 ?.places.map((place, index) => (
                   <div key={place.id} className="relative z-10 ml-12 bg-white rounded-lg p-3 border animate-fade-in" style={{ animationDelay: `${index * 100}ms` }}>
                     <div 
-                      className={`absolute left-[-24px] w-12 h-12 rounded-full flex items-center justify-center font-bold text-white`} 
+                      className={`absolute left-[-24px] w-12 h-12 rounded-full flex items-center justify-center font-bold text-white z-10`} 
                       style={{ backgroundColor: categoryColors[place.category]?.marker || '#1F1F1F' }}
                     >
                       {index + 1}
                     </div>
                     
-                    <h3 className="font-medium">{place.name}</h3>
-                    
-                    <div className="flex items-center text-xs text-muted-foreground mt-1 gap-1">
-                      <MapPin className="h-3 w-3" />
-                      <span className="truncate">{place.address}</span>
-                    </div>
-                    
-                    <div className="flex items-center text-xs text-muted-foreground mt-1 gap-1">
-                      <Clock className="h-3 w-3" />
-                      <span>{place.operatingHours}</span>
-                    </div>
-                    
-                    <div className="mt-2">
-                      <span 
-                        className={`text-xs px-2 py-0.5 rounded-full ${categoryColors[place.category]?.bg || 'bg-gray-100'} ${categoryColors[place.category]?.text || 'text-gray-800'}`}
-                      >
-                        {getCategoryName(place.category)}
-                      </span>
+                    <div className="pl-2">
+                      <h3 className="font-medium">{place.name}</h3>
+                      
+                      <div className="flex items-center text-xs text-muted-foreground mt-1 gap-1">
+                        <MapPin className="h-3 w-3" />
+                        <span className="truncate">{place.address}</span>
+                      </div>
+                      
+                      <div className="flex items-center text-xs text-muted-foreground mt-1 gap-1">
+                        <Clock className="h-3 w-3" />
+                        <span>{place.operatingHours}</span>
+                      </div>
+                      
+                      <div className="mt-2">
+                        <span 
+                          className={`text-xs px-2 py-0.5 rounded-full ${categoryColors[place.category]?.bg || 'bg-gray-100'} ${categoryColors[place.category]?.text || 'text-gray-800'}`}
+                        >
+                          {getCategoryName(place.category)}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 ))}
