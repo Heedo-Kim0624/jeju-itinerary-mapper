@@ -444,7 +444,7 @@ const Index: React.FC = () => {
       
       case 3: // Category and place list selection
         return (
-          <div className="p-4 bg-white rounded-lg shadow-sm">
+          <div className="p-4 bg-white rounded-lg shadow-sm h-full flex flex-col">
             <div className="flex items-center justify-between mb-4">
               <Button variant="ghost" onClick={goToPrevStep} className="p-1">
                 <ArrowLeft className="h-4 w-4 mr-2" />
@@ -472,19 +472,21 @@ const Index: React.FC = () => {
               ))}
             </div>
             
-            <ScrollArea className="h-[150px] mb-4">
-              <PlaceList
-                places={filteredPlaces}
-                loading={loading}
-                onSelectPlace={handlePlaceSelect}
-                selectedPlace={selectedPlace}
-                page={currentPage}
-                onPageChange={handlePageChange}
-                totalPages={totalPages}
-              />
-            </ScrollArea>
+            <div className="flex-1 overflow-hidden mb-4">
+              <ScrollArea className="h-[calc(100%-120px)]">
+                <PlaceList
+                  places={filteredPlaces}
+                  loading={loading}
+                  onSelectPlace={handlePlaceSelect}
+                  selectedPlace={selectedPlace}
+                  page={currentPage}
+                  onPageChange={handlePageChange}
+                  totalPages={totalPages}
+                />
+              </ScrollArea>
+            </div>
             
-            <div className="flex gap-2 mt-2">
+            <div className="flex gap-2 mt-auto sticky bottom-0 bg-white pt-2">
               <Button 
                 className="flex-1"
                 onClick={handleCreateItinerary}
@@ -506,7 +508,7 @@ const Index: React.FC = () => {
       
       case 4: // Itinerary view
         return (
-          <div className="p-4 bg-white rounded-lg shadow-sm">
+          <div className="p-4 bg-white rounded-lg shadow-sm h-full flex flex-col">
             <div className="flex items-center justify-between mb-4">
               <Button variant="ghost" onClick={goToPrevStep} className="p-1">
                 <ArrowLeft className="h-4 w-4 mr-2" />
@@ -517,14 +519,16 @@ const Index: React.FC = () => {
             </div>
             
             {itinerary && dateRange.startDate && (
-              <ScrollArea className="h-[200px]">
-                <ItineraryView
-                  itinerary={itinerary}
-                  startDate={dateRange.startDate}
-                  onSelectDay={handleSelectItineraryDay}
-                  selectedDay={selectedItineraryDay}
-                />
-              </ScrollArea>
+              <div className="flex-1 overflow-hidden">
+                <ScrollArea className="h-full">
+                  <ItineraryView
+                    itinerary={itinerary}
+                    startDate={dateRange.startDate}
+                    onSelectDay={handleSelectItineraryDay}
+                    selectedDay={selectedItineraryDay}
+                  />
+                </ScrollArea>
+              </div>
             )}
           </div>
         );
@@ -546,7 +550,7 @@ const Index: React.FC = () => {
           />
         </div>
         
-        <div className="fixed top-0 left-0 right-0 z-10 h-2/5 max-h-[40vh] bg-jeju-light-gray/95 backdrop-blur-sm rounded-b-xl shadow-lg overflow-auto">
+        <div className="fixed top-0 left-0 right-0 z-10 h-1/2 max-h-[50vh] min-h-[350px] bg-jeju-light-gray/95 backdrop-blur-sm rounded-b-xl shadow-lg overflow-auto">
           {getMobileStepContent()}
         </div>
       </div>
