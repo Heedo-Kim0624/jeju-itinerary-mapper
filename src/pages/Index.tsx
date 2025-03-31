@@ -582,7 +582,7 @@ const Index: React.FC = () => {
           className={`fixed left-0 right-0 z-10 transition-all duration-300 ease-in-out 
             bg-jeju-light-gray/95 backdrop-blur-sm rounded-b-xl shadow-lg overflow-auto
             ${isPanelHidden ? 'h-0 opacity-0 pointer-events-none' : 'h-[60vh] min-h-[400px] opacity-100'}`}
-          style={{ top: '10px' }}
+          style={{ top: '40px' }}
         >
           {getMobileStepContent()}
         </div>
