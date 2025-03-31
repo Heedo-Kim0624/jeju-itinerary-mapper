@@ -477,8 +477,8 @@ const Index: React.FC = () => {
               ))}
             </div>
             
-            <div className="flex-1 overflow-auto mb-4">
-              <ScrollArea className="h-full max-h-[calc(100%-80px)]">
+            <div className="flex-1 overflow-hidden flex flex-col">
+              <ScrollArea className="flex-1 mb-2">
                 <PlaceList
                   places={filteredPlaces}
                   loading={loading}
