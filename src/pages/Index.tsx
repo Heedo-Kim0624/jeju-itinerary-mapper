@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { CalendarIcon, Search, MapPin, Clock, ArrowLeft, ArrowRight, ChevronUp, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -580,7 +581,8 @@ const Index: React.FC = () => {
           ref={panelRef}
           className={`fixed left-0 right-0 z-10 transition-all duration-300 ease-in-out 
             bg-jeju-light-gray/95 backdrop-blur-sm rounded-b-xl shadow-lg overflow-auto
-            ${isPanelHidden ? 'top-10 h-0 opacity-0 pointer-events-none' : 'top-10 h-[60vh] min-h-[400px] opacity-100'}`}
+            ${isPanelHidden ? 'h-0 opacity-0 pointer-events-none' : 'h-[60vh] min-h-[400px] opacity-100'}`}
+          style={{ top: '10px' }}
         >
           {getMobileStepContent()}
         </div>
