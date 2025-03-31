@@ -231,7 +231,6 @@ const Index: React.FC = () => {
   const [mobileStep, setMobileStep] = useState<number>(1);
   const [isPanelHidden, setIsPanelHidden] = useState<boolean>(false);
   const panelRef = useRef<HTMLDivElement>(null);
-  const touchStartY = useRef<number | null>(null);
 
   const isDateSelectionComplete = dateRange.startDate !== null && dateRange.endDate !== null;
   const isSearchComplete = hasSearched;
@@ -542,30 +541,6 @@ const Index: React.FC = () => {
     }
   };
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartY.current = e.touches[0].clientY;
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (touchStartY.current === null) return;
-    
-    const touchY = e.touches[0].clientY;
-    const diff = touchY - touchStartY.current;
-    
-    if (diff < -50 && !isPanelHidden) {
-      setIsPanelHidden(true);
-      touchStartY.current = null;
-    } 
-    else if (diff > 50 && isPanelHidden) {
-      setIsPanelHidden(false);
-      touchStartY.current = null;
-    }
-  };
-
-  const handleTouchEnd = () => {
-    touchStartY.current = null;
-  };
-
   const togglePanel = () => {
     setIsPanelHidden(!isPanelHidden);
   };
@@ -583,13 +558,13 @@ const Index: React.FC = () => {
         </div>
         
         <div 
-          className="fixed top-0 left-0 right-0 z-20 h-6 flex items-center justify-center bg-white/80 backdrop-blur-sm rounded-b-lg shadow-sm"
+          className="fixed top-0 left-0 right-0 z-20 h-10 flex items-center justify-center bg-white/80 backdrop-blur-sm rounded-b-lg shadow-sm"
           onClick={togglePanel}
         >
           {isPanelHidden ? (
-            <ChevronDown className="h-4 w-4 text-gray-500" />
+            <ChevronDown className="h-5 w-5 text-gray-500" />
           ) : (
-            <ChevronUp className="h-4 w-4 text-gray-500" />
+            <ChevronUp className="h-5 w-5 text-gray-500" />
           )}
         </div>
         
@@ -605,10 +580,7 @@ const Index: React.FC = () => {
           ref={panelRef}
           className={`fixed left-0 right-0 z-10 transition-all duration-300 ease-in-out 
             bg-jeju-light-gray/95 backdrop-blur-sm rounded-b-xl shadow-lg overflow-auto
-            ${isPanelHidden ? 'top-6 h-0 opacity-0 pointer-events-none' : 'top-0 h-1/2 max-h-[50vh] min-h-[350px] opacity-100'}`}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
+            ${isPanelHidden ? 'top-10 h-0 opacity-0 pointer-events-none' : 'top-0 h-[60vh] min-h-[400px] opacity-100'}`}
         >
           {getMobileStepContent()}
         </div>
