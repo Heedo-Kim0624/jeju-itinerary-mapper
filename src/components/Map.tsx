@@ -1,7 +1,13 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { toast } from "sonner";
 import { getCategoryColor } from '@/utils/categoryColors';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
+import { Button } from "@/components/ui/button";
+import { MapPin, Star, Clock, ExternalLink } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface MapProps {
   places: Place[];
@@ -16,6 +22,12 @@ interface Place {
   x: number;
   y: number;
   category: string;
+  address?: string;
+  operatingHours?: string;
+  rating?: number;
+  reviewCount?: number;
+  naverLink?: string;
+  instaLink?: string;
 }
 
 interface ItineraryDay {
@@ -49,6 +61,8 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
   const polylines = useRef<any[]>([]);
   const [isMapInitialized, setIsMapInitialized] = useState<boolean>(false);
   const [isKakaoLoaded, setIsKakaoLoaded] = useState<boolean>(false);
+  const [popupPlace, setPopupPlace] = useState<Place | null>(null);
+  const [showDialog, setShowDialog] = useState<boolean>(false);
 
   const loadKakaoMapScript = () => {
     if (window.kakao && window.kakao.maps) {
@@ -171,6 +185,7 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
       content.style.color = 'white';
       content.style.backgroundColor = markerColor;
       content.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+      content.style.cursor = 'pointer';
       
       if (isItinerary) {
         content.textContent = (index + 1).toString();
@@ -187,13 +202,10 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
       customOverlay.setMap(map.current);
       markers.current.push(customOverlay);
       
-      const infowindow = new window.kakao.maps.InfoWindow({
-        content: `<div class="font-medium px-2 py-1">${place.name}</div>`,
-        removable: false
-      });
-      
+      // Add click event to show place details
       window.kakao.maps.event.addListener(customOverlay, 'click', function() {
-        infowindow.open(map.current, position);
+        setPopupPlace(place);
+        setShowDialog(true);
       });
     });
     
@@ -259,8 +271,74 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
       <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-md shadow-md z-10 text-sm">
         <p className="font-medium text-jeju-black">제주도 여행 계획</p>
       </div>
+
+      {/* Dialog for place details */}
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{popupPlace?.name}</DialogTitle>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            {popupPlace && (
+              <div className="space-y-3">
+                {popupPlace.address && (
+                  <div className="flex items-start gap-2">
+                    <MapPin className="h-4 w-4 text-gray-500 mt-0.5" />
+                    <span className="text-sm">{popupPlace.address}</span>
+                  </div>
+                )}
+                
+                {popupPlace.operatingHours && (
+                  <div className="flex items-start gap-2">
+                    <Clock className="h-4 w-4 text-gray-500 mt-0.5" />
+                    <span className="text-sm">{popupPlace.operatingHours}</span>
+                  </div>
+                )}
+                
+                {popupPlace.rating && (
+                  <div className="flex items-center gap-2">
+                    <Star className="h-4 w-4 text-amber-400" />
+                    <span className="text-sm font-medium">{popupPlace.rating}</span>
+                    {popupPlace.reviewCount && (
+                      <span className="text-xs text-gray-500">({popupPlace.reviewCount} 리뷰)</span>
+                    )}
+                  </div>
+                )}
+                
+                <div className="flex gap-2 mt-3">
+                  {popupPlace.naverLink && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => window.open(popupPlace.naverLink, '_blank')}
+                      className="flex gap-1"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      네이버 지도
+                    </Button>
+                  )}
+                  
+                  {popupPlace.instaLink && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => window.open(popupPlace.instaLink, '_blank')}
+                      className="flex gap-1"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      인스타그램
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
 
 export default Map;
+
