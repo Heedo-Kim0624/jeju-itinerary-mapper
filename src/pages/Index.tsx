@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { CalendarIcon, Search, MapPin, Clock, ArrowLeft, ArrowRight, ChevronUp, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -392,23 +391,25 @@ const Index: React.FC = () => {
     switch (mobileStep) {
       case 1: // Date selection
         return (
-          <div className="p-4 bg-white rounded-lg shadow-sm">
+          <div className="p-4 bg-white rounded-lg shadow-sm h-full">
             <h2 className="text-lg font-medium mb-4">날짜 선택</h2>
             <DatePicker onDatesSelected={handleDatesSelected} />
-            <Button 
-              className="w-full mt-4"
-              onClick={goToNextStep}
-              disabled={!isDateSelectionComplete}
-            >
-              다음 단계로
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
+            <div className="mt-4">
+              <Button 
+                className="w-full"
+                onClick={goToNextStep}
+                disabled={!isDateSelectionComplete}
+              >
+                다음 단계로
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
           </div>
         );
       
       case 2: // Prompt search
         return (
-          <div className="p-4 bg-white rounded-lg shadow-sm">
+          <div className="p-4 bg-white rounded-lg shadow-sm h-full flex flex-col">
             <div className="flex items-center justify-between mb-4">
               <Button variant="ghost" onClick={goToPrevStep} className="p-1">
                 <ArrowLeft className="h-4 w-4 mr-2" />
@@ -420,7 +421,7 @@ const Index: React.FC = () => {
             
             <Textarea
               placeholder="검색 프롬프트를 입력하세요"
-              className="min-h-24 text-sm"
+              className="min-h-24 text-sm flex-grow"
               value={promptText}
               onChange={handlePromptChange}
               disabled={!isDateSelectionComplete}
@@ -476,8 +477,8 @@ const Index: React.FC = () => {
               ))}
             </div>
             
-            <div className="flex-1 overflow-hidden mb-4">
-              <ScrollArea className="h-[calc(100%-120px)]">
+            <div className="flex-1 overflow-auto mb-4">
+              <ScrollArea className="h-full max-h-[calc(100%-80px)]">
                 <PlaceList
                   places={filteredPlaces}
                   loading={loading}
@@ -523,7 +524,7 @@ const Index: React.FC = () => {
             </div>
             
             {itinerary && dateRange.startDate && (
-              <div className="flex-1 overflow-hidden">
+              <div className="flex-1 overflow-auto">
                 <ScrollArea className="h-full">
                   <ItineraryView
                     itinerary={itinerary}
@@ -580,8 +581,8 @@ const Index: React.FC = () => {
         <div 
           ref={panelRef}
           className={`fixed left-0 right-0 z-10 transition-all duration-300 ease-in-out 
-            bg-jeju-light-gray/95 backdrop-blur-sm rounded-b-xl shadow-lg overflow-auto
-            ${isPanelHidden ? 'h-0 opacity-0 pointer-events-none' : 'h-[60vh] min-h-[400px] opacity-100'}`}
+            bg-jeju-light-gray/95 backdrop-blur-sm rounded-b-xl shadow-lg
+            ${isPanelHidden ? 'h-0 opacity-0 pointer-events-none' : 'h-[60vh] max-h-[60vh] opacity-100 overflow-auto'}`}
           style={{ top: '40px' }}
         >
           {getMobileStepContent()}
