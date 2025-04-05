@@ -1,6 +1,5 @@
-
 import React, { useEffect, useRef, useState } from 'react';
-import { ExternalLink, MapPin, Star, MessageCircle, Clock, ArrowUpDown } from 'lucide-react';
+import { ExternalLink, MapPin, Star, MessageCircle, Clock, ArrowUpDown, Instagram } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -16,6 +15,21 @@ import {
 } from "@/components/ui/pagination";
 import { categoryColors, getCategoryName } from '@/utils/categoryColors';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { Check } from "lucide-react"
+import { cn } from "@/lib/utils";
 
 interface PlaceListProps {
   places: Place[];
@@ -78,6 +92,8 @@ const PlaceList: React.FC<PlaceListProps> = ({
   const scrollRef = useRef<HTMLDivElement>(null);
   const [selectedPlaces, setSelectedPlaces] = useState<Record<string, boolean>>({});
   const [sortOption, setSortOption] = useState<SortOption>("recommendation");
+  const [comboboxOpen, setComboboxOpen] = useState(false);
+  const [selectedPlacesArray, setSelectedPlacesArray] = useState<Place[]>([]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -93,6 +109,11 @@ const PlaceList: React.FC<PlaceListProps> = ({
       }));
     }
   }, [selectedPlace]);
+
+  useEffect(() => {
+    const selected = places.filter(place => selectedPlaces[place.id]);
+    setSelectedPlacesArray(selected);
+  }, [selectedPlaces, places]);
 
   const sortedPlaces = React.useMemo(() => {
     let result = [...places];
@@ -115,6 +136,16 @@ const PlaceList: React.FC<PlaceListProps> = ({
     }));
 
     onSelectPlace(place);
+  };
+
+  const handleComboboxItemSelect = (place: Place) => {
+    setSelectedPlaces(prev => ({
+      ...prev,
+      [place.id]: !prev[place.id]
+    }));
+    
+    onSelectPlace(place);
+    setComboboxOpen(false);
   };
 
   if (loading) {
@@ -181,19 +212,55 @@ const PlaceList: React.FC<PlaceListProps> = ({
           검색 결과: {sortedPlaces.length}개의 장소
         </div>
         
-        <Select
-          value={sortOption}
-          onValueChange={(value) => setSortOption(value as SortOption)}
-        >
-          <SelectTrigger className="w-[130px] h-7 text-xs">
-            <SelectValue placeholder="정렬 기준" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="recommendation" className="text-xs">추천순</SelectItem>
-            <SelectItem value="rating" className="text-xs">별점순</SelectItem>
-            <SelectItem value="reviews" className="text-xs">리뷰많은순</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="h-7 text-xs justify-between">
+                선택된 장소 ({selectedPlacesArray.length})
+                <ArrowUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[200px] p-0" align="end">
+              <Command>
+                <CommandInput placeholder="장소 검색" className="h-8 text-xs" />
+                <CommandList>
+                  <CommandEmpty>선택된 장소가 없습니다</CommandEmpty>
+                  <CommandGroup>
+                    {places.map((place) => (
+                      <CommandItem
+                        key={place.id}
+                        value={place.id}
+                        onSelect={() => handleComboboxItemSelect(place)}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-3 w-3",
+                            selectedPlaces[place.id] ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        <span className="text-xs truncate">{place.name}</span>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        
+          <Select
+            value={sortOption}
+            onValueChange={(value) => setSortOption(value as SortOption)}
+          >
+            <SelectTrigger className="w-[130px] h-7 text-xs">
+              <SelectValue placeholder="정렬 기준" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="recommendation" className="text-xs">추천순</SelectItem>
+              <SelectItem value="rating" className="text-xs">별점순</SelectItem>
+              <SelectItem value="reviews" className="text-xs">리뷰많은순</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
       
       <div className="mb-2">
@@ -249,25 +316,39 @@ const PlaceList: React.FC<PlaceListProps> = ({
                     </div>
                   </div>
                   
-                  {(place.naverLink || place.instaLink) && (
-                    <div className="flex flex-col gap-1 ml-2">
-                      {place.naverLink && (
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-6 w-6"
-                          asChild
-                          onClick={(e) => {
-                            e.stopPropagation();
-                          }}
-                        >
-                          <a href={place.naverLink} target="_blank" rel="noopener noreferrer">
-                            <ExternalLink className="h-3 w-3" />
-                          </a>
-                        </Button>
-                      )}
-                    </div>
-                  )}
+                  <div className="flex flex-col gap-1 ml-2">
+                    {place.naverLink && (
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-6 w-6"
+                        asChild
+                        onClick={(e) => {
+                          e.stopPropagation();
+                        }}
+                      >
+                        <a href={place.naverLink} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </Button>
+                    )}
+                    
+                    {place.instaLink && (
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-6 w-6"
+                        asChild
+                        onClick={(e) => {
+                          e.stopPropagation();
+                        }}
+                      >
+                        <a href={place.instaLink} target="_blank" rel="noopener noreferrer">
+                          <Instagram className="h-3 w-3 text-pink-500" />
+                        </a>
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </CardContent>
             </Card>
