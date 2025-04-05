@@ -4,7 +4,7 @@ import { ExternalLink, MapPin, Star, MessageCircle, Clock, ArrowUpDown } from 'l
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Pagination,
   PaginationContent,
@@ -25,32 +25,45 @@ interface PlaceListProps {
   page: number;
   onPageChange: (page: number) => void;
   totalPages: number;
-  orderedIds?: string[]; // 프롬프트에서 정렬된 ID 순서
+  orderedIds?: string[];
 }
 
 interface Place {
   id: string;
   name: string;
-  address: string;
-  operatingHours: string;
-  naverLink: string;
-  instaLink: string;
-  rating: number;
-  reviewCount: number;
+  address?: string;
   category: string;
+  rating?: number;
+  reviewCount?: number;
+  operatingHours?: string;
+  naverLink?: string;
+  instaLink?: string;
   x: number;
   y: number;
-  operationTimeData?: {
-    [key: string]: number; // 요일_시간: 0(영업안함), 1(영업중), 999(정보없음)
-  };
-  nodeId?: string; // OSM 노드 ID
+}
+
+interface ItineraryDay {
+  day: number;
+  places: Place[];
+  totalDistance?: number;
 }
 
 interface ScheduleTable {
-  [dayHour: string]: Place | null; // 요일_시간: Place 객체 또는 null
+  [dayHour: string]: Place | null;
 }
 
 type SortOption = "recommendation" | "rating" | "reviews";
+
+const sortPlacesByIds = (places: Place[], orderedIds: string[]): Place[] => {
+  const placeMap = places.reduce((map, place) => {
+    map[place.id] = place;
+    return map;
+  }, {} as Record<string, Place>);
+  
+  return orderedIds
+    .filter(id => placeMap[id])
+    .map(id => placeMap[id]);
+};
 
 const PlaceList: React.FC<PlaceListProps> = ({
   places,
@@ -60,7 +73,7 @@ const PlaceList: React.FC<PlaceListProps> = ({
   page,
   onPageChange,
   totalPages,
-  orderedIds = [],
+  orderedIds = []
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [selectedPlaces, setSelectedPlaces] = useState<Record<string, boolean>>({});
@@ -76,7 +89,7 @@ const PlaceList: React.FC<PlaceListProps> = ({
     if (selectedPlace) {
       setSelectedPlaces(prev => ({
         ...prev,
-        [selectedPlace.id]: true
+        [selectedPlace.id]: !prev[selectedPlace.id]
       }));
     }
   }, [selectedPlace]);
@@ -100,42 +113,58 @@ const PlaceList: React.FC<PlaceListProps> = ({
       ...prev,
       [place.id]: !prev[place.id]
     }));
+
     onSelectPlace(place);
-  };
-
-  const sortPlacesByIds = (places: Place[], orderedIds: string[]): Place[] => {
-    const placeMap = places.reduce((map, place) => {
-      map[place.id] = place;
-      return map;
-    }, {} as Record<string, Place>);
-    
-    return orderedIds
-      .filter(id => placeMap[id])
-      .map(id => placeMap[id]);
-  };
-
-  const getPageNumbersToShow = (): number[] => {
-    const groupSize = 5;
-    const currentGroup = Math.floor((page - 1) / groupSize);
-    const startPage = currentGroup * groupSize + 1;
-    const endPage = Math.min(startPage + groupSize - 1, totalPages);
-    return Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i);
   };
 
   if (loading) {
     return (
-      <div className="w-full flex flex-col items-center justify-center h-[40vh]">
-        <div className="animate-pulse">
-          <div className="h-5 w-32 bg-gray-200 rounded mb-2"></div>
-          <div className="space-y-2">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-12 w-full bg-gray-200 rounded"></div>
-            ))}
-          </div>
-        </div>
+      <div className="flex flex-col items-center justify-center p-8 h-full">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-jeju-green mb-4"></div>
+        <p className="text-sm text-muted-foreground">장소 정보를 불러오는 중...</p>
       </div>
     );
   }
+
+  const itemsPerPage = 10;
+  const startIndex = (page - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, sortedPlaces.length);
+  const currentPlaces = sortedPlaces.slice(startIndex, endIndex);
+
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxPagesToShow = 5;
+    
+    if (totalPages <= maxPagesToShow) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      if (page <= 3) {
+        for (let i = 1; i <= 4; i++) {
+          pages.push(i);
+        }
+        pages.push(0); // Represent ellipsis
+        pages.push(totalPages);
+      } else if (page >= totalPages - 2) {
+        pages.push(1);
+        pages.push(0); // Represent ellipsis
+        for (let i = totalPages - 3; i <= totalPages; i++) {
+          pages.push(i);
+        }
+      } else {
+        pages.push(1);
+        pages.push(0); // Represent ellipsis
+        for (let i = page - 1; i <= page + 1; i++) {
+          pages.push(i);
+        }
+        pages.push(0); // Represent ellipsis
+        pages.push(totalPages);
+      }
+    }
+    
+    return pages;
+  };
 
   if (sortedPlaces.length === 0) {
     return (
@@ -144,12 +173,6 @@ const PlaceList: React.FC<PlaceListProps> = ({
       </div>
     );
   }
-
-  const currentPagePlaces = sortedPlaces.slice((page - 1) * 20, page * 20);
-  const pageNumbers = getPageNumbersToShow();
-  const currentGroup = Math.floor((page - 1) / 5);
-  const hasNextGroup = (currentGroup + 1) * 5 < totalPages;
-  const hasPrevGroup = currentGroup > 0;
 
   return (
     <div className="w-full flex flex-col h-full">
@@ -174,139 +197,123 @@ const PlaceList: React.FC<PlaceListProps> = ({
       </div>
       
       <div className="mb-2">
-        <Pagination className="justify-start">
-          <PaginationContent className="gap-2">
+        <ScrollArea className="h-[calc(100vh-280px)] md:h-[calc(100vh-350px)]">
+          {currentPlaces.map((place) => (
+            <Card
+              key={place.id}
+              className={`mb-2 cursor-pointer overflow-hidden transition ${
+                selectedPlaces[place.id] ? 'ring-2 ring-jeju-green' : ''
+              }`}
+              onClick={() => handlePlaceClick(place)}
+            >
+              <CardContent className="p-3">
+                <div className="flex justify-between items-start">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span 
+                        className={`${categoryColors[place.category].bg} ${categoryColors[place.category].text} text-[10px] rounded-sm px-1.5 py-0.5`}
+                      >
+                        {getCategoryName(place.category)}
+                      </span>
+                      <h3 className="text-sm font-medium truncate">{place.name}</h3>
+                    </div>
+                    
+                    {place.address && (
+                      <div className="flex items-center gap-1 mt-1.5 text-xs text-muted-foreground">
+                        <MapPin className="h-3 w-3" />
+                        <span className="truncate">{place.address}</span>
+                      </div>
+                    )}
+                    
+                    {place.operatingHours && (
+                      <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
+                        <Clock className="h-3 w-3" />
+                        <span>{place.operatingHours}</span>
+                      </div>
+                    )}
+                    
+                    <div className="flex items-center gap-2 mt-1.5">
+                      {place.rating && (
+                        <div className="flex items-center gap-1">
+                          <Star className="h-3 w-3 text-amber-400" />
+                          <span className="text-xs font-medium">{place.rating}</span>
+                        </div>
+                      )}
+                      
+                      {place.reviewCount && (
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <MessageCircle className="h-3 w-3" />
+                          <span>{place.reviewCount}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {(place.naverLink || place.instaLink) && (
+                    <div className="flex flex-col gap-1 ml-2">
+                      {place.naverLink && (
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-6 w-6"
+                          asChild
+                          onClick={(e) => {
+                            e.stopPropagation();
+                          }}
+                        >
+                          <a href={place.naverLink} target="_blank" rel="noopener noreferrer">
+                            <ExternalLink className="h-3 w-3" />
+                          </a>
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </ScrollArea>
+      </div>
+      
+      {totalPages > 1 && (
+        <Pagination className="mt-2">
+          <PaginationContent>
             <PaginationItem>
               <PaginationPrevious 
-                onClick={() => {
-                  if (page > 1) {
-                    onPageChange(page - 1);
-                  } else if (hasPrevGroup) {
-                    onPageChange(currentGroup * 5);
-                  }
-                }} 
-                className={`h-8 min-w-[4rem] text-xs ${page === 1 && !hasPrevGroup ? "pointer-events-none opacity-50" : ""}`} 
+                className="cursor-pointer" 
+                onClick={() => page > 1 && onPageChange(page - 1)}
+                tabIndex={0}
               />
             </PaginationItem>
             
-            {pageNumbers.map((pageNum) => (
-              <PaginationItem key={pageNum}>
-                <PaginationLink 
-                  isActive={pageNum === page}
-                  onClick={() => onPageChange(pageNum)}
-                  className="h-8 w-8 text-sm font-medium"
-                >
-                  {pageNum}
-                </PaginationLink>
-              </PaginationItem>
+            {getPageNumbers().map((pageNumber, i) => (
+              pageNumber === 0 ? (
+                <PaginationItem key={`ellipsis-${i}`}>
+                  <PaginationEllipsis />
+                </PaginationItem>
+              ) : (
+                <PaginationItem key={pageNumber}>
+                  <PaginationLink
+                    isActive={pageNumber === page}
+                    onClick={() => onPageChange(pageNumber)}
+                    className="cursor-pointer"
+                  >
+                    {pageNumber}
+                  </PaginationLink>
+                </PaginationItem>
+              )
             ))}
             
             <PaginationItem>
               <PaginationNext 
-                onClick={() => {
-                  if (page < totalPages) {
-                    onPageChange(page + 1);
-                  } else if (hasNextGroup) {
-                    onPageChange((currentGroup + 1) * 5 + 1);
-                  }
-                }} 
-                className={`h-8 min-w-[4rem] text-xs ${page === totalPages && !hasNextGroup ? "pointer-events-none opacity-50" : ""}`} 
+                className="cursor-pointer"
+                onClick={() => page < totalPages && onPageChange(page + 1)}
+                tabIndex={0}
               />
             </PaginationItem>
           </PaginationContent>
         </Pagination>
-      </div>
-      
-      <div className="flex-1 min-h-0 overflow-auto">
-        <div className="space-y-1 pr-1 pb-1">
-          {currentPagePlaces.map((place) => (
-            <div
-              key={place.id}
-              className={`place-item px-2 py-2 border rounded hover:bg-gray-50 cursor-pointer transition-colors ${
-                selectedPlaces[place.id] 
-                  ? `bg-${place.category === 'restaurant' ? 'jeju-orange' : place.category === 'cafe' ? 'jeju-green' : place.category === 'attraction' ? 'jeju-blue' : 'purple-500'}/10 border-${place.category === 'restaurant' ? 'jeju-orange' : place.category === 'cafe' ? 'jeju-green' : place.category === 'attraction' ? 'jeju-blue' : 'purple-500'}/30` 
-                  : ''
-              }`}
-              onClick={() => handlePlaceClick(place)}
-            >
-              <div className="flex items-start gap-2">
-                <div className="flex items-center justify-center pt-0.5">
-                  <Checkbox 
-                    checked={selectedPlaces[place.id] || false}
-                    onCheckedChange={() => handlePlaceClick(place)}
-                    className={`${
-                      place.category === 'restaurant' ? 'data-[state=checked]:bg-jeju-orange data-[state=checked]:border-jeju-orange' : 
-                      place.category === 'cafe' ? 'data-[state=checked]:bg-jeju-green data-[state=checked]:border-jeju-green' : 
-                      place.category === 'attraction' ? 'data-[state=checked]:bg-jeju-blue data-[state=checked]:border-jeju-blue' : 
-                      'data-[state=checked]:bg-purple-500 data-[state=checked]:border-purple-500'
-                    } h-3.5 w-3.5`}
-                  />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-start justify-between">
-                    <h3 className="font-medium text-xs line-clamp-1">{place.name}</h3>
-                    <div className="flex items-center gap-0.5 text-amber-500">
-                      <Star className="h-3 w-3 fill-current" />
-                      <span className="text-[10px]">{place.rating.toFixed(1)}</span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center text-[10px] text-muted-foreground mt-1 gap-0.5">
-                    <MapPin className="h-3 w-3" />
-                    <span className="truncate">{place.address}</span>
-                  </div>
-                  
-                  <div className="flex items-center text-[10px] text-muted-foreground mt-0.5 gap-0.5">
-                    <Clock className="h-3 w-3" />
-                    <span className="truncate">{place.operatingHours}</span>
-                  </div>
-                  
-                  <div className="flex items-center justify-between mt-1">
-                    <div className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
-                      <MessageCircle className="h-3 w-3" />
-                      <span>리뷰 {place.reviewCount}개</span>
-                    </div>
-                    
-                    <div className="flex items-center gap-1">
-                      <span 
-                        className={`text-[9px] px-1.5 py-0.5 rounded-full ${categoryColors[place.category]?.bg || 'bg-gray-100'} ${categoryColors[place.category]?.text || 'text-gray-800'}`}
-                      >
-                        {getCategoryName(place.category)}
-                      </span>
-                      
-                      {place.naverLink && (
-                        <a
-                          href={place.naverLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="text-[9px] text-blue-500 hover:underline flex items-center gap-0.5"
-                        >
-                          <ExternalLink className="h-3 w-3" />
-                          네이버
-                        </a>
-                      )}
-                      
-                      {place.instaLink && (
-                        <a
-                          href={place.instaLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="text-[9px] text-purple-500 hover:underline flex items-center gap-0.5"
-                        >
-                          <ExternalLink className="h-3 w-3" />
-                          인스타
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      )}
     </div>
   );
 };

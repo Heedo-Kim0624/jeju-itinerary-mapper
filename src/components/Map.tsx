@@ -1,6 +1,5 @@
 
 import React, { useEffect, useRef, useState } from 'react';
-import 'mapbox-gl/dist/mapbox-gl.css';
 import { toast } from "sonner";
 import { getCategoryColor } from '@/utils/categoryColors';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -50,9 +49,11 @@ interface OSMLink {
 
 declare global {
   interface Window {
-    kakao: any;
+    naver: any;
   }
 }
+
+const NAVER_CLIENT_ID = "w2r5am4bmr"; // 네이버 API Client ID
 
 const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
@@ -60,45 +61,41 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
   const markers = useRef<any[]>([]);
   const polylines = useRef<any[]>([]);
   const [isMapInitialized, setIsMapInitialized] = useState<boolean>(false);
-  const [isKakaoLoaded, setIsKakaoLoaded] = useState<boolean>(false);
+  const [isNaverLoaded, setIsNaverLoaded] = useState<boolean>(false);
   const [popupPlace, setPopupPlace] = useState<Place | null>(null);
   const [showDialog, setShowDialog] = useState<boolean>(false);
 
-  const loadKakaoMapScript = () => {
-    if (window.kakao && window.kakao.maps) {
-      setIsKakaoLoaded(true);
+  const loadNaverMapScript = () => {
+    if (window.naver && window.naver.maps) {
+      setIsNaverLoaded(true);
       return;
     }
 
     const script = document.createElement('script');
     script.async = true;
-    script.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=de034d4cccad63e1be77a7dd6910b730&autoload=false`;
+    script.src = `https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${NAVER_CLIENT_ID}`;
     script.onload = () => {
-      window.kakao.maps.load(() => {
-        setIsKakaoLoaded(true);
-      });
+      setIsNaverLoaded(true);
     };
     document.head.appendChild(script);
   };
 
   const initializeMap = () => {
-    if (!mapContainer.current || !isKakaoLoaded) return;
+    if (!mapContainer.current || !isNaverLoaded) return;
     if (map.current) return;
 
     try {
       const options = {
-        center: new window.kakao.maps.LatLng(33.3846216, 126.5311884),
-        level: 9
+        center: new window.naver.maps.LatLng(33.3846216, 126.5311884),
+        zoom: 10,
+        zoomControl: true,
+        zoomControlOptions: {
+          position: window.naver.maps.Position.RIGHT_CENTER
+        }
       };
 
-      map.current = new window.kakao.maps.Map(mapContainer.current, options);
+      map.current = new window.naver.maps.Map(mapContainer.current, options);
       
-      const zoomControl = new window.kakao.maps.ZoomControl();
-      map.current.addControl(zoomControl, window.kakao.maps.ControlPosition.RIGHT);
-      
-      const mapTypeControl = new window.kakao.maps.MapTypeControl();
-      map.current.addControl(mapTypeControl, window.kakao.maps.ControlPosition.TOPRIGHT);
-
       setIsMapInitialized(true);
       toast.success("지도가 로드되었습니다");
       
@@ -113,35 +110,33 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
     if (!map.current) return;
     
     const jejuBoundaryPath = [
-      new window.kakao.maps.LatLng(33.10, 126.15),
-      new window.kakao.maps.LatLng(33.10, 126.95),
-      new window.kakao.maps.LatLng(33.60, 126.95),
-      new window.kakao.maps.LatLng(33.60, 126.15),
-      new window.kakao.maps.LatLng(33.10, 126.15)
+      new window.naver.maps.LatLng(33.10, 126.15),
+      new window.naver.maps.LatLng(33.10, 126.95),
+      new window.naver.maps.LatLng(33.60, 126.95),
+      new window.naver.maps.LatLng(33.60, 126.15),
+      new window.naver.maps.LatLng(33.10, 126.15)
     ];
     
-    const polygon = new window.kakao.maps.Polygon({
-      path: jejuBoundaryPath,
+    const polygon = new window.naver.maps.Polygon({
+      map: map.current,
+      paths: jejuBoundaryPath,
       strokeWeight: 2,
       strokeColor: '#5EAEFF',
       strokeOpacity: 0.7,
-      strokeStyle: 'solid',
       fillColor: '#6CCEA0',
       fillOpacity: 0.1
     });
-    
-    polygon.setMap(map.current);
   };
 
   useEffect(() => {
-    loadKakaoMapScript();
+    loadNaverMapScript();
   }, []);
 
   useEffect(() => {
-    if (isKakaoLoaded) {
+    if (isNaverLoaded) {
       initializeMap();
     }
-  }, [isKakaoLoaded]);
+  }, [isNaverLoaded]);
 
   const clearMarkers = () => {
     markers.current.forEach(marker => {
@@ -162,55 +157,67 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
     
     clearMarkers();
     
-    const bounds = new window.kakao.maps.LatLngBounds();
+    if (!window.naver || !window.naver.maps) return;
+    
+    const bounds = new window.naver.maps.LatLngBounds();
     
     placesToMark.forEach((place, index) => {
       if (typeof place.x !== 'number' || typeof place.y !== 'number') return;
       
-      const position = new window.kakao.maps.LatLng(place.y, place.x);
+      const position = new window.naver.maps.LatLng(place.y, place.x);
       bounds.extend(position);
       
       const markerColor = getCategoryColor(place.category);
       
-      const content = document.createElement('div');
-      content.className = 'custom-marker animate-fade-in';
-      content.style.width = '30px';
-      content.style.height = '30px';
-      content.style.borderRadius = '50%';
-      content.style.display = 'flex';
-      content.style.alignItems = 'center';
-      content.style.justifyContent = 'center';
-      content.style.fontSize = '14px';
-      content.style.fontWeight = 'bold';
-      content.style.color = 'white';
-      content.style.backgroundColor = markerColor;
-      content.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
-      content.style.cursor = 'pointer';
+      // Create custom HTML for marker
+      const markerDiv = document.createElement('div');
+      markerDiv.className = 'custom-marker animate-fade-in';
+      markerDiv.style.width = '30px';
+      markerDiv.style.height = '30px';
+      markerDiv.style.borderRadius = '50%';
+      markerDiv.style.display = 'flex';
+      markerDiv.style.alignItems = 'center';
+      markerDiv.style.justifyContent = 'center';
+      markerDiv.style.fontSize = '14px';
+      markerDiv.style.fontWeight = 'bold';
+      markerDiv.style.color = 'white';
+      markerDiv.style.backgroundColor = markerColor;
+      markerDiv.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+      markerDiv.style.cursor = 'pointer';
       
       if (isItinerary) {
-        content.textContent = (index + 1).toString();
+        markerDiv.textContent = (index + 1).toString();
       } else {
-        content.textContent = place.category.charAt(0).toUpperCase();
+        markerDiv.textContent = place.category.charAt(0).toUpperCase();
       }
       
-      const customOverlay = new window.kakao.maps.CustomOverlay({
+      const marker = new window.naver.maps.Marker({
         position: position,
-        content: content,
-        yAnchor: 1
+        map: map.current,
+        title: place.name,
+        icon: {
+          content: markerDiv,
+          size: new window.naver.maps.Size(30, 30),
+          anchor: new window.naver.maps.Point(15, 15)
+        }
       });
       
-      customOverlay.setMap(map.current);
-      markers.current.push(customOverlay);
+      markers.current.push(marker);
       
       // Add click event to show place details
-      window.kakao.maps.event.addListener(customOverlay, 'click', function() {
+      window.naver.maps.Event.addListener(marker, 'click', () => {
         setPopupPlace(place);
         setShowDialog(true);
       });
     });
     
     if (placesToMark.length > 0) {
-      map.current.setBounds(bounds, 60);
+      map.current.fitBounds(bounds, {
+        top: 50,
+        right: 50,
+        bottom: 50,
+        left: 50
+      });
     }
   };
 
@@ -220,23 +227,25 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
     clearPolylines();
     
     const linePath = routePlaces.map(place => 
-      new window.kakao.maps.LatLng(place.y, place.x)
+      new window.naver.maps.LatLng(place.y, place.x)
     );
     
-    const polyline = new window.kakao.maps.Polyline({
+    const polyline = new window.naver.maps.Polyline({
       path: linePath,
       strokeWeight: 3,
       strokeColor: '#5EAEFF',
       strokeOpacity: 0.8,
-      strokeStyle: 'dashed'
+      strokeStyle: 'dashed',
+      strokeLineCap: 'round',
+      strokeLineJoin: 'round',
+      map: map.current
     });
     
-    polyline.setMap(map.current);
     polylines.current.push(polyline);
   };
 
   useEffect(() => {
-    if (!isMapInitialized || !isKakaoLoaded) return;
+    if (!isMapInitialized || !isNaverLoaded) return;
     
     if (itinerary && selectedDay !== null) {
       const dayPlaces = itinerary.find(day => day.day === selectedDay)?.places || [];
@@ -252,14 +261,14 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
     } else if (places.length > 0) {
       addMarkers(places);
     }
-  }, [places, selectedPlace, itinerary, selectedDay, isMapInitialized, isKakaoLoaded]);
+  }, [places, selectedPlace, itinerary, selectedDay, isMapInitialized, isNaverLoaded]);
 
-  if (!isKakaoLoaded) {
+  if (!isNaverLoaded) {
     return (
       <div className="w-full h-full flex flex-col items-center justify-center bg-jeju-light-gray rounded-lg p-6">
         <h3 className="text-xl font-medium mb-4">지도를 불러오는 중...</h3>
         <p className="text-sm text-gray-600 mb-4 text-center max-w-md">
-          카카오맵 API를 불러오는 중입니다. 잠시만 기다려주세요.
+          네이버 지도 API를 불러오는 중입니다. 잠시만 기다려주세요.
         </p>
       </div>
     );
@@ -341,4 +350,3 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
 };
 
 export default Map;
-
