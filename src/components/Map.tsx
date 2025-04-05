@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import { toast } from "sonner";
 import { getCategoryColor } from '@/utils/categoryColors';
@@ -54,6 +53,28 @@ declare global {
 }
 
 const NAVER_CLIENT_ID = "w2r5am4bmr"; // 네이버 API Client ID
+const NAVER_CLIENT_SECRET = "s987v8GxlHxZMP0HTBMBcjirphkvOORrJeH6vly1"; // 네이버 API Client Secret
+
+// 제주도 중심 좌표
+const JEJU_CENTER = { lat: 33.3846216, lng: 126.5311884 };
+// 제주도 경계 좌표 (정확한 해안선 형태를 위한 상세 좌표)
+const JEJU_BOUNDARY = [
+  { lat: 33.5427, lng: 126.5426 }, // 제주시
+  { lat: 33.4996, lng: 126.5312 }, // 조천읍
+  { lat: 33.4841, lng: 126.4831 }, // 애월읍
+  { lat: 33.4567, lng: 126.3387 }, // 한림읍
+  { lat: 33.3936, lng: 126.2422 }, // 한경면
+  { lat: 33.2905, lng: 126.1638 }, // 대정읍
+  { lat: 33.2500, lng: 126.2853 }, // 안덕면
+  { lat: 33.2482, lng: 126.4155 }, // 중문
+  { lat: 33.2439, lng: 126.5631 }, // 서귀포시
+  { lat: 33.2510, lng: 126.6224 }, // 남원읍
+  { lat: 33.3183, lng: 126.7446 }, // 표선면
+  { lat: 33.3825, lng: 126.8284 }, // 성산읍
+  { lat: 33.4943, lng: 126.8369 }, // 구좌읍
+  { lat: 33.5427, lng: 126.6597 }, // 우도면
+  { lat: 33.5427, lng: 126.5426 }  // 다시 제주시 (폐곡선을 위해)
+];
 
 const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
@@ -86,11 +107,15 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
 
     try {
       const options = {
-        center: new window.naver.maps.LatLng(33.3846216, 126.5311884),
+        center: new window.naver.maps.LatLng(JEJU_CENTER.lat, JEJU_CENTER.lng),
         zoom: 10,
         zoomControl: true,
         zoomControlOptions: {
           position: window.naver.maps.Position.RIGHT_CENTER
+        },
+        mapTypeControl: true,
+        mapTypeControlOptions: {
+          style: window.naver.maps.MapTypeControlStyle.DROPDOWN
         }
       };
 
@@ -109,22 +134,31 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
   const drawJejuBoundary = () => {
     if (!map.current) return;
     
-    const jejuBoundaryPath = [
-      new window.naver.maps.LatLng(33.10, 126.15),
-      new window.naver.maps.LatLng(33.10, 126.95),
-      new window.naver.maps.LatLng(33.60, 126.95),
-      new window.naver.maps.LatLng(33.60, 126.15),
-      new window.naver.maps.LatLng(33.10, 126.15)
-    ];
+    // 제주도 경계선 그리기
+    const jejuBoundaryPath = JEJU_BOUNDARY.map(coord => 
+      new window.naver.maps.LatLng(coord.lat, coord.lng)
+    );
     
+    // 제주도 해안선 표시
     const polygon = new window.naver.maps.Polygon({
       map: map.current,
       paths: jejuBoundaryPath,
       strokeWeight: 2,
       strokeColor: '#5EAEFF',
-      strokeOpacity: 0.7,
+      strokeOpacity: 0.8,
       fillColor: '#6CCEA0',
-      fillOpacity: 0.1
+      fillOpacity: 0.2
+    });
+    
+    // 제주도 이름 라벨 표시
+    new window.naver.maps.Marker({
+      position: new window.naver.maps.LatLng(JEJU_CENTER.lat, JEJU_CENTER.lng),
+      map: map.current,
+      icon: {
+        content: `<div style="padding: 5px 10px; background-color: rgba(255,255,255,0.8); border-radius: 20px; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">제주도</div>`,
+        anchor: new window.naver.maps.Point(30, 10)
+      },
+      clickable: false
     });
   };
 
@@ -199,7 +233,8 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
           content: markerDiv,
           size: new window.naver.maps.Size(30, 30),
           anchor: new window.naver.maps.Point(15, 15)
-        }
+        },
+        animation: window.naver.maps.Animation.DROP
       });
       
       markers.current.push(marker);
@@ -212,6 +247,7 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
     });
     
     if (placesToMark.length > 0) {
+      // 적절한 줌 레벨로 경계 맞추기 (여백 추가)
       map.current.fitBounds(bounds, {
         top: 50,
         right: 50,
@@ -235,13 +271,36 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
       strokeWeight: 3,
       strokeColor: '#5EAEFF',
       strokeOpacity: 0.8,
-      strokeStyle: 'dashed',
+      strokeStyle: 'solid',
       strokeLineCap: 'round',
       strokeLineJoin: 'round',
       map: map.current
     });
     
     polylines.current.push(polyline);
+    
+    // 출발지와 도착지 표시
+    const startMarker = new window.naver.maps.Marker({
+      position: linePath[0],
+      map: map.current,
+      icon: {
+        content: `<div style="padding: 5px 8px; background-color: #4CAF50; color: white; border-radius: 12px; font-weight: bold; font-size: 12px;">출발</div>`,
+        anchor: new window.naver.maps.Point(20, 10)
+      },
+      zIndex: 100
+    });
+    
+    const endMarker = new window.naver.maps.Marker({
+      position: linePath[linePath.length - 1],
+      map: map.current,
+      icon: {
+        content: `<div style="padding: 5px 8px; background-color: #F44336; color: white; border-radius: 12px; font-weight: bold; font-size: 12px;">도착</div>`,
+        anchor: new window.naver.maps.Point(20, 10)
+      },
+      zIndex: 100
+    });
+    
+    markers.current.push(startMarker, endMarker);
   };
 
   useEffect(() => {
@@ -270,6 +329,7 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
         <p className="text-sm text-gray-600 mb-4 text-center max-w-md">
           네이버 지도 API를 불러오는 중입니다. 잠시만 기다려주세요.
         </p>
+        <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
@@ -278,7 +338,31 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
     <div className="relative w-full h-full">
       <div ref={mapContainer} className="absolute inset-0 rounded-lg overflow-hidden" />
       <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-md shadow-md z-10 text-sm">
-        <p className="font-medium text-jeju-black">제주도 여행 계획</p>
+        <p className="font-medium text-jeju-black">제주도 여행 플래너</p>
+      </div>
+      
+      {/* Map type controls */}
+      <div className="absolute top-4 right-4 z-10">
+        <div className="bg-white/90 backdrop-blur-sm rounded-md shadow-md overflow-hidden">
+          <button 
+            className="px-3 py-1.5 text-sm hover:bg-blue-50 transition-colors" 
+            onClick={() => map.current?.setMapTypeId(window.naver.maps.MapTypeId.NORMAL)}
+          >
+            일반
+          </button>
+          <button 
+            className="px-3 py-1.5 text-sm hover:bg-blue-50 transition-colors" 
+            onClick={() => map.current?.setMapTypeId(window.naver.maps.MapTypeId.SATELLITE)}
+          >
+            위성
+          </button>
+          <button 
+            className="px-3 py-1.5 text-sm hover:bg-blue-50 transition-colors" 
+            onClick={() => map.current?.setMapTypeId(window.naver.maps.MapTypeId.HYBRID)}
+          >
+            하이브리드
+          </button>
+        </div>
       </div>
 
       {/* Dialog for place details */}
