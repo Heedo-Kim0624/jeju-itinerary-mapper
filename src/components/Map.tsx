@@ -103,7 +103,6 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
     script.onload = () => {
       console.log("Naver Maps script loaded successfully");
       setIsNaverLoaded(true);
-      setLoadAttempts(prev => prev + 1);
     };
     
     script.onerror = (error) => {
@@ -116,62 +115,93 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
   };
 
   const initializeMap = () => {
-    if (!mapContainer.current || !isNaverLoaded) return;
-    if (map.current) return;
+    if (!mapContainer.current || !window.naver || !window.naver.maps) {
+      console.error("Cannot initialize map - container or naver maps not available");
+      return;
+    }
+    
+    if (map.current) {
+      console.log("Map already initialized");
+      return;
+    }
     
     try {
-      console.log("Initializing map with container:", mapContainer.current);
-      console.log("Naver maps object available:", !!window.naver?.maps);
+      console.log("Initializing map...");
+      console.log("Map container dimensions:", mapContainer.current.offsetWidth, "x", mapContainer.current.offsetHeight);
+      console.log("Naver maps object available:", !!window.naver.maps);
       
-      if (!window.naver || !window.naver.maps) {
-        console.error("Naver maps not available despite isNaverLoaded being true");
-        setIsMapError(true);
+      // Check if container has dimensions
+      if (mapContainer.current.offsetWidth === 0 || mapContainer.current.offsetHeight === 0) {
+        console.warn("Map container has zero dimensions, waiting...");
+        setTimeout(initializeMap, 500);
         return;
       }
 
       const options = {
         center: new window.naver.maps.LatLng(JEJU_CENTER.lat, JEJU_CENTER.lng),
         zoom: 10,
+        minZoom: 7,  // 최소 줌 레벨
+        maxZoom: 18, // 최대 줌 레벨
         zoomControl: true,
         zoomControlOptions: {
-          position: window.naver.maps.Position.RIGHT_CENTER
+          position: window.naver.maps.Position.TOP_RIGHT
         },
         mapTypeControl: true,
+        scaleControl: true,
+        logoControl: true,
+        mapDataControl: true,
         mapTypeControlOptions: {
           style: window.naver.maps.MapTypeControlStyle.DROPDOWN
-        }
+        },
+        draggable: true, // 드래그 가능하도록 설정
+        pinchZoom: true, // 핀치 줌 가능하도록 설정
+        scrollWheel: true, // 스크롤로 줌 가능하도록 설정
       };
 
       map.current = new window.naver.maps.Map(mapContainer.current, options);
       
-      console.log("Map initialized successfully");
-      setIsMapInitialized(true);
-      toast.success("지도가 로드되었습니다");
-      
-      // Force a repaint of the container
-      setTimeout(() => {
-        if (mapContainer.current) {
-          mapContainer.current.style.visibility = "hidden";
-          setTimeout(() => {
-            if (mapContainer.current) {
-              mapContainer.current.style.visibility = "visible";
-            }
-          }, 50);
+      // 지도가 로드된 후 이벤트 처리
+      window.naver.maps.Event.once(map.current, 'init', function() {
+        console.log("Map init event fired");
+        setIsMapInitialized(true);
+        toast.success("지도가 로드되었습니다");
+        drawJejuBoundary();
+        
+        // 지도 컨트롤러에 대한 스타일 조정
+        const mapEl = mapContainer.current;
+        if (mapEl) {
+          // 네이버 지도의 기본 UI 스타일 조정
+          const naverControlsElements = mapEl.querySelectorAll('.nm-toolbar');
+          naverControlsElements.forEach(element => {
+            (element as HTMLElement).style.zIndex = '100';
+          });
         }
-      }, 100);
+      });
       
-      drawJejuBoundary();
+      window.naver.maps.Event.addListener(map.current, 'dragend', () => {
+        console.log('Map dragged to:', map.current.getCenter().toString());
+      });
+      
+      window.naver.maps.Event.addListener(map.current, 'zoom_changed', (zoom: number) => {
+        console.log('Zoom changed to:', zoom);
+      });
+      
     } catch (error) {
       console.error("Failed to initialize map:", error);
       setIsMapError(true);
-      toast.error("지도 초기화에 실패했습니다");
+      toast.error("지도 초기화에 실패했습니다. 새로고침해주세요.");
     }
   };
 
   const drawJejuBoundary = () => {
-    if (!map.current) return;
+    if (!map.current || !window.naver) {
+      console.error("Cannot draw Jeju boundary - map or naver not initialized");
+      return;
+    }
     
     try {
+      console.log("Drawing Jeju boundary...");
+      
       // 제주도 경계선 그리기
       const jejuBoundaryPath = JEJU_BOUNDARY.map(coord => 
         new window.naver.maps.LatLng(coord.lat, coord.lng)
@@ -188,13 +218,13 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
         fillOpacity: 0.2
       });
       
-      // 제주도 이름 라벨 표시
-      new window.naver.maps.Marker({
+      // 제주도 이름 라벨 표시 (커스텀 오버레이)
+      const jejuLabel = new window.naver.maps.Marker({
         position: new window.naver.maps.LatLng(JEJU_CENTER.lat, JEJU_CENTER.lng),
         map: map.current,
         icon: {
-          content: `<div style="padding: 5px 10px; background-color: rgba(255,255,255,0.8); border-radius: 20px; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">제주도</div>`,
-          anchor: new window.naver.maps.Point(30, 10)
+          content: `<div style="padding: 8px 12px; background-color: rgba(255,255,255,0.9); border-radius: 20px; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.2); font-size: 14px;">제주도</div>`,
+          anchor: new window.naver.maps.Point(30, 16)
         },
         clickable: false
       });
@@ -214,7 +244,8 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
     return () => {
       if (map.current) {
         console.log("Cleaning up map instance");
-        // Clean up any map resources if needed
+        markers.current.forEach(marker => marker.setMap(null));
+        polylines.current.forEach(polyline => polyline.setMap(null));
       }
     };
   }, []);
@@ -223,8 +254,11 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
   useEffect(() => {
     console.log("useEffect - isNaverLoaded:", isNaverLoaded);
     if (isNaverLoaded) {
-      console.log("Naver loaded, initializing map...");
-      initializeMap();
+      // 약간의 지연을 두고 초기화 시도 (DOM이 준비되었는지 확인)
+      setTimeout(() => {
+        console.log("Delayed map initialization");
+        initializeMap();
+      }, 300);
     }
   }, [isNaverLoaded]);
 
@@ -234,12 +268,26 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
       console.log("Map error detected, retrying...");
       const timer = setTimeout(() => {
         setIsMapError(false);
+        setLoadAttempts(prev => prev + 1);
         loadNaverMapScript();
       }, 2000);
       
       return () => clearTimeout(timer);
     }
   }, [isMapError, loadAttempts]);
+
+  // Add resize event listener to handle responsive behavior
+  useEffect(() => {
+    const handleResize = () => {
+      if (map.current && mapContainer.current) {
+        console.log("Window resized, triggering map resize");
+        window.naver.maps.Event.trigger(map.current, 'resize');
+      }
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const clearMarkers = () => {
     markers.current.forEach(marker => {
@@ -256,124 +304,170 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
   };
 
   const addMarkers = (placesToMark: Place[], isItinerary: boolean = false) => {
-    if (!map.current || !isMapInitialized) return;
+    if (!map.current || !isMapInitialized || !window.naver) return;
     
     clearMarkers();
     
-    if (!window.naver || !window.naver.maps) return;
+    console.log(`Adding ${placesToMark.length} markers, isItinerary:`, isItinerary);
     
-    const bounds = new window.naver.maps.LatLngBounds();
-    
-    placesToMark.forEach((place, index) => {
-      if (typeof place.x !== 'number' || typeof place.y !== 'number') return;
+    try {
+      const bounds = new window.naver.maps.LatLngBounds();
       
-      const position = new window.naver.maps.LatLng(place.y, place.x);
-      bounds.extend(position);
+      placesToMark.forEach((place, index) => {
+        if (typeof place.x !== 'number' || typeof place.y !== 'number') {
+          console.warn("Invalid coordinates for place:", place);
+          return;
+        }
+        
+        const position = new window.naver.maps.LatLng(place.y, place.x);
+        bounds.extend(position);
+        
+        const markerColor = getCategoryColor(place.category);
+        
+        // Create custom HTML for marker
+        const markerDiv = document.createElement('div');
+        markerDiv.className = 'custom-marker animate-fade-in';
+        markerDiv.style.width = '30px';
+        markerDiv.style.height = '30px';
+        markerDiv.style.borderRadius = '50%';
+        markerDiv.style.display = 'flex';
+        markerDiv.style.alignItems = 'center';
+        markerDiv.style.justifyContent = 'center';
+        markerDiv.style.fontSize = '14px';
+        markerDiv.style.fontWeight = 'bold';
+        markerDiv.style.color = 'white';
+        markerDiv.style.backgroundColor = markerColor;
+        markerDiv.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+        markerDiv.style.cursor = 'pointer';
+        markerDiv.style.transition = 'transform 0.2s ease';
+        markerDiv.style.animation = 'dropIn 0.5s ease-out';
+        
+        if (isItinerary) {
+          markerDiv.textContent = (index + 1).toString();
+        } else {
+          markerDiv.textContent = place.category.charAt(0).toUpperCase();
+        }
+        
+        // Add CSS animation for markers
+        const style = document.createElement('style');
+        style.innerHTML = `
+          @keyframes dropIn {
+            0% { transform: translateY(-20px); opacity: 0; }
+            100% { transform: translateY(0); opacity: 1; }
+          }
+        `;
+        document.head.appendChild(style);
+        
+        const marker = new window.naver.maps.Marker({
+          position: position,
+          map: map.current,
+          title: place.name,
+          icon: {
+            content: markerDiv,
+            size: new window.naver.maps.Size(30, 30),
+            anchor: new window.naver.maps.Point(15, 15)
+          }
+        });
+        
+        // 마커에 호버 효과 추가
+        window.naver.maps.Event.addListener(marker, 'mouseover', () => {
+          markerDiv.style.transform = 'scale(1.2)';
+        });
+        
+        window.naver.maps.Event.addListener(marker, 'mouseout', () => {
+          markerDiv.style.transform = 'scale(1)';
+        });
+        
+        markers.current.push(marker);
+        
+        // Add click event to show place details
+        window.naver.maps.Event.addListener(marker, 'click', () => {
+          setPopupPlace(place);
+          setShowDialog(true);
+        });
+      });
       
-      const markerColor = getCategoryColor(place.category);
-      
-      // Create custom HTML for marker
-      const markerDiv = document.createElement('div');
-      markerDiv.className = 'custom-marker animate-fade-in';
-      markerDiv.style.width = '30px';
-      markerDiv.style.height = '30px';
-      markerDiv.style.borderRadius = '50%';
-      markerDiv.style.display = 'flex';
-      markerDiv.style.alignItems = 'center';
-      markerDiv.style.justifyContent = 'center';
-      markerDiv.style.fontSize = '14px';
-      markerDiv.style.fontWeight = 'bold';
-      markerDiv.style.color = 'white';
-      markerDiv.style.backgroundColor = markerColor;
-      markerDiv.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
-      markerDiv.style.cursor = 'pointer';
-      
-      if (isItinerary) {
-        markerDiv.textContent = (index + 1).toString();
-      } else {
-        markerDiv.textContent = place.category.charAt(0).toUpperCase();
+      if (placesToMark.length > 0) {
+        console.log("Fitting map to bounds");
+        // 적절한 줌 레벨로 경계 맞추기 (여백 추가)
+        map.current.fitBounds(bounds, {
+          top: 50,
+          right: 50,
+          bottom: 50,
+          left: 50
+        });
       }
-      
-      const marker = new window.naver.maps.Marker({
-        position: position,
-        map: map.current,
-        title: place.name,
-        icon: {
-          content: markerDiv,
-          size: new window.naver.maps.Size(30, 30),
-          anchor: new window.naver.maps.Point(15, 15)
-        },
-        animation: window.naver.maps.Animation.DROP
-      });
-      
-      markers.current.push(marker);
-      
-      // Add click event to show place details
-      window.naver.maps.Event.addListener(marker, 'click', () => {
-        setPopupPlace(place);
-        setShowDialog(true);
-      });
-    });
-    
-    if (placesToMark.length > 0) {
-      // 적절한 줌 레벨로 경계 맞추기 (여백 추가)
-      map.current.fitBounds(bounds, {
-        top: 50,
-        right: 50,
-        bottom: 50,
-        left: 50
-      });
+    } catch (error) {
+      console.error("Error adding markers:", error);
     }
   };
 
   const drawRoute = (routePlaces: Place[]) => {
-    if (!map.current || !isMapInitialized || routePlaces.length <= 1) return;
+    if (!map.current || !isMapInitialized || routePlaces.length <= 1 || !window.naver) {
+      console.log("Cannot draw route - prerequisites not met");
+      return;
+    }
     
     clearPolylines();
     
-    const linePath = routePlaces.map(place => 
-      new window.naver.maps.LatLng(place.y, place.x)
-    );
-    
-    const polyline = new window.naver.maps.Polyline({
-      path: linePath,
-      strokeWeight: 3,
-      strokeColor: '#5EAEFF',
-      strokeOpacity: 0.8,
-      strokeStyle: 'solid',
-      strokeLineCap: 'round',
-      strokeLineJoin: 'round',
-      map: map.current
-    });
-    
-    polylines.current.push(polyline);
-    
-    // 출발지와 도착지 표시
-    const startMarker = new window.naver.maps.Marker({
-      position: linePath[0],
-      map: map.current,
-      icon: {
-        content: `<div style="padding: 5px 8px; background-color: #4CAF50; color: white; border-radius: 12px; font-weight: bold; font-size: 12px;">출발</div>`,
-        anchor: new window.naver.maps.Point(20, 10)
-      },
-      zIndex: 100
-    });
-    
-    const endMarker = new window.naver.maps.Marker({
-      position: linePath[linePath.length - 1],
-      map: map.current,
-      icon: {
-        content: `<div style="padding: 5px 8px; background-color: #F44336; color: white; border-radius: 12px; font-weight: bold; font-size: 12px;">도착</div>`,
-        anchor: new window.naver.maps.Point(20, 10)
-      },
-      zIndex: 100
-    });
-    
-    markers.current.push(startMarker, endMarker);
+    try {
+      const linePath = routePlaces.map(place => 
+        new window.naver.maps.LatLng(place.y, place.x)
+      );
+      
+      const polyline = new window.naver.maps.Polyline({
+        path: linePath,
+        strokeWeight: 3,
+        strokeColor: '#5EAEFF',
+        strokeOpacity: 0.8,
+        strokeStyle: 'solid',
+        strokeLineCap: 'round',
+        strokeLineJoin: 'round',
+        map: map.current
+      });
+      
+      polylines.current.push(polyline);
+      
+      // 출발지와 도착지 표시
+      const startMarker = new window.naver.maps.Marker({
+        position: linePath[0],
+        map: map.current,
+        icon: {
+          content: `<div style="padding: 5px 8px; background-color: #4CAF50; color: white; border-radius: 12px; font-weight: bold; font-size: 12px;">출발</div>`,
+          anchor: new window.naver.maps.Point(20, 10)
+        },
+        zIndex: 100
+      });
+      
+      const endMarker = new window.naver.maps.Marker({
+        position: linePath[linePath.length - 1],
+        map: map.current,
+        icon: {
+          content: `<div style="padding: 5px 8px; background-color: #F44336; color: white; border-radius: 12px; font-weight: bold; font-size: 12px;">도착</div>`,
+          anchor: new window.naver.maps.Point(20, 10)
+        },
+        zIndex: 100
+      });
+      
+      markers.current.push(startMarker, endMarker);
+      console.log("Route drawn successfully");
+    } catch (error) {
+      console.error("Error drawing route:", error);
+    }
   };
 
   useEffect(() => {
-    if (!isMapInitialized || !isNaverLoaded) return;
+    if (!isMapInitialized || !window.naver) {
+      console.log("Map not ready for data rendering");
+      return;
+    }
+    
+    console.log("Data changed, updating map visualization");
+    console.log("- isMapInitialized:", isMapInitialized);
+    console.log("- selectedPlace:", selectedPlace?.name);
+    console.log("- places count:", places?.length);
+    console.log("- itinerary days:", itinerary?.length);
+    console.log("- selectedDay:", selectedDay);
     
     if (itinerary && selectedDay !== null) {
       const dayPlaces = itinerary.find(day => day.day === selectedDay)?.places || [];
@@ -389,7 +483,7 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
     } else if (places.length > 0) {
       addMarkers(places);
     }
-  }, [places, selectedPlace, itinerary, selectedDay, isMapInitialized, isNaverLoaded]);
+  }, [places, selectedPlace, itinerary, selectedDay, isMapInitialized]);
 
   // Loading or error state
   if (!isNaverLoaded || isMapError) {
@@ -419,6 +513,7 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
             variant="default" 
             onClick={() => {
               setIsMapError(false);
+              setLoadAttempts(prev => prev + 1);
               loadNaverMapScript();
             }}
           >
@@ -430,8 +525,23 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
   }
 
   return (
-    <div className="relative w-full h-full">
-      <div id="map-container" ref={mapContainer} className="absolute inset-0 rounded-lg overflow-hidden" style={{visibility: 'visible'}} />
+    <div className="relative w-full h-full flex items-center justify-center">
+      <div 
+        id="map-container" 
+        ref={mapContainer} 
+        className="absolute inset-0 rounded-lg overflow-hidden" 
+        style={{visibility: 'visible'}}
+      />
+      
+      {!isMapInitialized && (
+        <div className="absolute inset-0 flex items-center justify-center bg-white/50 backdrop-blur-sm z-10">
+          <div className="flex flex-col items-center">
+            <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+            <p className="font-medium">지도를 초기화하는 중...</p>
+          </div>
+        </div>
+      )}
+      
       <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-md shadow-md z-10 text-sm">
         <p className="font-medium text-jeju-black">제주도 여행 플래너</p>
       </div>
@@ -439,24 +549,30 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
       {/* Map type controls */}
       <div className="absolute top-4 right-4 z-10">
         <div className="bg-white/90 backdrop-blur-sm rounded-md shadow-md overflow-hidden">
-          <button 
-            className="px-3 py-1.5 text-sm hover:bg-blue-50 transition-colors" 
-            onClick={() => map.current?.setMapTypeId(window.naver.maps.MapTypeId.NORMAL)}
-          >
-            일반
-          </button>
-          <button 
-            className="px-3 py-1.5 text-sm hover:bg-blue-50 transition-colors" 
-            onClick={() => map.current?.setMapTypeId(window.naver.maps.MapTypeId.SATELLITE)}
-          >
-            위성
-          </button>
-          <button 
-            className="px-3 py-1.5 text-sm hover:bg-blue-50 transition-colors" 
-            onClick={() => map.current?.setMapTypeId(window.naver.maps.MapTypeId.HYBRID)}
-          >
-            하이브리드
-          </button>
+          {window.naver && window.naver.maps ? (
+            <>
+              <button 
+                className="px-3 py-1.5 text-sm hover:bg-blue-50 transition-colors" 
+                onClick={() => map.current?.setMapTypeId(window.naver.maps.MapTypeId.NORMAL)}
+              >
+                일반
+              </button>
+              <button 
+                className="px-3 py-1.5 text-sm hover:bg-blue-50 transition-colors" 
+                onClick={() => map.current?.setMapTypeId(window.naver.maps.MapTypeId.SATELLITE)}
+              >
+                위성
+              </button>
+              <button 
+                className="px-3 py-1.5 text-sm hover:bg-blue-50 transition-colors" 
+                onClick={() => map.current?.setMapTypeId(window.naver.maps.MapTypeId.HYBRID)}
+              >
+                하이브리드
+              </button>
+            </>
+          ) : (
+            <div className="px-3 py-1.5 text-sm text-gray-400">지도 로딩 중...</div>
+          )}
         </div>
       </div>
 
