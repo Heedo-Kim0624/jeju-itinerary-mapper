@@ -1,10 +1,11 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 import { toast } from "sonner";
 import { getCategoryColor } from '@/utils/categoryColors';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Button } from "@/components/ui/button";
-import { MapPin, Star, Clock, ExternalLink } from "lucide-react";
+import { MapPin, Star, Clock, ExternalLink, AlertCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface MapProps {
@@ -53,7 +54,6 @@ declare global {
 }
 
 const NAVER_CLIENT_ID = "w2r5am4bmr"; // 네이버 API Client ID
-const NAVER_CLIENT_SECRET = "s987v8GxlHxZMP0HTBMBcjirphkvOORrJeH6vly1"; // 네이버 API Client Secret
 
 // 제주도 중심 좌표
 const JEJU_CENTER = { lat: 33.3846216, lng: 126.5311884 };
@@ -83,29 +83,52 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
   const polylines = useRef<any[]>([]);
   const [isMapInitialized, setIsMapInitialized] = useState<boolean>(false);
   const [isNaverLoaded, setIsNaverLoaded] = useState<boolean>(false);
+  const [isMapError, setIsMapError] = useState<boolean>(false);
+  const [loadAttempts, setLoadAttempts] = useState<number>(0);
   const [popupPlace, setPopupPlace] = useState<Place | null>(null);
   const [showDialog, setShowDialog] = useState<boolean>(false);
 
   const loadNaverMapScript = () => {
     if (window.naver && window.naver.maps) {
+      console.log("Naver Maps already loaded");
       setIsNaverLoaded(true);
       return;
     }
 
+    console.log("Loading Naver Maps script...");
     const script = document.createElement('script');
     script.async = true;
     script.src = `https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${NAVER_CLIENT_ID}`;
+    
     script.onload = () => {
+      console.log("Naver Maps script loaded successfully");
       setIsNaverLoaded(true);
+      setLoadAttempts(prev => prev + 1);
     };
+    
+    script.onerror = (error) => {
+      console.error("Failed to load Naver Maps script:", error);
+      setIsMapError(true);
+      toast.error("지도 로드에 실패했습니다. 새로고침해주세요.");
+    };
+    
     document.head.appendChild(script);
   };
 
   const initializeMap = () => {
     if (!mapContainer.current || !isNaverLoaded) return;
     if (map.current) return;
-
+    
     try {
+      console.log("Initializing map with container:", mapContainer.current);
+      console.log("Naver maps object available:", !!window.naver?.maps);
+      
+      if (!window.naver || !window.naver.maps) {
+        console.error("Naver maps not available despite isNaverLoaded being true");
+        setIsMapError(true);
+        return;
+      }
+
       const options = {
         center: new window.naver.maps.LatLng(JEJU_CENTER.lat, JEJU_CENTER.lng),
         zoom: 10,
@@ -121,56 +144,102 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
 
       map.current = new window.naver.maps.Map(mapContainer.current, options);
       
+      console.log("Map initialized successfully");
       setIsMapInitialized(true);
       toast.success("지도가 로드되었습니다");
+      
+      // Force a repaint of the container
+      setTimeout(() => {
+        if (mapContainer.current) {
+          mapContainer.current.style.visibility = "hidden";
+          setTimeout(() => {
+            if (mapContainer.current) {
+              mapContainer.current.style.visibility = "visible";
+            }
+          }, 50);
+        }
+      }, 100);
       
       drawJejuBoundary();
     } catch (error) {
       console.error("Failed to initialize map:", error);
-      toast.error("지도 로드에 실패했습니다");
+      setIsMapError(true);
+      toast.error("지도 초기화에 실패했습니다");
     }
   };
 
   const drawJejuBoundary = () => {
     if (!map.current) return;
     
-    // 제주도 경계선 그리기
-    const jejuBoundaryPath = JEJU_BOUNDARY.map(coord => 
-      new window.naver.maps.LatLng(coord.lat, coord.lng)
-    );
-    
-    // 제주도 해안선 표시
-    const polygon = new window.naver.maps.Polygon({
-      map: map.current,
-      paths: jejuBoundaryPath,
-      strokeWeight: 2,
-      strokeColor: '#5EAEFF',
-      strokeOpacity: 0.8,
-      fillColor: '#6CCEA0',
-      fillOpacity: 0.2
-    });
-    
-    // 제주도 이름 라벨 표시
-    new window.naver.maps.Marker({
-      position: new window.naver.maps.LatLng(JEJU_CENTER.lat, JEJU_CENTER.lng),
-      map: map.current,
-      icon: {
-        content: `<div style="padding: 5px 10px; background-color: rgba(255,255,255,0.8); border-radius: 20px; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">제주도</div>`,
-        anchor: new window.naver.maps.Point(30, 10)
-      },
-      clickable: false
-    });
+    try {
+      // 제주도 경계선 그리기
+      const jejuBoundaryPath = JEJU_BOUNDARY.map(coord => 
+        new window.naver.maps.LatLng(coord.lat, coord.lng)
+      );
+      
+      // 제주도 해안선 표시
+      const polygon = new window.naver.maps.Polygon({
+        map: map.current,
+        paths: jejuBoundaryPath,
+        strokeWeight: 2,
+        strokeColor: '#5EAEFF',
+        strokeOpacity: 0.8,
+        fillColor: '#6CCEA0',
+        fillOpacity: 0.2
+      });
+      
+      // 제주도 이름 라벨 표시
+      new window.naver.maps.Marker({
+        position: new window.naver.maps.LatLng(JEJU_CENTER.lat, JEJU_CENTER.lng),
+        map: map.current,
+        icon: {
+          content: `<div style="padding: 5px 10px; background-color: rgba(255,255,255,0.8); border-radius: 20px; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">제주도</div>`,
+          anchor: new window.naver.maps.Point(30, 10)
+        },
+        clickable: false
+      });
+      
+      console.log("Jeju boundary drawn successfully");
+    } catch (error) {
+      console.error("Failed to draw Jeju boundary:", error);
+    }
   };
 
+  // Effect to load the Naver Maps script
   useEffect(() => {
+    console.log("Initial useEffect - loading Naver Maps script");
     loadNaverMapScript();
+    
+    // Cleanup function to handle unmounting
+    return () => {
+      if (map.current) {
+        console.log("Cleaning up map instance");
+        // Clean up any map resources if needed
+      }
+    };
   }, []);
 
+  // Effect to initialize the map when the script is loaded
   useEffect(() => {
+    console.log("useEffect - isNaverLoaded:", isNaverLoaded);
     if (isNaverLoaded) {
+      console.log("Naver loaded, initializing map...");
       initializeMap();
     }
   }, [isNaverLoaded]);
+
+  // Effect to retry loading if needed
+  useEffect(() => {
+    if (isMapError && loadAttempts < 3) {
+      console.log("Map error detected, retrying...");
+      const timer = setTimeout(() => {
+        setIsMapError(false);
+        loadNaverMapScript();
+      }, 2000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isMapError, loadAttempts]);
 
   const clearMarkers = () => {
     markers.current.forEach(marker => {
@@ -322,21 +391,47 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
     }
   }, [places, selectedPlace, itinerary, selectedDay, isMapInitialized, isNaverLoaded]);
 
-  if (!isNaverLoaded) {
+  // Loading or error state
+  if (!isNaverLoaded || isMapError) {
     return (
       <div className="w-full h-full flex flex-col items-center justify-center bg-jeju-light-gray rounded-lg p-6">
-        <h3 className="text-xl font-medium mb-4">지도를 불러오는 중...</h3>
+        <h3 className="text-xl font-medium mb-4">
+          {isMapError ? "지도 로드 오류" : "지도를 불러오는 중..."}
+        </h3>
+        
+        <div className="flex items-center justify-center mb-4">
+          {isMapError ? (
+            <AlertCircle className="h-8 w-8 text-red-500 animate-pulse" />
+          ) : (
+            <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+          )}
+        </div>
+        
         <p className="text-sm text-gray-600 mb-4 text-center max-w-md">
-          네이버 지도 API를 불러오는 중입니다. 잠시만 기다려주세요.
+          {isMapError 
+            ? "네이버 지도 로드 중 오류가 발생했습니다. 페이지를 새로고침하거나 잠시 후 다시 시도해주세요." 
+            : "네이버 지도 API를 불러오는 중입니다. 잠시만 기다려주세요."
+          }
         </p>
-        <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+        
+        {isMapError && (
+          <Button 
+            variant="default" 
+            onClick={() => {
+              setIsMapError(false);
+              loadNaverMapScript();
+            }}
+          >
+            다시 시도
+          </Button>
+        )}
       </div>
     );
   }
 
   return (
     <div className="relative w-full h-full">
-      <div ref={mapContainer} className="absolute inset-0 rounded-lg overflow-hidden" />
+      <div id="map-container" ref={mapContainer} className="absolute inset-0 rounded-lg overflow-hidden" style={{visibility: 'visible'}} />
       <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-md shadow-md z-10 text-sm">
         <p className="font-medium text-jeju-black">제주도 여행 플래너</p>
       </div>
