@@ -15,20 +15,7 @@ import {
 } from "@/components/ui/pagination";
 import { categoryColors, getCategoryName } from '@/utils/categoryColors';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import { Check } from "lucide-react"
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 
 interface PlaceListProps {
@@ -92,7 +79,6 @@ const PlaceList: React.FC<PlaceListProps> = ({
   const scrollRef = useRef<HTMLDivElement>(null);
   const [selectedPlaces, setSelectedPlaces] = useState<Record<string, boolean>>({});
   const [sortOption, setSortOption] = useState<SortOption>("recommendation");
-  const [comboboxOpen, setComboboxOpen] = useState(false);
   const [selectedPlacesArray, setSelectedPlacesArray] = useState<Place[]>([]);
 
   useEffect(() => {
@@ -130,22 +116,18 @@ const PlaceList: React.FC<PlaceListProps> = ({
   }, [places, orderedIds, sortOption]);
 
   const handlePlaceClick = (place: Place) => {
-    setSelectedPlaces(prev => ({
-      ...prev,
-      [place.id]: !prev[place.id]
-    }));
-
     onSelectPlace(place);
   };
 
-  const handleComboboxItemSelect = (place: Place) => {
+  const handleCheckboxChange = (place: Place, checked: boolean) => {
     setSelectedPlaces(prev => ({
       ...prev,
-      [place.id]: !prev[place.id]
+      [place.id]: checked
     }));
     
-    onSelectPlace(place);
-    setComboboxOpen(false);
+    if (checked) {
+      onSelectPlace(place);
+    }
   };
 
   if (loading) {
@@ -213,40 +195,10 @@ const PlaceList: React.FC<PlaceListProps> = ({
         </div>
         
         <div className="flex items-center gap-2">
-          <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="h-7 text-xs justify-between">
-                선택된 장소 ({selectedPlacesArray.length})
-                <ArrowUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[200px] p-0" align="end">
-              <Command>
-                <CommandInput placeholder="장소 검색" className="h-8 text-xs" />
-                <CommandList>
-                  <CommandEmpty>선택된 장소가 없습니다</CommandEmpty>
-                  <CommandGroup>
-                    {places.map((place) => (
-                      <CommandItem
-                        key={place.id}
-                        value={place.id}
-                        onSelect={() => handleComboboxItemSelect(place)}
-                      >
-                        <Check
-                          className={cn(
-                            "mr-2 h-3 w-3",
-                            selectedPlaces[place.id] ? "opacity-100" : "opacity-0"
-                          )}
-                        />
-                        <span className="text-xs truncate">{place.name}</span>
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
-        
+          <div className="text-xs text-muted-foreground">
+            선택된 장소: {selectedPlacesArray.length}개
+          </div>
+          
           <Select
             value={sortOption}
             onValueChange={(value) => setSortOption(value as SortOption)}
@@ -275,18 +227,29 @@ const PlaceList: React.FC<PlaceListProps> = ({
             >
               <CardContent className="p-3">
                 <div className="flex justify-between items-start">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span 
-                        className={`${categoryColors[place.category].bg} ${categoryColors[place.category].text} text-[10px] rounded-sm px-1.5 py-0.5`}
-                      >
-                        {getCategoryName(place.category)}
-                      </span>
-                      <h3 className="text-sm font-medium truncate">{place.name}</h3>
-                    </div>
-                    
+                  <div className="flex items-center mb-1">
+                    <Checkbox 
+                      id={`place-${place.id}`}
+                      checked={!!selectedPlaces[place.id]} 
+                      onCheckedChange={(checked) => {
+                        handleCheckboxChange(place, checked === true);
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      className="mr-2"
+                    />
+                    <span 
+                      className={`${categoryColors[place.category].bg} ${categoryColors[place.category].text} text-[10px] rounded-sm px-1.5 py-0.5 mr-1.5`}
+                    >
+                      {getCategoryName(place.category)}
+                    </span>
+                    <h3 className="text-sm font-medium truncate">{place.name}</h3>
+                  </div>
+                </div>
+                
+                <div className="flex justify-between items-start mt-1">
+                  <div className="flex-1 min-w-0 pl-6">
                     {place.address && (
-                      <div className="flex items-center gap-1 mt-1.5 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
                         <MapPin className="h-3 w-3" />
                         <span className="truncate">{place.address}</span>
                       </div>
@@ -316,7 +279,7 @@ const PlaceList: React.FC<PlaceListProps> = ({
                     </div>
                   </div>
                   
-                  <div className="flex flex-col gap-1 ml-2">
+                  <div className="flex gap-1 ml-2">
                     {place.naverLink && (
                       <Button 
                         variant="ghost" 
