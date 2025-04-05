@@ -1,5 +1,6 @@
+
 import React, { useEffect, useRef, useState } from 'react';
-import { ExternalLink, MapPin, Star, MessageCircle, Clock } from 'lucide-react';
+import { ExternalLink, MapPin, Star, MessageCircle, Clock, ArrowUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -14,6 +15,7 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { categoryColors, getCategoryName } from '@/utils/categoryColors';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface PlaceListProps {
   places: Place[];
@@ -48,6 +50,8 @@ interface ScheduleTable {
   [dayHour: string]: Place | null; // 요일_시간: Place 객체 또는 null
 }
 
+type SortOption = "recommendation" | "rating" | "reviews";
+
 const PlaceList: React.FC<PlaceListProps> = ({
   places,
   loading,
@@ -60,6 +64,7 @@ const PlaceList: React.FC<PlaceListProps> = ({
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [selectedPlaces, setSelectedPlaces] = useState<Record<string, boolean>>({});
+  const [sortOption, setSortOption] = useState<SortOption>("recommendation");
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -77,11 +82,18 @@ const PlaceList: React.FC<PlaceListProps> = ({
   }, [selectedPlace]);
 
   const sortedPlaces = React.useMemo(() => {
-    if (orderedIds.length > 0) {
+    let result = [...places];
+    
+    if (sortOption === "recommendation" && orderedIds.length > 0) {
       return sortPlacesByIds(places, orderedIds);
+    } else if (sortOption === "rating") {
+      return [...places].sort((a, b) => b.rating - a.rating);
+    } else if (sortOption === "reviews") {
+      return [...places].sort((a, b) => b.reviewCount - a.reviewCount);
     }
+    
     return places;
-  }, [places, orderedIds]);
+  }, [places, orderedIds, sortOption]);
 
   const handlePlaceClick = (place: Place) => {
     setSelectedPlaces(prev => ({
@@ -128,7 +140,7 @@ const PlaceList: React.FC<PlaceListProps> = ({
   if (sortedPlaces.length === 0) {
     return (
       <div className="w-full flex flex-col items-center justify-center h-[40vh] text-muted-foreground">
-        <p>장소를 검색하거나 ��테고리를 선택해주세요</p>
+        <p>장소를 검색하거나 카테고리를 선택해주세요</p>
       </div>
     );
   }
@@ -141,8 +153,24 @@ const PlaceList: React.FC<PlaceListProps> = ({
 
   return (
     <div className="w-full flex flex-col h-full">
-      <div className="text-[10px] text-muted-foreground mb-0.5">
-        검색 결과: {sortedPlaces.length}개의 장소
+      <div className="flex items-center justify-between mb-2">
+        <div className="text-[10px] text-muted-foreground">
+          검색 결과: {sortedPlaces.length}개의 장소
+        </div>
+        
+        <Select
+          value={sortOption}
+          onValueChange={(value) => setSortOption(value as SortOption)}
+        >
+          <SelectTrigger className="w-[130px] h-7 text-xs">
+            <SelectValue placeholder="정렬 기준" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="recommendation" className="text-xs">추천순</SelectItem>
+            <SelectItem value="rating" className="text-xs">별점순</SelectItem>
+            <SelectItem value="reviews" className="text-xs">리뷰많은순</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
       
       <div className="mb-2">
