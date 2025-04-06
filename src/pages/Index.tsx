@@ -241,18 +241,27 @@ const Index: React.FC = () => {
   useEffect(() => {
     const loadInitialData = async () => {
       try {
+        console.log('데이터 로드 시작...');
+        
         const restaurants = await fetchRestaurants();
         console.log('레스토랑 데이터 가져옴:', restaurants.length);
         
         const accommodations = await fetchAccommodations();
-        console.log('숙소 데이터 가져옴:', accommodations.length);
+        console.log('숙소 데이터 가져옴:', accommodations.length, '개');
+        console.log('첫 번째 숙소 데이터:', accommodations.length > 0 ? accommodations[0].name : '없음');
+        
+        const cafes = generateMockPlaces('cafe', 200);
+        const attractions = generateMockPlaces('attraction', 200);
         
         const allPlaces = [
           ...restaurants,
           ...accommodations,
-          ...generateMockPlaces('cafe', 200),
-          ...generateMockPlaces('attraction', 200),
+          ...cafes,
+          ...attractions
         ] as Place[];
+        
+        console.log('총 로드된 장소 수:', allPlaces.length);
+        console.log('숙소 수:', accommodations.length);
         
         setPlaces(allPlaces);
       } catch (error) {

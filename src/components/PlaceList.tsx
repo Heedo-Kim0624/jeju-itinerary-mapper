@@ -103,13 +103,25 @@ const PlaceList: React.FC<PlaceListProps> = ({
 
   const sortedPlaces = React.useMemo(() => {
     let result = [...places];
+    console.log("정렬 전 장소 수:", places.length);
+    console.log("장소 카테고리:", places.map(p => p.category).filter((v, i, a) => a.indexOf(v) === i));
     
     if (sortOption === "recommendation" && orderedIds.length > 0) {
       return sortPlacesByIds(places, orderedIds);
     } else if (sortOption === "rating") {
-      return [...places].sort((a, b) => b.rating - a.rating);
+      return [...places].sort((a, b) => {
+        if (a.rating === null && b.rating === null) return 0;
+        if (a.rating === null) return 1;
+        if (b.rating === null) return -1;
+        return b.rating - a.rating;
+      });
     } else if (sortOption === "reviews") {
-      return [...places].sort((a, b) => b.reviewCount - a.reviewCount);
+      return [...places].sort((a, b) => {
+        if (a.reviewCount === null && b.reviewCount === null) return 0;
+        if (a.reviewCount === null) return 1;
+        if (b.reviewCount === null) return -1;
+        return b.reviewCount - a.reviewCount;
+      });
     }
     
     return places;
@@ -263,14 +275,14 @@ const PlaceList: React.FC<PlaceListProps> = ({
                     )}
                     
                     <div className="flex items-center gap-2 mt-1.5">
-                      {place.rating && (
+                      {place.rating !== null && (
                         <div className="flex items-center gap-1">
                           <Star className="h-3 w-3 text-amber-400" />
                           <span className="text-xs font-medium">{place.rating}</span>
                         </div>
                       )}
                       
-                      {place.reviewCount && (
+                      {place.reviewCount !== null && (
                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
                           <MessageCircle className="h-3 w-3" />
                           <span>{place.reviewCount}</span>

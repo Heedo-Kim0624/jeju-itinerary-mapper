@@ -65,7 +65,7 @@ export const fetchRestaurants = async (): Promise<RestaurantData[]> => {
 
 export const fetchAccommodations = async (): Promise<RestaurantData[]> => {
   try {
-    console.log('숙소 데이터 가져오는 중...');
+    console.log('숙소 데이터 가져오기 시작...');
     
     // 숙소 정보 가져오기 (accomodation with one 'c')
     const { data: accommodations, error: accommodationError } = await supabase
@@ -74,10 +74,14 @@ export const fetchAccommodations = async (): Promise<RestaurantData[]> => {
 
     if (accommodationError) {
       console.error('숙소 정보 가져오기 오류:', accommodationError);
+      console.error('오류 세부 정보:', JSON.stringify(accommodationError));
       return [];
     }
 
     console.log('숙소 기본 정보 가져옴:', accommodations?.length || 0);
+    if (accommodations && accommodations.length > 0) {
+      console.log('첫 번째 숙소 데이터 샘플:', JSON.stringify(accommodations[0]));
+    }
 
     // 숙소 링크 정보 가져오기 (accomodation with one 'c')
     const { data: links, error: linkError } = await supabase
@@ -88,6 +92,9 @@ export const fetchAccommodations = async (): Promise<RestaurantData[]> => {
       console.error('숙소 링크 가져오기 오류:', linkError);
     } else {
       console.log('숙소 링크 정보 가져옴:', links?.length || 0);
+      if (links && links.length > 0) {
+        console.log('첫 번째 링크 데이터 샘플:', JSON.stringify(links[0]));
+      }
     }
 
     // 숙소 리뷰 정보 가져오기 (accomodation with one 'c')
@@ -99,6 +106,9 @@ export const fetchAccommodations = async (): Promise<RestaurantData[]> => {
       console.error('숙소 리뷰 가져오기 오류:', reviewError);
     } else {
       console.log('숙소 리뷰 정보 가져옴:', reviews?.length || 0);
+      if (reviews && reviews.length > 0) {
+        console.log('첫 번째 리뷰 데이터 샘플:', JSON.stringify(reviews[0]));
+      }
     }
 
     // 링크 정보 맵 생성
@@ -141,9 +151,12 @@ export const fetchAccommodations = async (): Promise<RestaurantData[]> => {
     });
     
     console.log('숙소 데이터 변환 완료:', result.length);
+    console.log('첫 번째 변환된 데이터 샘플:', result.length > 0 ? JSON.stringify(result[0]) : 'None');
+    
     return result;
   } catch (error) {
     console.error('숙소 데이터 가져오기 오류:', error);
+    console.error('오류 세부 정보:', error instanceof Error ? error.message : JSON.stringify(error));
     return [];
   }
 };
