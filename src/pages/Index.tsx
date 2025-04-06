@@ -11,7 +11,7 @@ import DaySelector from '@/components/DaySelector';
 import { toast } from 'sonner';
 import { categoryColors, getCategoryName } from '@/utils/categoryColors';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { fetchRestaurants } from '@/services/restaurantService';
+import { fetchRestaurants, fetchAccommodations } from '@/services/restaurantService';
 
 const DEFAULT_PROMPT = '';
 
@@ -244,12 +244,16 @@ const Index: React.FC = () => {
         const restaurants = await fetchRestaurants();
         console.log('레스토랑 데이터 가져옴:', restaurants.length);
         
+        const accommodations = await fetchAccommodations();
+        console.log('숙소 데이터 가져옴:', accommodations.length);
+        
         const allPlaces = [
           ...restaurants,
+          ...accommodations,
           ...generateMockPlaces('cafe', 200),
           ...generateMockPlaces('attraction', 200),
-          ...generateMockPlaces('accommodation', 200)
-        ];
+        ] as Place[];
+        
         setPlaces(allPlaces);
       } catch (error) {
         console.error('초기 데이터 로드 오류:', error);
