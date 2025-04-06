@@ -11,6 +11,7 @@ import DaySelector from '@/components/DaySelector';
 import { toast } from 'sonner';
 import { categoryColors, getCategoryName } from '@/utils/categoryColors';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { fetchRestaurants } from '@/services/restaurantService';
 
 const DEFAULT_PROMPT = '';
 
@@ -238,13 +239,34 @@ const Index: React.FC = () => {
   const isPlaceListReady = isCategorySelectionComplete && filteredPlaces.length > 0;
   
   useEffect(() => {
-    const allPlaces = [
-      ...generateMockPlaces('restaurant', 200),
-      ...generateMockPlaces('cafe', 200),
-      ...generateMockPlaces('attraction', 200),
-      ...generateMockPlaces('accommodation', 200)
-    ];
-    setPlaces(allPlaces);
+    const loadInitialData = async () => {
+      try {
+        const restaurants = await fetchRestaurants();
+        console.log('레스토랑 데이터 가져옴:', restaurants.length);
+        
+        const allPlaces = [
+          ...restaurants,
+          ...generateMockPlaces('cafe', 200),
+          ...generateMockPlaces('attraction', 200),
+          ...generateMockPlaces('accommodation', 200)
+        ];
+        setPlaces(allPlaces);
+      } catch (error) {
+        console.error('초기 데이터 로드 오류:', error);
+        
+        const allPlaces = [
+          ...generateMockPlaces('restaurant', 200),
+          ...generateMockPlaces('cafe', 200),
+          ...generateMockPlaces('attraction', 200),
+          ...generateMockPlaces('accommodation', 200)
+        ];
+        setPlaces(allPlaces);
+        
+        toast.error('데이터 로딩 중 오류가 발생했습니다.');
+      }
+    };
+
+    loadInitialData();
   }, []);
   
   const handleDatesSelected = (dates: {
@@ -365,7 +387,7 @@ const Index: React.FC = () => {
       setShowItinerary(true);
       setLoading(false);
       
-      toast.success('일정이 생성되었습니다');
+      toast.success('일정이 생성되었��니다');
     }, 1500);
   };
   
