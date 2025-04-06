@@ -81,6 +81,9 @@ export const fetchAccommodations = async (): Promise<RestaurantData[]> => {
     console.log('숙소 기본 정보 가져옴:', accommodations?.length || 0);
     if (accommodations && accommodations.length > 0) {
       console.log('첫 번째 숙소 데이터 샘플:', JSON.stringify(accommodations[0]));
+    } else {
+      console.error('가져온 숙소 데이터가 없거나 비어 있습니다!');
+      return [];
     }
 
     // 숙소 링크 정보 가져오기 (accomodation with one 'c')
@@ -92,9 +95,6 @@ export const fetchAccommodations = async (): Promise<RestaurantData[]> => {
       console.error('숙소 링크 가져오기 오류:', linkError);
     } else {
       console.log('숙소 링크 정보 가져옴:', links?.length || 0);
-      if (links && links.length > 0) {
-        console.log('첫 번째 링크 데이터 샘플:', JSON.stringify(links[0]));
-      }
     }
 
     // 숙소 리뷰 정보 가져오기 (accomodation with one 'c')
@@ -106,52 +106,62 @@ export const fetchAccommodations = async (): Promise<RestaurantData[]> => {
       console.error('숙소 리뷰 가져오기 오류:', reviewError);
     } else {
       console.log('숙소 리뷰 정보 가져옴:', reviews?.length || 0);
-      if (reviews && reviews.length > 0) {
-        console.log('첫 번째 리뷰 데이터 샘플:', JSON.stringify(reviews[0]));
-      }
     }
 
     // 링크 정보 맵 생성
     const linkMap = links ? links.reduce((map: Record<string, any>, link: any) => {
+      // 링크 정보의 ID를 문자열로 변환하여 키로 사용
       map[link.id.toString()] = link;
       return map;
     }, {}) : {};
 
     // 리뷰 정보 맵 생성
     const reviewMap = reviews ? reviews.reduce((map: Record<string, any>, review: any) => {
+      // 리뷰 정보의 ID를 문자열로 변환하여 키로 사용
       map[review.id.toString()] = review;
       return map;
     }, {}) : {};
 
     console.log('데이터 변환 시작...');
 
-    // 데이터 변환
+    // 데이터 변환하여 반환 (비어있으면 빈 배열 반환)
     if (!accommodations || accommodations.length === 0) {
-      console.log('가져온 숙소 정보가 없음');
+      console.log('변환할 숙소 정보가 없음');
       return [];
     }
     
     const result = accommodations.map((accommodation: any) => {
       const id = accommodation.id.toString();
-      const item = {
+      
+      // 리뷰와 링크 정보 로그
+      if (reviewMap[id]) {
+        console.log(`숙소 ID ${id}의 리뷰 정보:`, JSON.stringify(reviewMap[id]));
+      }
+      if (linkMap[id]) {
+        console.log(`숙소 ID ${id}의 링크 정보:`, JSON.stringify(linkMap[id]));
+      }
+      
+      const item: RestaurantData = {
         id: id,
         name: accommodation.Place_Name || '이름 없음',
         address: accommodation.Road_Address || accommodation.Lot_Address || '주소 없음',
-        category: 'accommodation', // 숙소 카테고리 고정
+        category: 'accommodation',
         rating: reviewMap[id]?.Rating || null,
         reviewCount: reviewMap[id]?.visitor_review || null,
         operatingHours: '24시간', // 숙소 운영 시간
         naverLink: linkMap[id]?.link || '',
         instaLink: linkMap[id]?.instagram || '',
-        x: accommodation.Longitude || 126.5311884, // 제주도 중심 좌표 기본값
-        y: accommodation.Latitude || 33.3846216, // 제주도 중심 좌표 기본값
+        x: accommodation.Longitude || 126.5311884,
+        y: accommodation.Latitude || 33.3846216,
       };
       
       return item;
     });
     
     console.log('숙소 데이터 변환 완료:', result.length);
-    console.log('첫 번째 변환된 데이터 샘플:', result.length > 0 ? JSON.stringify(result[0]) : 'None');
+    if (result.length > 0) {
+      console.log('첫 번째 변환된 데이터 샘플:', JSON.stringify(result[0]));
+    }
     
     return result;
   } catch (error) {

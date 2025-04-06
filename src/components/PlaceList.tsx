@@ -110,16 +110,14 @@ const PlaceList: React.FC<PlaceListProps> = ({
       return sortPlacesByIds(places, orderedIds);
     } else if (sortOption === "rating") {
       return [...places].sort((a, b) => {
-        if (a.rating === null && b.rating === null) return 0;
-        if (a.rating === null) return 1;
-        if (b.rating === null) return -1;
+        if (a.rating === undefined || a.rating === null) return 1;
+        if (b.rating === undefined || b.rating === null) return -1;
         return b.rating - a.rating;
       });
     } else if (sortOption === "reviews") {
       return [...places].sort((a, b) => {
-        if (a.reviewCount === null && b.reviewCount === null) return 0;
-        if (a.reviewCount === null) return 1;
-        if (b.reviewCount === null) return -1;
+        if (a.reviewCount === undefined || a.reviewCount === null) return 1;
+        if (b.reviewCount === undefined || b.reviewCount === null) return -1;
         return b.reviewCount - a.reviewCount;
       });
     }
@@ -250,7 +248,7 @@ const PlaceList: React.FC<PlaceListProps> = ({
                       className="mr-2"
                     />
                     <span 
-                      className={`${categoryColors[place.category].bg} ${categoryColors[place.category].text} text-[10px] rounded-sm px-1.5 py-0.5 mr-1.5`}
+                      className={`${categoryColors[place.category]?.bg || 'bg-gray-200'} ${categoryColors[place.category]?.text || 'text-gray-800'} text-[10px] rounded-sm px-1.5 py-0.5 mr-1.5`}
                     >
                       {getCategoryName(place.category)}
                     </span>
@@ -275,14 +273,14 @@ const PlaceList: React.FC<PlaceListProps> = ({
                     )}
                     
                     <div className="flex items-center gap-2 mt-1.5">
-                      {place.rating !== null && (
+                      {place.rating !== undefined && place.rating !== null && (
                         <div className="flex items-center gap-1">
                           <Star className="h-3 w-3 text-amber-400" />
                           <span className="text-xs font-medium">{place.rating}</span>
                         </div>
                       )}
                       
-                      {place.reviewCount !== null && (
+                      {place.reviewCount !== undefined && place.reviewCount !== null && (
                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
                           <MessageCircle className="h-3 w-3" />
                           <span>{place.reviewCount}</span>
