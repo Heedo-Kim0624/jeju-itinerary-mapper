@@ -36,6 +36,7 @@ export interface RestaurantNotes {
   Note?: string;
 }
 
+// Accommodation 테이블 구조에 맞게 타입 정의 수정
 export interface AccommodationInformation {
   id: number;
   Place_Name?: string;
