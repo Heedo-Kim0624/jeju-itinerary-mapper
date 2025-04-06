@@ -404,7 +404,7 @@ const Index: React.FC = () => {
       setShowItinerary(true);
       setLoading(false);
       
-      toast.success('일정이 생성되었��니다');
+      toast.success('일정이 생성되었습니다');
     }, 1500);
   };
   

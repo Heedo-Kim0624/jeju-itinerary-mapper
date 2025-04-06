@@ -1,4 +1,5 @@
 
+
 import { supabase } from '@/integrations/supabase/client';
 import { 
   AccommodationInformation, 
@@ -127,7 +128,7 @@ export const fetchAccommodations = async (): Promise<RestaurantData[]> => {
     
     if (reviews) {
       reviews.forEach(review => {
-        reviewMap[review.ID.toString()] = review;
+        reviewMap[review.id.toString()] = review;
       });
     }
     
@@ -197,7 +198,7 @@ export const fetchLandmarks = async (): Promise<RestaurantData[]> => {
       console.log('관광지 링크 정보 가져옴:', links?.length || 0);
     }
 
-    // 관광지 리뷰 정보 가져오기
+    // 관광지 리뷰 정보 가져오기 - 테이블 이름 확인 필요
     const { data: reviews, error: reviewError } = await supabase
       .from('landmark_review')
       .select('*');
@@ -214,13 +215,13 @@ export const fetchLandmarks = async (): Promise<RestaurantData[]> => {
     
     if (links) {
       links.forEach(link => {
-        linkMap[link.ID.toString()] = link;
+        linkMap[link.id.toString()] = link;
       });
     }
     
     if (reviews) {
       reviews.forEach(review => {
-        reviewMap[review.ID.toString()] = review;
+        reviewMap[review.id.toString()] = review;
       });
     }
     
@@ -228,12 +229,12 @@ export const fetchLandmarks = async (): Promise<RestaurantData[]> => {
     
     // 데이터 변환하여 반환
     const result = landmarks.map((landmark: LandmarkInformation) => {
-      const id = landmark.ID.toString();
+      const id = landmark.id.toString();
       
       return {
         id: id,
-        name: landmark.Place_name || '이름 없음',
-        address: landmark.Road_address || landmark.Lot_Address || '주소 없음',
+        name: landmark.Place_Name || '이름 없음',
+        address: landmark.Road_Address || landmark.Lot_Address || '주소 없음',
         category: 'attraction', // 관광지 카테고리 고정
         rating: reviewMap[id]?.Rating || null,
         reviewCount: reviewMap[id]?.visitor_review || null,
@@ -254,3 +255,4 @@ export const fetchLandmarks = async (): Promise<RestaurantData[]> => {
     return [];
   }
 };
+

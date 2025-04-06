@@ -1,4 +1,5 @@
 
+
 export interface RestaurantInformation {
   id: number;
   Place_Name?: string;
@@ -53,7 +54,7 @@ export interface AccommodationLink {
 }
 
 export interface AccommodationReview {
-  ID: number;
+  id: number; // 주의: 소문자 'id'
   Rating?: number;
   visitor_review?: number; // 리뷰 수를 나타내는 필드
 }
@@ -66,22 +67,23 @@ export interface AccommodationCategory {
 
 // 관광지(landmark) 정보를 위한 인터페이스 추가
 export interface LandmarkInformation {
-  ID: number;
-  Place_name?: string;
-  Road_address?: string;
+  id: number; // 주의: 소문자 'id'
+  Place_Name?: string;
+  Road_Address?: string;
   Lot_Address?: string;
   Longitude?: number;
   Latitude?: number;
 }
 
 export interface LandmarkLink {
-  ID: number;
+  id: number; // 주의: 소문자 'id'
   link?: string;
   instagram?: string;
 }
 
 export interface LandmarkReview {
-  ID: number;
+  id: number; // 주의: 소문자 'id'
   Rating?: number;
   visitor_review?: number;
 }
+
