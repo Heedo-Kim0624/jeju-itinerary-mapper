@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 import { ExternalLink, MapPin, Star, MessageCircle, Clock, ArrowUpDown, Instagram } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -276,7 +277,7 @@ const PlaceList: React.FC<PlaceListProps> = ({
                       {place.rating !== undefined && place.rating !== null && (
                         <div className="flex items-center gap-1">
                           <Star className="h-3 w-3 text-amber-400" />
-                          <span className="text-xs font-medium">{place.rating}</span>
+                          <span className="text-xs font-medium">{typeof place.rating === 'number' ? place.rating.toFixed(1) : place.rating}</span>
                         </div>
                       )}
                       

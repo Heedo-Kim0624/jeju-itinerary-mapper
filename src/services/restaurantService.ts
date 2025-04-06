@@ -114,6 +114,9 @@ export const fetchAccommodations = async (): Promise<RestaurantData[]> => {
       console.error('숙소 리뷰 가져오기 오류:', reviewError);
     } else {
       console.log('숙소 리뷰 정보 가져옴:', reviews?.length || 0);
+      if (reviews && reviews.length > 0) {
+        console.log('첫번째 리뷰 샘플:', JSON.stringify(reviews[0]));
+      }
     }
 
     // 링크와 리뷰 정보 맵 생성
@@ -137,14 +140,20 @@ export const fetchAccommodations = async (): Promise<RestaurantData[]> => {
     // 데이터 변환하여 반환
     const result = accommodations.map((accommodation: AccommodationInformation) => {
       const id = accommodation.ID.toString();
+      const reviewData = reviewMap[id];
+      
+      // 리뷰 데이터가 있는 경우 콘솔에 출력 (디버깅)
+      if (reviewData) {
+        console.log(`숙소 ID ${id}의 리뷰 데이터:`, reviewData);
+      }
       
       return {
         id: id,
         name: accommodation.Place_name || '이름 없음',
         address: accommodation.Road_address || accommodation.Lot_Address || '주소 없음',
         category: 'accommodation', // 숙소 카테고리 고정
-        rating: reviewMap[id]?.Rating || null,
-        reviewCount: reviewMap[id]?.visitor_review || null,
+        rating: reviewData?.Rating || null,
+        reviewCount: reviewData?.visitor_review || reviewData?.visitor_review_count || null,
         operatingHours: '24시간', // 숙소 운영 시간 
         naverLink: linkMap[id]?.link || '',
         instaLink: linkMap[id]?.instagram || '',
@@ -163,7 +172,7 @@ export const fetchAccommodations = async (): Promise<RestaurantData[]> => {
   }
 };
 
-// 관광지(landmark) 데이터를 가져오는 함수 추가
+// 관광지(landmark) 데이터를 가져오는 함수
 export const fetchLandmarks = async (): Promise<RestaurantData[]> => {
   try {
     console.log('관광지 데이터 가져오기 시작...');
@@ -198,9 +207,9 @@ export const fetchLandmarks = async (): Promise<RestaurantData[]> => {
       console.log('관광지 링크 정보 가져옴:', links?.length || 0);
     }
 
-    // 관광지 리뷰 정보 가져오기 - 테이블 이름 확인 필요
+    // 관광지 리뷰 정보 가져오기
     const { data: reviews, error: reviewError } = await supabase
-      .from('landmark_review')
+      .from('landmark_rating')  // landmark_rating으로 테이블명 변경
       .select('*');
 
     if (reviewError) {

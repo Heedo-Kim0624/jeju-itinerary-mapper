@@ -57,6 +57,7 @@ export interface AccommodationReview {
   id: number; // 주의: 소문자 'id'
   Rating?: number;
   visitor_review?: number; // 리뷰 수를 나타내는 필드
+  visitor_review_count?: number; // 대체 필드명
 }
 
 export interface AccommodationCategory {
