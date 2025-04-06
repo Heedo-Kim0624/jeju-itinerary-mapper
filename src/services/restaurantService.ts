@@ -1,6 +1,13 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { AccommodationInformation, AccommodationLink, AccommodationReview } from '@/types/supabase';
+import { 
+  AccommodationInformation, 
+  AccommodationLink, 
+  AccommodationReview,
+  LandmarkInformation,
+  LandmarkLink,
+  LandmarkReview
+} from '@/types/supabase';
 
 export interface RestaurantData {
   id: string;
@@ -127,7 +134,7 @@ export const fetchAccommodations = async (): Promise<RestaurantData[]> => {
     console.log('데이터 맵 생성 완료. 변환 시작...');
     
     // 데이터 변환하여 반환
-    const result = accommodations.map((accommodation) => {
+    const result = accommodations.map((accommodation: AccommodationInformation) => {
       const id = accommodation.ID.toString();
       
       return {
@@ -151,6 +158,99 @@ export const fetchAccommodations = async (): Promise<RestaurantData[]> => {
     return result;
   } catch (error) {
     console.error('숙소 데이터 가져오기 오류:', error);
+    return [];
+  }
+};
+
+// 관광지(landmark) 데이터를 가져오는 함수 추가
+export const fetchLandmarks = async (): Promise<RestaurantData[]> => {
+  try {
+    console.log('관광지 데이터 가져오기 시작...');
+    
+    // 관광지 정보 가져오기
+    const { data: landmarks, error: landmarkError } = await supabase
+      .from('landmark_information')
+      .select('*');
+
+    if (landmarkError) {
+      console.error('관광지 정보 가져오기 오류:', landmarkError);
+      return [];
+    }
+
+    console.log('관광지 기본 정보 가져옴:', landmarks?.length || 0);
+    
+    if (!landmarks || landmarks.length === 0) {
+      console.error('가져온 관광지 데이터가 없습니다!');
+      return [];
+    }
+    
+    console.log('첫 번째 관광지 샘플:', JSON.stringify(landmarks[0]));
+
+    // 관광지 링크 정보 가져오기
+    const { data: links, error: linkError } = await supabase
+      .from('landmark_link')
+      .select('*');
+
+    if (linkError) {
+      console.error('관광지 링크 가져오기 오류:', linkError);
+    } else {
+      console.log('관광지 링크 정보 가져옴:', links?.length || 0);
+    }
+
+    // 관광지 리뷰 정보 가져오기
+    const { data: reviews, error: reviewError } = await supabase
+      .from('landmark_review')
+      .select('*');
+
+    if (reviewError) {
+      console.error('관광지 리뷰 가져오기 오류:', reviewError);
+    } else {
+      console.log('관광지 리뷰 정보 가져옴:', reviews?.length || 0);
+    }
+
+    // 링크와 리뷰 정보 맵 생성
+    const linkMap: Record<string, any> = {};
+    const reviewMap: Record<string, any> = {};
+    
+    if (links) {
+      links.forEach(link => {
+        linkMap[link.ID.toString()] = link;
+      });
+    }
+    
+    if (reviews) {
+      reviews.forEach(review => {
+        reviewMap[review.ID.toString()] = review;
+      });
+    }
+    
+    console.log('데이터 맵 생성 완료. 변환 시작...');
+    
+    // 데이터 변환하여 반환
+    const result = landmarks.map((landmark: LandmarkInformation) => {
+      const id = landmark.ID.toString();
+      
+      return {
+        id: id,
+        name: landmark.Place_name || '이름 없음',
+        address: landmark.Road_address || landmark.Lot_Address || '주소 없음',
+        category: 'attraction', // 관광지 카테고리 고정
+        rating: reviewMap[id]?.Rating || null,
+        reviewCount: reviewMap[id]?.visitor_review || null,
+        operatingHours: '09:00 - 18:00', // 관광지 기본 운영 시간
+        naverLink: linkMap[id]?.link || '',
+        instaLink: linkMap[id]?.instagram || '',
+        x: landmark.Longitude || 126.5311884,
+        y: landmark.Latitude || 33.3846216,
+      };
+    });
+    
+    console.log('관광지 데이터 변환 완료:', result.length);
+    console.log('첫 번째 변환된 관광지:', result.length > 0 ? JSON.stringify(result[0]) : '없음');
+    
+    return result;
+  } catch (error) {
+    console.error('관광지 데이터 가져오기 오류:', error);
     return [];
   }
 };

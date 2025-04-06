@@ -1,3 +1,4 @@
+
 export interface RestaurantInformation {
   id: number;
   Place_Name?: string;
@@ -61,4 +62,26 @@ export interface AccommodationCategory {
   id: number;
   Categories?: string;
   Categories_Details?: string;
+}
+
+// 관광지(landmark) 정보를 위한 인터페이스 추가
+export interface LandmarkInformation {
+  ID: number;
+  Place_name?: string;
+  Road_address?: string;
+  Lot_Address?: string;
+  Longitude?: number;
+  Latitude?: number;
+}
+
+export interface LandmarkLink {
+  ID: number;
+  link?: string;
+  instagram?: string;
+}
+
+export interface LandmarkReview {
+  ID: number;
+  Rating?: number;
+  visitor_review?: number;
 }

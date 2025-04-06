@@ -11,7 +11,7 @@ import DaySelector from '@/components/DaySelector';
 import { toast } from 'sonner';
 import { categoryColors, getCategoryName } from '@/utils/categoryColors';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { fetchRestaurants, fetchAccommodations } from '@/services/restaurantService';
+import { fetchRestaurants, fetchAccommodations, fetchLandmarks } from '@/services/restaurantService';
 
 const DEFAULT_PROMPT = '';
 
@@ -250,18 +250,22 @@ const Index: React.FC = () => {
         console.log('숙소 데이터 가져옴:', accommodations.length, '개');
         console.log('첫 번째 숙소 데이터:', accommodations.length > 0 ? accommodations[0].name : '없음');
         
+        const attractions = await fetchLandmarks();
+        console.log('관광지 데이터 가져옴:', attractions.length, '개');
+        console.log('첫 번째 관광지 데이터:', attractions.length > 0 ? attractions[0].name : '없음');
+        
         const cafes = generateMockPlaces('cafe', 200);
-        const attractions = generateMockPlaces('attraction', 200);
         
         const allPlaces = [
           ...restaurants,
           ...accommodations,
-          ...cafes,
-          ...attractions
+          ...attractions,
+          ...cafes
         ] as Place[];
         
         console.log('총 로드된 장소 수:', allPlaces.length);
         console.log('숙소 수:', accommodations.length);
+        console.log('관광지 수:', attractions.length);
         
         setPlaces(allPlaces);
       } catch (error) {
