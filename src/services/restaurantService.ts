@@ -1,5 +1,4 @@
 
-
 import { supabase } from '@/integrations/supabase/client';
 import { AccommodationInformation, AccommodationLink, AccommodationReview } from '@/types/supabase';
 
@@ -66,6 +65,8 @@ export const fetchRestaurants = async (): Promise<RestaurantData[]> => {
 
 export const fetchAccommodations = async (): Promise<RestaurantData[]> => {
   try {
+    console.log('숙소 데이터 가져오는 중...');
+    
     // 숙소 정보 가져오기 (accomodation with one 'c')
     const { data: accommodations, error: accommodationError } = await supabase
       .from('accomodation_information')
@@ -76,6 +77,8 @@ export const fetchAccommodations = async (): Promise<RestaurantData[]> => {
       return [];
     }
 
+    console.log('숙소 기본 정보 가져옴:', accommodations?.length || 0);
+
     // 숙소 링크 정보 가져오기 (accomodation with one 'c')
     const { data: links, error: linkError } = await supabase
       .from('accomodation_link')
@@ -83,6 +86,8 @@ export const fetchAccommodations = async (): Promise<RestaurantData[]> => {
 
     if (linkError) {
       console.error('숙소 링크 가져오기 오류:', linkError);
+    } else {
+      console.log('숙소 링크 정보 가져옴:', links?.length || 0);
     }
 
     // 숙소 리뷰 정보 가져오기 (accomodation with one 'c')
@@ -92,6 +97,8 @@ export const fetchAccommodations = async (): Promise<RestaurantData[]> => {
 
     if (reviewError) {
       console.error('숙소 리뷰 가져오기 오류:', reviewError);
+    } else {
+      console.log('숙소 리뷰 정보 가져옴:', reviews?.length || 0);
     }
 
     // 링크 정보 맵 생성
@@ -106,23 +113,37 @@ export const fetchAccommodations = async (): Promise<RestaurantData[]> => {
       return map;
     }, {}) : {};
 
+    console.log('데이터 변환 시작...');
+
     // 데이터 변환
-    return accommodations.map((accommodation: any) => ({
-      id: accommodation.id.toString(),
-      name: accommodation.Place_Name || '이름 없음',
-      address: accommodation.Road_Address || accommodation.Lot_Address || '주소 없음',
-      category: 'accommodation', // 숙소 카테고리 고정
-      rating: reviewMap[accommodation.id]?.Rating || 4 + Math.random(), // 리뷰 정보 또는 임시 평점
-      reviewCount: reviewMap[accommodation.id]?.visitor_review || Math.floor(Math.random() * 200) + 10, // 리뷰 수 또는 임시 리뷰 수
-      operatingHours: '24시간', // 숙소 운영 시간
-      naverLink: linkMap[accommodation.id]?.link || 'https://map.naver.com',
-      instaLink: linkMap[accommodation.id]?.instagram || '',
-      x: accommodation.Longitude || 126.5311884, // 제주도 중심 좌표 기본값
-      y: accommodation.Latitude || 33.3846216, // 제주도 중심 좌표 기본값
-    }));
+    if (!accommodations || accommodations.length === 0) {
+      console.log('가져온 숙소 정보가 없음');
+      return [];
+    }
+    
+    const result = accommodations.map((accommodation: any) => {
+      const id = accommodation.id.toString();
+      const item = {
+        id: id,
+        name: accommodation.Place_Name || '이름 없음',
+        address: accommodation.Road_Address || accommodation.Lot_Address || '주소 없음',
+        category: 'accommodation', // 숙소 카테고리 고정
+        rating: reviewMap[id]?.Rating || null,
+        reviewCount: reviewMap[id]?.visitor_review || null,
+        operatingHours: '24시간', // 숙소 운영 시간
+        naverLink: linkMap[id]?.link || '',
+        instaLink: linkMap[id]?.instagram || '',
+        x: accommodation.Longitude || 126.5311884, // 제주도 중심 좌표 기본값
+        y: accommodation.Latitude || 33.3846216, // 제주도 중심 좌표 기본값
+      };
+      
+      return item;
+    });
+    
+    console.log('숙소 데이터 변환 완료:', result.length);
+    return result;
   } catch (error) {
     console.error('숙소 데이터 가져오기 오류:', error);
     return [];
   }
 };
-

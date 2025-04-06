@@ -1,5 +1,4 @@
 
-
 export interface RestaurantInformation {
   id: number;
   Place_Name?: string;
@@ -37,7 +36,7 @@ export interface RestaurantNotes {
   Note?: string;
 }
 
-// 숙박시설 테이블 구조에 맞게 타입 정의 수정 (accomodation with one 'c')
+// accomodation with one 'c' (철자 주의)
 export interface AccommodationInformation {
   id: number;
   Place_Name?: string;
@@ -56,7 +55,7 @@ export interface AccommodationLink {
 export interface AccommodationReview {
   id: number;
   Rating?: number;
-  visitor_review?: number;
+  visitor_review?: number; // 리뷰 수를 나타내는 필드
 }
 
 export interface AccommodationCategory {
@@ -64,4 +63,3 @@ export interface AccommodationCategory {
   Categories?: string;
   Categories_Details?: string;
 }
-
