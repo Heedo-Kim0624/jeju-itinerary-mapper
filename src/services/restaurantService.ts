@@ -74,19 +74,19 @@ export const fetchAccommodations = async (): Promise<RestaurantData[]> => {
 
     if (accommodationError) {
       console.error('숙소 정보 가져오기 오류:', accommodationError);
-      console.error('오류 세부 정보:', JSON.stringify(accommodationError));
       return [];
     }
 
     console.log('숙소 기본 정보 가져옴:', accommodations?.length || 0);
-    if (accommodations && accommodations.length > 0) {
-      console.log('첫 번째 숙소 데이터 샘플:', JSON.stringify(accommodations[0]));
-    } else {
-      console.error('가져온 숙소 데이터가 없거나 비어 있습니다!');
+    
+    if (!accommodations || accommodations.length === 0) {
+      console.error('가져온 숙소 데이터가 없습니다!');
       return [];
     }
+    
+    console.log('첫 번째 숙소 샘플:', JSON.stringify(accommodations[0]));
 
-    // 숙소 링크 정보 가져오기 (accomodation with one 'c')
+    // 숙소 링크 정보 가져오기
     const { data: links, error: linkError } = await supabase
       .from('accomodation_link')
       .select('*');
@@ -97,7 +97,7 @@ export const fetchAccommodations = async (): Promise<RestaurantData[]> => {
       console.log('숙소 링크 정보 가져옴:', links?.length || 0);
     }
 
-    // 숙소 리뷰 정보 가져오기 (accomodation with one 'c')
+    // 숙소 리뷰 정보 가져오기
     const { data: reviews, error: reviewError } = await supabase
       .from('accomodation_review')
       .select('*');
@@ -108,65 +108,49 @@ export const fetchAccommodations = async (): Promise<RestaurantData[]> => {
       console.log('숙소 리뷰 정보 가져옴:', reviews?.length || 0);
     }
 
-    // 링크 정보 맵 생성
-    const linkMap = links ? links.reduce((map: Record<string, any>, link: any) => {
-      // 링크 정보의 ID를 문자열로 변환하여 키로 사용
-      map[link.id.toString()] = link;
-      return map;
-    }, {}) : {};
-
-    // 리뷰 정보 맵 생성
-    const reviewMap = reviews ? reviews.reduce((map: Record<string, any>, review: any) => {
-      // 리뷰 정보의 ID를 문자열로 변환하여 키로 사용
-      map[review.id.toString()] = review;
-      return map;
-    }, {}) : {};
-
-    console.log('데이터 변환 시작...');
-
-    // 데이터 변환하여 반환 (비어있으면 빈 배열 반환)
-    if (!accommodations || accommodations.length === 0) {
-      console.log('변환할 숙소 정보가 없음');
-      return [];
+    // 링크와 리뷰 정보 맵 생성
+    const linkMap: Record<string, any> = {};
+    const reviewMap: Record<string, any> = {};
+    
+    if (links) {
+      links.forEach(link => {
+        linkMap[link.id.toString()] = link;
+      });
     }
     
-    const result = accommodations.map((accommodation: any) => {
+    if (reviews) {
+      reviews.forEach(review => {
+        reviewMap[review.id.toString()] = review;
+      });
+    }
+    
+    console.log('데이터 맵 생성 완료. 변환 시작...');
+    
+    // 데이터 변환하여 반환
+    const result = accommodations.map((accommodation) => {
       const id = accommodation.id.toString();
       
-      // 리뷰와 링크 정보 로그
-      if (reviewMap[id]) {
-        console.log(`숙소 ID ${id}의 리뷰 정보:`, JSON.stringify(reviewMap[id]));
-      }
-      if (linkMap[id]) {
-        console.log(`숙소 ID ${id}의 링크 정보:`, JSON.stringify(linkMap[id]));
-      }
-      
-      const item: RestaurantData = {
+      return {
         id: id,
         name: accommodation.Place_Name || '이름 없음',
         address: accommodation.Road_Address || accommodation.Lot_Address || '주소 없음',
-        category: 'accommodation',
+        category: 'accommodation', // 숙소 카테고리 고정
         rating: reviewMap[id]?.Rating || null,
         reviewCount: reviewMap[id]?.visitor_review || null,
-        operatingHours: '24시간', // 숙소 운영 시간
+        operatingHours: '24시간', // 숙소 운영 시간 
         naverLink: linkMap[id]?.link || '',
         instaLink: linkMap[id]?.instagram || '',
         x: accommodation.Longitude || 126.5311884,
         y: accommodation.Latitude || 33.3846216,
       };
-      
-      return item;
     });
     
     console.log('숙소 데이터 변환 완료:', result.length);
-    if (result.length > 0) {
-      console.log('첫 번째 변환된 데이터 샘플:', JSON.stringify(result[0]));
-    }
+    console.log('첫 번째 변환된 숙소:', result.length > 0 ? JSON.stringify(result[0]) : '없음');
     
     return result;
   } catch (error) {
     console.error('숙소 데이터 가져오기 오류:', error);
-    console.error('오류 세부 정보:', error instanceof Error ? error.message : JSON.stringify(error));
     return [];
   }
 };
