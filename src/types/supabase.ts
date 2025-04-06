@@ -1,5 +1,4 @@
 
-
 export interface RestaurantInformation {
   id: number;
   Place_Name?: string;
@@ -88,3 +87,8 @@ export interface LandmarkReview {
   visitor_review?: number;
 }
 
+export interface LandmarkCategory {
+  id: number;
+  Categories?: string;
+  Categories_Details?: string;
+}

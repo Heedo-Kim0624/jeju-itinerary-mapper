@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import { ExternalLink, MapPin, Star, MessageCircle, Clock, ArrowUpDown, Instagram } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -18,6 +17,7 @@ import { categoryColors, getCategoryName } from '@/utils/categoryColors';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 
 interface PlaceListProps {
   places: Place[];
@@ -42,6 +42,7 @@ interface Place {
   instaLink?: string;
   x: number;
   y: number;
+  categoryDetail?: string;
 }
 
 interface ItineraryDay {
@@ -286,6 +287,12 @@ const PlaceList: React.FC<PlaceListProps> = ({
                           <MessageCircle className="h-3 w-3" />
                           <span>{place.reviewCount}</span>
                         </div>
+                      )}
+
+                      {place.categoryDetail && (
+                        <Badge variant="outline" className="text-[9px] h-4 px-1 ml-1">
+                          {place.categoryDetail}
+                        </Badge>
                       )}
                     </div>
                   </div>

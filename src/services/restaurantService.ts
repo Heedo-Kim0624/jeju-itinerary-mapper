@@ -1,13 +1,14 @@
 
-
 import { supabase } from '@/integrations/supabase/client';
 import { 
   AccommodationInformation, 
   AccommodationLink, 
   AccommodationReview,
+  AccommodationCategory,
   LandmarkInformation,
   LandmarkLink,
-  LandmarkReview
+  LandmarkReview,
+  RestaurantCategory
 } from '@/types/supabase';
 
 export interface RestaurantData {
@@ -22,6 +23,7 @@ export interface RestaurantData {
   instaLink?: string;
   x: number;
   y: number;
+  categoryDetail?: string; // 카테고리 상세 정보 필드 추가
 }
 
 export const fetchRestaurants = async (): Promise<RestaurantData[]> => {
@@ -45,26 +47,46 @@ export const fetchRestaurants = async (): Promise<RestaurantData[]> => {
       console.error('레스토랑 링크 가져오기 오류:', linkError);
     }
 
-    // 레스토랑 정보와 링크 정보 병합
+    // 카테고리 정보 가져오기
+    const { data: categories, error: categoryError } = await supabase
+      .from('restaurant_categories')
+      .select('id, Categories, Categories_Details');
+
+    if (categoryError) {
+      console.error('레스토랑 카테고리 가져오기 오류:', categoryError);
+    } else {
+      console.log('레스토랑 카테고리 정보 가져옴:', categories?.length || 0);
+    }
+
+    // 데이터 맵 생성
     const linkMap = links ? links.reduce((map, link) => {
       map[link.id.toString()] = link;
       return map;
     }, {} as Record<string, any>) : {};
 
+    const categoryMap = categories ? categories.reduce((map, category) => {
+      map[category.id.toString()] = category;
+      return map;
+    }, {} as Record<string, any>) : {};
+
     // 데이터 변환
-    return restaurants.map(restaurant => ({
-      id: restaurant.id.toString(),
-      name: restaurant.Place_Name || '이름 없음',
-      address: restaurant.Road_Address || restaurant.Lot_Address || '주소 없음',
-      category: 'restaurant', // 레스토랑 카테고리 고정
-      rating: 4 + Math.random(), // 임시 평점
-      reviewCount: Math.floor(Math.random() * 500) + 10, // 임시 리뷰 수
-      operatingHours: '09:00 - 21:00', // 임시 운영 시간
-      naverLink: linkMap[restaurant.id]?.link || 'https://map.naver.com',
-      instaLink: linkMap[restaurant.id]?.instagram || '',
-      x: restaurant.Longitude || 126.5311884, // 제주도 중심 좌표 기본값
-      y: restaurant.Latitude || 33.3846216, // 제주도 중심 좌표 기본값
-    }));
+    return restaurants.map(restaurant => {
+      const id = restaurant.id.toString();
+      return {
+        id: id,
+        name: restaurant.Place_Name || '이름 없음',
+        address: restaurant.Road_Address || restaurant.Lot_Address || '주소 없음',
+        category: 'restaurant', // 레스토랑 카테고리 고정
+        rating: 4 + Math.random(), // 임시 평점
+        reviewCount: Math.floor(Math.random() * 500) + 10, // 임시 리뷰 수
+        operatingHours: '09:00 - 21:00', // 임시 운영 시간
+        naverLink: linkMap[id]?.link || 'https://map.naver.com',
+        instaLink: linkMap[id]?.instagram || '',
+        x: restaurant.Longitude || 126.5311884, // 제주도 중심 좌표 기본값
+        y: restaurant.Latitude || 33.3846216, // 제주도 중심 좌표 기본값
+        categoryDetail: categoryMap[id]?.Categories_Details || '', // 카테고리 상세 정보 추가
+      };
+    });
   } catch (error) {
     console.error('레스토랑 데이터 가져오기 오류:', error);
     return [];
@@ -119,9 +141,24 @@ export const fetchAccommodations = async (): Promise<RestaurantData[]> => {
       }
     }
 
-    // 링크와 리뷰 정보 맵 생성
+    // 숙소 카테고리 정보 가져오기
+    const { data: categories, error: categoryError } = await supabase
+      .from('accomodation_categories')
+      .select('*');
+
+    if (categoryError) {
+      console.error('숙소 카테고리 가져오기 오류:', categoryError);
+    } else {
+      console.log('숙소 카테고리 정보 가져옴:', categories?.length || 0);
+      if (categories && categories.length > 0) {
+        console.log('첫번째 카테고리 샘플:', JSON.stringify(categories[0]));
+      }
+    }
+
+    // 링크, 리뷰, 카테고리 정보 맵 생성
     const linkMap: Record<string, any> = {};
     const reviewMap: Record<string, any> = {};
+    const categoryMap: Record<string, any> = {};
     
     if (links) {
       links.forEach(link => {
@@ -135,16 +172,23 @@ export const fetchAccommodations = async (): Promise<RestaurantData[]> => {
       });
     }
     
+    if (categories) {
+      categories.forEach(category => {
+        categoryMap[category.id.toString()] = category;
+      });
+    }
+    
     console.log('데이터 맵 생성 완료. 변환 시작...');
     
     // 데이터 변환하여 반환
     const result = accommodations.map((accommodation: AccommodationInformation) => {
       const id = accommodation.ID.toString();
       const reviewData = reviewMap[id];
+      const categoryData = categoryMap[id];
       
-      // 리뷰 데이터가 있는 경우 콘솔에 출력 (디버깅)
-      if (reviewData) {
-        console.log(`숙소 ID ${id}의 리뷰 데이터:`, reviewData);
+      // 디버깅 정보
+      if (categoryData) {
+        console.log(`숙소 ID ${id}의 카테고리 데이터:`, categoryData);
       }
       
       return {
@@ -159,6 +203,7 @@ export const fetchAccommodations = async (): Promise<RestaurantData[]> => {
         instaLink: linkMap[id]?.instagram || '',
         x: accommodation.Longitude || 126.5311884,
         y: accommodation.Latitude || 33.3846216,
+        categoryDetail: categoryData?.Categories_Details || '', // 카테고리 상세 정보 추가
       };
     });
     
@@ -209,7 +254,7 @@ export const fetchLandmarks = async (): Promise<RestaurantData[]> => {
 
     // 관광지 리뷰 정보 가져오기
     const { data: reviews, error: reviewError } = await supabase
-      .from('landmark_rating')  // landmark_rating으로 테이블명 변경
+      .from('landmark_review')
       .select('*');
 
     if (reviewError) {
@@ -218,9 +263,21 @@ export const fetchLandmarks = async (): Promise<RestaurantData[]> => {
       console.log('관광지 리뷰 정보 가져옴:', reviews?.length || 0);
     }
 
-    // 링크와 리뷰 정보 맵 생성
+    // 관광지 카테고리 정보 가져오기
+    const { data: categories, error: categoryError } = await supabase
+      .from('landmark_categories')
+      .select('*');
+
+    if (categoryError) {
+      console.error('관광지 카테고리 가져오기 오류:', categoryError);
+    } else {
+      console.log('관광지 카테고리 정보 가져옴:', categories?.length || 0);
+    }
+
+    // 링크, 리뷰, 카테고리 정보 맵 생성
     const linkMap: Record<string, any> = {};
     const reviewMap: Record<string, any> = {};
+    const categoryMap: Record<string, any> = {};
     
     if (links) {
       links.forEach(link => {
@@ -234,11 +291,23 @@ export const fetchLandmarks = async (): Promise<RestaurantData[]> => {
       });
     }
     
+    if (categories) {
+      categories.forEach(category => {
+        categoryMap[category.id.toString()] = category;
+      });
+    }
+    
     console.log('데이터 맵 생성 완료. 변환 시작...');
     
     // 데이터 변환하여 반환
     const result = landmarks.map((landmark: LandmarkInformation) => {
       const id = landmark.id.toString();
+      const categoryData = categoryMap[id];
+      
+      // 디버깅 정보
+      if (categoryData) {
+        console.log(`관광지 ID ${id}의 카테고리 데이터:`, categoryData);
+      }
       
       return {
         id: id,
@@ -252,6 +321,7 @@ export const fetchLandmarks = async (): Promise<RestaurantData[]> => {
         instaLink: linkMap[id]?.instagram || '',
         x: landmark.Longitude || 126.5311884,
         y: landmark.Latitude || 33.3846216,
+        categoryDetail: categoryData?.Categories_Details || '', // 카테고리 상세 정보 추가
       };
     });
     
@@ -264,4 +334,3 @@ export const fetchLandmarks = async (): Promise<RestaurantData[]> => {
     return [];
   }
 };
-
