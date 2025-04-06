@@ -1,4 +1,5 @@
 
+
 import { supabase } from '@/integrations/supabase/client';
 import { AccommodationInformation, AccommodationLink, AccommodationReview } from '@/types/supabase';
 
@@ -65,9 +66,9 @@ export const fetchRestaurants = async (): Promise<RestaurantData[]> => {
 
 export const fetchAccommodations = async (): Promise<RestaurantData[]> => {
   try {
-    // 숙소 정보 가져오기
+    // 숙소 정보 가져오기 (accomodation with one 'c')
     const { data: accommodations, error: accommodationError } = await supabase
-      .from('accommodation_information')
+      .from('accomodation_information')
       .select('*');
 
     if (accommodationError) {
@@ -75,18 +76,18 @@ export const fetchAccommodations = async (): Promise<RestaurantData[]> => {
       return [];
     }
 
-    // 숙소 링크 정보 가져오기
+    // 숙소 링크 정보 가져오기 (accomodation with one 'c')
     const { data: links, error: linkError } = await supabase
-      .from('accommodation_link')
+      .from('accomodation_link')
       .select('*');
 
     if (linkError) {
       console.error('숙소 링크 가져오기 오류:', linkError);
     }
 
-    // 숙소 리뷰 정보 가져오기
+    // 숙소 리뷰 정보 가져오기 (accomodation with one 'c')
     const { data: reviews, error: reviewError } = await supabase
-      .from('accommodation_review')
+      .from('accomodation_review')
       .select('*');
 
     if (reviewError) {
@@ -94,19 +95,19 @@ export const fetchAccommodations = async (): Promise<RestaurantData[]> => {
     }
 
     // 링크 정보 맵 생성
-    const linkMap = links ? links.reduce((map: Record<string, any>, link: AccommodationLink) => {
+    const linkMap = links ? links.reduce((map: Record<string, any>, link: any) => {
       map[link.id.toString()] = link;
       return map;
     }, {}) : {};
 
     // 리뷰 정보 맵 생성
-    const reviewMap = reviews ? reviews.reduce((map: Record<string, any>, review: AccommodationReview) => {
+    const reviewMap = reviews ? reviews.reduce((map: Record<string, any>, review: any) => {
       map[review.id.toString()] = review;
       return map;
     }, {}) : {};
 
     // 데이터 변환
-    return accommodations.map((accommodation: AccommodationInformation) => ({
+    return accommodations.map((accommodation: any) => ({
       id: accommodation.id.toString(),
       name: accommodation.Place_Name || '이름 없음',
       address: accommodation.Road_Address || accommodation.Lot_Address || '주소 없음',
@@ -124,3 +125,4 @@ export const fetchAccommodations = async (): Promise<RestaurantData[]> => {
     return [];
   }
 };
+

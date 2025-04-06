@@ -1,4 +1,5 @@
 
+
 export interface RestaurantInformation {
   id: number;
   Place_Name?: string;
@@ -36,7 +37,7 @@ export interface RestaurantNotes {
   Note?: string;
 }
 
-// Accommodation 테이블 구조에 맞게 타입 정의 수정
+// 숙박시설 테이블 구조에 맞게 타입 정의 수정 (accomodation with one 'c')
 export interface AccommodationInformation {
   id: number;
   Place_Name?: string;
@@ -63,3 +64,4 @@ export interface AccommodationCategory {
   Categories?: string;
   Categories_Details?: string;
 }
+
