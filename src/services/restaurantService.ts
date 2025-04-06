@@ -114,13 +114,13 @@ export const fetchAccommodations = async (): Promise<RestaurantData[]> => {
     
     if (links) {
       links.forEach(link => {
-        linkMap[link.id.toString()] = link;
+        linkMap[link.ID.toString()] = link;
       });
     }
     
     if (reviews) {
       reviews.forEach(review => {
-        reviewMap[review.id.toString()] = review;
+        reviewMap[review.ID.toString()] = review;
       });
     }
     
@@ -128,12 +128,12 @@ export const fetchAccommodations = async (): Promise<RestaurantData[]> => {
     
     // 데이터 변환하여 반환
     const result = accommodations.map((accommodation) => {
-      const id = accommodation.id.toString();
+      const id = accommodation.ID.toString();
       
       return {
         id: id,
-        name: accommodation.Place_Name || '이름 없음',
-        address: accommodation.Road_Address || accommodation.Lot_Address || '주소 없음',
+        name: accommodation.Place_name || '이름 없음',
+        address: accommodation.Road_address || accommodation.Lot_Address || '주소 없음',
         category: 'accommodation', // 숙소 카테고리 고정
         rating: reviewMap[id]?.Rating || null,
         reviewCount: reviewMap[id]?.visitor_review || null,

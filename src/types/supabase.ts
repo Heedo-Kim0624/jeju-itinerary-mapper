@@ -1,4 +1,3 @@
-
 export interface RestaurantInformation {
   id: number;
   Place_Name?: string;
@@ -38,22 +37,22 @@ export interface RestaurantNotes {
 
 // accomodation with one 'c' (철자 주의)
 export interface AccommodationInformation {
-  id: number;
-  Place_Name?: string;
-  Road_Address?: string;
+  ID: number;
+  Place_name?: string;
+  Road_address?: string;
   Lot_Address?: string;
   Longitude?: number;
   Latitude?: number;
 }
 
 export interface AccommodationLink {
-  id: number;
+  ID: number;
   link?: string;
   instagram?: string;
 }
 
 export interface AccommodationReview {
-  id: number;
+  ID: number;
   Rating?: number;
   visitor_review?: number; // 리뷰 수를 나타내는 필드
 }
