@@ -37,12 +37,15 @@ export const fetchRestaurants = async () => {
 
     if (categoriesError) throw categoriesError;
 
-    // Fetch restaurant reviews
+    // Fetch restaurant reviews - using restaurant_review_data instead of restaurant_review
     const { data: restaurantReviews, error: reviewsError } = await supabase
-      .from("restaurant_review")
+      .from("restaurant_review_data")  // Updated table name
       .select("id, Rating, visitor_review_count");
 
-    if (reviewsError) throw reviewsError;
+    if (reviewsError) {
+      console.error("Error fetching restaurant reviews:", reviewsError);
+      // Continue with null reviews if there's an error
+    }
 
     // Combine the data
     const restaurants = restaurantInfo.map((info: RestaurantInformation) => {
@@ -52,9 +55,14 @@ export const fetchRestaurants = async () => {
       const category = restaurantCategories.find(
         (category: RestaurantCategory) => category.id === info.id
       );
-      const review = restaurantReviews.find(
-        (review: RestaurantReview) => review.id === info.id
-      );
+      
+      // Safely access reviews if available
+      let review = null;
+      if (restaurantReviews) {
+        review = restaurantReviews.find(
+          (r: any) => r.id === info.id
+        );
+      }
 
       return {
         id: `restaurant-${info.id}`,
@@ -80,9 +88,9 @@ export const fetchRestaurants = async () => {
 
 export const fetchAccommodations = async () => {
   try {
-    // Fetch accommodation information
+    // Fetch accommodation information - updated table name
     const { data: accomInfo, error: infoError } = await supabase
-      .from("accomodation_information")
+      .from("accomodation_information_node")  // Updated table name
       .select("*");
 
     if (infoError) throw infoError;
@@ -106,24 +114,33 @@ export const fetchAccommodations = async () => {
       .from("accomodation_review")
       .select("id, Rating, visitor_review_count");
 
-    if (reviewsError) throw reviewsError;
+    if (reviewsError) {
+      console.error("Error fetching accommodation reviews:", reviewsError);
+      // Continue with null reviews if there's an error
+    }
 
-    // Combine the data
-    const accommodations = accomInfo.map((info: AccommodationInformation) => {
+    // Combine the data - handle different field names
+    const accommodations = accomInfo.map((info: any) => {
       const link = accomLinks.find(
-        (link: AccommodationLink) => link.ID === info.ID
+        (link: AccommodationLink) => link.ID === info.id  // Adjust ID matching
       );
+      
       const category = accomCategories.find(
-        (category: AccommodationCategory) => category.id === info.ID
+        (category: AccommodationCategory) => category.id === info.id  // Adjust ID matching
       );
-      const review = accomReviews.find(
-        (review: AccommodationReview) => review.id === info.ID
-      );
+      
+      // Safely access reviews if available
+      let review = null;
+      if (accomReviews) {
+        review = accomReviews.find(
+          (r: any) => r.id === info.id
+        );
+      }
 
       return {
-        id: `accommodation-${info.ID}`,
-        name: info.Place_name || "",
-        address: info.Road_address || info.Lot_Address || "",
+        id: `accommodation-${info.id}`,
+        name: info.Place_Name || "",  // Adjusted field names
+        address: info.Road_Address || info.Lot_Address || "",  // Adjusted field names
         category: "accommodation",
         categoryDetail: category?.Categories_Details || "",
         x: info.Longitude || 0,
@@ -144,9 +161,9 @@ export const fetchAccommodations = async () => {
 
 export const fetchLandmarks = async () => {
   try {
-    // Fetch landmark information
+    // Fetch landmark information - updated table name
     const { data: landmarkInfo, error: infoError } = await supabase
-      .from("landmark_information")
+      .from("landmark_information_node")  // Updated table name
       .select("*");
 
     if (infoError) throw infoError;
@@ -165,22 +182,20 @@ export const fetchLandmarks = async () => {
 
     if (categoriesError) throw categoriesError;
 
-    // 테이블이 없을 가능성이 있으므로 리뷰 데이터는 건너뜁니다
-    // IMPORTANT: 리뷰 테이블이 존재하지 않으므로 리뷰 데이터 없이 랜드마크 정보만 반환합니다
-    
-    // Combine the data
-    const landmarks = landmarkInfo.map((info: LandmarkInformation) => {
+    // Combine the data - handling different field names
+    const landmarks = landmarkInfo.map((info: any) => {
       const link = landmarkLinks.find(
         (link: LandmarkLink) => link.id === info.id
       );
+      
       const category = landmarkCategories.find(
         (category: LandmarkCategory) => category.id === info.id
       );
 
       return {
         id: `landmark-${info.id}`,
-        name: info.Place_Name || "",
-        address: info.Road_Address || info.Lot_Address || "",
+        name: info.Place_Name || "",  // Adjusted field names
+        address: info.Road_Address || info.Lot_Address || "",  // Adjusted field names
         category: "attraction",
         categoryDetail: category?.Categories_Details || "",
         x: info.Longitude || 0,
