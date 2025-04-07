@@ -34,20 +34,22 @@ export const loadNaverMaps = (): Promise<void> => {
     console.log("Loading Naver Maps script...");
     const script = document.createElement('script');
     script.async = true;
-    script.src = `https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${NAVER_CLIENT_ID}&submodules=geocoder,drawing,geojson`;
-    
+    script.src = `https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${clientId}&submodules=geocoder,drawing`;
+
     script.onload = () => {
       console.log("Naver Maps script loaded successfully");
       resolve();
     };
-    
+
     script.onerror = (error) => {
       console.error("Failed to load Naver Maps script:", error);
       reject(error);
     };
+
     document.head.appendChild(script);
   });
 };
+
 
 // naver 객체를 위한 전역 타입 선언 추가
 declare global {
