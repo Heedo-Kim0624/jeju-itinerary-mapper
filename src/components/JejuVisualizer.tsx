@@ -38,7 +38,7 @@ const JejuVisualizer: React.FC<JejuVisualizerProps> = ({ className }) => {
     initNaverMaps();
     
     return () => {
-      clearMarkers();
+      clearMarkersAndInfoWindows();
     };
   }, []);
 
@@ -49,17 +49,49 @@ const JejuVisualizer: React.FC<JejuVisualizerProps> = ({ className }) => {
     }
   }, [isNaverLoaded]);
 
-  // 마커 클리어 함수
-  const clearMarkers = () => {
-    markers.current.forEach(marker => {
-      marker.setMap(null);
-    });
+  // 마커 클리어 함수 - null 체크 추가
+  const clearMarkersAndInfoWindows = () => {
+    // 마커 제거
+    if (markers.current && markers.current.length > 0) {
+      markers.current.forEach(marker => {
+        if (marker && typeof marker.setMap === 'function') {
+          try {
+            marker.setMap(null);
+          } catch (error) {
+            console.error("Error clearing marker:", error);
+          }
+        }
+      });
+    }
     markers.current = [];
     
-    infoWindows.current.forEach(infoWindow => {
-      infoWindow.close();
-    });
+    // 정보창 닫기
+    if (infoWindows.current && infoWindows.current.length > 0) {
+      infoWindows.current.forEach(infoWindow => {
+        if (infoWindow && typeof infoWindow.close === 'function') {
+          try {
+            infoWindow.close();
+          } catch (error) {
+            console.error("Error closing infoWindow:", error);
+          }
+        }
+      });
+    }
     infoWindows.current = [];
+    
+    // 폴리라인 제거
+    if (polylines.current && polylines.current.length > 0) {
+      polylines.current.forEach(polyline => {
+        if (polyline && typeof polyline.setMap === 'function') {
+          try {
+            polyline.setMap(null);
+          } catch (error) {
+            console.error("Error clearing polyline:", error);
+          }
+        }
+      });
+    }
+    polylines.current = [];
   };
 
   // 지도 초기화 함수

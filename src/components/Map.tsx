@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import { toast } from "sonner";
 import { getCategoryColor } from '@/utils/categoryColors';
@@ -91,12 +90,16 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
     return () => {
       if (map.current) {
         console.log("Cleaning up map instance");
-        markers.current.forEach(marker => marker.setMap(null));
-        polylines.current.forEach(polyline => polyline.setMap(null));
-        infoWindows.current.forEach(infoWindow => infoWindow.close());
+        clearMarkersAndUiElements();
       }
     };
   }, []);
+
+  const clearMarkersAndUiElements = () => {
+    clearMarkers();
+    clearInfoWindows();
+    clearPolylines();
+  };
 
   useEffect(() => {
     if (isNaverLoaded) {
@@ -242,23 +245,47 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
   };
 
   const clearMarkers = () => {
-    markers.current.forEach(marker => {
-      marker.setMap(null);
-    });
+    if (markers.current && markers.current.length > 0) {
+      markers.current.forEach(marker => {
+        if (marker && typeof marker.setMap === 'function') {
+          try {
+            marker.setMap(null);
+          } catch (error) {
+            console.error("Error clearing marker:", error);
+          }
+        }
+      });
+    }
     markers.current = [];
   };
 
   const clearInfoWindows = () => {
-    infoWindows.current.forEach(infoWindow => {
-      infoWindow.close();
-    });
+    if (infoWindows.current && infoWindows.current.length > 0) {
+      infoWindows.current.forEach(infoWindow => {
+        if (infoWindow && typeof infoWindow.close === 'function') {
+          try {
+            infoWindow.close();
+          } catch (error) {
+            console.error("Error closing infoWindow:", error);
+          }
+        }
+      });
+    }
     infoWindows.current = [];
   };
 
   const clearPolylines = () => {
-    polylines.current.forEach(polyline => {
-      polyline.setMap(null);
-    });
+    if (polylines.current && polylines.current.length > 0) {
+      polylines.current.forEach(polyline => {
+        if (polyline && typeof polyline.setMap === 'function') {
+          try {
+            polyline.setMap(null);
+          } catch (error) {
+            console.error("Error clearing polyline:", error);
+          }
+        }
+      });
+    }
     polylines.current = [];
   };
 
@@ -315,8 +342,7 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
   const addMarkers = (placesToMark: Place[], isItinerary: boolean = false) => {
     if (!map.current || !isMapInitialized || !window.naver) return;
     
-    clearMarkers();
-    clearInfoWindows();
+    clearMarkersAndUiElements();
     
     console.log(`Adding ${placesToMark.length} markers, isItinerary:`, isItinerary);
     
