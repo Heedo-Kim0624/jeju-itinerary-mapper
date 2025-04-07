@@ -2,8 +2,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import { toast } from "sonner";
 import { getCategoryColor } from '@/utils/categoryColors';
 import { loadNaverMaps } from "@/utils/loadNaverMaps";
-// Fix the import issue - we're importing from mapStyles.css.ts, not mapStyles.css
-import { MapStyles } from '@/utils/mapStyles.css';
 
 interface Place {
   id: string;

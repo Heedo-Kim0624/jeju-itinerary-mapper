@@ -20,10 +20,10 @@ export interface RestaurantCategory {
   Categories_Details?: string;
 }
 
-export interface RestaurantReview {
+export interface RestaurantRating {
   id: number;
-  Rating?: number;
-  review_count?: number;
+  rating?: number;
+  visitor_review_count?: number;
 }
 
 export interface RestaurantOpeningHours {
@@ -36,14 +36,42 @@ export interface RestaurantNotes {
   Note?: string;
 }
 
+// Cafe interfaces
+export interface CafeInformation {
+  id: number;
+  place_name?: string;
+  road_address?: string;
+  lot_address?: string;
+  longitude?: number;
+  latitude?: number;
+}
+
+export interface CafeLink {
+  id: number;
+  link?: string;
+  instagram?: string;
+}
+
+export interface CafeCategory {
+  id: number;
+  categories?: string;
+  categories_details?: string;
+}
+
+export interface CafeRating {
+  id: number;
+  rating?: number;
+  visitor_review_count?: number;
+}
+
 // accomodation with one 'c' (철자 주의)
 export interface AccommodationInformation {
-  ID: number;
-  Place_name?: string;
-  Road_address?: string;
-  Lot_Address?: string;
-  Longitude?: number;
-  Latitude?: number;
+  id: number; // Changed from ID to lowercase id
+  place_name?: string;
+  road_address?: string;
+  lot_address?: string;
+  longitude?: number;
+  latitude?: number;
 }
 
 export interface AccommodationLink {
@@ -52,11 +80,10 @@ export interface AccommodationLink {
   instagram?: string;
 }
 
-export interface AccommodationReview {
-  id: number; // 주의: 소문자 'id'
-  Rating?: number;
-  visitor_review?: number; // 리뷰 수를 나타내는 필드
-  visitor_review_count?: number; // 대체 필드명
+export interface AccommodationRating {
+  id: number; 
+  rating?: number;
+  visitor_review_count?: number;
 }
 
 export interface AccommodationCategory {
@@ -67,30 +94,30 @@ export interface AccommodationCategory {
 
 // 관광지(landmark) 정보를 위한 인터페이스 추가
 export interface LandmarkInformation {
-  id: number; // 주의: 소문자 'id'
-  Place_Name?: string;
-  Road_Address?: string;
-  Lot_Address?: string;
-  Longitude?: number;
-  Latitude?: number;
+  id: number;
+  place_name?: string;
+  road_address?: string;
+  lot_address?: string;
+  longitude?: number;
+  latitude?: number;
 }
 
 export interface LandmarkLink {
-  id: number; // 주의: 소문자 'id'
+  id: number;
   link?: string;
   instagram?: string;
 }
 
-export interface LandmarkReview {
-  id: number; // 주의: 소문자 'id'
-  Rating?: number;
-  visitor_review?: number;
+export interface LandmarkRating {
+  id: number;
+  rating?: number;
+  visitor_review_count?: number;
 }
 
 export interface LandmarkCategory {
   id: number;
-  Categories?: string;
-  Categories_Details?: string;
+  categories?: string;
+  categories_details?: string;
 }
 
 // Naver Maps 타입 정의

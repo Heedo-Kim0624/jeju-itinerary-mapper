@@ -4,11 +4,9 @@ import {
   RestaurantInformation,
   RestaurantLink,
   RestaurantCategory,
-  RestaurantReview,
   AccommodationInformation,
   AccommodationLink,
   AccommodationCategory,
-  AccommodationReview,
   LandmarkInformation,
   LandmarkLink,
   LandmarkCategory,
@@ -37,14 +35,14 @@ export const fetchRestaurants = async () => {
 
     if (categoriesError) throw categoriesError;
 
-    // Fetch restaurant reviews - using restaurant_review_data instead of restaurant_review
-    const { data: restaurantReviews, error: reviewsError } = await supabase
-      .from("restaurant_review_data")  // Updated table name
-      .select("id, Rating, visitor_review_count");
+    // Fetch restaurant ratings
+    const { data: restaurantRatings, error: ratingsError } = await supabase
+      .from("restaurant_rating")
+      .select("id, rating, visitor_review_count");
 
-    if (reviewsError) {
-      console.error("Error fetching restaurant reviews:", reviewsError);
-      // Continue with null reviews if there's an error
+    if (ratingsError) {
+      console.error("Error fetching restaurant ratings:", ratingsError);
+      // Continue with null ratings if there's an error
     }
 
     // Combine the data
@@ -56,10 +54,10 @@ export const fetchRestaurants = async () => {
         (category: RestaurantCategory) => category.id === info.id
       );
       
-      // Safely access reviews if available
-      let review = null;
-      if (restaurantReviews) {
-        review = restaurantReviews.find(
+      // Safely access ratings if available
+      let rating = null;
+      if (restaurantRatings) {
+        rating = restaurantRatings.find(
           (r: any) => r.id === info.id
         );
       }
@@ -74,8 +72,8 @@ export const fetchRestaurants = async () => {
         y: info.Latitude || 0,
         naverLink: link?.link || "",
         instaLink: link?.instagram || "",
-        rating: review?.Rating,
-        reviewCount: review?.visitor_review_count,
+        rating: rating?.rating,
+        reviewCount: rating?.visitor_review_count,
       };
     });
 
@@ -86,11 +84,83 @@ export const fetchRestaurants = async () => {
   }
 };
 
+export const fetchCafes = async () => {
+  try {
+    // Fetch cafe information
+    const { data: cafeInfo, error: infoError } = await supabase
+      .from("cafe_information")
+      .select("*");
+
+    if (infoError) throw infoError;
+
+    // Fetch cafe links
+    const { data: cafeLinks, error: linksError } = await supabase
+      .from("cafe_link")
+      .select("*");
+
+    if (linksError) throw linksError;
+
+    // Fetch cafe categories
+    const { data: cafeCategories, error: categoriesError } = await supabase
+      .from("cafe_categories")
+      .select("*");
+
+    if (categoriesError) throw categoriesError;
+
+    // Fetch cafe ratings
+    const { data: cafeRatings, error: ratingsError } = await supabase
+      .from("cafe_rating")
+      .select("id, rating, visitor_review_count");
+
+    if (ratingsError) {
+      console.error("Error fetching cafe ratings:", ratingsError);
+      // Continue with null ratings if there's an error
+    }
+
+    // Combine the data
+    const cafes = cafeInfo.map((info: any) => {
+      const link = cafeLinks.find(
+        (link: any) => link.id === info.id
+      );
+      const category = cafeCategories.find(
+        (category: any) => category.id === info.id
+      );
+      
+      // Safely access ratings if available
+      let rating = null;
+      if (cafeRatings) {
+        rating = cafeRatings.find(
+          (r: any) => r.id === info.id
+        );
+      }
+
+      return {
+        id: `cafe-${info.id}`,
+        name: info.place_name || "",
+        address: info.lot_address || info.road_address || "",
+        category: "cafe",
+        categoryDetail: category?.categories_details || "",
+        x: info.longitude || 0,
+        y: info.latitude || 0,
+        naverLink: link?.link || "",
+        instaLink: link?.instagram || "",
+        rating: rating?.rating,
+        reviewCount: rating?.visitor_review_count,
+      };
+    });
+
+    return cafes;
+  } catch (error) {
+    console.error("Error fetching cafes:", error);
+    return [];
+  }
+};
+
 export const fetchAccommodations = async () => {
   try {
     // Fetch accommodation information - updated table name
     const { data: accomInfo, error: infoError } = await supabase
-      .from("accomodation_information_node")  // Updated table name
+      .from("accomodation_information")
       .select("*");
 
     if (infoError) throw infoError;
@@ -109,14 +179,14 @@ export const fetchAccommodations = async () => {
 
     if (categoriesError) throw categoriesError;
 
-    // Fetch accommodation reviews
-    const { data: accomReviews, error: reviewsError } = await supabase
-      .from("accomodation_review")
-      .select("id, Rating, visitor_review_count");
+    // Fetch accommodation ratings
+    const { data: accomRatings, error: ratingsError } = await supabase
+      .from("accomodation_rating")
+      .select("id, rating, visitor_review_count");
 
-    if (reviewsError) {
-      console.error("Error fetching accommodation reviews:", reviewsError);
-      // Continue with null reviews if there's an error
+    if (ratingsError) {
+      console.error("Error fetching accommodation ratings:", ratingsError);
+      // Continue with null ratings if there's an error
     }
 
     // Combine the data - handle different field names
@@ -129,26 +199,26 @@ export const fetchAccommodations = async () => {
         (category: AccommodationCategory) => category.id === info.id  // Adjust ID matching
       );
       
-      // Safely access reviews if available
-      let review = null;
-      if (accomReviews) {
-        review = accomReviews.find(
+      // Safely access ratings if available
+      let rating = null;
+      if (accomRatings) {
+        rating = accomRatings.find(
           (r: any) => r.id === info.id
         );
       }
 
       return {
         id: `accommodation-${info.id}`,
-        name: info.Place_Name || "",  // Adjusted field names
-        address: info.Road_Address || info.Lot_Address || "",  // Adjusted field names
+        name: info.place_name || "",  // Adjusted field names
+        address: info.lot_address || info.road_address || "",  // Adjusted field names
         category: "accommodation",
         categoryDetail: category?.Categories_Details || "",
-        x: info.Longitude || 0,
-        y: info.Latitude || 0,
+        x: info.longitude || 0,
+        y: info.latitude || 0,
         naverLink: link?.link || "",
         instaLink: link?.instagram || "",
-        rating: review?.Rating,
-        reviewCount: review?.visitor_review_count,
+        rating: rating?.rating,
+        reviewCount: rating?.visitor_review_count,
       };
     });
 
@@ -161,9 +231,9 @@ export const fetchAccommodations = async () => {
 
 export const fetchLandmarks = async () => {
   try {
-    // Fetch landmark information - updated table name
+    // Fetch landmark information
     const { data: landmarkInfo, error: infoError } = await supabase
-      .from("landmark_information_node")  // Updated table name
+      .from("landmark_information")
       .select("*");
 
     if (infoError) throw infoError;
@@ -182,6 +252,16 @@ export const fetchLandmarks = async () => {
 
     if (categoriesError) throw categoriesError;
 
+    // Fetch landmark ratings
+    const { data: landmarkRatings, error: ratingsError } = await supabase
+      .from("landmark_rating")
+      .select("id, rating, visitor_review_count");
+
+    if (ratingsError) {
+      console.error("Error fetching landmark ratings:", ratingsError);
+      // Continue with null ratings if there's an error
+    }
+
     // Combine the data - handling different field names
     const landmarks = landmarkInfo.map((info: any) => {
       const link = landmarkLinks.find(
@@ -191,19 +271,27 @@ export const fetchLandmarks = async () => {
       const category = landmarkCategories.find(
         (category: LandmarkCategory) => category.id === info.id
       );
+      
+      // Safely access ratings if available
+      let rating = null;
+      if (landmarkRatings) {
+        rating = landmarkRatings.find(
+          (r: any) => r.id === info.id
+        );
+      }
 
       return {
         id: `landmark-${info.id}`,
-        name: info.Place_Name || "",  // Adjusted field names
-        address: info.Road_Address || info.Lot_Address || "",  // Adjusted field names
+        name: info.place_name || "",  // Adjusted field names
+        address: info.lot_address || info.road_address || "",  // Adjusted field names
         category: "attraction",
-        categoryDetail: category?.Categories_Details || "",
-        x: info.Longitude || 0,
-        y: info.Latitude || 0,
+        categoryDetail: category?.categories_details || "",
+        x: info.longitude || 0,
+        y: info.latitude || 0,
         naverLink: link?.link || "",
         instaLink: link?.instagram || "",
-        rating: null, // 리뷰 데이터 없음
-        reviewCount: null,
+        rating: rating?.rating,
+        reviewCount: rating?.visitor_review_count,
       };
     });
 
@@ -213,3 +301,4 @@ export const fetchLandmarks = async () => {
     return [];
   }
 };
+

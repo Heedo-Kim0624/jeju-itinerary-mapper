@@ -11,7 +11,7 @@ import DaySelector from '@/components/DaySelector';
 import { toast } from 'sonner';
 import { categoryColors, getCategoryName } from '@/utils/categoryColors';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { fetchRestaurants, fetchAccommodations, fetchLandmarks } from '@/services/restaurantService';
+import { fetchRestaurants, fetchAccommodations, fetchLandmarks, fetchCafes } from '@/services/restaurantService';
 
 const DEFAULT_PROMPT = '';
 
@@ -254,7 +254,8 @@ const Index: React.FC = () => {
         console.log('관광지 데이터 가져옴:', attractions.length, '개');
         console.log('첫 번째 관광지 데이터:', attractions.length > 0 ? attractions[0].name : '없음');
         
-        const cafes = generateMockPlaces('cafe', 200);
+        const cafes = await fetchCafes();
+        console.log('카페 데이터 가져옴:', cafes.length, '개');
         
         const allPlaces = [
           ...restaurants,
@@ -266,6 +267,7 @@ const Index: React.FC = () => {
         console.log('총 로드된 장소 수:', allPlaces.length);
         console.log('숙소 수:', accommodations.length);
         console.log('관광지 수:', attractions.length);
+        console.log('카페 수:', cafes.length);
         
         setPlaces(allPlaces);
       } catch (error) {
@@ -345,7 +347,7 @@ const Index: React.FC = () => {
     }
     
     if (!promptText.trim()) {
-      toast.error('검색 프롬프트를 입력해주세요');
+      toast.error('검색 프롬프트를 입력하세요');
       return;
     }
     
