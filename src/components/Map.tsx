@@ -133,8 +133,8 @@ const Map: React.FC<MapProps> = ({
     try {
       const mapOptions = {
         center: new window.naver.maps.LatLng(JEJU_CENTER.lat, JEJU_CENTER.lng),
-        zoom: 11,
-        minZoom: 10,
+        zoom: 10,
+        minZoom: 9,
         maxZoom: 18,
         zoomControl: true,
         zoomControlOptions: {
