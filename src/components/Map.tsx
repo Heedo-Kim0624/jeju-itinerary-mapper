@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import { toast } from "sonner";
 import { getCategoryColor } from '@/utils/categoryColors';
@@ -8,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { MapPin, Star, Clock, ExternalLink, AlertCircle, Instagram } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { loadNaverMaps } from "@/utils/loadNaverMaps";
+import JejuVisualizer from './JejuVisualizer';
+import { JEJU_CENTER, JEJU_BOUNDARY } from '@/utils/jejuMapStyles';
 
 interface MapProps {
   places: Place[];
@@ -71,8 +72,8 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
   const [loadAttempts, setLoadAttempts] = useState<number>(0);
   const [popupPlace, setPopupPlace] = useState<Place | null>(null);
   const [showDialog, setShowDialog] = useState<boolean>(false);
+  const [showJejuVisualizer, setShowJejuVisualizer] = useState<boolean>(false);
 
-  // Effect to load the Naver Maps script
   useEffect(() => {
     console.log("Loading Naver Maps script...");
     
@@ -101,14 +102,12 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
     };
   }, []);
 
-  // Initialize the map when the script is loaded
   useEffect(() => {
     if (isNaverLoaded) {
       setTimeout(initializeMap, 300);
     }
   }, [isNaverLoaded]);
 
-  // Effect to retry loading if needed
   useEffect(() => {
     if (isMapError && loadAttempts < 3) {
       console.log("Map error detected, retrying...");
@@ -122,7 +121,6 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
     }
   }, [isMapError, loadAttempts]);
 
-  // Add resize event listener to handle responsive behavior
   useEffect(() => {
     const handleResize = () => {
       if (map.current && mapContainer.current && window.naver) {
@@ -515,7 +513,10 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
     }
   }, [places, selectedPlace, itinerary, selectedDay, isMapInitialized]);
 
-  // Loading or error state
+  const toggleJejuVisualizer = () => {
+    setShowJejuVisualizer(!showJejuVisualizer);
+  };
+
   if (!isNaverLoaded || isMapError) {
     return (
       <div className="w-full h-full flex flex-col items-center justify-center bg-jeju-light-gray rounded-lg p-6">
@@ -556,27 +557,40 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
 
   return (
     <div className="relative w-full h-full flex items-center justify-center">
-      <div 
-        id="map-container" 
-        ref={mapContainer} 
-        className="absolute inset-0 rounded-lg overflow-hidden" 
-        style={{visibility: 'visible'}}
-      />
-      
-      {!isMapInitialized && (
-        <div className="absolute inset-0 flex items-center justify-center bg-white/50 backdrop-blur-sm z-10">
-          <div className="flex flex-col items-center">
-            <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-            <p className="font-medium">지도를 초기화하는 중...</p>
-          </div>
-        </div>
+      {showJejuVisualizer ? (
+        <JejuVisualizer className="w-full h-full" />
+      ) : (
+        <>
+          <div 
+            id="map-container" 
+            ref={mapContainer} 
+            className="absolute inset-0 rounded-lg overflow-hidden" 
+            style={{visibility: 'visible'}}
+          />
+          
+          {!isMapInitialized && (
+            <div className="absolute inset-0 flex items-center justify-center bg-white/50 backdrop-blur-sm z-10">
+              <div className="flex flex-col items-center">
+                <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                <p className="font-medium">지도를 초기화하는 중...</p>
+              </div>
+            </div>
+          )}
+        </>
       )}
       
-      <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-md shadow-md z-10 text-sm">
+      <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-md shadow-md z-10 text-sm flex items-center gap-2">
         <p className="font-medium text-jeju-black">제주도 여행 플래너</p>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="ml-2 text-xs"
+          onClick={toggleJejuVisualizer}
+        >
+          {showJejuVisualizer ? '일반 지도로 보기' : '제주도 전체 보기'}
+        </Button>
       </div>
       
-      {/* Map type controls */}
       <div className="absolute top-4 right-4 z-10">
         <div className="bg-white/90 backdrop-blur-sm rounded-md shadow-md overflow-hidden">
           {window.naver && window.naver.maps ? (
@@ -606,7 +620,6 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
         </div>
       </div>
 
-      {/* Dialog for place details */}
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>

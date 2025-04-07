@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import {
   RestaurantInformation,
@@ -168,7 +167,7 @@ export const fetchLandmarks = async () => {
 
     // Fetch landmark reviews
     const { data: landmarkReviewsData, error: reviewsError } = await supabase
-      .from("landmark_review")
+      .from("landmark_reviews")
       .select("id, Rating, visitor_review_count");
 
     if (reviewsError) throw reviewsError;

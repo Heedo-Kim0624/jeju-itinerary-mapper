@@ -16,7 +16,7 @@ export const loadNaverMaps = (): Promise<void> => {
     console.log("Loading Naver Maps script...");
     const script = document.createElement('script');
     script.async = true;
-    script.src = `https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${NAVER_CLIENT_ID}`;
+    script.src = `https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${NAVER_CLIENT_ID}&submodules=geocoder`;
     
     script.onload = () => {
       console.log("Naver Maps script loaded successfully");
@@ -31,4 +31,3 @@ export const loadNaverMaps = (): Promise<void> => {
     document.head.appendChild(script);
   });
 };
-

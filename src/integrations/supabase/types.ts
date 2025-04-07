@@ -1916,18 +1916,11 @@ export type Database = {
         Returns: boolean
       }
       _add_raster_constraint: {
-        Args: {
-          cn: unknown
-          sql: string
-        }
+        Args: { cn: unknown; sql: string }
         Returns: boolean
       }
       _add_raster_constraint_alignment: {
-        Args: {
-          rastschema: unknown
-          rasttable: unknown
-          rastcolumn: unknown
-        }
+        Args: { rastschema: unknown; rasttable: unknown; rastcolumn: unknown }
         Returns: boolean
       }
       _add_raster_constraint_blocksize: {
@@ -1940,51 +1933,27 @@ export type Database = {
         Returns: boolean
       }
       _add_raster_constraint_coverage_tile: {
-        Args: {
-          rastschema: unknown
-          rasttable: unknown
-          rastcolumn: unknown
-        }
+        Args: { rastschema: unknown; rasttable: unknown; rastcolumn: unknown }
         Returns: boolean
       }
       _add_raster_constraint_extent: {
-        Args: {
-          rastschema: unknown
-          rasttable: unknown
-          rastcolumn: unknown
-        }
+        Args: { rastschema: unknown; rasttable: unknown; rastcolumn: unknown }
         Returns: boolean
       }
       _add_raster_constraint_nodata_values: {
-        Args: {
-          rastschema: unknown
-          rasttable: unknown
-          rastcolumn: unknown
-        }
+        Args: { rastschema: unknown; rasttable: unknown; rastcolumn: unknown }
         Returns: boolean
       }
       _add_raster_constraint_num_bands: {
-        Args: {
-          rastschema: unknown
-          rasttable: unknown
-          rastcolumn: unknown
-        }
+        Args: { rastschema: unknown; rasttable: unknown; rastcolumn: unknown }
         Returns: boolean
       }
       _add_raster_constraint_out_db: {
-        Args: {
-          rastschema: unknown
-          rasttable: unknown
-          rastcolumn: unknown
-        }
+        Args: { rastschema: unknown; rasttable: unknown; rastcolumn: unknown }
         Returns: boolean
       }
       _add_raster_constraint_pixel_types: {
-        Args: {
-          rastschema: unknown
-          rasttable: unknown
-          rastcolumn: unknown
-        }
+        Args: { rastschema: unknown; rasttable: unknown; rastcolumn: unknown }
         Returns: boolean
       }
       _add_raster_constraint_scale: {
@@ -1997,43 +1966,23 @@ export type Database = {
         Returns: boolean
       }
       _add_raster_constraint_spatially_unique: {
-        Args: {
-          rastschema: unknown
-          rasttable: unknown
-          rastcolumn: unknown
-        }
+        Args: { rastschema: unknown; rasttable: unknown; rastcolumn: unknown }
         Returns: boolean
       }
       _add_raster_constraint_srid: {
-        Args: {
-          rastschema: unknown
-          rasttable: unknown
-          rastcolumn: unknown
-        }
+        Args: { rastschema: unknown; rasttable: unknown; rastcolumn: unknown }
         Returns: boolean
       }
       _drop_overview_constraint: {
-        Args: {
-          ovschema: unknown
-          ovtable: unknown
-          ovcolumn: unknown
-        }
+        Args: { ovschema: unknown; ovtable: unknown; ovcolumn: unknown }
         Returns: boolean
       }
       _drop_raster_constraint: {
-        Args: {
-          rastschema: unknown
-          rasttable: unknown
-          cn: unknown
-        }
+        Args: { rastschema: unknown; rasttable: unknown; cn: unknown }
         Returns: boolean
       }
       _drop_raster_constraint_alignment: {
-        Args: {
-          rastschema: unknown
-          rasttable: unknown
-          rastcolumn: unknown
-        }
+        Args: { rastschema: unknown; rasttable: unknown; rastcolumn: unknown }
         Returns: boolean
       }
       _drop_raster_constraint_blocksize: {
@@ -2046,59 +1995,31 @@ export type Database = {
         Returns: boolean
       }
       _drop_raster_constraint_coverage_tile: {
-        Args: {
-          rastschema: unknown
-          rasttable: unknown
-          rastcolumn: unknown
-        }
+        Args: { rastschema: unknown; rasttable: unknown; rastcolumn: unknown }
         Returns: boolean
       }
       _drop_raster_constraint_extent: {
-        Args: {
-          rastschema: unknown
-          rasttable: unknown
-          rastcolumn: unknown
-        }
+        Args: { rastschema: unknown; rasttable: unknown; rastcolumn: unknown }
         Returns: boolean
       }
       _drop_raster_constraint_nodata_values: {
-        Args: {
-          rastschema: unknown
-          rasttable: unknown
-          rastcolumn: unknown
-        }
+        Args: { rastschema: unknown; rasttable: unknown; rastcolumn: unknown }
         Returns: boolean
       }
       _drop_raster_constraint_num_bands: {
-        Args: {
-          rastschema: unknown
-          rasttable: unknown
-          rastcolumn: unknown
-        }
+        Args: { rastschema: unknown; rasttable: unknown; rastcolumn: unknown }
         Returns: boolean
       }
       _drop_raster_constraint_out_db: {
-        Args: {
-          rastschema: unknown
-          rasttable: unknown
-          rastcolumn: unknown
-        }
+        Args: { rastschema: unknown; rasttable: unknown; rastcolumn: unknown }
         Returns: boolean
       }
       _drop_raster_constraint_pixel_types: {
-        Args: {
-          rastschema: unknown
-          rasttable: unknown
-          rastcolumn: unknown
-        }
+        Args: { rastschema: unknown; rasttable: unknown; rastcolumn: unknown }
         Returns: boolean
       }
       _drop_raster_constraint_regular_blocking: {
-        Args: {
-          rastschema: unknown
-          rasttable: unknown
-          rastcolumn: unknown
-        }
+        Args: { rastschema: unknown; rasttable: unknown; rastcolumn: unknown }
         Returns: boolean
       }
       _drop_raster_constraint_scale: {
@@ -2111,19 +2032,11 @@ export type Database = {
         Returns: boolean
       }
       _drop_raster_constraint_spatially_unique: {
-        Args: {
-          rastschema: unknown
-          rasttable: unknown
-          rastcolumn: unknown
-        }
+        Args: { rastschema: unknown; rasttable: unknown; rastcolumn: unknown }
         Returns: boolean
       }
       _drop_raster_constraint_srid: {
-        Args: {
-          rastschema: unknown
-          rasttable: unknown
-          rastcolumn: unknown
-        }
+        Args: { rastschema: unknown; rasttable: unknown; rastcolumn: unknown }
         Returns: boolean
       }
       _overview_constraint: {
@@ -2137,26 +2050,15 @@ export type Database = {
         Returns: boolean
       }
       _overview_constraint_info: {
-        Args: {
-          ovschema: unknown
-          ovtable: unknown
-          ovcolumn: unknown
-        }
+        Args: { ovschema: unknown; ovtable: unknown; ovcolumn: unknown }
         Returns: Record<string, unknown>
       }
       _postgis_deprecate: {
-        Args: {
-          oldname: string
-          newname: string
-          version: string
-        }
+        Args: { oldname: string; newname: string; version: string }
         Returns: undefined
       }
       _postgis_index_extent: {
-        Args: {
-          tbl: unknown
-          col: string
-        }
+        Args: { tbl: unknown; col: string }
         Returns: unknown
       }
       _postgis_pgsql_version: {
@@ -2168,20 +2070,11 @@ export type Database = {
         Returns: string
       }
       _postgis_selectivity: {
-        Args: {
-          tbl: unknown
-          att_name: string
-          geom: unknown
-          mode?: string
-        }
+        Args: { tbl: unknown; att_name: string; geom: unknown; mode?: string }
         Returns: number
       }
       _raster_constraint_info_alignment: {
-        Args: {
-          rastschema: unknown
-          rasttable: unknown
-          rastcolumn: unknown
-        }
+        Args: { rastschema: unknown; rasttable: unknown; rastcolumn: unknown }
         Returns: boolean
       }
       _raster_constraint_info_blocksize: {
@@ -2194,67 +2087,35 @@ export type Database = {
         Returns: number
       }
       _raster_constraint_info_coverage_tile: {
-        Args: {
-          rastschema: unknown
-          rasttable: unknown
-          rastcolumn: unknown
-        }
+        Args: { rastschema: unknown; rasttable: unknown; rastcolumn: unknown }
         Returns: boolean
       }
       _raster_constraint_info_extent: {
-        Args: {
-          rastschema: unknown
-          rasttable: unknown
-          rastcolumn: unknown
-        }
+        Args: { rastschema: unknown; rasttable: unknown; rastcolumn: unknown }
         Returns: unknown
       }
       _raster_constraint_info_index: {
-        Args: {
-          rastschema: unknown
-          rasttable: unknown
-          rastcolumn: unknown
-        }
+        Args: { rastschema: unknown; rasttable: unknown; rastcolumn: unknown }
         Returns: boolean
       }
       _raster_constraint_info_nodata_values: {
-        Args: {
-          rastschema: unknown
-          rasttable: unknown
-          rastcolumn: unknown
-        }
+        Args: { rastschema: unknown; rasttable: unknown; rastcolumn: unknown }
         Returns: number[]
       }
       _raster_constraint_info_num_bands: {
-        Args: {
-          rastschema: unknown
-          rasttable: unknown
-          rastcolumn: unknown
-        }
+        Args: { rastschema: unknown; rasttable: unknown; rastcolumn: unknown }
         Returns: number
       }
       _raster_constraint_info_out_db: {
-        Args: {
-          rastschema: unknown
-          rasttable: unknown
-          rastcolumn: unknown
-        }
+        Args: { rastschema: unknown; rasttable: unknown; rastcolumn: unknown }
         Returns: boolean[]
       }
       _raster_constraint_info_pixel_types: {
-        Args: {
-          rastschema: unknown
-          rasttable: unknown
-          rastcolumn: unknown
-        }
+        Args: { rastschema: unknown; rasttable: unknown; rastcolumn: unknown }
         Returns: string[]
       }
       _raster_constraint_info_regular_blocking: {
-        Args: {
-          rastschema: unknown
-          rasttable: unknown
-          rastcolumn: unknown
-        }
+        Args: { rastschema: unknown; rasttable: unknown; rastcolumn: unknown }
         Returns: boolean
       }
       _raster_constraint_info_scale: {
@@ -2267,51 +2128,31 @@ export type Database = {
         Returns: number
       }
       _raster_constraint_info_spatially_unique: {
-        Args: {
-          rastschema: unknown
-          rasttable: unknown
-          rastcolumn: unknown
-        }
+        Args: { rastschema: unknown; rasttable: unknown; rastcolumn: unknown }
         Returns: boolean
       }
       _raster_constraint_info_srid: {
-        Args: {
-          rastschema: unknown
-          rasttable: unknown
-          rastcolumn: unknown
-        }
+        Args: { rastschema: unknown; rasttable: unknown; rastcolumn: unknown }
         Returns: number
       }
       _raster_constraint_nodata_values: {
-        Args: {
-          rast: unknown
-        }
+        Args: { rast: unknown }
         Returns: number[]
       }
       _raster_constraint_out_db: {
-        Args: {
-          rast: unknown
-        }
+        Args: { rast: unknown }
         Returns: boolean[]
       }
       _raster_constraint_pixel_types: {
-        Args: {
-          rast: unknown
-        }
+        Args: { rast: unknown }
         Returns: string[]
       }
       _st_3dintersects: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
       }
       _st_aspect4ma: {
-        Args: {
-          value: number[]
-          pos: number[]
-        }
+        Args: { value: number[]; pos: number[] }
         Returns: number
       }
       _st_asraster: {
@@ -2335,9 +2176,7 @@ export type Database = {
         Returns: unknown
       }
       _st_bestsrid: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: number
       }
       _st_clip: {
@@ -2359,44 +2198,20 @@ export type Database = {
         }
         Returns: unknown
       }
-      _st_contains:
-        | {
-            Args: {
-              geom1: unknown
-              geom2: unknown
-            }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              rast1: unknown
-              nband1: number
-              rast2: unknown
-              nband2: number
-            }
-            Returns: boolean
-          }
-      _st_containsproperly:
-        | {
-            Args: {
-              geom1: unknown
-              geom2: unknown
-            }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              rast1: unknown
-              nband1: number
-              rast2: unknown
-              nband2: number
-            }
-            Returns: boolean
-          }
+      _st_contains: {
+        Args:
+          | { geom1: unknown; geom2: unknown }
+          | { rast1: unknown; nband1: number; rast2: unknown; nband2: number }
+        Returns: boolean
+      }
+      _st_containsproperly: {
+        Args:
+          | { geom1: unknown; geom2: unknown }
+          | { rast1: unknown; nband1: number; rast2: unknown; nband2: number }
+        Returns: boolean
+      }
       _st_convertarray4ma: {
-        Args: {
-          value: number[]
-        }
+        Args: { value: number[] }
         Returns: number[]
       }
       _st_count: {
@@ -2409,92 +2224,47 @@ export type Database = {
         Returns: number
       }
       _st_countagg_finalfn: {
-        Args: {
-          agg: Database["public"]["CompositeTypes"]["agg_count"]
-        }
+        Args: { agg: Database["public"]["CompositeTypes"]["agg_count"] }
         Returns: number
       }
-      _st_countagg_transfn:
-        | {
-            Args: {
-              agg: Database["public"]["CompositeTypes"]["agg_count"]
-              rast: unknown
-              exclude_nodata_value: boolean
-            }
-            Returns: Database["public"]["CompositeTypes"]["agg_count"]
-          }
-        | {
-            Args: {
+      _st_countagg_transfn: {
+        Args:
+          | {
               agg: Database["public"]["CompositeTypes"]["agg_count"]
               rast: unknown
               nband: number
               exclude_nodata_value: boolean
             }
-            Returns: Database["public"]["CompositeTypes"]["agg_count"]
-          }
-        | {
-            Args: {
+          | {
               agg: Database["public"]["CompositeTypes"]["agg_count"]
               rast: unknown
               nband: number
               exclude_nodata_value: boolean
               sample_percent: number
             }
-            Returns: Database["public"]["CompositeTypes"]["agg_count"]
-          }
-      _st_coveredby:
-        | {
-            Args: {
-              geog1: unknown
-              geog2: unknown
+          | {
+              agg: Database["public"]["CompositeTypes"]["agg_count"]
+              rast: unknown
+              exclude_nodata_value: boolean
             }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              geom1: unknown
-              geom2: unknown
-            }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              rast1: unknown
-              nband1: number
-              rast2: unknown
-              nband2: number
-            }
-            Returns: boolean
-          }
-      _st_covers:
-        | {
-            Args: {
-              geog1: unknown
-              geog2: unknown
-            }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              geom1: unknown
-              geom2: unknown
-            }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              rast1: unknown
-              nband1: number
-              rast2: unknown
-              nband2: number
-            }
-            Returns: boolean
-          }
+        Returns: Database["public"]["CompositeTypes"]["agg_count"]
+      }
+      _st_coveredby: {
+        Args:
+          | { geom1: unknown; geom2: unknown }
+          | { geog1: unknown; geog2: unknown }
+          | { rast1: unknown; nband1: number; rast2: unknown; nband2: number }
+        Returns: boolean
+      }
+      _st_covers: {
+        Args:
+          | { geom1: unknown; geom2: unknown }
+          | { geog1: unknown; geog2: unknown }
+          | { rast1: unknown; nband1: number; rast2: unknown; nband2: number }
+        Returns: boolean
+      }
       _st_crosses: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
       }
       _st_dfullywithin: {
@@ -2507,31 +2277,25 @@ export type Database = {
         }
         Returns: boolean
       }
-      _st_dwithin:
-        | {
-            Args: {
+      _st_dwithin: {
+        Args:
+          | {
               geog1: unknown
               geog2: unknown
               tolerance: number
               use_spheroid?: boolean
             }
-            Returns: boolean
-          }
-        | {
-            Args: {
+          | {
               rast1: unknown
               nband1: number
               rast2: unknown
               nband2: number
               distance: number
             }
-            Returns: boolean
-          }
+        Returns: boolean
+      }
       _st_equals: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
       }
       _st_gdalwarp: {
@@ -2552,17 +2316,11 @@ export type Database = {
         Returns: unknown
       }
       _st_grayscale4ma: {
-        Args: {
-          value: number[]
-          pos: number[]
-        }
+        Args: { value: number[]; pos: number[] }
         Returns: number
       }
       _st_hillshade4ma: {
-        Args: {
-          value: number[]
-          pos: number[]
-        }
+        Args: { value: number[]; pos: number[] }
         Returns: number
       }
       _st_histogram: {
@@ -2579,48 +2337,24 @@ export type Database = {
         }
         Returns: Record<string, unknown>[]
       }
-      _st_intersects:
-        | {
-            Args: {
-              geom: unknown
-              rast: unknown
-              nband?: number
-            }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              geom1: unknown
-              geom2: unknown
-            }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              rast1: unknown
-              nband1: number
-              rast2: unknown
-              nband2: number
-            }
-            Returns: boolean
-          }
+      _st_intersects: {
+        Args:
+          | { geom1: unknown; geom2: unknown }
+          | { rast1: unknown; nband1: number; rast2: unknown; nband2: number }
+          | { geom: unknown; rast: unknown; nband?: number }
+        Returns: boolean
+      }
       _st_linecrossingdirection: {
-        Args: {
-          line1: unknown
-          line2: unknown
-        }
+        Args: { line1: unknown; line2: unknown }
         Returns: number
       }
       _st_longestline: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: unknown
       }
-      _st_mapalgebra:
-        | {
-            Args: {
+      _st_mapalgebra: {
+        Args:
+          | {
               rastbandargset: Database["public"]["CompositeTypes"]["rastbandarg"][]
               callbackfunc: unknown
               pixeltype?: string
@@ -2631,10 +2365,7 @@ export type Database = {
               mask?: number[]
               weighted?: boolean
             }
-            Returns: unknown
-          }
-        | {
-            Args: {
+          | {
               rastbandargset: Database["public"]["CompositeTypes"]["rastbandarg"][]
               expression: string
               pixeltype?: string
@@ -2643,13 +2374,10 @@ export type Database = {
               nodata2expr?: string
               nodatanodataval?: number
             }
-            Returns: unknown
-          }
+        Returns: unknown
+      }
       _st_maxdistance: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: number
       }
       _st_neighborhood: {
@@ -2665,29 +2393,15 @@ export type Database = {
         Returns: number[]
       }
       _st_orderingequals: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
       }
-      _st_overlaps:
-        | {
-            Args: {
-              geom1: unknown
-              geom2: unknown
-            }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              rast1: unknown
-              nband1: number
-              rast2: unknown
-              nband2: number
-            }
-            Returns: boolean
-          }
+      _st_overlaps: {
+        Args:
+          | { geom1: unknown; geom2: unknown }
+          | { rast1: unknown; nband1: number; rast2: unknown; nband2: number }
+        Returns: boolean
+      }
       _st_pixelascentroids: {
         Args: {
           rast: unknown
@@ -2719,9 +2433,7 @@ export type Database = {
         }[]
       }
       _st_pointoutside: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       _st_quantile: {
@@ -2735,30 +2447,19 @@ export type Database = {
         Returns: Record<string, unknown>[]
       }
       _st_rastertoworldcoord: {
-        Args: {
-          rast: unknown
-          columnx?: number
-          rowy?: number
-        }
+        Args: { rast: unknown; columnx?: number; rowy?: number }
         Returns: Record<string, unknown>
       }
       _st_reclass: {
-        Args: {
-          rast: unknown
-        }
+        Args: { rast: unknown }
         Returns: unknown
       }
       _st_roughness4ma: {
-        Args: {
-          value: number[]
-          pos: number[]
-        }
+        Args: { value: number[]; pos: number[] }
         Returns: number
       }
       _st_samealignment_finalfn: {
-        Args: {
-          agg: Database["public"]["CompositeTypes"]["agg_samealignment"]
-        }
+        Args: { agg: Database["public"]["CompositeTypes"]["agg_samealignment"] }
         Returns: boolean
       }
       _st_samealignment_transfn: {
@@ -2783,16 +2484,11 @@ export type Database = {
         Returns: unknown
       }
       _st_slope4ma: {
-        Args: {
-          value: number[]
-          pos: number[]
-        }
+        Args: { value: number[]; pos: number[] }
         Returns: number
       }
       _st_sortablehash: {
-        Args: {
-          geom: unknown
-        }
+        Args: { geom: unknown }
         Returns: number
       }
       _st_summarystats: {
@@ -2805,9 +2501,7 @@ export type Database = {
         Returns: Database["public"]["CompositeTypes"]["summarystats"]
       }
       _st_summarystats_finalfn: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: Database["public"]["CompositeTypes"]["summarystats"]
       }
       _st_tile: {
@@ -2821,56 +2515,34 @@ export type Database = {
         }
         Returns: unknown[]
       }
-      _st_touches:
-        | {
-            Args: {
-              geom1: unknown
-              geom2: unknown
-            }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              rast1: unknown
-              nband1: number
-              rast2: unknown
-              nband2: number
-            }
-            Returns: boolean
-          }
+      _st_touches: {
+        Args:
+          | { geom1: unknown; geom2: unknown }
+          | { rast1: unknown; nband1: number; rast2: unknown; nband2: number }
+        Returns: boolean
+      }
       _st_tpi4ma: {
-        Args: {
-          value: number[]
-          pos: number[]
-        }
+        Args: { value: number[]; pos: number[] }
         Returns: number
       }
       _st_tri4ma: {
-        Args: {
-          value: number[]
-          pos: number[]
-        }
+        Args: { value: number[]; pos: number[] }
         Returns: number
       }
       _st_union_finalfn: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
-      _st_valuecount:
-        | {
-            Args: {
+      _st_valuecount: {
+        Args:
+          | {
               rast: unknown
               nband?: number
               exclude_nodata_value?: boolean
               searchvalues?: number[]
               roundto?: number
             }
-            Returns: Record<string, unknown>[]
-          }
-        | {
-            Args: {
+          | {
               rastertable: string
               rastercolumn: string
               nband?: number
@@ -2878,8 +2550,8 @@ export type Database = {
               searchvalues?: number[]
               roundto?: number
             }
-            Returns: Record<string, unknown>[]
-          }
+        Returns: Record<string, unknown>[]
+      }
       _st_voronoi: {
         Args: {
           g1: unknown
@@ -2889,29 +2561,14 @@ export type Database = {
         }
         Returns: unknown
       }
-      _st_within:
-        | {
-            Args: {
-              geom1: unknown
-              geom2: unknown
-            }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              rast1: unknown
-              nband1: number
-              rast2: unknown
-              nband2: number
-            }
-            Returns: boolean
-          }
+      _st_within: {
+        Args:
+          | { geom1: unknown; geom2: unknown }
+          | { rast1: unknown; nband1: number; rast2: unknown; nband2: number }
+        Returns: boolean
+      }
       _st_worldtorastercoord: {
-        Args: {
-          rast: unknown
-          longitude?: number
-          latitude?: number
-        }
+        Args: { rast: unknown; longitude?: number; latitude?: number }
         Returns: Record<string, unknown>
       }
       _updaterastersrid: {
@@ -2924,14 +2581,12 @@ export type Database = {
         Returns: boolean
       }
       addauth: {
-        Args: {
-          "": string
-        }
+        Args: { "": string }
         Returns: boolean
       }
-      addgeometrycolumn:
-        | {
-            Args: {
+      addgeometrycolumn: {
+        Args:
+          | {
               catalog_name: string
               schema_name: string
               table_name: string
@@ -2941,10 +2596,7 @@ export type Database = {
               new_dim: number
               use_typmod?: boolean
             }
-            Returns: string
-          }
-        | {
-            Args: {
+          | {
               schema_name: string
               table_name: string
               column_name: string
@@ -2953,10 +2605,7 @@ export type Database = {
               new_dim: number
               use_typmod?: boolean
             }
-            Returns: string
-          }
-        | {
-            Args: {
+          | {
               table_name: string
               column_name: string
               new_srid: number
@@ -2964,11 +2613,18 @@ export type Database = {
               new_dim: number
               use_typmod?: boolean
             }
-            Returns: string
-          }
-      addoverviewconstraints:
-        | {
-            Args: {
+        Returns: string
+      }
+      addoverviewconstraints: {
+        Args:
+          | {
+              ovtable: unknown
+              ovcolumn: unknown
+              reftable: unknown
+              refcolumn: unknown
+              ovfactor: number
+            }
+          | {
               ovschema: unknown
               ovtable: unknown
               ovcolumn: unknown
@@ -2977,29 +2633,13 @@ export type Database = {
               refcolumn: unknown
               ovfactor: number
             }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              ovtable: unknown
-              ovcolumn: unknown
-              reftable: unknown
-              refcolumn: unknown
-              ovfactor: number
-            }
-            Returns: boolean
-          }
-      addrasterconstraints:
-        | {
-            Args: {
-              rastschema: unknown
-              rasttable: unknown
-              rastcolumn: unknown
-            }
-            Returns: boolean
-          }
-        | {
-            Args: {
+        Returns: boolean
+      }
+      addrasterconstraints: {
+        Args:
+          | { rastschema: unknown; rasttable: unknown; rastcolumn: unknown }
+          | { rasttable: unknown; rastcolumn: unknown }
+          | {
               rastschema: unknown
               rasttable: unknown
               rastcolumn: unknown
@@ -3016,17 +2656,7 @@ export type Database = {
               out_db?: boolean
               extent?: boolean
             }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              rasttable: unknown
-              rastcolumn: unknown
-            }
-            Returns: boolean
-          }
-        | {
-            Args: {
+          | {
               rasttable: unknown
               rastcolumn: unknown
               srid?: boolean
@@ -3042,192 +2672,86 @@ export type Database = {
               out_db?: boolean
               extent?: boolean
             }
-            Returns: boolean
-          }
-      box:
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: unknown
-          }
-      box2d:
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: unknown
-          }
+        Returns: boolean
+      }
+      box: {
+        Args: { "": unknown } | { "": unknown }
+        Returns: unknown
+      }
+      box2d: {
+        Args: { "": unknown } | { "": unknown }
+        Returns: unknown
+      }
       box2d_in: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       box2d_out: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       box2df_in: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       box2df_out: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
-      box3d:
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: unknown
-          }
+      box3d: {
+        Args: { "": unknown } | { "": unknown } | { "": unknown }
+        Returns: unknown
+      }
       box3d_in: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       box3d_out: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       box3dtobox: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
-      bytea:
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: string
-          }
+      bytea: {
+        Args: { "": unknown } | { "": unknown } | { "": unknown }
+        Returns: string
+      }
       disablelongtransactions: {
         Args: Record<PropertyKey, never>
         Returns: string
       }
-      dropgeometrycolumn:
-        | {
-            Args: {
+      dropgeometrycolumn: {
+        Args:
+          | {
               catalog_name: string
               schema_name: string
               table_name: string
               column_name: string
             }
-            Returns: string
-          }
-        | {
-            Args: {
-              schema_name: string
-              table_name: string
-              column_name: string
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              table_name: string
-              column_name: string
-            }
-            Returns: string
-          }
-      dropgeometrytable:
-        | {
-            Args: {
-              catalog_name: string
-              schema_name: string
-              table_name: string
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              schema_name: string
-              table_name: string
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              table_name: string
-            }
-            Returns: string
-          }
-      dropoverviewconstraints:
-        | {
-            Args: {
-              ovschema: unknown
-              ovtable: unknown
-              ovcolumn: unknown
-            }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              ovtable: unknown
-              ovcolumn: unknown
-            }
-            Returns: boolean
-          }
-      droprasterconstraints:
-        | {
-            Args: {
-              rastschema: unknown
-              rasttable: unknown
-              rastcolumn: unknown
-            }
-            Returns: boolean
-          }
-        | {
-            Args: {
+          | { schema_name: string; table_name: string; column_name: string }
+          | { table_name: string; column_name: string }
+        Returns: string
+      }
+      dropgeometrytable: {
+        Args:
+          | { catalog_name: string; schema_name: string; table_name: string }
+          | { schema_name: string; table_name: string }
+          | { table_name: string }
+        Returns: string
+      }
+      dropoverviewconstraints: {
+        Args:
+          | { ovtable: unknown; ovcolumn: unknown }
+          | { ovschema: unknown; ovtable: unknown; ovcolumn: unknown }
+        Returns: boolean
+      }
+      droprasterconstraints: {
+        Args:
+          | { rastschema: unknown; rasttable: unknown; rastcolumn: unknown }
+          | { rasttable: unknown; rastcolumn: unknown }
+          | {
               rastschema: unknown
               rasttable: unknown
               rastcolumn: unknown
@@ -3244,17 +2768,7 @@ export type Database = {
               out_db?: boolean
               extent?: boolean
             }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              rasttable: unknown
-              rastcolumn: unknown
-            }
-            Returns: boolean
-          }
-        | {
-            Args: {
+          | {
               rasttable: unknown
               rastcolumn: unknown
               srid?: boolean
@@ -3270,428 +2784,242 @@ export type Database = {
               out_db?: boolean
               extent?: boolean
             }
-            Returns: boolean
-          }
+        Returns: boolean
+      }
       enablelongtransactions: {
         Args: Record<PropertyKey, never>
         Returns: string
       }
       equals: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
       }
-      geography:
-        | {
-            Args: {
-              "": string
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: unknown
-          }
+      geography: {
+        Args: { "": string } | { "": unknown }
+        Returns: unknown
+      }
       geography_analyze: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: boolean
       }
       geography_gist_compress: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       geography_gist_decompress: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       geography_out: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       geography_send: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: string
       }
       geography_spgist_compress_nd: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       geography_typmod_in: {
-        Args: {
-          "": unknown[]
-        }
+        Args: { "": unknown[] }
         Returns: number
       }
       geography_typmod_out: {
-        Args: {
-          "": number
-        }
+        Args: { "": number }
         Returns: unknown
       }
-      geometry:
-        | {
-            Args: {
-              "": string
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              "": string
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: unknown
-          }
+      geometry: {
+        Args:
+          | { "": unknown }
+          | { "": unknown }
+          | { "": unknown }
+          | { "": unknown }
+          | { "": unknown }
+          | { "": string }
+          | { "": string }
+          | { "": unknown }
+        Returns: unknown
+      }
       geometry_above: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
       }
       geometry_analyze: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: boolean
       }
       geometry_below: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
       }
       geometry_cmp: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: number
       }
       geometry_contained_3d: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
       }
       geometry_contains: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
       }
       geometry_contains_3d: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
       }
       geometry_distance_box: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: number
       }
       geometry_distance_centroid: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: number
       }
       geometry_eq: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
       }
       geometry_ge: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
       }
       geometry_gist_compress_2d: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       geometry_gist_compress_nd: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       geometry_gist_decompress_2d: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       geometry_gist_decompress_nd: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       geometry_gist_sortsupport_2d: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: undefined
       }
       geometry_gt: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
       }
       geometry_hash: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: number
       }
       geometry_in: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       geometry_le: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
       }
       geometry_left: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
       }
       geometry_lt: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
       }
       geometry_out: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       geometry_overabove: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
       }
       geometry_overbelow: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
       }
       geometry_overlaps: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
       }
       geometry_overlaps_3d: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
       }
       geometry_overleft: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
       }
       geometry_overright: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
       }
       geometry_recv: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       geometry_right: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
       }
       geometry_same: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
       }
       geometry_same_3d: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
       }
       geometry_send: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: string
       }
       geometry_sortsupport: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: undefined
       }
       geometry_spgist_compress_2d: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       geometry_spgist_compress_3d: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       geometry_spgist_compress_nd: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       geometry_typmod_in: {
-        Args: {
-          "": unknown[]
-        }
+        Args: { "": unknown[] }
         Returns: number
       }
       geometry_typmod_out: {
-        Args: {
-          "": number
-        }
+        Args: { "": number }
         Returns: unknown
       }
       geometry_within: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
       }
-      geometrytype:
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: string
-          }
+      geometrytype: {
+        Args: { "": unknown } | { "": unknown }
+        Returns: string
+      }
       geomfromewkb: {
-        Args: {
-          "": string
-        }
+        Args: { "": string }
         Returns: unknown
       }
       geomfromewkt: {
-        Args: {
-          "": string
-        }
+        Args: { "": string }
         Returns: unknown
       }
       get_proj4_from_srid: {
-        Args: {
-          "": number
-        }
+        Args: { "": number }
         Returns: string
       }
       gettransactionid: {
@@ -3699,27 +3027,19 @@ export type Database = {
         Returns: unknown
       }
       gidx_in: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       gidx_out: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       json: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: Json
       }
       jsonb: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: Json
       }
       longtransactionsenabled: {
@@ -3727,137 +3047,85 @@ export type Database = {
         Returns: boolean
       }
       path: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       pgis_asflatgeobuf_finalfn: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: string
       }
       pgis_asgeobuf_finalfn: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: string
       }
       pgis_asmvt_finalfn: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: string
       }
       pgis_asmvt_serialfn: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: string
       }
       pgis_geometry_clusterintersecting_finalfn: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown[]
       }
       pgis_geometry_clusterwithin_finalfn: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown[]
       }
       pgis_geometry_collect_finalfn: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       pgis_geometry_makeline_finalfn: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       pgis_geometry_polygonize_finalfn: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       pgis_geometry_union_parallel_finalfn: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       pgis_geometry_union_parallel_serialfn: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: string
       }
       point: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       polygon: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
-      populate_geometry_columns:
-        | {
-            Args: {
-              tbl_oid: unknown
-              use_typmod?: boolean
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              use_typmod?: boolean
-            }
-            Returns: string
-          }
+      populate_geometry_columns: {
+        Args:
+          | { use_typmod?: boolean }
+          | { tbl_oid: unknown; use_typmod?: boolean }
+        Returns: string
+      }
       postgis_addbbox: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       postgis_constraint_dims: {
-        Args: {
-          geomschema: string
-          geomtable: string
-          geomcolumn: string
-        }
+        Args: { geomschema: string; geomtable: string; geomcolumn: string }
         Returns: number
       }
       postgis_constraint_srid: {
-        Args: {
-          geomschema: string
-          geomtable: string
-          geomcolumn: string
-        }
+        Args: { geomschema: string; geomtable: string; geomcolumn: string }
         Returns: number
       }
       postgis_constraint_type: {
-        Args: {
-          geomschema: string
-          geomtable: string
-          geomcolumn: string
-        }
+        Args: { geomschema: string; geomtable: string; geomcolumn: string }
         Returns: string
       }
       postgis_dropbbox: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       postgis_extensions_upgrade: {
@@ -3873,9 +3141,7 @@ export type Database = {
         Returns: string
       }
       postgis_geos_noop: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       postgis_geos_version: {
@@ -3883,21 +3149,15 @@ export type Database = {
         Returns: string
       }
       postgis_getbbox: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       postgis_hasbbox: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: boolean
       }
       postgis_index_supportfn: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       postgis_lib_build_date: {
@@ -3928,19 +3188,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
-      postgis_noop:
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: unknown
-          }
+      postgis_noop: {
+        Args: { "": unknown } | { "": unknown }
+        Returns: unknown
+      }
       postgis_proj_version: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -3982,21 +3233,15 @@ export type Database = {
         Returns: string
       }
       postgis_typmod_dims: {
-        Args: {
-          "": number
-        }
+        Args: { "": number }
         Returns: number
       }
       postgis_typmod_srid: {
-        Args: {
-          "": number
-        }
+        Args: { "": number }
         Returns: number
       }
       postgis_typmod_type: {
-        Args: {
-          "": number
-        }
+        Args: { "": number }
         Returns: string
       }
       postgis_version: {
@@ -4008,261 +3253,138 @@ export type Database = {
         Returns: string
       }
       raster_hash: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: number
       }
       raster_in: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       raster_out: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       spheroid_in: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       spheroid_out: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       st_3dclosestpoint: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: unknown
       }
       st_3ddistance: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: number
       }
       st_3dintersects: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
       }
       st_3dlength: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: number
       }
       st_3dlongestline: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: unknown
       }
       st_3dmakebox: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: unknown
       }
       st_3dmaxdistance: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: number
       }
       st_3dperimeter: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: number
       }
       st_3dshortestline: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: unknown
       }
-      st_addband:
-        | {
-            Args: {
+      st_addband: {
+        Args:
+          | {
               rast: unknown
               addbandargset: Database["public"]["CompositeTypes"]["addbandarg"][]
             }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              rast: unknown
-              index: number
-              outdbfile: string
-              outdbindex: number[]
-              nodataval?: number
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
+          | {
               rast: unknown
               index: number
               pixeltype: string
               initialvalue?: number
               nodataval?: number
             }
-            Returns: unknown
-          }
-        | {
-            Args: {
+          | {
+              rast: unknown
+              pixeltype: string
+              initialvalue?: number
+              nodataval?: number
+            }
+          | {
+              torast: unknown
+              fromrast: unknown
+              fromband?: number
+              torastindex?: number
+            }
+          | {
+              torast: unknown
+              fromrasts: unknown[]
+              fromband?: number
+              torastindex?: number
+            }
+          | {
+              rast: unknown
+              index: number
+              outdbfile: string
+              outdbindex: number[]
+              nodataval?: number
+            }
+          | {
               rast: unknown
               outdbfile: string
               outdbindex: number[]
               index?: number
               nodataval?: number
             }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              rast: unknown
-              pixeltype: string
-              initialvalue?: number
-              nodataval?: number
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              torast: unknown
-              fromrast: unknown
-              fromband?: number
-              torastindex?: number
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              torast: unknown
-              fromrasts: unknown[]
-              fromband?: number
-              torastindex?: number
-            }
-            Returns: unknown
-          }
-      st_addpoint: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
         Returns: unknown
       }
-      st_angle:
-        | {
-            Args: {
-              line1: unknown
-              line2: unknown
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              pt1: unknown
-              pt2: unknown
-              pt3: unknown
-              pt4?: unknown
-            }
-            Returns: number
-          }
-      st_approxcount:
-        | {
-            Args: {
-              rast: unknown
-              exclude_nodata_value: boolean
-              sample_percent?: number
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              rast: unknown
-              nband: number
-              sample_percent: number
-            }
-            Returns: number
-          }
-        | {
-            Args: {
+      st_addpoint: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: unknown
+      }
+      st_angle: {
+        Args:
+          | { pt1: unknown; pt2: unknown; pt3: unknown; pt4?: unknown }
+          | { line1: unknown; line2: unknown }
+        Returns: number
+      }
+      st_approxcount: {
+        Args:
+          | {
               rast: unknown
               nband?: number
               exclude_nodata_value?: boolean
               sample_percent?: number
             }
-            Returns: number
-          }
-        | {
-            Args: {
+          | { rast: unknown; nband: number; sample_percent: number }
+          | {
               rast: unknown
-              sample_percent: number
-            }
-            Returns: number
-          }
-      st_approxhistogram:
-        | {
-            Args: {
-              rast: unknown
-              nband: number
               exclude_nodata_value: boolean
-              sample_percent: number
-              bins: number
-              right: boolean
+              sample_percent?: number
             }
-            Returns: Record<string, unknown>[]
-          }
-        | {
-            Args: {
-              rast: unknown
-              nband: number
-              sample_percent: number
-            }
-            Returns: Record<string, unknown>[]
-          }
-        | {
-            Args: {
-              rast: unknown
-              nband: number
-              sample_percent: number
-              bins: number
-              right: boolean
-            }
-            Returns: Record<string, unknown>[]
-          }
-        | {
-            Args: {
-              rast: unknown
-              nband: number
-              sample_percent: number
-              bins: number
-              width?: number[]
-              right?: boolean
-            }
-            Returns: Record<string, unknown>[]
-          }
-        | {
-            Args: {
+          | { rast: unknown; sample_percent: number }
+        Returns: number
+      }
+      st_approxhistogram: {
+        Args:
+          | {
               rast: unknown
               nband?: number
               exclude_nodata_value?: boolean
@@ -4271,196 +3393,112 @@ export type Database = {
               width?: number[]
               right?: boolean
             }
-            Returns: Record<string, unknown>[]
-          }
-        | {
-            Args: {
-              rast: unknown
-              sample_percent: number
-            }
-            Returns: Record<string, unknown>[]
-          }
-      st_approxquantile:
-        | {
-            Args: {
-              rast: unknown
-              exclude_nodata_value: boolean
-              quantile?: number
-            }
-            Returns: number
-          }
-        | {
-            Args: {
+          | {
               rast: unknown
               nband: number
               exclude_nodata_value: boolean
               sample_percent: number
-              quantile: number
+              bins: number
+              right: boolean
             }
-            Returns: number
-          }
-        | {
-            Args: {
+          | { rast: unknown; nband: number; sample_percent: number }
+          | { rast: unknown; sample_percent: number }
+          | {
               rast: unknown
               nband: number
               sample_percent: number
-              quantile: number
+              bins: number
+              width?: number[]
+              right?: boolean
             }
-            Returns: number
-          }
-        | {
-            Args: {
+          | {
               rast: unknown
               nband: number
               sample_percent: number
-              quantiles?: number[]
+              bins: number
+              right: boolean
             }
-            Returns: Record<string, unknown>[]
-          }
-        | {
-            Args: {
+        Returns: Record<string, unknown>[]
+      }
+      st_approxquantile: {
+        Args:
+          | {
               rast: unknown
               nband?: number
               exclude_nodata_value?: boolean
               sample_percent?: number
               quantiles?: number[]
             }
-            Returns: Record<string, unknown>[]
-          }
-        | {
-            Args: {
-              rast: unknown
-              quantile: number
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              rast: unknown
-              quantiles: number[]
-            }
-            Returns: Record<string, unknown>[]
-          }
-        | {
-            Args: {
-              rast: unknown
-              sample_percent: number
-              quantile: number
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              rast: unknown
-              sample_percent: number
-              quantiles?: number[]
-            }
-            Returns: Record<string, unknown>[]
-          }
-      st_approxsummarystats:
-        | {
-            Args: {
-              rast: unknown
-              exclude_nodata_value: boolean
-              sample_percent?: number
-            }
-            Returns: Database["public"]["CompositeTypes"]["summarystats"]
-          }
-        | {
-            Args: {
+          | {
               rast: unknown
               nband: number
               sample_percent: number
+              quantiles?: number[]
             }
-            Returns: Database["public"]["CompositeTypes"]["summarystats"]
-          }
-        | {
-            Args: {
+          | { rast: unknown; sample_percent: number; quantiles?: number[] }
+          | { rast: unknown; quantiles: number[] }
+          | {
+              rast: unknown
+              nband: number
+              exclude_nodata_value: boolean
+              sample_percent: number
+              quantile: number
+            }
+          | {
+              rast: unknown
+              nband: number
+              sample_percent: number
+              quantile: number
+            }
+          | { rast: unknown; sample_percent: number; quantile: number }
+          | { rast: unknown; exclude_nodata_value: boolean; quantile?: number }
+          | { rast: unknown; quantile: number }
+        Returns: Record<string, unknown>[]
+      }
+      st_approxsummarystats: {
+        Args:
+          | {
               rast: unknown
               nband?: number
               exclude_nodata_value?: boolean
               sample_percent?: number
             }
-            Returns: Database["public"]["CompositeTypes"]["summarystats"]
-          }
-        | {
-            Args: {
+          | { rast: unknown; nband: number; sample_percent: number }
+          | {
               rast: unknown
-              sample_percent: number
+              exclude_nodata_value: boolean
+              sample_percent?: number
             }
-            Returns: Database["public"]["CompositeTypes"]["summarystats"]
-          }
-      st_area:
-        | {
-            Args: {
-              "": string
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              geog: unknown
-              use_spheroid?: boolean
-            }
-            Returns: number
-          }
-      st_area2d: {
-        Args: {
-          "": unknown
-        }
+          | { rast: unknown; sample_percent: number }
+        Returns: Database["public"]["CompositeTypes"]["summarystats"]
+      }
+      st_area: {
+        Args:
+          | { "": unknown }
+          | { geog: unknown; use_spheroid?: boolean }
+          | { "": string }
         Returns: number
       }
-      st_asbinary:
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: string
-          }
+      st_area2d: {
+        Args: { "": unknown }
+        Returns: number
+      }
+      st_asbinary: {
+        Args: { "": unknown } | { "": unknown }
+        Returns: string
+      }
       st_asencodedpolyline: {
-        Args: {
-          geom: unknown
-          nprecision?: number
-        }
+        Args: { geom: unknown; nprecision?: number }
         Returns: string
       }
       st_asewkb: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: string
       }
-      st_asewkt:
-        | {
-            Args: {
-              "": string
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: string
-          }
+      st_asewkt: {
+        Args: { "": unknown } | { "": unknown } | { "": string }
+        Returns: string
+      }
       st_asgdalraster: {
         Args: {
           rast: unknown
@@ -4470,166 +3508,74 @@ export type Database = {
         }
         Returns: string
       }
-      st_asgeojson:
-        | {
-            Args: {
-              "": string
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              geog: unknown
-              maxdecimaldigits?: number
-              options?: number
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              geom: unknown
-              maxdecimaldigits?: number
-              options?: number
-            }
-            Returns: string
-          }
-        | {
-            Args: {
+      st_asgeojson: {
+        Args:
+          | { geom: unknown; maxdecimaldigits?: number; options?: number }
+          | {
               r: Record<string, unknown>
               geom_column?: string
               maxdecimaldigits?: number
               pretty_bool?: boolean
             }
-            Returns: string
-          }
-      st_asgml:
-        | {
-            Args: {
-              "": string
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              geog: unknown
-              maxdecimaldigits?: number
-              options?: number
-              nprefix?: string
-              id?: string
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              geom: unknown
-              maxdecimaldigits?: number
-              options?: number
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              version: number
-              geog: unknown
-              maxdecimaldigits?: number
-              options?: number
-              nprefix?: string
-              id?: string
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              version: number
-              geom: unknown
-              maxdecimaldigits?: number
-              options?: number
-              nprefix?: string
-              id?: string
-            }
-            Returns: string
-          }
-      st_ashexewkb: {
-        Args: {
-          "": unknown
-        }
+          | { geog: unknown; maxdecimaldigits?: number; options?: number }
+          | { "": string }
         Returns: string
       }
-      st_asjpeg:
-        | {
-            Args: {
-              rast: unknown
-              nband: number
-              options?: string[]
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              rast: unknown
-              nband: number
-              quality: number
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              rast: unknown
-              nbands: number[]
-              options?: string[]
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              rast: unknown
-              nbands: number[]
-              quality: number
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              rast: unknown
-              options?: string[]
-            }
-            Returns: string
-          }
-      st_askml:
-        | {
-            Args: {
-              "": string
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              geog: unknown
-              maxdecimaldigits?: number
-              nprefix?: string
-            }
-            Returns: string
-          }
-        | {
-            Args: {
+      st_asgml: {
+        Args:
+          | { geom: unknown; maxdecimaldigits?: number; options?: number }
+          | {
+              version: number
               geom: unknown
               maxdecimaldigits?: number
+              options?: number
               nprefix?: string
+              id?: string
             }
-            Returns: string
-          }
+          | {
+              version: number
+              geog: unknown
+              maxdecimaldigits?: number
+              options?: number
+              nprefix?: string
+              id?: string
+            }
+          | {
+              geog: unknown
+              maxdecimaldigits?: number
+              options?: number
+              nprefix?: string
+              id?: string
+            }
+          | { "": string }
+        Returns: string
+      }
+      st_ashexewkb: {
+        Args: { "": unknown }
+        Returns: string
+      }
+      st_asjpeg: {
+        Args:
+          | { rast: unknown; options?: string[] }
+          | { rast: unknown; nbands: number[]; options?: string[] }
+          | { rast: unknown; nbands: number[]; quality: number }
+          | { rast: unknown; nband: number; options?: string[] }
+          | { rast: unknown; nband: number; quality: number }
+        Returns: string
+      }
+      st_askml: {
+        Args:
+          | { geom: unknown; maxdecimaldigits?: number; nprefix?: string }
+          | { geog: unknown; maxdecimaldigits?: number; nprefix?: string }
+          | { "": string }
+        Returns: string
+      }
       st_aslatlontext: {
-        Args: {
-          geom: unknown
-          tmpl?: string
-        }
+        Args: { geom: unknown; tmpl?: string }
         Returns: string
       }
       st_asmarc21: {
-        Args: {
-          geom: unknown
-          format?: string
-        }
+        Args: { geom: unknown; format?: string }
         Returns: string
       }
       st_asmvtgeom: {
@@ -4642,9 +3588,9 @@ export type Database = {
         }
         Returns: unknown
       }
-      st_aspect:
-        | {
-            Args: {
+      st_aspect: {
+        Args:
+          | {
               rast: unknown
               nband: number
               customextent: unknown
@@ -4652,99 +3598,27 @@ export type Database = {
               units?: string
               interpolate_nodata?: boolean
             }
-            Returns: unknown
-          }
-        | {
-            Args: {
+          | {
               rast: unknown
               nband?: number
               pixeltype?: string
               units?: string
               interpolate_nodata?: boolean
             }
-            Returns: unknown
-          }
-      st_aspng:
-        | {
-            Args: {
-              rast: unknown
-              nband: number
-              compression: number
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              rast: unknown
-              nband: number
-              options?: string[]
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              rast: unknown
-              nbands: number[]
-              compression: number
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              rast: unknown
-              nbands: number[]
-              options?: string[]
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              rast: unknown
-              options?: string[]
-            }
-            Returns: string
-          }
-      st_asraster:
-        | {
-            Args: {
-              geom: unknown
-              ref: unknown
-              pixeltype: string
-              value?: number
-              nodataval?: number
-              touched?: boolean
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              geom: unknown
-              ref: unknown
-              pixeltype?: string[]
-              value?: number[]
-              nodataval?: number[]
-              touched?: boolean
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              geom: unknown
-              scalex: number
-              scaley: number
-              gridx: number
-              gridy: number
-              pixeltype: string
-              value?: number
-              nodataval?: number
-              skewx?: number
-              skewy?: number
-              touched?: boolean
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
+        Returns: unknown
+      }
+      st_aspng: {
+        Args:
+          | { rast: unknown; options?: string[] }
+          | { rast: unknown; nbands: number[]; options?: string[] }
+          | { rast: unknown; nbands: number[]; compression: number }
+          | { rast: unknown; nband: number; options?: string[] }
+          | { rast: unknown; nband: number; compression: number }
+        Returns: string
+      }
+      st_asraster: {
+        Args:
+          | {
               geom: unknown
               scalex: number
               scaley: number
@@ -4757,10 +3631,7 @@ export type Database = {
               skewy?: number
               touched?: boolean
             }
-            Returns: unknown
-          }
-        | {
-            Args: {
+          | {
               geom: unknown
               scalex: number
               scaley: number
@@ -4773,42 +3644,7 @@ export type Database = {
               skewy?: number
               touched?: boolean
             }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              geom: unknown
-              scalex: number
-              scaley: number
-              pixeltype: string
-              value?: number
-              nodataval?: number
-              upperleftx?: number
-              upperlefty?: number
-              skewx?: number
-              skewy?: number
-              touched?: boolean
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              geom: unknown
-              width: number
-              height: number
-              gridx: number
-              gridy: number
-              pixeltype: string
-              value?: number
-              nodataval?: number
-              skewx?: number
-              skewy?: number
-              touched?: boolean
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
+          | {
               geom: unknown
               width: number
               height: number
@@ -4821,10 +3657,7 @@ export type Database = {
               skewy?: number
               touched?: boolean
             }
-            Returns: unknown
-          }
-        | {
-            Args: {
+          | {
               geom: unknown
               width: number
               height: number
@@ -4837,10 +3670,54 @@ export type Database = {
               skewy?: number
               touched?: boolean
             }
-            Returns: unknown
-          }
-        | {
-            Args: {
+          | {
+              geom: unknown
+              ref: unknown
+              pixeltype: string
+              value?: number
+              nodataval?: number
+              touched?: boolean
+            }
+          | {
+              geom: unknown
+              scalex: number
+              scaley: number
+              gridx: number
+              gridy: number
+              pixeltype: string
+              value?: number
+              nodataval?: number
+              skewx?: number
+              skewy?: number
+              touched?: boolean
+            }
+          | {
+              geom: unknown
+              scalex: number
+              scaley: number
+              pixeltype: string
+              value?: number
+              nodataval?: number
+              upperleftx?: number
+              upperlefty?: number
+              skewx?: number
+              skewy?: number
+              touched?: boolean
+            }
+          | {
+              geom: unknown
+              width: number
+              height: number
+              gridx: number
+              gridy: number
+              pixeltype: string
+              value?: number
+              nodataval?: number
+              skewx?: number
+              skewy?: number
+              touched?: boolean
+            }
+          | {
               geom: unknown
               width: number
               height: number
@@ -4853,88 +3730,56 @@ export type Database = {
               skewy?: number
               touched?: boolean
             }
-            Returns: unknown
-          }
-      st_assvg:
-        | {
-            Args: {
-              "": string
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              geog: unknown
-              rel?: number
-              maxdecimaldigits?: number
-            }
-            Returns: string
-          }
-        | {
-            Args: {
+          | {
               geom: unknown
-              rel?: number
-              maxdecimaldigits?: number
+              ref: unknown
+              pixeltype?: string[]
+              value?: number[]
+              nodataval?: number[]
+              touched?: boolean
             }
-            Returns: string
-          }
-      st_astext:
-        | {
-            Args: {
-              "": string
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: string
-          }
-      st_astiff:
-        | {
-            Args: {
-              rast: unknown
-              compression: string
-              srid?: number
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              rast: unknown
-              nbands: number[]
-              compression: string
-              srid?: number
-            }
-            Returns: string
-          }
-        | {
-            Args: {
+        Returns: unknown
+      }
+      st_assvg: {
+        Args:
+          | { geom: unknown; rel?: number; maxdecimaldigits?: number }
+          | { geog: unknown; rel?: number; maxdecimaldigits?: number }
+          | { "": string }
+        Returns: string
+      }
+      st_astext: {
+        Args: { "": unknown } | { "": unknown } | { "": string }
+        Returns: string
+      }
+      st_astiff: {
+        Args:
+          | { rast: unknown; options?: string[]; srid?: number }
+          | {
               rast: unknown
               nbands: number[]
               options?: string[]
               srid?: number
             }
-            Returns: string
-          }
-        | {
-            Args: {
+          | { rast: unknown; compression: string; srid?: number }
+          | {
               rast: unknown
-              options?: string[]
+              nbands: number[]
+              compression: string
               srid?: number
             }
-            Returns: string
-          }
-      st_astwkb:
-        | {
-            Args: {
+        Returns: string
+      }
+      st_astwkb: {
+        Args:
+          | {
+              geom: unknown
+              prec?: number
+              prec_z?: number
+              prec_m?: number
+              with_sizes?: boolean
+              with_boxes?: boolean
+            }
+          | {
               geom: unknown[]
               ids: number[]
               prec?: number
@@ -4943,323 +3788,154 @@ export type Database = {
               with_sizes?: boolean
               with_boxes?: boolean
             }
-            Returns: string
-          }
-        | {
-            Args: {
-              geom: unknown
-              prec?: number
-              prec_z?: number
-              prec_m?: number
-              with_sizes?: boolean
-              with_boxes?: boolean
-            }
-            Returns: string
-          }
-      st_asx3d: {
-        Args: {
-          geom: unknown
-          maxdecimaldigits?: number
-          options?: number
-        }
         Returns: string
       }
-      st_azimuth:
-        | {
-            Args: {
-              geog1: unknown
-              geog2: unknown
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              geom1: unknown
-              geom2: unknown
-            }
-            Returns: number
-          }
-      st_band:
-        | {
-            Args: {
-              rast: unknown
-              nband: number
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              rast: unknown
-              nbands: string
-              delimiter?: string
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              rast: unknown
-              nbands?: number[]
-            }
-            Returns: unknown
-          }
+      st_asx3d: {
+        Args: { geom: unknown; maxdecimaldigits?: number; options?: number }
+        Returns: string
+      }
+      st_azimuth: {
+        Args:
+          | { geom1: unknown; geom2: unknown }
+          | { geog1: unknown; geog2: unknown }
+        Returns: number
+      }
+      st_band: {
+        Args:
+          | { rast: unknown; nbands?: number[] }
+          | { rast: unknown; nband: number }
+          | { rast: unknown; nbands: string; delimiter?: string }
+        Returns: unknown
+      }
       st_bandfilesize: {
-        Args: {
-          rast: unknown
-          band?: number
-        }
+        Args: { rast: unknown; band?: number }
         Returns: number
       }
       st_bandfiletimestamp: {
-        Args: {
-          rast: unknown
-          band?: number
-        }
+        Args: { rast: unknown; band?: number }
         Returns: number
       }
-      st_bandisnodata:
-        | {
-            Args: {
-              rast: unknown
-              band?: number
-              forcechecking?: boolean
-            }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              rast: unknown
-              forcechecking: boolean
-            }
-            Returns: boolean
-          }
-      st_bandmetadata:
-        | {
-            Args: {
-              rast: unknown
-              band: number[]
-            }
-            Returns: {
-              bandnum: number
-              pixeltype: string
-              nodatavalue: number
-              isoutdb: boolean
-              path: string
-              outdbbandnum: number
-              filesize: number
-              filetimestamp: number
-            }[]
-          }
-        | {
-            Args: {
-              rast: unknown
-              band?: number
-            }
-            Returns: {
-              pixeltype: string
-              nodatavalue: number
-              isoutdb: boolean
-              path: string
-              outdbbandnum: number
-              filesize: number
-              filetimestamp: number
-            }[]
-          }
+      st_bandisnodata: {
+        Args:
+          | { rast: unknown; band?: number; forcechecking?: boolean }
+          | { rast: unknown; forcechecking: boolean }
+        Returns: boolean
+      }
+      st_bandmetadata: {
+        Args:
+          | { rast: unknown; band: number[] }
+          | { rast: unknown; band?: number }
+        Returns: {
+          bandnum: number
+          pixeltype: string
+          nodatavalue: number
+          isoutdb: boolean
+          path: string
+          outdbbandnum: number
+          filesize: number
+          filetimestamp: number
+        }[]
+      }
       st_bandnodatavalue: {
-        Args: {
-          rast: unknown
-          band?: number
-        }
+        Args: { rast: unknown; band?: number }
         Returns: number
       }
       st_bandpath: {
-        Args: {
-          rast: unknown
-          band?: number
-        }
+        Args: { rast: unknown; band?: number }
         Returns: string
       }
       st_bandpixeltype: {
-        Args: {
-          rast: unknown
-          band?: number
-        }
+        Args: { rast: unknown; band?: number }
         Returns: string
       }
       st_boundary: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       st_boundingdiagonal: {
-        Args: {
-          geom: unknown
-          fits?: boolean
-        }
+        Args: { geom: unknown; fits?: boolean }
         Returns: unknown
       }
-      st_buffer:
-        | {
-            Args: {
-              geom: unknown
-              radius: number
-              options?: string
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              geom: unknown
-              radius: number
-              quadsegs: number
-            }
-            Returns: unknown
-          }
+      st_buffer: {
+        Args:
+          | { geom: unknown; radius: number; options?: string }
+          | { geom: unknown; radius: number; quadsegs: number }
+        Returns: unknown
+      }
       st_buildarea: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
-      st_centroid:
-        | {
-            Args: {
-              "": string
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: unknown
-          }
+      st_centroid: {
+        Args: { "": unknown } | { "": string }
+        Returns: unknown
+      }
       st_cleangeometry: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
-      st_clip:
-        | {
-            Args: {
-              rast: unknown
-              geom: unknown
-              crop: boolean
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              rast: unknown
-              geom: unknown
-              nodataval: number
-              crop?: boolean
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              rast: unknown
-              geom: unknown
-              nodataval?: number[]
-              crop?: boolean
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
+      st_clip: {
+        Args:
+          | {
               rast: unknown
               nband: number[]
               geom: unknown
               nodataval?: number[]
               crop?: boolean
             }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              rast: unknown
-              nband: number
-              geom: unknown
-              crop: boolean
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
+          | {
               rast: unknown
               nband: number
               geom: unknown
               nodataval: number
               crop?: boolean
             }
-            Returns: unknown
-          }
+          | { rast: unknown; nband: number; geom: unknown; crop: boolean }
+          | {
+              rast: unknown
+              geom: unknown
+              nodataval?: number[]
+              crop?: boolean
+            }
+          | { rast: unknown; geom: unknown; nodataval: number; crop?: boolean }
+          | { rast: unknown; geom: unknown; crop: boolean }
+        Returns: unknown
+      }
       st_clipbybox2d: {
-        Args: {
-          geom: unknown
-          box: unknown
-        }
+        Args: { geom: unknown; box: unknown }
         Returns: unknown
       }
       st_closestpoint: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: unknown
       }
       st_clusterintersecting: {
-        Args: {
-          "": unknown[]
-        }
+        Args: { "": unknown[] }
         Returns: unknown[]
       }
-      st_collect:
-        | {
-            Args: {
-              "": unknown[]
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              geom1: unknown
-              geom2: unknown
-            }
-            Returns: unknown
-          }
+      st_collect: {
+        Args: { geom1: unknown; geom2: unknown } | { "": unknown[] }
+        Returns: unknown
+      }
       st_collectionextract: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       st_collectionhomogenize: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
-      st_colormap:
-        | {
-            Args: {
-              rast: unknown
-              colormap: string
-              method?: string
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
+      st_colormap: {
+        Args:
+          | {
               rast: unknown
               nband?: number
               colormap?: string
               method?: string
             }
-            Returns: unknown
-          }
+          | { rast: unknown; colormap: string; method?: string }
+        Returns: unknown
+      }
       st_concavehull: {
         Args: {
           param_geom: unknown
@@ -5268,54 +3944,20 @@ export type Database = {
         }
         Returns: unknown
       }
-      st_contains:
-        | {
-            Args: {
-              geom1: unknown
-              geom2: unknown
-            }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              rast1: unknown
-              nband1: number
-              rast2: unknown
-              nband2: number
-            }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              rast1: unknown
-              rast2: unknown
-            }
-            Returns: boolean
-          }
-      st_containsproperly:
-        | {
-            Args: {
-              geom1: unknown
-              geom2: unknown
-            }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              rast1: unknown
-              nband1: number
-              rast2: unknown
-              nband2: number
-            }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              rast1: unknown
-              rast2: unknown
-            }
-            Returns: boolean
-          }
+      st_contains: {
+        Args:
+          | { geom1: unknown; geom2: unknown }
+          | { rast1: unknown; nband1: number; rast2: unknown; nband2: number }
+          | { rast1: unknown; rast2: unknown }
+        Returns: boolean
+      }
+      st_containsproperly: {
+        Args:
+          | { geom1: unknown; geom2: unknown }
+          | { rast1: unknown; nband1: number; rast2: unknown; nband2: number }
+          | { rast1: unknown; rast2: unknown }
+        Returns: boolean
+      }
       st_contour: {
         Args: {
           rast: unknown
@@ -5331,534 +3973,257 @@ export type Database = {
           value: number
         }[]
       }
-      st_convexhull:
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: unknown
-          }
+      st_convexhull: {
+        Args: { "": unknown } | { "": unknown }
+        Returns: unknown
+      }
       st_coorddim: {
-        Args: {
-          geometry: unknown
-        }
+        Args: { geometry: unknown }
         Returns: number
       }
-      st_count:
-        | {
-            Args: {
-              rast: unknown
-              exclude_nodata_value: boolean
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              rast: unknown
-              nband?: number
-              exclude_nodata_value?: boolean
-            }
-            Returns: number
-          }
-      st_coveredby:
-        | {
-            Args: {
-              geog1: unknown
-              geog2: unknown
-            }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              geom1: unknown
-              geom2: unknown
-            }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              rast1: unknown
-              nband1: number
-              rast2: unknown
-              nband2: number
-            }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              rast1: unknown
-              rast2: unknown
-            }
-            Returns: boolean
-          }
-      st_covers:
-        | {
-            Args: {
-              geog1: unknown
-              geog2: unknown
-            }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              geom1: unknown
-              geom2: unknown
-            }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              rast1: unknown
-              nband1: number
-              rast2: unknown
-              nband2: number
-            }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              rast1: unknown
-              rast2: unknown
-            }
-            Returns: boolean
-          }
+      st_count: {
+        Args:
+          | { rast: unknown; nband?: number; exclude_nodata_value?: boolean }
+          | { rast: unknown; exclude_nodata_value: boolean }
+        Returns: number
+      }
+      st_coveredby: {
+        Args:
+          | { geom1: unknown; geom2: unknown }
+          | { geog1: unknown; geog2: unknown }
+          | { rast1: unknown; nband1: number; rast2: unknown; nband2: number }
+          | { rast1: unknown; rast2: unknown }
+        Returns: boolean
+      }
+      st_covers: {
+        Args:
+          | { geom1: unknown; geom2: unknown }
+          | { geog1: unknown; geog2: unknown }
+          | { rast1: unknown; nband1: number; rast2: unknown; nband2: number }
+          | { rast1: unknown; rast2: unknown }
+        Returns: boolean
+      }
       st_createoverview: {
-        Args: {
-          tab: unknown
-          col: unknown
-          factor: number
-          algo?: string
-        }
+        Args: { tab: unknown; col: unknown; factor: number; algo?: string }
         Returns: unknown
       }
       st_crosses: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
       }
       st_curvetoline: {
-        Args: {
-          geom: unknown
-          tol?: number
-          toltype?: number
-          flags?: number
-        }
+        Args: { geom: unknown; tol?: number; toltype?: number; flags?: number }
         Returns: unknown
       }
       st_delaunaytriangles: {
-        Args: {
-          g1: unknown
-          tolerance?: number
-          flags?: number
-        }
+        Args: { g1: unknown; tolerance?: number; flags?: number }
         Returns: unknown
       }
-      st_dfullywithin:
-        | {
-            Args: {
+      st_dfullywithin: {
+        Args:
+          | {
               rast1: unknown
               nband1: number
               rast2: unknown
               nband2: number
               distance: number
             }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              rast1: unknown
-              rast2: unknown
-              distance: number
-            }
-            Returns: boolean
-          }
+          | { rast1: unknown; rast2: unknown; distance: number }
+        Returns: boolean
+      }
       st_difference: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-          gridsize?: number
-        }
+        Args: { geom1: unknown; geom2: unknown; gridsize?: number }
         Returns: unknown
       }
       st_dimension: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: number
       }
-      st_disjoint:
-        | {
-            Args: {
-              geom1: unknown
-              geom2: unknown
-            }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              rast1: unknown
-              nband1: number
-              rast2: unknown
-              nband2: number
-            }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              rast1: unknown
-              rast2: unknown
-            }
-            Returns: boolean
-          }
-      st_distance:
-        | {
-            Args: {
-              geog1: unknown
-              geog2: unknown
-              use_spheroid?: boolean
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              geom1: unknown
-              geom2: unknown
-            }
-            Returns: number
-          }
-      st_distancesphere:
-        | {
-            Args: {
-              geom1: unknown
-              geom2: unknown
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              geom1: unknown
-              geom2: unknown
-              radius: number
-            }
-            Returns: number
-          }
+      st_disjoint: {
+        Args:
+          | { geom1: unknown; geom2: unknown }
+          | { rast1: unknown; nband1: number; rast2: unknown; nband2: number }
+          | { rast1: unknown; rast2: unknown }
+        Returns: boolean
+      }
+      st_distance: {
+        Args:
+          | { geom1: unknown; geom2: unknown }
+          | { geog1: unknown; geog2: unknown; use_spheroid?: boolean }
+        Returns: number
+      }
+      st_distancesphere: {
+        Args:
+          | { geom1: unknown; geom2: unknown }
+          | { geom1: unknown; geom2: unknown; radius: number }
+        Returns: number
+      }
       st_distancespheroid: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: number
       }
-      st_distinct4ma:
-        | {
-            Args: {
-              matrix: number[]
-              nodatamode: string
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              value: number[]
-              pos: number[]
-            }
-            Returns: number
-          }
+      st_distinct4ma: {
+        Args:
+          | { matrix: number[]; nodatamode: string }
+          | { value: number[]; pos: number[] }
+        Returns: number
+      }
       st_dump: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: Database["public"]["CompositeTypes"]["geometry_dump"][]
       }
       st_dumpaspolygons: {
-        Args: {
-          rast: unknown
-          band?: number
-          exclude_nodata_value?: boolean
-        }
+        Args: { rast: unknown; band?: number; exclude_nodata_value?: boolean }
         Returns: Database["public"]["CompositeTypes"]["geomval"][]
       }
       st_dumppoints: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: Database["public"]["CompositeTypes"]["geometry_dump"][]
       }
       st_dumprings: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: Database["public"]["CompositeTypes"]["geometry_dump"][]
       }
       st_dumpsegments: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: Database["public"]["CompositeTypes"]["geometry_dump"][]
       }
-      st_dumpvalues:
-        | {
-            Args: {
-              rast: unknown
-              nband: number
-              exclude_nodata_value?: boolean
-            }
-            Returns: number[]
-          }
-        | {
-            Args: {
-              rast: unknown
-              nband?: number[]
-              exclude_nodata_value?: boolean
-            }
-            Returns: {
-              nband: number
-              valarray: number[]
-            }[]
-          }
-      st_dwithin:
-        | {
-            Args: {
+      st_dumpvalues: {
+        Args:
+          | { rast: unknown; nband?: number[]; exclude_nodata_value?: boolean }
+          | { rast: unknown; nband: number; exclude_nodata_value?: boolean }
+        Returns: {
+          nband: number
+          valarray: number[]
+        }[]
+      }
+      st_dwithin: {
+        Args:
+          | {
               geog1: unknown
               geog2: unknown
               tolerance: number
               use_spheroid?: boolean
             }
-            Returns: boolean
-          }
-        | {
-            Args: {
+          | {
               rast1: unknown
               nband1: number
               rast2: unknown
               nband2: number
               distance: number
             }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              rast1: unknown
-              rast2: unknown
-              distance: number
-            }
-            Returns: boolean
-          }
-      st_endpoint: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      st_envelope:
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: unknown
-          }
-      st_equals: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+          | { rast1: unknown; rast2: unknown; distance: number }
         Returns: boolean
       }
-      st_expand:
-        | {
-            Args: {
-              box: unknown
-              dx: number
-              dy: number
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              box: unknown
-              dx: number
-              dy: number
-              dz?: number
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              geom: unknown
-              dx: number
-              dy: number
-              dz?: number
-              dm?: number
-            }
-            Returns: unknown
-          }
+      st_endpoint: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      st_envelope: {
+        Args: { "": unknown } | { "": unknown }
+        Returns: unknown
+      }
+      st_equals: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: boolean
+      }
+      st_expand: {
+        Args:
+          | { box: unknown; dx: number; dy: number }
+          | { box: unknown; dx: number; dy: number; dz?: number }
+          | { geom: unknown; dx: number; dy: number; dz?: number; dm?: number }
+        Returns: unknown
+      }
       st_exteriorring: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       st_flipcoordinates: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       st_force2d: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       st_force3d: {
-        Args: {
-          geom: unknown
-          zvalue?: number
-        }
+        Args: { geom: unknown; zvalue?: number }
         Returns: unknown
       }
       st_force3dm: {
-        Args: {
-          geom: unknown
-          mvalue?: number
-        }
+        Args: { geom: unknown; mvalue?: number }
         Returns: unknown
       }
       st_force3dz: {
-        Args: {
-          geom: unknown
-          zvalue?: number
-        }
+        Args: { geom: unknown; zvalue?: number }
         Returns: unknown
       }
       st_force4d: {
-        Args: {
-          geom: unknown
-          zvalue?: number
-          mvalue?: number
-        }
+        Args: { geom: unknown; zvalue?: number; mvalue?: number }
         Returns: unknown
       }
       st_forcecollection: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       st_forcecurve: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       st_forcepolygonccw: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       st_forcepolygoncw: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       st_forcerhr: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       st_forcesfs: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       st_fromgdalraster: {
-        Args: {
-          gdaldata: string
-          srid?: number
-        }
+        Args: { gdaldata: string; srid?: number }
         Returns: unknown
       }
       st_gdaldrivers: {
         Args: Record<PropertyKey, never>
         Returns: Record<string, unknown>[]
       }
-      st_generatepoints:
-        | {
-            Args: {
-              area: unknown
-              npoints: number
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              area: unknown
-              npoints: number
-              seed: number
-            }
-            Returns: unknown
-          }
+      st_generatepoints: {
+        Args:
+          | { area: unknown; npoints: number }
+          | { area: unknown; npoints: number; seed: number }
+        Returns: unknown
+      }
       st_geogfromtext: {
-        Args: {
-          "": string
-        }
+        Args: { "": string }
         Returns: unknown
       }
       st_geogfromwkb: {
-        Args: {
-          "": string
-        }
+        Args: { "": string }
         Returns: unknown
       }
       st_geographyfromtext: {
-        Args: {
-          "": string
-        }
+        Args: { "": string }
         Returns: unknown
       }
-      st_geohash:
-        | {
-            Args: {
-              geog: unknown
-              maxchars?: number
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              geom: unknown
-              maxchars?: number
-            }
-            Returns: string
-          }
+      st_geohash: {
+        Args:
+          | { geom: unknown; maxchars?: number }
+          | { geog: unknown; maxchars?: number }
+        Returns: string
+      }
       st_geomcollfromtext: {
-        Args: {
-          "": string
-        }
+        Args: { "": string }
         Returns: unknown
       }
       st_geomcollfromwkb: {
-        Args: {
-          "": string
-        }
+        Args: { "": string }
         Returns: unknown
       }
       st_geometricmedian: {
@@ -5871,166 +4236,103 @@ export type Database = {
         Returns: unknown
       }
       st_geometryfromtext: {
-        Args: {
-          "": string
-        }
+        Args: { "": string }
         Returns: unknown
       }
       st_geometrytype: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: string
       }
       st_geomfromewkb: {
-        Args: {
-          "": string
-        }
+        Args: { "": string }
         Returns: unknown
       }
       st_geomfromewkt: {
-        Args: {
-          "": string
-        }
+        Args: { "": string }
         Returns: unknown
       }
-      st_geomfromgeojson:
-        | {
-            Args: {
-              "": Json
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              "": Json
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              "": string
-            }
-            Returns: unknown
-          }
+      st_geomfromgeojson: {
+        Args: { "": string } | { "": Json } | { "": Json }
+        Returns: unknown
+      }
       st_geomfromgml: {
-        Args: {
-          "": string
-        }
+        Args: { "": string }
         Returns: unknown
       }
       st_geomfromkml: {
-        Args: {
-          "": string
-        }
+        Args: { "": string }
         Returns: unknown
       }
       st_geomfrommarc21: {
-        Args: {
-          marc21xml: string
-        }
+        Args: { marc21xml: string }
         Returns: unknown
       }
       st_geomfromtext: {
-        Args: {
-          "": string
-        }
+        Args: { "": string }
         Returns: unknown
       }
       st_geomfromtwkb: {
-        Args: {
-          "": string
-        }
+        Args: { "": string }
         Returns: unknown
       }
       st_geomfromwkb: {
-        Args: {
-          "": string
-        }
+        Args: { "": string }
         Returns: unknown
       }
       st_georeference: {
-        Args: {
-          rast: unknown
-          format?: string
-        }
+        Args: { rast: unknown; format?: string }
         Returns: string
       }
       st_geotransform: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: Record<string, unknown>
       }
       st_gmltosql: {
-        Args: {
-          "": string
-        }
+        Args: { "": string }
         Returns: unknown
       }
-      st_grayscale:
-        | {
-            Args: {
+      st_grayscale: {
+        Args:
+          | {
+              rastbandargset: Database["public"]["CompositeTypes"]["rastbandarg"][]
+              extenttype?: string
+            }
+          | {
               rast: unknown
               redband?: number
               greenband?: number
               blueband?: number
               extenttype?: string
             }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              rastbandargset: Database["public"]["CompositeTypes"]["rastbandarg"][]
-              extenttype?: string
-            }
-            Returns: unknown
-          }
+        Returns: unknown
+      }
       st_hasarc: {
-        Args: {
-          geometry: unknown
-        }
+        Args: { geometry: unknown }
         Returns: boolean
       }
       st_hasnoband: {
-        Args: {
-          rast: unknown
-          nband?: number
-        }
+        Args: { rast: unknown; nband?: number }
         Returns: boolean
       }
       st_hausdorffdistance: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: number
       }
       st_height: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: number
       }
       st_hexagon: {
-        Args: {
-          size: number
-          cell_i: number
-          cell_j: number
-          origin?: unknown
-        }
+        Args: { size: number; cell_i: number; cell_j: number; origin?: unknown }
         Returns: unknown
       }
       st_hexagongrid: {
-        Args: {
-          size: number
-          bounds: unknown
-        }
+        Args: { size: number; bounds: unknown }
         Returns: Record<string, unknown>[]
       }
-      st_hillshade:
-        | {
-            Args: {
+      st_hillshade: {
+        Args:
+          | {
               rast: unknown
               nband: number
               customextent: unknown
@@ -6041,10 +4343,7 @@ export type Database = {
               scale?: number
               interpolate_nodata?: boolean
             }
-            Returns: unknown
-          }
-        | {
-            Args: {
+          | {
               rast: unknown
               nband?: number
               pixeltype?: string
@@ -6054,40 +4353,11 @@ export type Database = {
               scale?: number
               interpolate_nodata?: boolean
             }
-            Returns: unknown
-          }
-      st_histogram:
-        | {
-            Args: {
-              rast: unknown
-              nband: number
-              bins: number
-              right: boolean
-            }
-            Returns: Record<string, unknown>[]
-          }
-        | {
-            Args: {
-              rast: unknown
-              nband: number
-              bins: number
-              width?: number[]
-              right?: boolean
-            }
-            Returns: Record<string, unknown>[]
-          }
-        | {
-            Args: {
-              rast: unknown
-              nband: number
-              exclude_nodata_value: boolean
-              bins: number
-              right: boolean
-            }
-            Returns: Record<string, unknown>[]
-          }
-        | {
-            Args: {
+        Returns: unknown
+      }
+      st_histogram: {
+        Args:
+          | {
               rast: unknown
               nband?: number
               exclude_nodata_value?: boolean
@@ -6095,13 +4365,25 @@ export type Database = {
               width?: number[]
               right?: boolean
             }
-            Returns: Record<string, unknown>[]
-          }
+          | {
+              rast: unknown
+              nband: number
+              exclude_nodata_value: boolean
+              bins: number
+              right: boolean
+            }
+          | {
+              rast: unknown
+              nband: number
+              bins: number
+              width?: number[]
+              right?: boolean
+            }
+          | { rast: unknown; nband: number; bins: number; right: boolean }
+        Returns: Record<string, unknown>[]
+      }
       st_interpolatepoint: {
-        Args: {
-          line: unknown
-          point: unknown
-        }
+        Args: { line: unknown; point: unknown }
         Returns: number
       }
       st_interpolateraster: {
@@ -6113,71 +4395,13 @@ export type Database = {
         }
         Returns: unknown
       }
-      st_intersection:
-        | {
-            Args: {
-              geom1: unknown
-              geom2: unknown
-              gridsize?: number
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              geomin: unknown
-              rast: unknown
-              band?: number
-            }
-            Returns: Database["public"]["CompositeTypes"]["geomval"][]
-          }
-        | {
-            Args: {
-              rast: unknown
-              band: number
-              geomin: unknown
-            }
-            Returns: Database["public"]["CompositeTypes"]["geomval"][]
-          }
-        | {
-            Args: {
-              rast: unknown
-              geomin: unknown
-            }
-            Returns: Database["public"]["CompositeTypes"]["geomval"][]
-          }
-        | {
-            Args: {
-              rast1: unknown
-              band1: number
-              rast2: unknown
-              band2: number
-              nodataval: number[]
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              rast1: unknown
-              band1: number
-              rast2: unknown
-              band2: number
-              nodataval: number
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              rast1: unknown
-              band1: number
-              rast2: unknown
-              band2: number
-              returnband: string
-              nodataval: number
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
+      st_intersection: {
+        Args:
+          | { geom1: unknown; geom2: unknown; gridsize?: number }
+          | { geomin: unknown; rast: unknown; band?: number }
+          | { rast: unknown; band: number; geomin: unknown }
+          | { rast: unknown; geomin: unknown }
+          | {
               rast1: unknown
               band1: number
               rast2: unknown
@@ -6185,114 +4409,65 @@ export type Database = {
               returnband?: string
               nodataval?: number[]
             }
-            Returns: unknown
-          }
-        | {
-            Args: {
+          | {
               rast1: unknown
+              band1: number
               rast2: unknown
-              nodataval: number[]
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              rast1: unknown
-              rast2: unknown
-              nodataval: number
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              rast1: unknown
-              rast2: unknown
+              band2: number
               returnband: string
               nodataval: number
             }
-            Returns: unknown
-          }
-        | {
-            Args: {
+          | {
+              rast1: unknown
+              band1: number
+              rast2: unknown
+              band2: number
+              nodataval: number[]
+            }
+          | {
+              rast1: unknown
+              band1: number
+              rast2: unknown
+              band2: number
+              nodataval: number
+            }
+          | {
               rast1: unknown
               rast2: unknown
               returnband?: string
               nodataval?: number[]
             }
-            Returns: unknown
-          }
-      st_intersects:
-        | {
-            Args: {
-              geog1: unknown
-              geog2: unknown
-            }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              geom: unknown
-              rast: unknown
-              nband?: number
-            }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              geom1: unknown
-              geom2: unknown
-            }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              rast: unknown
-              geom: unknown
-              nband?: number
-            }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              rast: unknown
-              nband: number
-              geom: unknown
-            }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              rast1: unknown
-              nband1: number
-              rast2: unknown
-              nband2: number
-            }
-            Returns: boolean
-          }
-        | {
-            Args: {
+          | {
               rast1: unknown
               rast2: unknown
+              returnband: string
+              nodataval: number
             }
-            Returns: boolean
-          }
+          | { rast1: unknown; rast2: unknown; nodataval: number[] }
+          | { rast1: unknown; rast2: unknown; nodataval: number }
+        Returns: unknown
+      }
+      st_intersects: {
+        Args:
+          | { geom1: unknown; geom2: unknown }
+          | { geog1: unknown; geog2: unknown }
+          | { rast1: unknown; nband1: number; rast2: unknown; nband2: number }
+          | { rast1: unknown; rast2: unknown }
+          | { geom: unknown; rast: unknown; nband?: number }
+          | { rast: unknown; geom: unknown; nband?: number }
+          | { rast: unknown; nband: number; geom: unknown }
+        Returns: boolean
+      }
       st_invdistweight4ma: {
-        Args: {
-          value: number[]
-          pos: number[]
-        }
+        Args: { value: number[]; pos: number[] }
         Returns: number
       }
       st_isclosed: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: boolean
       }
       st_iscollection: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: boolean
       }
       st_iscoveragetile: {
@@ -6304,164 +4479,95 @@ export type Database = {
         }
         Returns: boolean
       }
-      st_isempty:
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              rast: unknown
-            }
-            Returns: boolean
-          }
+      st_isempty: {
+        Args: { "": unknown } | { rast: unknown }
+        Returns: boolean
+      }
       st_ispolygonccw: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: boolean
       }
       st_ispolygoncw: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: boolean
       }
       st_isring: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: boolean
       }
       st_issimple: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: boolean
       }
       st_isvalid: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: boolean
       }
       st_isvaliddetail: {
-        Args: {
-          geom: unknown
-          flags?: number
-        }
+        Args: { geom: unknown; flags?: number }
         Returns: Database["public"]["CompositeTypes"]["valid_detail"]
       }
       st_isvalidreason: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: string
       }
       st_isvalidtrajectory: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: boolean
       }
-      st_length:
-        | {
-            Args: {
-              "": string
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              geog: unknown
-              use_spheroid?: boolean
-            }
-            Returns: number
-          }
+      st_length: {
+        Args:
+          | { "": unknown }
+          | { geog: unknown; use_spheroid?: boolean }
+          | { "": string }
+        Returns: number
+      }
       st_length2d: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: number
       }
       st_letters: {
-        Args: {
-          letters: string
-          font?: Json
-        }
+        Args: { letters: string; font?: Json }
         Returns: unknown
       }
       st_linecrossingdirection: {
-        Args: {
-          line1: unknown
-          line2: unknown
-        }
+        Args: { line1: unknown; line2: unknown }
         Returns: number
       }
       st_linefromencodedpolyline: {
-        Args: {
-          txtin: string
-          nprecision?: number
-        }
+        Args: { txtin: string; nprecision?: number }
         Returns: unknown
       }
       st_linefrommultipoint: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       st_linefromtext: {
-        Args: {
-          "": string
-        }
+        Args: { "": string }
         Returns: unknown
       }
       st_linefromwkb: {
-        Args: {
-          "": string
-        }
+        Args: { "": string }
         Returns: unknown
       }
       st_linelocatepoint: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: number
       }
       st_linemerge: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       st_linestringfromwkb: {
-        Args: {
-          "": string
-        }
+        Args: { "": string }
         Returns: unknown
       }
       st_linetocurve: {
-        Args: {
-          geometry: unknown
-        }
+        Args: { geometry: unknown }
         Returns: unknown
       }
       st_locatealong: {
-        Args: {
-          geometry: unknown
-          measure: number
-          leftrightoffset?: number
-        }
+        Args: { geometry: unknown; measure: number; leftrightoffset?: number }
         Returns: unknown
       }
       st_locatebetween: {
@@ -6474,31 +4580,19 @@ export type Database = {
         Returns: unknown
       }
       st_locatebetweenelevations: {
-        Args: {
-          geometry: unknown
-          fromelevation: number
-          toelevation: number
-        }
+        Args: { geometry: unknown; fromelevation: number; toelevation: number }
         Returns: unknown
       }
       st_longestline: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: unknown
       }
       st_m: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: number
       }
       st_makebox2d: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: unknown
       }
       st_makeemptycoverage: {
@@ -6517,25 +4611,9 @@ export type Database = {
         }
         Returns: unknown[]
       }
-      st_makeemptyraster:
-        | {
-            Args: {
-              rast: unknown
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              width: number
-              height: number
-              upperleftx: number
-              upperlefty: number
-              pixelsize: number
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
+      st_makeemptyraster: {
+        Args:
+          | {
               width: number
               height: number
               upperleftx: number
@@ -6546,45 +4624,40 @@ export type Database = {
               skewy: number
               srid?: number
             }
-            Returns: unknown
-          }
-      st_makeline:
-        | {
-            Args: {
-              "": unknown[]
+          | {
+              width: number
+              height: number
+              upperleftx: number
+              upperlefty: number
+              pixelsize: number
             }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              geom1: unknown
-              geom2: unknown
-            }
-            Returns: unknown
-          }
-      st_makepolygon: {
-        Args: {
-          "": unknown
-        }
+          | { rast: unknown }
         Returns: unknown
       }
-      st_makevalid:
-        | {
-            Args: {
-              "": unknown
+      st_makeline: {
+        Args: { "": unknown[] } | { geom1: unknown; geom2: unknown }
+        Returns: unknown
+      }
+      st_makepolygon: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      st_makevalid: {
+        Args: { "": unknown } | { geom: unknown; params: string }
+        Returns: unknown
+      }
+      st_mapalgebra: {
+        Args:
+          | {
+              rastbandargset: Database["public"]["CompositeTypes"]["rastbandarg"][]
+              callbackfunc: unknown
+              pixeltype?: string
+              extenttype?: string
+              customextent?: unknown
+              distancex?: number
+              distancey?: number
             }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              geom: unknown
-              params: string
-            }
-            Returns: unknown
-          }
-      st_mapalgebra:
-        | {
-            Args: {
+          | {
               rast: unknown
               nband: number[]
               callbackfunc: unknown
@@ -6594,23 +4667,7 @@ export type Database = {
               distancex?: number
               distancey?: number
             }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              rast: unknown
-              nband: number
-              callbackfunc: unknown
-              mask: number[]
-              weighted: boolean
-              pixeltype?: string
-              extenttype?: string
-              customextent?: unknown
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
+          | {
               rast: unknown
               nband: number
               callbackfunc: unknown
@@ -6620,44 +4677,7 @@ export type Database = {
               distancex?: number
               distancey?: number
             }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              rast: unknown
-              nband: number
-              pixeltype: string
-              expression: string
-              nodataval?: number
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              rast: unknown
-              pixeltype: string
-              expression: string
-              nodataval?: number
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              rast1: unknown
-              band1: number
-              rast2: unknown
-              band2: number
-              expression: string
-              pixeltype?: string
-              extenttype?: string
-              nodata1expr?: string
-              nodata2expr?: string
-              nodatanodataval?: number
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
+          | {
               rast1: unknown
               nband1: number
               rast2: unknown
@@ -6669,55 +4689,30 @@ export type Database = {
               distancex?: number
               distancey?: number
             }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              rast1: unknown
-              rast2: unknown
-              expression: string
-              pixeltype?: string
-              extenttype?: string
-              nodata1expr?: string
-              nodata2expr?: string
-              nodatanodataval?: number
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              rastbandargset: Database["public"]["CompositeTypes"]["rastbandarg"][]
+          | {
+              rast: unknown
+              nband: number
               callbackfunc: unknown
+              mask: number[]
+              weighted: boolean
               pixeltype?: string
               extenttype?: string
               customextent?: unknown
-              distancex?: number
-              distancey?: number
             }
-            Returns: unknown
-          }
-      st_mapalgebraexpr:
-        | {
-            Args: {
+          | {
               rast: unknown
-              band: number
+              nband: number
               pixeltype: string
               expression: string
               nodataval?: number
             }
-            Returns: unknown
-          }
-        | {
-            Args: {
+          | {
               rast: unknown
               pixeltype: string
               expression: string
               nodataval?: number
             }
-            Returns: unknown
-          }
-        | {
-            Args: {
+          | {
               rast1: unknown
               band1: number
               rast2: unknown
@@ -6729,10 +4724,7 @@ export type Database = {
               nodata2expr?: string
               nodatanodataval?: number
             }
-            Returns: unknown
-          }
-        | {
-            Args: {
+          | {
               rast1: unknown
               rast2: unknown
               expression: string
@@ -6742,75 +4734,68 @@ export type Database = {
               nodata2expr?: string
               nodatanodataval?: number
             }
-            Returns: unknown
-          }
-      st_mapalgebrafct:
-        | {
-            Args: {
+        Returns: unknown
+      }
+      st_mapalgebraexpr: {
+        Args:
+          | {
               rast: unknown
               band: number
-              onerastuserfunc: unknown
+              pixeltype: string
+              expression: string
+              nodataval?: number
             }
-            Returns: unknown
-          }
-        | {
-            Args: {
+          | {
               rast: unknown
-              band: number
-              onerastuserfunc: unknown
+              pixeltype: string
+              expression: string
+              nodataval?: number
             }
-            Returns: unknown
-          }
-        | {
-            Args: {
+          | {
+              rast1: unknown
+              band1: number
+              rast2: unknown
+              band2: number
+              expression: string
+              pixeltype?: string
+              extenttype?: string
+              nodata1expr?: string
+              nodata2expr?: string
+              nodatanodataval?: number
+            }
+          | {
+              rast1: unknown
+              rast2: unknown
+              expression: string
+              pixeltype?: string
+              extenttype?: string
+              nodata1expr?: string
+              nodata2expr?: string
+              nodatanodataval?: number
+            }
+        Returns: unknown
+      }
+      st_mapalgebrafct: {
+        Args:
+          | {
               rast: unknown
               band: number
               pixeltype: string
               onerastuserfunc: unknown
             }
-            Returns: unknown
-          }
-        | {
-            Args: {
+          | {
               rast: unknown
               band: number
               pixeltype: string
               onerastuserfunc: unknown
             }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              rast: unknown
-              onerastuserfunc: unknown
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              rast: unknown
-              onerastuserfunc: unknown
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              rast: unknown
-              pixeltype: string
-              onerastuserfunc: unknown
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              rast: unknown
-              pixeltype: string
-              onerastuserfunc: unknown
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
+          | { rast: unknown; band: number; onerastuserfunc: unknown }
+          | { rast: unknown; band: number; onerastuserfunc: unknown }
+          | { rast: unknown; pixeltype: string; onerastuserfunc: unknown }
+          | { rast: unknown; pixeltype: string; onerastuserfunc: unknown }
+          | { rast: unknown; onerastuserfunc: unknown }
+          | { rast: unknown; onerastuserfunc: unknown }
+          | {
               rast1: unknown
               band1: number
               rast2: unknown
@@ -6819,18 +4804,15 @@ export type Database = {
               pixeltype?: string
               extenttype?: string
             }
-            Returns: unknown
-          }
-        | {
-            Args: {
+          | {
               rast1: unknown
               rast2: unknown
               tworastuserfunc: unknown
               pixeltype?: string
               extenttype?: string
             }
-            Returns: unknown
-          }
+        Returns: unknown
+      }
       st_mapalgebrafctngb: {
         Args: {
           rast: unknown
@@ -6843,252 +4825,151 @@ export type Database = {
         }
         Returns: unknown
       }
-      st_max4ma:
-        | {
-            Args: {
-              matrix: number[]
-              nodatamode: string
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              value: number[]
-              pos: number[]
-            }
-            Returns: number
-          }
+      st_max4ma: {
+        Args:
+          | { matrix: number[]; nodatamode: string }
+          | { value: number[]; pos: number[] }
+        Returns: number
+      }
       st_maxdistance: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: number
       }
       st_maximuminscribedcircle: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: Record<string, unknown>
       }
-      st_mean4ma:
-        | {
-            Args: {
-              matrix: number[]
-              nodatamode: string
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              value: number[]
-              pos: number[]
-            }
-            Returns: number
-          }
-      st_memsize:
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: number
-          }
+      st_mean4ma: {
+        Args:
+          | { matrix: number[]; nodatamode: string }
+          | { value: number[]; pos: number[] }
+        Returns: number
+      }
+      st_memsize: {
+        Args: { "": unknown } | { "": unknown }
+        Returns: number
+      }
       st_metadata: {
-        Args: {
-          rast: unknown
-        }
+        Args: { rast: unknown }
         Returns: Record<string, unknown>
       }
-      st_min4ma:
-        | {
-            Args: {
-              matrix: number[]
-              nodatamode: string
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              value: number[]
-              pos: number[]
-            }
-            Returns: number
-          }
+      st_min4ma: {
+        Args:
+          | { matrix: number[]; nodatamode: string }
+          | { value: number[]; pos: number[] }
+        Returns: number
+      }
       st_minconvexhull: {
-        Args: {
-          rast: unknown
-          nband?: number
-        }
+        Args: { rast: unknown; nband?: number }
         Returns: unknown
       }
       st_mindist4ma: {
-        Args: {
-          value: number[]
-          pos: number[]
-        }
+        Args: { value: number[]; pos: number[] }
         Returns: number
       }
       st_minimumboundingcircle: {
-        Args: {
-          inputgeom: unknown
-          segs_per_quarter?: number
-        }
+        Args: { inputgeom: unknown; segs_per_quarter?: number }
         Returns: unknown
       }
       st_minimumboundingradius: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: Record<string, unknown>
       }
       st_minimumclearance: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: number
       }
       st_minimumclearanceline: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       st_minpossiblevalue: {
-        Args: {
-          pixeltype: string
-        }
+        Args: { pixeltype: string }
         Returns: number
       }
       st_mlinefromtext: {
-        Args: {
-          "": string
-        }
+        Args: { "": string }
         Returns: unknown
       }
       st_mlinefromwkb: {
-        Args: {
-          "": string
-        }
+        Args: { "": string }
         Returns: unknown
       }
       st_mpointfromtext: {
-        Args: {
-          "": string
-        }
+        Args: { "": string }
         Returns: unknown
       }
       st_mpointfromwkb: {
-        Args: {
-          "": string
-        }
+        Args: { "": string }
         Returns: unknown
       }
       st_mpolyfromtext: {
-        Args: {
-          "": string
-        }
+        Args: { "": string }
         Returns: unknown
       }
       st_mpolyfromwkb: {
-        Args: {
-          "": string
-        }
+        Args: { "": string }
         Returns: unknown
       }
       st_multi: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       st_multilinefromwkb: {
-        Args: {
-          "": string
-        }
+        Args: { "": string }
         Returns: unknown
       }
       st_multilinestringfromtext: {
-        Args: {
-          "": string
-        }
+        Args: { "": string }
         Returns: unknown
       }
       st_multipointfromtext: {
-        Args: {
-          "": string
-        }
+        Args: { "": string }
         Returns: unknown
       }
       st_multipointfromwkb: {
-        Args: {
-          "": string
-        }
+        Args: { "": string }
         Returns: unknown
       }
       st_multipolyfromwkb: {
-        Args: {
-          "": string
-        }
+        Args: { "": string }
         Returns: unknown
       }
       st_multipolygonfromtext: {
-        Args: {
-          "": string
-        }
+        Args: { "": string }
         Returns: unknown
       }
       st_ndims: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: number
       }
-      st_nearestvalue:
-        | {
-            Args: {
+      st_nearestvalue: {
+        Args:
+          | {
+              rast: unknown
+              band: number
+              pt: unknown
+              exclude_nodata_value?: boolean
+            }
+          | { rast: unknown; pt: unknown; exclude_nodata_value?: boolean }
+          | {
               rast: unknown
               band: number
               columnx: number
               rowy: number
               exclude_nodata_value?: boolean
             }
-            Returns: number
-          }
-        | {
-            Args: {
-              rast: unknown
-              band: number
-              pt: unknown
-              exclude_nodata_value?: boolean
-            }
-            Returns: number
-          }
-        | {
-            Args: {
+          | {
               rast: unknown
               columnx: number
               rowy: number
               exclude_nodata_value?: boolean
             }
-            Returns: number
-          }
-        | {
-            Args: {
-              rast: unknown
-              pt: unknown
-              exclude_nodata_value?: boolean
-            }
-            Returns: number
-          }
-      st_neighborhood:
-        | {
-            Args: {
+        Returns: number
+      }
+      st_neighborhood: {
+        Args:
+          | {
               rast: unknown
               band: number
               columnx: number
@@ -7097,21 +4978,7 @@ export type Database = {
               distancey: number
               exclude_nodata_value?: boolean
             }
-            Returns: number[]
-          }
-        | {
-            Args: {
-              rast: unknown
-              band: number
-              pt: unknown
-              distancex: number
-              distancey: number
-              exclude_nodata_value?: boolean
-            }
-            Returns: number[]
-          }
-        | {
-            Args: {
+          | {
               rast: unknown
               columnx: number
               rowy: number
@@ -7119,164 +4986,100 @@ export type Database = {
               distancey: number
               exclude_nodata_value?: boolean
             }
-            Returns: number[]
-          }
-        | {
-            Args: {
+          | {
+              rast: unknown
+              band: number
+              pt: unknown
+              distancex: number
+              distancey: number
+              exclude_nodata_value?: boolean
+            }
+          | {
               rast: unknown
               pt: unknown
               distancex: number
               distancey: number
               exclude_nodata_value?: boolean
             }
-            Returns: number[]
-          }
+        Returns: number[]
+      }
       st_node: {
-        Args: {
-          g: unknown
-        }
+        Args: { g: unknown }
         Returns: unknown
       }
       st_normalize: {
-        Args: {
-          geom: unknown
-        }
+        Args: { geom: unknown }
         Returns: unknown
       }
       st_notsamealignmentreason: {
-        Args: {
-          rast1: unknown
-          rast2: unknown
-        }
+        Args: { rast1: unknown; rast2: unknown }
         Returns: string
       }
       st_npoints: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: number
       }
       st_nrings: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: number
       }
       st_numbands: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: number
       }
       st_numgeometries: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: number
       }
       st_numinteriorring: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: number
       }
       st_numinteriorrings: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: number
       }
       st_numpatches: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: number
       }
       st_numpoints: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: number
       }
       st_offsetcurve: {
-        Args: {
-          line: unknown
-          distance: number
-          params?: string
-        }
+        Args: { line: unknown; distance: number; params?: string }
         Returns: unknown
       }
       st_orderingequals: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
       }
       st_orientedenvelope: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
-      st_overlaps:
-        | {
-            Args: {
-              geom1: unknown
-              geom2: unknown
-            }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              rast1: unknown
-              nband1: number
-              rast2: unknown
-              nband2: number
-            }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              rast1: unknown
-              rast2: unknown
-            }
-            Returns: boolean
-          }
-      st_perimeter:
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              geog: unknown
-              use_spheroid?: boolean
-            }
-            Returns: number
-          }
+      st_overlaps: {
+        Args:
+          | { geom1: unknown; geom2: unknown }
+          | { rast1: unknown; nband1: number; rast2: unknown; nband2: number }
+          | { rast1: unknown; rast2: unknown }
+        Returns: boolean
+      }
+      st_perimeter: {
+        Args: { "": unknown } | { geog: unknown; use_spheroid?: boolean }
+        Returns: number
+      }
       st_perimeter2d: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: number
       }
       st_pixelascentroid: {
-        Args: {
-          rast: unknown
-          x: number
-          y: number
-        }
+        Args: { rast: unknown; x: number; y: number }
         Returns: unknown
       }
       st_pixelascentroids: {
-        Args: {
-          rast: unknown
-          band?: number
-          exclude_nodata_value?: boolean
-        }
+        Args: { rast: unknown; band?: number; exclude_nodata_value?: boolean }
         Returns: {
           geom: unknown
           val: number
@@ -7285,19 +5088,11 @@ export type Database = {
         }[]
       }
       st_pixelaspoint: {
-        Args: {
-          rast: unknown
-          x: number
-          y: number
-        }
+        Args: { rast: unknown; x: number; y: number }
         Returns: unknown
       }
       st_pixelaspoints: {
-        Args: {
-          rast: unknown
-          band?: number
-          exclude_nodata_value?: boolean
-        }
+        Args: { rast: unknown; band?: number; exclude_nodata_value?: boolean }
         Returns: {
           geom: unknown
           val: number
@@ -7306,19 +5101,11 @@ export type Database = {
         }[]
       }
       st_pixelaspolygon: {
-        Args: {
-          rast: unknown
-          x: number
-          y: number
-        }
+        Args: { rast: unknown; x: number; y: number }
         Returns: unknown
       }
       st_pixelaspolygons: {
-        Args: {
-          rast: unknown
-          band?: number
-          exclude_nodata_value?: boolean
-        }
+        Args: { rast: unknown; band?: number; exclude_nodata_value?: boolean }
         Returns: {
           geom: unknown
           val: number
@@ -7327,76 +5114,41 @@ export type Database = {
         }[]
       }
       st_pixelheight: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: number
       }
-      st_pixelofvalue:
-        | {
-            Args: {
+      st_pixelofvalue: {
+        Args:
+          | {
               rast: unknown
               nband: number
               search: number[]
               exclude_nodata_value?: boolean
             }
-            Returns: {
-              val: number
-              x: number
-              y: number
-            }[]
-          }
-        | {
-            Args: {
+          | { rast: unknown; search: number[]; exclude_nodata_value?: boolean }
+          | {
               rast: unknown
               nband: number
               search: number
               exclude_nodata_value?: boolean
             }
-            Returns: {
-              x: number
-              y: number
-            }[]
-          }
-        | {
-            Args: {
-              rast: unknown
-              search: number[]
-              exclude_nodata_value?: boolean
-            }
-            Returns: {
-              val: number
-              x: number
-              y: number
-            }[]
-          }
-        | {
-            Args: {
-              rast: unknown
-              search: number
-              exclude_nodata_value?: boolean
-            }
-            Returns: {
-              x: number
-              y: number
-            }[]
-          }
+          | { rast: unknown; search: number; exclude_nodata_value?: boolean }
+        Returns: {
+          val: number
+          x: number
+          y: number
+        }[]
+      }
       st_pixelwidth: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: number
       }
       st_pointfromtext: {
-        Args: {
-          "": string
-        }
+        Args: { "": string }
         Returns: unknown
       }
       st_pointfromwkb: {
-        Args: {
-          "": string
-        }
+        Args: { "": string }
         Returns: unknown
       }
       st_pointm: {
@@ -7409,15 +5161,11 @@ export type Database = {
         Returns: unknown
       }
       st_pointonsurface: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       st_points: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       st_pointz: {
@@ -7440,107 +5188,54 @@ export type Database = {
         Returns: unknown
       }
       st_polyfromtext: {
-        Args: {
-          "": string
-        }
+        Args: { "": string }
         Returns: unknown
       }
       st_polyfromwkb: {
-        Args: {
-          "": string
-        }
+        Args: { "": string }
         Returns: unknown
       }
       st_polygon: {
-        Args: {
-          rast: unknown
-          band?: number
-        }
+        Args: { rast: unknown; band?: number }
         Returns: unknown
       }
       st_polygonfromtext: {
-        Args: {
-          "": string
-        }
+        Args: { "": string }
         Returns: unknown
       }
       st_polygonfromwkb: {
-        Args: {
-          "": string
-        }
+        Args: { "": string }
         Returns: unknown
       }
       st_polygonize: {
-        Args: {
-          "": unknown[]
-        }
+        Args: { "": unknown[] }
         Returns: unknown
       }
       st_project: {
-        Args: {
-          geog: unknown
-          distance: number
-          azimuth: number
-        }
+        Args: { geog: unknown; distance: number; azimuth: number }
         Returns: unknown
       }
-      st_quantile:
-        | {
-            Args: {
-              rast: unknown
-              exclude_nodata_value: boolean
-              quantile?: number
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              rast: unknown
-              nband: number
-              exclude_nodata_value: boolean
-              quantile: number
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              rast: unknown
-              nband: number
-              quantile: number
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              rast: unknown
-              nband: number
-              quantiles: number[]
-            }
-            Returns: Record<string, unknown>[]
-          }
-        | {
-            Args: {
+      st_quantile: {
+        Args:
+          | {
               rast: unknown
               nband?: number
               exclude_nodata_value?: boolean
               quantiles?: number[]
             }
-            Returns: Record<string, unknown>[]
-          }
-        | {
-            Args: {
+          | { rast: unknown; nband: number; quantiles: number[] }
+          | { rast: unknown; quantiles: number[] }
+          | {
               rast: unknown
+              nband: number
+              exclude_nodata_value: boolean
               quantile: number
             }
-            Returns: number
-          }
-        | {
-            Args: {
-              rast: unknown
-              quantiles: number[]
-            }
-            Returns: Record<string, unknown>[]
-          }
+          | { rast: unknown; nband: number; quantile: number }
+          | { rast: unknown; exclude_nodata_value: boolean; quantile?: number }
+          | { rast: unknown; quantile: number }
+        Returns: Record<string, unknown>[]
+      }
       st_quantizecoordinates: {
         Args: {
           g: unknown
@@ -7551,142 +5246,64 @@ export type Database = {
         }
         Returns: unknown
       }
-      st_range4ma:
-        | {
-            Args: {
-              matrix: number[]
-              nodatamode: string
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              value: number[]
-              pos: number[]
-            }
-            Returns: number
-          }
+      st_range4ma: {
+        Args:
+          | { matrix: number[]; nodatamode: string }
+          | { value: number[]; pos: number[] }
+        Returns: number
+      }
       st_rastertoworldcoord: {
-        Args: {
-          rast: unknown
-          columnx: number
-          rowy: number
-        }
+        Args: { rast: unknown; columnx: number; rowy: number }
         Returns: Record<string, unknown>
       }
-      st_rastertoworldcoordx:
-        | {
-            Args: {
-              rast: unknown
-              xr: number
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              rast: unknown
-              xr: number
-              yr: number
-            }
-            Returns: number
-          }
-      st_rastertoworldcoordy:
-        | {
-            Args: {
-              rast: unknown
-              xr: number
-              yr: number
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              rast: unknown
-              yr: number
-            }
-            Returns: number
-          }
+      st_rastertoworldcoordx: {
+        Args:
+          | { rast: unknown; xr: number }
+          | { rast: unknown; xr: number; yr: number }
+        Returns: number
+      }
+      st_rastertoworldcoordy: {
+        Args:
+          | { rast: unknown; xr: number; yr: number }
+          | { rast: unknown; yr: number }
+        Returns: number
+      }
       st_rastfromhexwkb: {
-        Args: {
-          "": string
-        }
+        Args: { "": string }
         Returns: unknown
       }
       st_rastfromwkb: {
-        Args: {
-          "": string
-        }
+        Args: { "": string }
         Returns: unknown
       }
-      st_reclass:
-        | {
-            Args: {
-              rast: unknown
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
+      st_reclass: {
+        Args:
+          | { rast: unknown; reclassexpr: string; pixeltype: string }
+          | { rast: unknown }
+          | {
               rast: unknown
               nband: number
               reclassexpr: string
               pixeltype: string
               nodataval?: number
             }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              rast: unknown
-              reclassexpr: string
-              pixeltype: string
-            }
-            Returns: unknown
-          }
+        Returns: unknown
+      }
       st_reduceprecision: {
-        Args: {
-          geom: unknown
-          gridsize: number
-        }
+        Args: { geom: unknown; gridsize: number }
         Returns: unknown
       }
       st_relate: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: string
       }
       st_removerepeatedpoints: {
-        Args: {
-          geom: unknown
-          tolerance?: number
-        }
+        Args: { geom: unknown; tolerance?: number }
         Returns: unknown
       }
-      st_resample:
-        | {
-            Args: {
-              rast: unknown
-              ref: unknown
-              algorithm?: string
-              maxerr?: number
-              usescale?: boolean
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              rast: unknown
-              ref: unknown
-              usescale: boolean
-              algorithm?: string
-              maxerr?: number
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
+      st_resample: {
+        Args:
+          | {
               rast: unknown
               scalex?: number
               scaley?: number
@@ -7697,10 +5314,7 @@ export type Database = {
               algorithm?: string
               maxerr?: number
             }
-            Returns: unknown
-          }
-        | {
-            Args: {
+          | {
               rast: unknown
               width: number
               height: number
@@ -7711,79 +5325,81 @@ export type Database = {
               algorithm?: string
               maxerr?: number
             }
-            Returns: unknown
-          }
-      st_rescale:
-        | {
-            Args: {
+          | {
+              rast: unknown
+              ref: unknown
+              algorithm?: string
+              maxerr?: number
+              usescale?: boolean
+            }
+          | {
+              rast: unknown
+              ref: unknown
+              usescale: boolean
+              algorithm?: string
+              maxerr?: number
+            }
+        Returns: unknown
+      }
+      st_rescale: {
+        Args:
+          | {
               rast: unknown
               scalex: number
               scaley: number
               algorithm?: string
               maxerr?: number
             }
-            Returns: unknown
-          }
-        | {
-            Args: {
+          | {
               rast: unknown
               scalexy: number
               algorithm?: string
               maxerr?: number
             }
-            Returns: unknown
-          }
-      st_resize:
-        | {
-            Args: {
-              rast: unknown
-              percentwidth: number
-              percentheight: number
-              algorithm?: string
-              maxerr?: number
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              rast: unknown
-              width: number
-              height: number
-              algorithm?: string
-              maxerr?: number
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
+        Returns: unknown
+      }
+      st_resize: {
+        Args:
+          | {
               rast: unknown
               width: string
               height: string
               algorithm?: string
               maxerr?: number
             }
-            Returns: unknown
-          }
-      st_reskew:
-        | {
-            Args: {
+          | {
+              rast: unknown
+              width: number
+              height: number
+              algorithm?: string
+              maxerr?: number
+            }
+          | {
+              rast: unknown
+              percentwidth: number
+              percentheight: number
+              algorithm?: string
+              maxerr?: number
+            }
+        Returns: unknown
+      }
+      st_reskew: {
+        Args:
+          | {
+              rast: unknown
+              skewxy: number
+              algorithm?: string
+              maxerr?: number
+            }
+          | {
               rast: unknown
               skewx: number
               skewy: number
               algorithm?: string
               maxerr?: number
             }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              rast: unknown
-              skewxy: number
-              algorithm?: string
-              maxerr?: number
-            }
-            Returns: unknown
-          }
+        Returns: unknown
+      }
       st_retile: {
         Args: {
           tab: unknown
@@ -7798,47 +5414,34 @@ export type Database = {
         Returns: unknown[]
       }
       st_reverse: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       st_rotation: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: number
       }
-      st_roughness:
-        | {
-            Args: {
+      st_roughness: {
+        Args:
+          | {
               rast: unknown
               nband: number
               customextent: unknown
               pixeltype?: string
               interpolate_nodata?: boolean
             }
-            Returns: unknown
-          }
-        | {
-            Args: {
+          | {
               rast: unknown
               nband?: number
               pixeltype?: string
               interpolate_nodata?: boolean
             }
-            Returns: unknown
-          }
-      st_samealignment:
-        | {
-            Args: {
-              rast1: unknown
-              rast2: unknown
-            }
-            Returns: boolean
-          }
-        | {
-            Args: {
+        Returns: unknown
+      }
+      st_samealignment: {
+        Args:
+          | { rast1: unknown; rast2: unknown }
+          | {
               ulx1: number
               uly1: number
               scalex1: number
@@ -7852,25 +5455,18 @@ export type Database = {
               skewx2: number
               skewy2: number
             }
-            Returns: boolean
-          }
+        Returns: boolean
+      }
       st_scalex: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: number
       }
       st_scaley: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: number
       }
       st_segmentize: {
-        Args: {
-          geog: unknown
-          max_segment_length: number
-        }
+        Args: { geog: unknown; max_segment_length: number }
         Returns: unknown
       }
       st_setbandindex: {
@@ -7883,29 +5479,20 @@ export type Database = {
         Returns: unknown
       }
       st_setbandisnodata: {
-        Args: {
-          rast: unknown
-          band?: number
-        }
+        Args: { rast: unknown; band?: number }
         Returns: unknown
       }
-      st_setbandnodatavalue:
-        | {
-            Args: {
+      st_setbandnodatavalue: {
+        Args:
+          | {
               rast: unknown
               band: number
               nodatavalue: number
               forcechecking?: boolean
             }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              rast: unknown
-              nodatavalue: number
-            }
-            Returns: unknown
-          }
+          | { rast: unknown; nodatavalue: number }
+        Returns: unknown
+      }
       st_setbandpath: {
         Args: {
           rast: unknown
@@ -7916,17 +5503,10 @@ export type Database = {
         }
         Returns: unknown
       }
-      st_setgeoreference:
-        | {
-            Args: {
-              rast: unknown
-              georef: string
-              format?: string
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
+      st_setgeoreference: {
+        Args:
+          | { rast: unknown; georef: string; format?: string }
+          | {
               rast: unknown
               upperleftx: number
               upperlefty: number
@@ -7935,8 +5515,8 @@ export type Database = {
               skewx: number
               skewy: number
             }
-            Returns: unknown
-          }
+        Returns: unknown
+      }
       st_setgeotransform: {
         Args: {
           rast: unknown
@@ -7950,132 +5530,53 @@ export type Database = {
         Returns: unknown
       }
       st_setm: {
-        Args: {
-          rast: unknown
-          geom: unknown
-          resample?: string
-          band?: number
-        }
+        Args: { rast: unknown; geom: unknown; resample?: string; band?: number }
         Returns: unknown
       }
       st_setrotation: {
-        Args: {
-          rast: unknown
-          rotation: number
-        }
+        Args: { rast: unknown; rotation: number }
         Returns: unknown
       }
-      st_setscale:
-        | {
-            Args: {
-              rast: unknown
-              scale: number
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              rast: unknown
-              scalex: number
-              scaley: number
-            }
-            Returns: unknown
-          }
-      st_setskew:
-        | {
-            Args: {
-              rast: unknown
-              skew: number
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              rast: unknown
-              skewx: number
-              skewy: number
-            }
-            Returns: unknown
-          }
-      st_setsrid:
-        | {
-            Args: {
-              geog: unknown
-              srid: number
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              geom: unknown
-              srid: number
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              rast: unknown
-              srid: number
-            }
-            Returns: unknown
-          }
+      st_setscale: {
+        Args:
+          | { rast: unknown; scale: number }
+          | { rast: unknown; scalex: number; scaley: number }
+        Returns: unknown
+      }
+      st_setskew: {
+        Args:
+          | { rast: unknown; skew: number }
+          | { rast: unknown; skewx: number; skewy: number }
+        Returns: unknown
+      }
+      st_setsrid: {
+        Args:
+          | { geom: unknown; srid: number }
+          | { geog: unknown; srid: number }
+          | { rast: unknown; srid: number }
+        Returns: unknown
+      }
       st_setupperleft: {
-        Args: {
-          rast: unknown
-          upperleftx: number
-          upperlefty: number
-        }
+        Args: { rast: unknown; upperleftx: number; upperlefty: number }
         Returns: unknown
       }
-      st_setvalue:
-        | {
-            Args: {
+      st_setvalue: {
+        Args:
+          | { rast: unknown; nband: number; geom: unknown; newvalue: number }
+          | { rast: unknown; geom: unknown; newvalue: number }
+          | {
               rast: unknown
               band: number
               x: number
               y: number
               newvalue: number
             }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              rast: unknown
-              geom: unknown
-              newvalue: number
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              rast: unknown
-              nband: number
-              geom: unknown
-              newvalue: number
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              rast: unknown
-              x: number
-              y: number
-              newvalue: number
-            }
-            Returns: unknown
-          }
-      st_setvalues:
-        | {
-            Args: {
-              rast: unknown
-              nband: number
-              geomvalset: Database["public"]["CompositeTypes"]["geomval"][]
-              keepnodata?: boolean
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
+          | { rast: unknown; x: number; y: number; newvalue: number }
+        Returns: unknown
+      }
+      st_setvalues: {
+        Args:
+          | {
               rast: unknown
               nband: number
               x: number
@@ -8084,10 +5585,7 @@ export type Database = {
               noset?: boolean[]
               keepnodata?: boolean
             }
-            Returns: unknown
-          }
-        | {
-            Args: {
+          | {
               rast: unknown
               nband: number
               x: number
@@ -8096,10 +5594,7 @@ export type Database = {
               nosetvalue: number
               keepnodata?: boolean
             }
-            Returns: unknown
-          }
-        | {
-            Args: {
+          | {
               rast: unknown
               nband: number
               x: number
@@ -8109,10 +5604,7 @@ export type Database = {
               newvalue: number
               keepnodata?: boolean
             }
-            Returns: unknown
-          }
-        | {
-            Args: {
+          | {
               rast: unknown
               x: number
               y: number
@@ -8121,60 +5613,45 @@ export type Database = {
               newvalue: number
               keepnodata?: boolean
             }
-            Returns: unknown
-          }
+          | {
+              rast: unknown
+              nband: number
+              geomvalset: Database["public"]["CompositeTypes"]["geomval"][]
+              keepnodata?: boolean
+            }
+        Returns: unknown
+      }
       st_setz: {
-        Args: {
-          rast: unknown
-          geom: unknown
-          resample?: string
-          band?: number
-        }
+        Args: { rast: unknown; geom: unknown; resample?: string; band?: number }
         Returns: unknown
       }
       st_sharedpaths: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: unknown
       }
       st_shiftlongitude: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       st_shortestline: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: unknown
       }
       st_simplifypolygonhull: {
-        Args: {
-          geom: unknown
-          vertex_fraction: number
-          is_outer?: boolean
-        }
+        Args: { geom: unknown; vertex_fraction: number; is_outer?: boolean }
         Returns: unknown
       }
       st_skewx: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: number
       }
       st_skewy: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: number
       }
-      st_slope:
-        | {
-            Args: {
+      st_slope: {
+        Args:
+          | {
               rast: unknown
               nband: number
               customextent: unknown
@@ -8183,10 +5660,7 @@ export type Database = {
               scale?: number
               interpolate_nodata?: boolean
             }
-            Returns: unknown
-          }
-        | {
-            Args: {
+          | {
               rast: unknown
               nband?: number
               pixeltype?: string
@@ -8194,11 +5668,11 @@ export type Database = {
               scale?: number
               interpolate_nodata?: boolean
             }
-            Returns: unknown
-          }
-      st_snaptogrid:
-        | {
-            Args: {
+        Returns: unknown
+      }
+      st_snaptogrid: {
+        Args:
+          | {
               rast: unknown
               gridx: number
               gridy: number
@@ -8207,10 +5681,7 @@ export type Database = {
               scalex?: number
               scaley?: number
             }
-            Returns: unknown
-          }
-        | {
-            Args: {
+          | {
               rast: unknown
               gridx: number
               gridy: number
@@ -8219,10 +5690,7 @@ export type Database = {
               algorithm?: string
               maxerr?: number
             }
-            Returns: unknown
-          }
-        | {
-            Args: {
+          | {
               rast: unknown
               gridx: number
               gridy: number
@@ -8230,165 +5698,69 @@ export type Database = {
               algorithm?: string
               maxerr?: number
             }
-            Returns: unknown
-          }
+        Returns: unknown
+      }
       st_split: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: unknown
       }
       st_square: {
-        Args: {
-          size: number
-          cell_i: number
-          cell_j: number
-          origin?: unknown
-        }
+        Args: { size: number; cell_i: number; cell_j: number; origin?: unknown }
         Returns: unknown
       }
       st_squaregrid: {
-        Args: {
-          size: number
-          bounds: unknown
-        }
+        Args: { size: number; bounds: unknown }
         Returns: Record<string, unknown>[]
       }
-      st_srid:
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              geog: unknown
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              geom: unknown
-            }
-            Returns: number
-          }
+      st_srid: {
+        Args: { geom: unknown } | { geog: unknown } | { "": unknown }
+        Returns: number
+      }
       st_startpoint: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
-      st_stddev4ma:
-        | {
-            Args: {
-              matrix: number[]
-              nodatamode: string
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              value: number[]
-              pos: number[]
-            }
-            Returns: number
-          }
+      st_stddev4ma: {
+        Args:
+          | { matrix: number[]; nodatamode: string }
+          | { value: number[]; pos: number[] }
+        Returns: number
+      }
       st_subdivide: {
-        Args: {
-          geom: unknown
-          maxvertices?: number
-          gridsize?: number
-        }
+        Args: { geom: unknown; maxvertices?: number; gridsize?: number }
         Returns: unknown[]
       }
-      st_sum4ma:
-        | {
-            Args: {
-              matrix: number[]
-              nodatamode: string
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              value: number[]
-              pos: number[]
-            }
-            Returns: number
-          }
-      st_summary:
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              rast: unknown
-            }
-            Returns: string
-          }
-      st_summarystats:
-        | {
-            Args: {
-              rast: unknown
-              exclude_nodata_value: boolean
-            }
-            Returns: Database["public"]["CompositeTypes"]["summarystats"]
-          }
-        | {
-            Args: {
-              rast: unknown
-              nband?: number
-              exclude_nodata_value?: boolean
-            }
-            Returns: Database["public"]["CompositeTypes"]["summarystats"]
-          }
+      st_sum4ma: {
+        Args:
+          | { matrix: number[]; nodatamode: string }
+          | { value: number[]; pos: number[] }
+        Returns: number
+      }
+      st_summary: {
+        Args: { "": unknown } | { "": unknown } | { rast: unknown }
+        Returns: string
+      }
+      st_summarystats: {
+        Args:
+          | { rast: unknown; nband?: number; exclude_nodata_value?: boolean }
+          | { rast: unknown; exclude_nodata_value: boolean }
+        Returns: Database["public"]["CompositeTypes"]["summarystats"]
+      }
       st_swapordinates: {
-        Args: {
-          geom: unknown
-          ords: unknown
-        }
+        Args: { geom: unknown; ords: unknown }
         Returns: unknown
       }
       st_symdifference: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-          gridsize?: number
-        }
+        Args: { geom1: unknown; geom2: unknown; gridsize?: number }
         Returns: unknown
       }
       st_symmetricdifference: {
-        Args: {
-          geom1: unknown
-          geom2: unknown
-        }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: unknown
       }
-      st_tile:
-        | {
-            Args: {
-              rast: unknown
-              nband: number[]
-              width: number
-              height: number
-              padwithnodata?: boolean
-              nodataval?: number
-            }
-            Returns: unknown[]
-          }
-        | {
-            Args: {
+      st_tile: {
+        Args:
+          | {
               rast: unknown
               nband: number
               width: number
@@ -8396,18 +5768,23 @@ export type Database = {
               padwithnodata?: boolean
               nodataval?: number
             }
-            Returns: unknown[]
-          }
-        | {
-            Args: {
+          | {
               rast: unknown
               width: number
               height: number
               padwithnodata?: boolean
               nodataval?: number
             }
-            Returns: unknown[]
-          }
+          | {
+              rast: unknown
+              nband: number[]
+              width: number
+              height: number
+              padwithnodata?: boolean
+              nodataval?: number
+            }
+        Returns: unknown[]
+      }
       st_tileenvelope: {
         Args: {
           zoom: number
@@ -8418,85 +5795,36 @@ export type Database = {
         }
         Returns: unknown
       }
-      st_touches:
-        | {
-            Args: {
-              geom1: unknown
-              geom2: unknown
+      st_touches: {
+        Args:
+          | { geom1: unknown; geom2: unknown }
+          | { rast1: unknown; nband1: number; rast2: unknown; nband2: number }
+          | { rast1: unknown; rast2: unknown }
+        Returns: boolean
+      }
+      st_tpi: {
+        Args:
+          | {
+              rast: unknown
+              nband?: number
+              pixeltype?: string
+              interpolate_nodata?: boolean
             }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              rast1: unknown
-              nband1: number
-              rast2: unknown
-              nband2: number
-            }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              rast1: unknown
-              rast2: unknown
-            }
-            Returns: boolean
-          }
-      st_tpi:
-        | {
-            Args: {
+          | {
               rast: unknown
               nband: number
               customextent: unknown
               pixeltype?: string
               interpolate_nodata?: boolean
             }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              rast: unknown
-              nband?: number
-              pixeltype?: string
-              interpolate_nodata?: boolean
-            }
-            Returns: unknown
-          }
-      st_transform:
-        | {
-            Args: {
-              geom: unknown
-              from_proj: string
-              to_proj: string
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              geom: unknown
-              from_proj: string
-              to_srid: number
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              geom: unknown
-              to_proj: string
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              rast: unknown
-              alignto: unknown
-              algorithm?: string
-              maxerr?: number
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
+        Returns: unknown
+      }
+      st_transform: {
+        Args:
+          | { geom: unknown; to_proj: string }
+          | { geom: unknown; from_proj: string; to_proj: string }
+          | { geom: unknown; from_proj: string; to_srid: number }
+          | {
               rast: unknown
               srid: number
               algorithm?: string
@@ -8504,10 +5832,7 @@ export type Database = {
               scalex?: number
               scaley?: number
             }
-            Returns: unknown
-          }
-        | {
-            Args: {
+          | {
               rast: unknown
               srid: number
               scalex: number
@@ -8515,204 +5840,113 @@ export type Database = {
               algorithm?: string
               maxerr?: number
             }
-            Returns: unknown
-          }
-        | {
-            Args: {
+          | {
               rast: unknown
               srid: number
               scalexy: number
               algorithm?: string
               maxerr?: number
             }
-            Returns: unknown
-          }
-      st_tri:
-        | {
-            Args: {
+          | {
+              rast: unknown
+              alignto: unknown
+              algorithm?: string
+              maxerr?: number
+            }
+        Returns: unknown
+      }
+      st_tri: {
+        Args:
+          | {
               rast: unknown
               nband: number
               customextent: unknown
               pixeltype?: string
               interpolate_nodata?: boolean
             }
-            Returns: unknown
-          }
-        | {
-            Args: {
+          | {
               rast: unknown
               nband?: number
               pixeltype?: string
               interpolate_nodata?: boolean
             }
-            Returns: unknown
-          }
-      st_triangulatepolygon: {
-        Args: {
-          g1: unknown
-        }
         Returns: unknown
       }
-      st_union:
-        | {
-            Args: {
-              "": unknown[]
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              geom1: unknown
-              geom2: unknown
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              geom1: unknown
-              geom2: unknown
-              gridsize: number
-            }
-            Returns: unknown
-          }
+      st_triangulatepolygon: {
+        Args: { g1: unknown }
+        Returns: unknown
+      }
+      st_union: {
+        Args:
+          | { geom1: unknown; geom2: unknown }
+          | { geom1: unknown; geom2: unknown; gridsize: number }
+          | { "": unknown[] }
+        Returns: unknown
+      }
       st_upperleftx: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: number
       }
       st_upperlefty: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: number
       }
-      st_value:
-        | {
-            Args: {
+      st_value: {
+        Args:
+          | {
+              rast: unknown
+              band: number
+              x: number
+              y: number
+              exclude_nodata_value?: boolean
+            }
+          | {
               rast: unknown
               band: number
               pt: unknown
               exclude_nodata_value?: boolean
               resample?: string
             }
-            Returns: number
-          }
-        | {
-            Args: {
-              rast: unknown
-              band: number
-              x: number
-              y: number
-              exclude_nodata_value?: boolean
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              rast: unknown
-              pt: unknown
-              exclude_nodata_value?: boolean
-            }
-            Returns: number
-          }
-        | {
-            Args: {
+          | {
               rast: unknown
               x: number
               y: number
               exclude_nodata_value?: boolean
             }
-            Returns: number
-          }
-      st_valuecount:
-        | {
-            Args: {
-              rast: unknown
-              nband: number
-              exclude_nodata_value: boolean
-              searchvalue: number
-              roundto?: number
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              rast: unknown
-              nband: number
-              searchvalue: number
-              roundto?: number
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              rast: unknown
-              nband: number
-              searchvalues: number[]
-              roundto?: number
-            }
-            Returns: Record<string, unknown>[]
-          }
-        | {
-            Args: {
+          | { rast: unknown; pt: unknown; exclude_nodata_value?: boolean }
+        Returns: number
+      }
+      st_valuecount: {
+        Args:
+          | {
               rast: unknown
               nband?: number
               exclude_nodata_value?: boolean
               searchvalues?: number[]
               roundto?: number
             }
-            Returns: Record<string, unknown>[]
-          }
-        | {
-            Args: {
+          | {
               rast: unknown
-              searchvalue: number
-              roundto?: number
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              rast: unknown
+              nband: number
               searchvalues: number[]
               roundto?: number
             }
-            Returns: Record<string, unknown>[]
-          }
-        | {
-            Args: {
-              rastertable: string
-              rastercolumn: string
+          | { rast: unknown; searchvalues: number[]; roundto?: number }
+          | {
+              rast: unknown
               nband: number
               exclude_nodata_value: boolean
               searchvalue: number
               roundto?: number
             }
-            Returns: number
-          }
-        | {
-            Args: {
-              rastertable: string
-              rastercolumn: string
+          | {
+              rast: unknown
               nband: number
               searchvalue: number
               roundto?: number
             }
-            Returns: number
-          }
-        | {
-            Args: {
-              rastertable: string
-              rastercolumn: string
-              nband: number
-              searchvalues: number[]
-              roundto?: number
-            }
-            Returns: Record<string, unknown>[]
-          }
-        | {
-            Args: {
+          | { rast: unknown; searchvalue: number; roundto?: number }
+          | {
               rastertable: string
               rastercolumn: string
               nband?: number
@@ -8720,83 +5954,20 @@ export type Database = {
               searchvalues?: number[]
               roundto?: number
             }
-            Returns: Record<string, unknown>[]
-          }
-        | {
-            Args: {
+          | {
               rastertable: string
               rastercolumn: string
-              searchvalue: number
+              nband: number
+              searchvalues: number[]
               roundto?: number
             }
-            Returns: number
-          }
-        | {
-            Args: {
+          | {
               rastertable: string
               rastercolumn: string
               searchvalues: number[]
               roundto?: number
             }
-            Returns: Record<string, unknown>[]
-          }
-      st_valuepercent:
-        | {
-            Args: {
-              rast: unknown
-              nband: number
-              exclude_nodata_value: boolean
-              searchvalue: number
-              roundto?: number
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              rast: unknown
-              nband: number
-              searchvalue: number
-              roundto?: number
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              rast: unknown
-              nband: number
-              searchvalues: number[]
-              roundto?: number
-            }
-            Returns: Record<string, unknown>[]
-          }
-        | {
-            Args: {
-              rast: unknown
-              nband?: number
-              exclude_nodata_value?: boolean
-              searchvalues?: number[]
-              roundto?: number
-            }
-            Returns: Record<string, unknown>[]
-          }
-        | {
-            Args: {
-              rast: unknown
-              searchvalue: number
-              roundto?: number
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              rast: unknown
-              searchvalues: number[]
-              roundto?: number
-            }
-            Returns: Record<string, unknown>[]
-          }
-        | {
-            Args: {
+          | {
               rastertable: string
               rastercolumn: string
               nband: number
@@ -8804,30 +5975,52 @@ export type Database = {
               searchvalue: number
               roundto?: number
             }
-            Returns: number
-          }
-        | {
-            Args: {
+          | {
               rastertable: string
               rastercolumn: string
               nband: number
               searchvalue: number
               roundto?: number
             }
-            Returns: number
-          }
-        | {
-            Args: {
+          | {
               rastertable: string
               rastercolumn: string
+              searchvalue: number
+              roundto?: number
+            }
+        Returns: Record<string, unknown>[]
+      }
+      st_valuepercent: {
+        Args:
+          | {
+              rast: unknown
+              nband: number
+              exclude_nodata_value: boolean
+              searchvalue: number
+              roundto?: number
+            }
+          | {
+              rast: unknown
+              nband?: number
+              exclude_nodata_value?: boolean
+              searchvalues?: number[]
+              roundto?: number
+            }
+          | {
+              rast: unknown
               nband: number
               searchvalues: number[]
               roundto?: number
             }
-            Returns: Record<string, unknown>[]
-          }
-        | {
-            Args: {
+          | { rast: unknown; searchvalues: number[]; roundto?: number }
+          | {
+              rast: unknown
+              nband: number
+              searchvalue: number
+              roundto?: number
+            }
+          | { rast: unknown; searchvalue: number; roundto?: number }
+          | {
               rastertable: string
               rastercolumn: string
               nband?: number
@@ -8835,224 +6028,139 @@ export type Database = {
               searchvalues?: number[]
               roundto?: number
             }
-            Returns: Record<string, unknown>[]
-          }
-        | {
-            Args: {
+          | {
               rastertable: string
               rastercolumn: string
-              searchvalue: number
+              nband: number
+              searchvalues: number[]
               roundto?: number
             }
-            Returns: number
-          }
-        | {
-            Args: {
+          | {
               rastertable: string
               rastercolumn: string
               searchvalues: number[]
               roundto?: number
             }
-            Returns: Record<string, unknown>[]
-          }
+          | {
+              rastertable: string
+              rastercolumn: string
+              nband: number
+              exclude_nodata_value: boolean
+              searchvalue: number
+              roundto?: number
+            }
+          | {
+              rastertable: string
+              rastercolumn: string
+              nband: number
+              searchvalue: number
+              roundto?: number
+            }
+          | {
+              rastertable: string
+              rastercolumn: string
+              searchvalue: number
+              roundto?: number
+            }
+        Returns: number
+      }
       st_voronoilines: {
-        Args: {
-          g1: unknown
-          tolerance?: number
-          extend_to?: unknown
-        }
+        Args: { g1: unknown; tolerance?: number; extend_to?: unknown }
         Returns: unknown
       }
       st_voronoipolygons: {
-        Args: {
-          g1: unknown
-          tolerance?: number
-          extend_to?: unknown
-        }
+        Args: { g1: unknown; tolerance?: number; extend_to?: unknown }
         Returns: unknown
       }
       st_width: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: number
       }
-      st_within:
-        | {
-            Args: {
-              geom1: unknown
-              geom2: unknown
-            }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              rast1: unknown
-              nband1: number
-              rast2: unknown
-              nband2: number
-            }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              rast1: unknown
-              rast2: unknown
-            }
-            Returns: boolean
-          }
+      st_within: {
+        Args:
+          | { geom1: unknown; geom2: unknown }
+          | { rast1: unknown; nband1: number; rast2: unknown; nband2: number }
+          | { rast1: unknown; rast2: unknown }
+        Returns: boolean
+      }
       st_wkbtosql: {
-        Args: {
-          wkb: string
-        }
+        Args: { wkb: string }
         Returns: unknown
       }
       st_wkttosql: {
-        Args: {
-          "": string
-        }
+        Args: { "": string }
         Returns: unknown
       }
-      st_worldtorastercoord:
-        | {
-            Args: {
-              rast: unknown
-              longitude: number
-              latitude: number
-            }
-            Returns: Record<string, unknown>
-          }
-        | {
-            Args: {
-              rast: unknown
-              pt: unknown
-            }
-            Returns: Record<string, unknown>
-          }
-      st_worldtorastercoordx:
-        | {
-            Args: {
-              rast: unknown
-              pt: unknown
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              rast: unknown
-              xw: number
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              rast: unknown
-              xw: number
-              yw: number
-            }
-            Returns: number
-          }
-      st_worldtorastercoordy:
-        | {
-            Args: {
-              rast: unknown
-              pt: unknown
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              rast: unknown
-              xw: number
-              yw: number
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              rast: unknown
-              yw: number
-            }
-            Returns: number
-          }
+      st_worldtorastercoord: {
+        Args:
+          | { rast: unknown; longitude: number; latitude: number }
+          | { rast: unknown; pt: unknown }
+        Returns: Record<string, unknown>
+      }
+      st_worldtorastercoordx: {
+        Args:
+          | { rast: unknown; xw: number; yw: number }
+          | { rast: unknown; xw: number }
+          | { rast: unknown; pt: unknown }
+        Returns: number
+      }
+      st_worldtorastercoordy: {
+        Args:
+          | { rast: unknown; xw: number; yw: number }
+          | { rast: unknown; yw: number }
+          | { rast: unknown; pt: unknown }
+        Returns: number
+      }
       st_wrapx: {
-        Args: {
-          geom: unknown
-          wrap: number
-          move: number
-        }
+        Args: { geom: unknown; wrap: number; move: number }
         Returns: unknown
       }
       st_x: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: number
       }
       st_xmax: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: number
       }
       st_xmin: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: number
       }
       st_y: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: number
       }
       st_ymax: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: number
       }
       st_ymin: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: number
       }
       st_z: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: number
       }
       st_zmax: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: number
       }
       st_zmflag: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: number
       }
       st_zmin: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: number
       }
       text: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: string
       }
       unlockrows: {
-        Args: {
-          "": string
-        }
+        Args: { "": string }
         Returns: number
       }
       updategeometrysrid: {
@@ -9065,24 +6173,17 @@ export type Database = {
         }
         Returns: string
       }
-      updaterastersrid:
-        | {
-            Args: {
+      updaterastersrid: {
+        Args:
+          | {
               schema_name: unknown
               table_name: unknown
               column_name: unknown
               new_srid: number
             }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              table_name: unknown
-              column_name: unknown
-              new_srid: number
-            }
-            Returns: boolean
-          }
+          | { table_name: unknown; column_name: unknown; new_srid: number }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
@@ -9143,27 +6244,29 @@ export type Database = {
   }
 }
 
-type PublicSchema = Database[Extract<keyof Database, "public">]
+type DefaultSchema = Database[Extract<keyof Database, "public">]
 
 export type Tables<
-  PublicTableNameOrOptions extends
-    | keyof (PublicSchema["Tables"] & PublicSchema["Views"])
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
-        Database[PublicTableNameOrOptions["schema"]]["Views"])
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
-      Database[PublicTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
+  ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
     : never
-  : PublicTableNameOrOptions extends keyof (PublicSchema["Tables"] &
-        PublicSchema["Views"])
-    ? (PublicSchema["Tables"] &
-        PublicSchema["Views"])[PublicTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
         Row: infer R
       }
       ? R
@@ -9171,20 +6274,22 @@ export type Tables<
     : never
 
 export type TablesInsert<
-  PublicTableNameOrOptions extends
-    | keyof PublicSchema["Tables"]
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
     | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
+  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
     : never
-  : PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
-    ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
         Insert: infer I
       }
       ? I
@@ -9192,20 +6297,22 @@ export type TablesInsert<
     : never
 
 export type TablesUpdate<
-  PublicTableNameOrOptions extends
-    | keyof PublicSchema["Tables"]
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
     | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
+  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
     : never
-  : PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
-    ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
         Update: infer U
       }
       ? U
@@ -9213,21 +6320,23 @@ export type TablesUpdate<
     : never
 
 export type Enums<
-  PublicEnumNameOrOptions extends
-    | keyof PublicSchema["Enums"]
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
     | { schema: keyof Database },
-  EnumName extends PublicEnumNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicEnumNameOrOptions["schema"]]["Enums"]
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
-> = PublicEnumNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicEnumNameOrOptions["schema"]]["Enums"][EnumName]
-  : PublicEnumNameOrOptions extends keyof PublicSchema["Enums"]
-    ? PublicSchema["Enums"][PublicEnumNameOrOptions]
+> = DefaultSchemaEnumNameOrOptions extends { schema: keyof Database }
+  ? Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
-    | keyof PublicSchema["CompositeTypes"]
+    | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof Database },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof Database
@@ -9236,6 +6345,12 @@ export type CompositeTypes<
     : never = never,
 > = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
   ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof PublicSchema["CompositeTypes"]
-    ? PublicSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
+
+export const Constants = {
+  public: {
+    Enums: {},
+  },
+} as const
