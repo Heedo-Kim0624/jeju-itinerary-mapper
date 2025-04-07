@@ -27,40 +27,13 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "accomodation_categories_id_fkey"
+            foreignKeyName: "accomodation_categories_id_fkey1"
             columns: ["id"]
             isOneToOne: true
-            referencedRelation: "accomodation_information"
+            referencedRelation: "accomodation_information_node"
             referencedColumns: ["ID"]
           },
         ]
-      }
-      accomodation_information: {
-        Row: {
-          ID: number
-          Latitude: number | null
-          Longitude: number | null
-          Lot_Address: string | null
-          Place_name: string | null
-          Road_address: string | null
-        }
-        Insert: {
-          ID: number
-          Latitude?: number | null
-          Longitude?: number | null
-          Lot_Address?: string | null
-          Place_name?: string | null
-          Road_address?: string | null
-        }
-        Update: {
-          ID?: number
-          Latitude?: number | null
-          Longitude?: number | null
-          Lot_Address?: string | null
-          Place_name?: string | null
-          Road_address?: string | null
-        }
-        Relationships: []
       }
       accomodation_information_node: {
         Row: {
@@ -93,15 +66,7 @@ export type Database = {
           Place_name?: string | null
           Road_address?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "accomodation_information_node_ID_fkey"
-            columns: ["ID"]
-            isOneToOne: true
-            referencedRelation: "accomodation_information"
-            referencedColumns: ["ID"]
-          },
-        ]
+        Relationships: []
       }
       accomodation_link: {
         Row: {
@@ -121,17 +86,45 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "accomodation_link_ID_fkey"
+            foreignKeyName: "accomodation_link_ID_fkey1"
             columns: ["ID"]
             isOneToOne: true
-            referencedRelation: "accomodation_information"
+            referencedRelation: "accomodation_information_node"
+            referencedColumns: ["ID"]
+          },
+        ]
+      }
+      accomodation_rating: {
+        Row: {
+          blog_review_count: number | null
+          id: number
+          Rating: number | null
+          visitor_review_count: number | null
+        }
+        Insert: {
+          blog_review_count?: number | null
+          id: number
+          Rating?: number | null
+          visitor_review_count?: number | null
+        }
+        Update: {
+          blog_review_count?: number | null
+          id?: number
+          Rating?: number | null
+          visitor_review_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accomodation_rating_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "accomodation_information_node"
             referencedColumns: ["ID"]
           },
         ]
       }
       accomodation_review: {
         Row: {
-          blog_review_count: number | null
           cleanliness: number | null
           convenient_public_transport: number | null
           easy_parking: number | null
@@ -151,17 +144,14 @@ export type Database = {
           no_bugs: number | null
           photo_spot: number | null
           quiet_and_relax: number | null
-          Rating: number | null
           secure_facilities: number | null
           stylish_interior: number | null
           unique_concept: number | null
-          visitor_review_count: number | null
           well_equipped_bathroom: number | null
           well_maintained_facilities: number | null
           worth_the_price: number | null
         }
         Insert: {
-          blog_review_count?: number | null
           cleanliness?: number | null
           convenient_public_transport?: number | null
           easy_parking?: number | null
@@ -181,17 +171,14 @@ export type Database = {
           no_bugs?: number | null
           photo_spot?: number | null
           quiet_and_relax?: number | null
-          Rating?: number | null
           secure_facilities?: number | null
           stylish_interior?: number | null
           unique_concept?: number | null
-          visitor_review_count?: number | null
           well_equipped_bathroom?: number | null
           well_maintained_facilities?: number | null
           worth_the_price?: number | null
         }
         Update: {
-          blog_review_count?: number | null
           cleanliness?: number | null
           convenient_public_transport?: number | null
           easy_parking?: number | null
@@ -211,11 +198,9 @@ export type Database = {
           no_bugs?: number | null
           photo_spot?: number | null
           quiet_and_relax?: number | null
-          Rating?: number | null
           secure_facilities?: number | null
           stylish_interior?: number | null
           unique_concept?: number | null
-          visitor_review_count?: number | null
           well_equipped_bathroom?: number | null
           well_maintained_facilities?: number | null
           worth_the_price?: number | null
@@ -225,8 +210,409 @@ export type Database = {
             foreignKeyName: "accomodation_review_id_fkey"
             columns: ["id"]
             isOneToOne: true
-            referencedRelation: "accomodation_information"
+            referencedRelation: "accomodation_information_node"
             referencedColumns: ["ID"]
+          },
+        ]
+      }
+      cafe_categories: {
+        Row: {
+          Categories: string | null
+          Categories_Details: string | null
+          id: number
+        }
+        Insert: {
+          Categories?: string | null
+          Categories_Details?: string | null
+          id: number
+        }
+        Update: {
+          Categories?: string | null
+          Categories_Details?: string | null
+          id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cafe_categories_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "cafe_information"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cafe_information: {
+        Row: {
+          id: number
+          Latitude: number | null
+          Longitude: number | null
+          Lot_Address: string | null
+          NEAR_DIST: number | null
+          NEAR_FID: number | null
+          Place_Name: string | null
+          Road_Address: string | null
+        }
+        Insert: {
+          id: number
+          Latitude?: number | null
+          Longitude?: number | null
+          Lot_Address?: string | null
+          NEAR_DIST?: number | null
+          NEAR_FID?: number | null
+          Place_Name?: string | null
+          Road_Address?: string | null
+        }
+        Update: {
+          id?: number
+          Latitude?: number | null
+          Longitude?: number | null
+          Lot_Address?: string | null
+          NEAR_DIST?: number | null
+          NEAR_FID?: number | null
+          Place_Name?: string | null
+          Road_Address?: string | null
+        }
+        Relationships: []
+      }
+      cafe_link: {
+        Row: {
+          id: number
+          instagram: string | null
+          link: string | null
+        }
+        Insert: {
+          id: number
+          instagram?: string | null
+          link?: string | null
+        }
+        Update: {
+          id?: number
+          instagram?: string | null
+          link?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cafe_link_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "cafe_information"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cafe_openinghours_logical: {
+        Row: {
+          Fri_09: string | null
+          Fri_10: string | null
+          Fri_11: string | null
+          Fri_12: string | null
+          Fri_13: string | null
+          Fri_14: string | null
+          Fri_15: string | null
+          Fri_16: string | null
+          Fri_17: string | null
+          Fri_18: string | null
+          Fri_19: string | null
+          Fri_20: string | null
+          Fri_21: string | null
+          Id: number
+          Mon_09: string | null
+          Mon_10: string | null
+          Mon_11: string | null
+          Mon_12: string | null
+          Mon_13: string | null
+          Mon_14: string | null
+          Mon_15: string | null
+          Mon_16: string | null
+          Mon_17: string | null
+          Mon_18: string | null
+          Mon_19: string | null
+          Mon_20: string | null
+          Mon_21: string | null
+          Sat_09: string | null
+          Sat_10: string | null
+          Sat_11: string | null
+          Sat_12: string | null
+          Sat_13: string | null
+          Sat_14: string | null
+          Sat_15: string | null
+          Sat_16: string | null
+          Sat_17: string | null
+          Sat_18: string | null
+          Sat_19: string | null
+          Sat_20: string | null
+          Sat_21: string | null
+          Sun_09: string | null
+          Sun_10: string | null
+          Sun_11: string | null
+          Sun_12: string | null
+          Sun_13: string | null
+          Sun_14: string | null
+          Sun_15: string | null
+          Sun_16: string | null
+          Sun_17: string | null
+          Sun_18: string | null
+          Sun_19: string | null
+          Sun_20: string | null
+          Sun_21: string | null
+          Thu_09: string | null
+          Thu_10: string | null
+          Thu_11: string | null
+          Thu_12: string | null
+          Thu_13: string | null
+          Thu_14: string | null
+          Thu_15: string | null
+          Thu_16: string | null
+          Thu_17: string | null
+          Thu_18: string | null
+          Thu_19: string | null
+          Thu_20: string | null
+          Thu_21: string | null
+          Tue_09: string | null
+          Tue_10: string | null
+          Tue_11: string | null
+          Tue_12: string | null
+          Tue_13: string | null
+          Tue_14: string | null
+          Tue_15: string | null
+          Tue_16: string | null
+          Tue_17: string | null
+          Tue_18: string | null
+          Tue_19: string | null
+          Tue_20: string | null
+          Tue_21: string | null
+          Wed_09: string | null
+          Wed_10: string | null
+          Wed_11: string | null
+          Wed_12: string | null
+          Wed_13: string | null
+          Wed_14: string | null
+          Wed_15: string | null
+          Wed_16: string | null
+          Wed_17: string | null
+          Wed_18: string | null
+          Wed_19: string | null
+          Wed_20: string | null
+          Wed_21: string | null
+        }
+        Insert: {
+          Fri_09?: string | null
+          Fri_10?: string | null
+          Fri_11?: string | null
+          Fri_12?: string | null
+          Fri_13?: string | null
+          Fri_14?: string | null
+          Fri_15?: string | null
+          Fri_16?: string | null
+          Fri_17?: string | null
+          Fri_18?: string | null
+          Fri_19?: string | null
+          Fri_20?: string | null
+          Fri_21?: string | null
+          Id: number
+          Mon_09?: string | null
+          Mon_10?: string | null
+          Mon_11?: string | null
+          Mon_12?: string | null
+          Mon_13?: string | null
+          Mon_14?: string | null
+          Mon_15?: string | null
+          Mon_16?: string | null
+          Mon_17?: string | null
+          Mon_18?: string | null
+          Mon_19?: string | null
+          Mon_20?: string | null
+          Mon_21?: string | null
+          Sat_09?: string | null
+          Sat_10?: string | null
+          Sat_11?: string | null
+          Sat_12?: string | null
+          Sat_13?: string | null
+          Sat_14?: string | null
+          Sat_15?: string | null
+          Sat_16?: string | null
+          Sat_17?: string | null
+          Sat_18?: string | null
+          Sat_19?: string | null
+          Sat_20?: string | null
+          Sat_21?: string | null
+          Sun_09?: string | null
+          Sun_10?: string | null
+          Sun_11?: string | null
+          Sun_12?: string | null
+          Sun_13?: string | null
+          Sun_14?: string | null
+          Sun_15?: string | null
+          Sun_16?: string | null
+          Sun_17?: string | null
+          Sun_18?: string | null
+          Sun_19?: string | null
+          Sun_20?: string | null
+          Sun_21?: string | null
+          Thu_09?: string | null
+          Thu_10?: string | null
+          Thu_11?: string | null
+          Thu_12?: string | null
+          Thu_13?: string | null
+          Thu_14?: string | null
+          Thu_15?: string | null
+          Thu_16?: string | null
+          Thu_17?: string | null
+          Thu_18?: string | null
+          Thu_19?: string | null
+          Thu_20?: string | null
+          Thu_21?: string | null
+          Tue_09?: string | null
+          Tue_10?: string | null
+          Tue_11?: string | null
+          Tue_12?: string | null
+          Tue_13?: string | null
+          Tue_14?: string | null
+          Tue_15?: string | null
+          Tue_16?: string | null
+          Tue_17?: string | null
+          Tue_18?: string | null
+          Tue_19?: string | null
+          Tue_20?: string | null
+          Tue_21?: string | null
+          Wed_09?: string | null
+          Wed_10?: string | null
+          Wed_11?: string | null
+          Wed_12?: string | null
+          Wed_13?: string | null
+          Wed_14?: string | null
+          Wed_15?: string | null
+          Wed_16?: string | null
+          Wed_17?: string | null
+          Wed_18?: string | null
+          Wed_19?: string | null
+          Wed_20?: string | null
+          Wed_21?: string | null
+        }
+        Update: {
+          Fri_09?: string | null
+          Fri_10?: string | null
+          Fri_11?: string | null
+          Fri_12?: string | null
+          Fri_13?: string | null
+          Fri_14?: string | null
+          Fri_15?: string | null
+          Fri_16?: string | null
+          Fri_17?: string | null
+          Fri_18?: string | null
+          Fri_19?: string | null
+          Fri_20?: string | null
+          Fri_21?: string | null
+          Id?: number
+          Mon_09?: string | null
+          Mon_10?: string | null
+          Mon_11?: string | null
+          Mon_12?: string | null
+          Mon_13?: string | null
+          Mon_14?: string | null
+          Mon_15?: string | null
+          Mon_16?: string | null
+          Mon_17?: string | null
+          Mon_18?: string | null
+          Mon_19?: string | null
+          Mon_20?: string | null
+          Mon_21?: string | null
+          Sat_09?: string | null
+          Sat_10?: string | null
+          Sat_11?: string | null
+          Sat_12?: string | null
+          Sat_13?: string | null
+          Sat_14?: string | null
+          Sat_15?: string | null
+          Sat_16?: string | null
+          Sat_17?: string | null
+          Sat_18?: string | null
+          Sat_19?: string | null
+          Sat_20?: string | null
+          Sat_21?: string | null
+          Sun_09?: string | null
+          Sun_10?: string | null
+          Sun_11?: string | null
+          Sun_12?: string | null
+          Sun_13?: string | null
+          Sun_14?: string | null
+          Sun_15?: string | null
+          Sun_16?: string | null
+          Sun_17?: string | null
+          Sun_18?: string | null
+          Sun_19?: string | null
+          Sun_20?: string | null
+          Sun_21?: string | null
+          Thu_09?: string | null
+          Thu_10?: string | null
+          Thu_11?: string | null
+          Thu_12?: string | null
+          Thu_13?: string | null
+          Thu_14?: string | null
+          Thu_15?: string | null
+          Thu_16?: string | null
+          Thu_17?: string | null
+          Thu_18?: string | null
+          Thu_19?: string | null
+          Thu_20?: string | null
+          Thu_21?: string | null
+          Tue_09?: string | null
+          Tue_10?: string | null
+          Tue_11?: string | null
+          Tue_12?: string | null
+          Tue_13?: string | null
+          Tue_14?: string | null
+          Tue_15?: string | null
+          Tue_16?: string | null
+          Tue_17?: string | null
+          Tue_18?: string | null
+          Tue_19?: string | null
+          Tue_20?: string | null
+          Tue_21?: string | null
+          Wed_09?: string | null
+          Wed_10?: string | null
+          Wed_11?: string | null
+          Wed_12?: string | null
+          Wed_13?: string | null
+          Wed_14?: string | null
+          Wed_15?: string | null
+          Wed_16?: string | null
+          Wed_17?: string | null
+          Wed_18?: string | null
+          Wed_19?: string | null
+          Wed_20?: string | null
+          Wed_21?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cafe_openinghours_logical_Id_fkey"
+            columns: ["Id"]
+            isOneToOne: true
+            referencedRelation: "cafe_information"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cafe_openinghours_note: {
+        Row: {
+          id: number
+          Note: string | null
+        }
+        Insert: {
+          id: number
+          Note?: string | null
+        }
+        Update: {
+          id?: number
+          Note?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cafe_openinghours_note_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "cafe_information"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -248,40 +634,13 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "landmark_categories_id_fkey"
+            foreignKeyName: "landmark_categories_id_fkey1"
             columns: ["id"]
             isOneToOne: true
-            referencedRelation: "landmark_information"
+            referencedRelation: "landmark_information_node"
             referencedColumns: ["id"]
           },
         ]
-      }
-      landmark_information: {
-        Row: {
-          id: number
-          Latitude: number | null
-          Longitude: number | null
-          Lot_Address: string | null
-          Place_Name: string | null
-          Road_Address: string | null
-        }
-        Insert: {
-          id: number
-          Latitude?: number | null
-          Longitude?: number | null
-          Lot_Address?: string | null
-          Place_Name?: string | null
-          Road_Address?: string | null
-        }
-        Update: {
-          id?: number
-          Latitude?: number | null
-          Longitude?: number | null
-          Lot_Address?: string | null
-          Place_Name?: string | null
-          Road_Address?: string | null
-        }
-        Relationships: []
       }
       landmark_information_node: {
         Row: {
@@ -314,15 +673,7 @@ export type Database = {
           Place_Name?: string | null
           Road_Address?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "landmark_information_node_id_fkey"
-            columns: ["id"]
-            isOneToOne: true
-            referencedRelation: "landmark_information"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       landmark_link: {
         Row: {
@@ -342,10 +693,10 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "landmark_link_id_fkey"
+            foreignKeyName: "landmark_link_id_fkey1"
             columns: ["id"]
             isOneToOne: true
-            referencedRelation: "landmark_information"
+            referencedRelation: "landmark_information_node"
             referencedColumns: ["id"]
           },
         ]
@@ -635,10 +986,10 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "landmark_openinghours_logical_id_fkey"
+            foreignKeyName: "landmark_openinghours_logical_id_fkey1"
             columns: ["id"]
             isOneToOne: true
-            referencedRelation: "landmark_information"
+            referencedRelation: "landmark_information_node"
             referencedColumns: ["id"]
           },
         ]
@@ -658,10 +1009,10 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "landmark_openinghours_note_id_fkey"
+            foreignKeyName: "landmark_openinghours_note_id_fkey1"
             columns: ["id"]
             isOneToOne: true
-            referencedRelation: "landmark_information"
+            referencedRelation: "landmark_information_node"
             referencedColumns: ["id"]
           },
         ]
@@ -698,33 +1049,6 @@ export type Database = {
           Latitude: number | null
           Longitude: number | null
           Lot_Address: string | null
-          Place_Name: string | null
-          Road_Address: string | null
-        }
-        Insert: {
-          id: number
-          Latitude?: number | null
-          Longitude?: number | null
-          Lot_Address?: string | null
-          Place_Name?: string | null
-          Road_Address?: string | null
-        }
-        Update: {
-          id?: number
-          Latitude?: number | null
-          Longitude?: number | null
-          Lot_Address?: string | null
-          Place_Name?: string | null
-          Road_Address?: string | null
-        }
-        Relationships: []
-      }
-      restaurant_information_node: {
-        Row: {
-          id: number
-          Latitude: number | null
-          Longitude: number | null
-          Lot_Address: string | null
           NEAR_DIST: number | null
           NEAR_FID: number | null
           Place_Name: string | null
@@ -750,15 +1074,7 @@ export type Database = {
           Place_Name?: string | null
           Road_Address?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "restaurant_information_node_id_fkey"
-            columns: ["id"]
-            isOneToOne: true
-            referencedRelation: "restaurant_information"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       restaurant_link: {
         Row: {
@@ -1073,714 +1389,6 @@ export type Database = {
           {
             foreignKeyName: "restaurant_openinghours_logical_Id_fkey"
             columns: ["Id"]
-            isOneToOne: true
-            referencedRelation: "restaurant_information"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      restaurant_openinghours_logical_plus: {
-        Row: {
-          Fri_09: string | null
-          Fri_10: string | null
-          Fri_11: string | null
-          Fri_12: string | null
-          Fri_13: string | null
-          Fri_14: string | null
-          Fri_15: string | null
-          Fri_16: string | null
-          Fri_17: string | null
-          Fri_18: string | null
-          Fri_19: string | null
-          Fri_20: string | null
-          Fri_21: string | null
-          Id: number
-          Mon_09: string | null
-          Mon_10: string | null
-          Mon_11: string | null
-          Mon_12: string | null
-          Mon_13: string | null
-          Mon_14: string | null
-          Mon_15: string | null
-          Mon_16: string | null
-          Mon_17: string | null
-          Mon_18: string | null
-          Mon_19: string | null
-          Mon_20: string | null
-          Mon_21: string | null
-          Sat_09: string | null
-          Sat_10: string | null
-          Sat_11: string | null
-          Sat_12: string | null
-          Sat_13: string | null
-          Sat_14: string | null
-          Sat_15: string | null
-          Sat_16: string | null
-          Sat_17: string | null
-          Sat_18: string | null
-          Sat_19: string | null
-          Sat_20: string | null
-          Sat_21: string | null
-          Sun_09: string | null
-          Sun_10: string | null
-          Sun_11: string | null
-          Sun_12: string | null
-          Sun_13: string | null
-          Sun_14: string | null
-          Sun_15: string | null
-          Sun_16: string | null
-          Sun_17: string | null
-          Sun_18: string | null
-          Sun_19: string | null
-          Sun_20: string | null
-          Sun_21: string | null
-          Thu_09: string | null
-          Thu_10: string | null
-          Thu_11: string | null
-          Thu_12: string | null
-          Thu_13: string | null
-          Thu_14: string | null
-          Thu_15: string | null
-          Thu_16: string | null
-          Thu_17: string | null
-          Thu_18: string | null
-          Thu_19: string | null
-          Thu_20: string | null
-          Thu_21: string | null
-          Tue_09: string | null
-          Tue_10: string | null
-          Tue_11: string | null
-          Tue_12: string | null
-          Tue_13: string | null
-          Tue_14: string | null
-          Tue_15: string | null
-          Tue_16: string | null
-          Tue_17: string | null
-          Tue_18: string | null
-          Tue_19: string | null
-          Tue_20: string | null
-          Tue_21: string | null
-          Wed_09: string | null
-          Wed_10: string | null
-          Wed_11: string | null
-          Wed_12: string | null
-          Wed_13: string | null
-          Wed_14: string | null
-          Wed_15: string | null
-          Wed_16: string | null
-          Wed_17: string | null
-          Wed_18: string | null
-          Wed_19: string | null
-          Wed_20: string | null
-          Wed_21: string | null
-        }
-        Insert: {
-          Fri_09?: string | null
-          Fri_10?: string | null
-          Fri_11?: string | null
-          Fri_12?: string | null
-          Fri_13?: string | null
-          Fri_14?: string | null
-          Fri_15?: string | null
-          Fri_16?: string | null
-          Fri_17?: string | null
-          Fri_18?: string | null
-          Fri_19?: string | null
-          Fri_20?: string | null
-          Fri_21?: string | null
-          Id: number
-          Mon_09?: string | null
-          Mon_10?: string | null
-          Mon_11?: string | null
-          Mon_12?: string | null
-          Mon_13?: string | null
-          Mon_14?: string | null
-          Mon_15?: string | null
-          Mon_16?: string | null
-          Mon_17?: string | null
-          Mon_18?: string | null
-          Mon_19?: string | null
-          Mon_20?: string | null
-          Mon_21?: string | null
-          Sat_09?: string | null
-          Sat_10?: string | null
-          Sat_11?: string | null
-          Sat_12?: string | null
-          Sat_13?: string | null
-          Sat_14?: string | null
-          Sat_15?: string | null
-          Sat_16?: string | null
-          Sat_17?: string | null
-          Sat_18?: string | null
-          Sat_19?: string | null
-          Sat_20?: string | null
-          Sat_21?: string | null
-          Sun_09?: string | null
-          Sun_10?: string | null
-          Sun_11?: string | null
-          Sun_12?: string | null
-          Sun_13?: string | null
-          Sun_14?: string | null
-          Sun_15?: string | null
-          Sun_16?: string | null
-          Sun_17?: string | null
-          Sun_18?: string | null
-          Sun_19?: string | null
-          Sun_20?: string | null
-          Sun_21?: string | null
-          Thu_09?: string | null
-          Thu_10?: string | null
-          Thu_11?: string | null
-          Thu_12?: string | null
-          Thu_13?: string | null
-          Thu_14?: string | null
-          Thu_15?: string | null
-          Thu_16?: string | null
-          Thu_17?: string | null
-          Thu_18?: string | null
-          Thu_19?: string | null
-          Thu_20?: string | null
-          Thu_21?: string | null
-          Tue_09?: string | null
-          Tue_10?: string | null
-          Tue_11?: string | null
-          Tue_12?: string | null
-          Tue_13?: string | null
-          Tue_14?: string | null
-          Tue_15?: string | null
-          Tue_16?: string | null
-          Tue_17?: string | null
-          Tue_18?: string | null
-          Tue_19?: string | null
-          Tue_20?: string | null
-          Tue_21?: string | null
-          Wed_09?: string | null
-          Wed_10?: string | null
-          Wed_11?: string | null
-          Wed_12?: string | null
-          Wed_13?: string | null
-          Wed_14?: string | null
-          Wed_15?: string | null
-          Wed_16?: string | null
-          Wed_17?: string | null
-          Wed_18?: string | null
-          Wed_19?: string | null
-          Wed_20?: string | null
-          Wed_21?: string | null
-        }
-        Update: {
-          Fri_09?: string | null
-          Fri_10?: string | null
-          Fri_11?: string | null
-          Fri_12?: string | null
-          Fri_13?: string | null
-          Fri_14?: string | null
-          Fri_15?: string | null
-          Fri_16?: string | null
-          Fri_17?: string | null
-          Fri_18?: string | null
-          Fri_19?: string | null
-          Fri_20?: string | null
-          Fri_21?: string | null
-          Id?: number
-          Mon_09?: string | null
-          Mon_10?: string | null
-          Mon_11?: string | null
-          Mon_12?: string | null
-          Mon_13?: string | null
-          Mon_14?: string | null
-          Mon_15?: string | null
-          Mon_16?: string | null
-          Mon_17?: string | null
-          Mon_18?: string | null
-          Mon_19?: string | null
-          Mon_20?: string | null
-          Mon_21?: string | null
-          Sat_09?: string | null
-          Sat_10?: string | null
-          Sat_11?: string | null
-          Sat_12?: string | null
-          Sat_13?: string | null
-          Sat_14?: string | null
-          Sat_15?: string | null
-          Sat_16?: string | null
-          Sat_17?: string | null
-          Sat_18?: string | null
-          Sat_19?: string | null
-          Sat_20?: string | null
-          Sat_21?: string | null
-          Sun_09?: string | null
-          Sun_10?: string | null
-          Sun_11?: string | null
-          Sun_12?: string | null
-          Sun_13?: string | null
-          Sun_14?: string | null
-          Sun_15?: string | null
-          Sun_16?: string | null
-          Sun_17?: string | null
-          Sun_18?: string | null
-          Sun_19?: string | null
-          Sun_20?: string | null
-          Sun_21?: string | null
-          Thu_09?: string | null
-          Thu_10?: string | null
-          Thu_11?: string | null
-          Thu_12?: string | null
-          Thu_13?: string | null
-          Thu_14?: string | null
-          Thu_15?: string | null
-          Thu_16?: string | null
-          Thu_17?: string | null
-          Thu_18?: string | null
-          Thu_19?: string | null
-          Thu_20?: string | null
-          Thu_21?: string | null
-          Tue_09?: string | null
-          Tue_10?: string | null
-          Tue_11?: string | null
-          Tue_12?: string | null
-          Tue_13?: string | null
-          Tue_14?: string | null
-          Tue_15?: string | null
-          Tue_16?: string | null
-          Tue_17?: string | null
-          Tue_18?: string | null
-          Tue_19?: string | null
-          Tue_20?: string | null
-          Tue_21?: string | null
-          Wed_09?: string | null
-          Wed_10?: string | null
-          Wed_11?: string | null
-          Wed_12?: string | null
-          Wed_13?: string | null
-          Wed_14?: string | null
-          Wed_15?: string | null
-          Wed_16?: string | null
-          Wed_17?: string | null
-          Wed_18?: string | null
-          Wed_19?: string | null
-          Wed_20?: string | null
-          Wed_21?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "restaurant_openinghours_logical_plus_Id_fkey"
-            columns: ["Id"]
-            isOneToOne: true
-            referencedRelation: "restaurant_information"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      restaurant_openinghours_note: {
-        Row: {
-          id: number
-          Note: string | null
-        }
-        Insert: {
-          id: number
-          Note?: string | null
-        }
-        Update: {
-          id?: number
-          Note?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "restaurant_openinghours_note_id_fkey"
-            columns: ["id"]
-            isOneToOne: true
-            referencedRelation: "restaurant_information"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      restaurant_review: {
-        Row: {
-          Authentic_local_taste: string | null
-          blog_review_count: number | null
-          "Cafe-like_atmosphere": string | null
-          Calm_atmosphere: string | null
-          Clean: string | null
-          Clean_facilities: string | null
-          Clean_restrooms: string | null
-          Clean_store: string | null
-          Cleanly_prepared_ingredients: string | null
-          Clearly_labeled_origins: string | null
-          Comfortable_bedding: string | null
-          Comfortable_for_reading: string | null
-          Comfortable_seating: string | null
-          Convenient_public_transportation: string | null
-          Cozy: string | null
-          Custom_orders_available: string | null
-          Cute_and_charming: string | null
-          Delicious_bread: string | null
-          Delicious_coffee: string | null
-          Delicious_desserts: string | null
-          Delicious_food: string | null
-          Delicious_fruit: string | null
-          Detailed_consultation: string | null
-          Detailed_cooking_instructions: string | null
-          Detailed_customer_service: string | null
-          Detailed_explanations: string | null
-          Diverse_experience_programs: string | null
-          Diverse_products: string | null
-          Easy_parking: string | null
-          Easy_to_cook: string | null
-          Easy_to_find_desired_books: string | null
-          Fast_service: string | null
-          Fresh: string | null
-          Fresh_ingredients: string | null
-          Friendly: string | null
-          Good_communication_with_students: string | null
-          Good_complimentary_side_dishes: string | null
-          Good_for_barbecue: string | null
-          Good_for_conversation: string | null
-          Good_for_families_with_kids: string | null
-          Good_for_focus: string | null
-          Good_for_long_stays: string | null
-          Good_for_parties: string | null
-          Good_for_photos: string | null
-          Good_for_quiet_rest: string | null
-          Good_for_solo_dining: string | null
-          Good_for_solo_drinking: string | null
-          Good_heating_and_cooling: string | null
-          Good_recommendations: string | null
-          Good_set_menu_combinations: string | null
-          Good_soundproofing: string | null
-          Good_value_for_money: string | null
-          Good_ventilation: string | null
-          Great_for_gifting: string | null
-          Great_for_group_gatherings: string | null
-          Great_for_special_occasions: string | null
-          Great_for_water_play: string | null
-          Great_live_performances: string | null
-          Great_natural_scenery: string | null
-          Great_outdoor_space: string | null
-          Great_side_dishes: string | null
-          Healthy_taste: string | null
-          High_quality: string | null
-          "High-quality_meat": string | null
-          id: number
-          Informative: string | null
-          Large_portions: string | null
-          Large_scale: string | null
-          Little_odor: string | null
-          Lots_of_attractions: string | null
-          Lots_of_food_options: string | null
-          Lots_of_fun_activities: string | null
-          Lots_of_pretty_items: string | null
-          Lots_of_readable_books: string | null
-          Luxurious: string | null
-          Many_bestsellers: string | null
-          Many_nearby_attractions: string | null
-          Many_new_products: string | null
-          Many_visitors: string | null
-          Neat_packaging: string | null
-          New_releases_arrive_quickly: string | null
-          Nice_music: string | null
-          Nice_view: string | null
-          No_insect_concerns: string | null
-          Not_crowded: string | null
-          Not_too_spicy: string | null
-          Passionate_teachers: string | null
-          "Pet-friendly": string | null
-          Provides_tailored_guidance_well: string | null
-          Rating: number | null
-          Reasonable_price: string | null
-          Relaxing_atmosphere: string | null
-          Seasonal_fruit_arrives_early: string | null
-          Spacious_store: string | null
-          Special_menu_available: string | null
-          Staff_grills_food_well: string | null
-          Stylish_interior: string | null
-          Systematic_classes: string | null
-          Tasty: string | null
-          Tasty_drinks: string | null
-          Tasty_tea: string | null
-          Thoughtful_packaging: string | null
-          Trendy: string | null
-          Trendy_products: string | null
-          Unique_book_collection: string | null
-          Unique_concept: string | null
-          Unique_design: string | null
-          Unique_items: string | null
-          Variety_of_alcohol: string | null
-          Variety_of_options: string | null
-          Various_meat_cuts: string | null
-          visitor_review_count: number | null
-          Visually_appealing: string | null
-          "Well-balanced_course_meals": string | null
-          "Well-curated_menu": string | null
-          "Well-designed_walking_trails": string | null
-          "Well-equipped_amenities": string | null
-          "Well-equipped_cooking_facilities": string | null
-          "Well-equipped_private_rooms": string | null
-          "Well-equipped_restrooms": string | null
-          "Well-maintained": string | null
-          "Well-organized_night_market": string | null
-          "Well-stocked_salad_bar": string | null
-          Wide_range_of_books: string | null
-          Worth_the_price: string | null
-        }
-        Insert: {
-          Authentic_local_taste?: string | null
-          blog_review_count?: number | null
-          "Cafe-like_atmosphere"?: string | null
-          Calm_atmosphere?: string | null
-          Clean?: string | null
-          Clean_facilities?: string | null
-          Clean_restrooms?: string | null
-          Clean_store?: string | null
-          Cleanly_prepared_ingredients?: string | null
-          Clearly_labeled_origins?: string | null
-          Comfortable_bedding?: string | null
-          Comfortable_for_reading?: string | null
-          Comfortable_seating?: string | null
-          Convenient_public_transportation?: string | null
-          Cozy?: string | null
-          Custom_orders_available?: string | null
-          Cute_and_charming?: string | null
-          Delicious_bread?: string | null
-          Delicious_coffee?: string | null
-          Delicious_desserts?: string | null
-          Delicious_food?: string | null
-          Delicious_fruit?: string | null
-          Detailed_consultation?: string | null
-          Detailed_cooking_instructions?: string | null
-          Detailed_customer_service?: string | null
-          Detailed_explanations?: string | null
-          Diverse_experience_programs?: string | null
-          Diverse_products?: string | null
-          Easy_parking?: string | null
-          Easy_to_cook?: string | null
-          Easy_to_find_desired_books?: string | null
-          Fast_service?: string | null
-          Fresh?: string | null
-          Fresh_ingredients?: string | null
-          Friendly?: string | null
-          Good_communication_with_students?: string | null
-          Good_complimentary_side_dishes?: string | null
-          Good_for_barbecue?: string | null
-          Good_for_conversation?: string | null
-          Good_for_families_with_kids?: string | null
-          Good_for_focus?: string | null
-          Good_for_long_stays?: string | null
-          Good_for_parties?: string | null
-          Good_for_photos?: string | null
-          Good_for_quiet_rest?: string | null
-          Good_for_solo_dining?: string | null
-          Good_for_solo_drinking?: string | null
-          Good_heating_and_cooling?: string | null
-          Good_recommendations?: string | null
-          Good_set_menu_combinations?: string | null
-          Good_soundproofing?: string | null
-          Good_value_for_money?: string | null
-          Good_ventilation?: string | null
-          Great_for_gifting?: string | null
-          Great_for_group_gatherings?: string | null
-          Great_for_special_occasions?: string | null
-          Great_for_water_play?: string | null
-          Great_live_performances?: string | null
-          Great_natural_scenery?: string | null
-          Great_outdoor_space?: string | null
-          Great_side_dishes?: string | null
-          Healthy_taste?: string | null
-          High_quality?: string | null
-          "High-quality_meat"?: string | null
-          id: number
-          Informative?: string | null
-          Large_portions?: string | null
-          Large_scale?: string | null
-          Little_odor?: string | null
-          Lots_of_attractions?: string | null
-          Lots_of_food_options?: string | null
-          Lots_of_fun_activities?: string | null
-          Lots_of_pretty_items?: string | null
-          Lots_of_readable_books?: string | null
-          Luxurious?: string | null
-          Many_bestsellers?: string | null
-          Many_nearby_attractions?: string | null
-          Many_new_products?: string | null
-          Many_visitors?: string | null
-          Neat_packaging?: string | null
-          New_releases_arrive_quickly?: string | null
-          Nice_music?: string | null
-          Nice_view?: string | null
-          No_insect_concerns?: string | null
-          Not_crowded?: string | null
-          Not_too_spicy?: string | null
-          Passionate_teachers?: string | null
-          "Pet-friendly"?: string | null
-          Provides_tailored_guidance_well?: string | null
-          Rating?: number | null
-          Reasonable_price?: string | null
-          Relaxing_atmosphere?: string | null
-          Seasonal_fruit_arrives_early?: string | null
-          Spacious_store?: string | null
-          Special_menu_available?: string | null
-          Staff_grills_food_well?: string | null
-          Stylish_interior?: string | null
-          Systematic_classes?: string | null
-          Tasty?: string | null
-          Tasty_drinks?: string | null
-          Tasty_tea?: string | null
-          Thoughtful_packaging?: string | null
-          Trendy?: string | null
-          Trendy_products?: string | null
-          Unique_book_collection?: string | null
-          Unique_concept?: string | null
-          Unique_design?: string | null
-          Unique_items?: string | null
-          Variety_of_alcohol?: string | null
-          Variety_of_options?: string | null
-          Various_meat_cuts?: string | null
-          visitor_review_count?: number | null
-          Visually_appealing?: string | null
-          "Well-balanced_course_meals"?: string | null
-          "Well-curated_menu"?: string | null
-          "Well-designed_walking_trails"?: string | null
-          "Well-equipped_amenities"?: string | null
-          "Well-equipped_cooking_facilities"?: string | null
-          "Well-equipped_private_rooms"?: string | null
-          "Well-equipped_restrooms"?: string | null
-          "Well-maintained"?: string | null
-          "Well-organized_night_market"?: string | null
-          "Well-stocked_salad_bar"?: string | null
-          Wide_range_of_books?: string | null
-          Worth_the_price?: string | null
-        }
-        Update: {
-          Authentic_local_taste?: string | null
-          blog_review_count?: number | null
-          "Cafe-like_atmosphere"?: string | null
-          Calm_atmosphere?: string | null
-          Clean?: string | null
-          Clean_facilities?: string | null
-          Clean_restrooms?: string | null
-          Clean_store?: string | null
-          Cleanly_prepared_ingredients?: string | null
-          Clearly_labeled_origins?: string | null
-          Comfortable_bedding?: string | null
-          Comfortable_for_reading?: string | null
-          Comfortable_seating?: string | null
-          Convenient_public_transportation?: string | null
-          Cozy?: string | null
-          Custom_orders_available?: string | null
-          Cute_and_charming?: string | null
-          Delicious_bread?: string | null
-          Delicious_coffee?: string | null
-          Delicious_desserts?: string | null
-          Delicious_food?: string | null
-          Delicious_fruit?: string | null
-          Detailed_consultation?: string | null
-          Detailed_cooking_instructions?: string | null
-          Detailed_customer_service?: string | null
-          Detailed_explanations?: string | null
-          Diverse_experience_programs?: string | null
-          Diverse_products?: string | null
-          Easy_parking?: string | null
-          Easy_to_cook?: string | null
-          Easy_to_find_desired_books?: string | null
-          Fast_service?: string | null
-          Fresh?: string | null
-          Fresh_ingredients?: string | null
-          Friendly?: string | null
-          Good_communication_with_students?: string | null
-          Good_complimentary_side_dishes?: string | null
-          Good_for_barbecue?: string | null
-          Good_for_conversation?: string | null
-          Good_for_families_with_kids?: string | null
-          Good_for_focus?: string | null
-          Good_for_long_stays?: string | null
-          Good_for_parties?: string | null
-          Good_for_photos?: string | null
-          Good_for_quiet_rest?: string | null
-          Good_for_solo_dining?: string | null
-          Good_for_solo_drinking?: string | null
-          Good_heating_and_cooling?: string | null
-          Good_recommendations?: string | null
-          Good_set_menu_combinations?: string | null
-          Good_soundproofing?: string | null
-          Good_value_for_money?: string | null
-          Good_ventilation?: string | null
-          Great_for_gifting?: string | null
-          Great_for_group_gatherings?: string | null
-          Great_for_special_occasions?: string | null
-          Great_for_water_play?: string | null
-          Great_live_performances?: string | null
-          Great_natural_scenery?: string | null
-          Great_outdoor_space?: string | null
-          Great_side_dishes?: string | null
-          Healthy_taste?: string | null
-          High_quality?: string | null
-          "High-quality_meat"?: string | null
-          id?: number
-          Informative?: string | null
-          Large_portions?: string | null
-          Large_scale?: string | null
-          Little_odor?: string | null
-          Lots_of_attractions?: string | null
-          Lots_of_food_options?: string | null
-          Lots_of_fun_activities?: string | null
-          Lots_of_pretty_items?: string | null
-          Lots_of_readable_books?: string | null
-          Luxurious?: string | null
-          Many_bestsellers?: string | null
-          Many_nearby_attractions?: string | null
-          Many_new_products?: string | null
-          Many_visitors?: string | null
-          Neat_packaging?: string | null
-          New_releases_arrive_quickly?: string | null
-          Nice_music?: string | null
-          Nice_view?: string | null
-          No_insect_concerns?: string | null
-          Not_crowded?: string | null
-          Not_too_spicy?: string | null
-          Passionate_teachers?: string | null
-          "Pet-friendly"?: string | null
-          Provides_tailored_guidance_well?: string | null
-          Rating?: number | null
-          Reasonable_price?: string | null
-          Relaxing_atmosphere?: string | null
-          Seasonal_fruit_arrives_early?: string | null
-          Spacious_store?: string | null
-          Special_menu_available?: string | null
-          Staff_grills_food_well?: string | null
-          Stylish_interior?: string | null
-          Systematic_classes?: string | null
-          Tasty?: string | null
-          Tasty_drinks?: string | null
-          Tasty_tea?: string | null
-          Thoughtful_packaging?: string | null
-          Trendy?: string | null
-          Trendy_products?: string | null
-          Unique_book_collection?: string | null
-          Unique_concept?: string | null
-          Unique_design?: string | null
-          Unique_items?: string | null
-          Variety_of_alcohol?: string | null
-          Variety_of_options?: string | null
-          Various_meat_cuts?: string | null
-          visitor_review_count?: number | null
-          Visually_appealing?: string | null
-          "Well-balanced_course_meals"?: string | null
-          "Well-curated_menu"?: string | null
-          "Well-designed_walking_trails"?: string | null
-          "Well-equipped_amenities"?: string | null
-          "Well-equipped_cooking_facilities"?: string | null
-          "Well-equipped_private_rooms"?: string | null
-          "Well-equipped_restrooms"?: string | null
-          "Well-maintained"?: string | null
-          "Well-organized_night_market"?: string | null
-          "Well-stocked_salad_bar"?: string | null
-          Wide_range_of_books?: string | null
-          Worth_the_price?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "restaurant_review_id_fkey"
-            columns: ["id"]
             isOneToOne: true
             referencedRelation: "restaurant_information"
             referencedColumns: ["id"]
