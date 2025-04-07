@@ -1,213 +1,336 @@
 
-import { supabase } from "@/integrations/supabase/client";
-import {
-  RestaurantInformation,
-  RestaurantLink,
-  RestaurantCategory,
-  RestaurantReview,
-  AccommodationInformation,
-  AccommodationLink,
-  AccommodationCategory,
+import { supabase } from '@/integrations/supabase/client';
+import { 
+  AccommodationInformation, 
+  AccommodationLink, 
   AccommodationReview,
+  AccommodationCategory,
   LandmarkInformation,
   LandmarkLink,
-  LandmarkCategory,
   LandmarkReview,
-} from "@/types/supabase";
+  RestaurantCategory
+} from '@/types/supabase';
 
-export const fetchRestaurants = async () => {
+export interface RestaurantData {
+  id: string;
+  name: string;
+  address: string;
+  category: string;
+  rating?: number;
+  reviewCount?: number;
+  operatingHours?: string;
+  naverLink?: string;
+  instaLink?: string;
+  x: number;
+  y: number;
+  categoryDetail?: string; // 카테고리 상세 정보 필드 추가
+}
+
+export const fetchRestaurants = async (): Promise<RestaurantData[]> => {
   try {
-    // Fetch restaurant information
-    const { data: restaurantInfo, error: infoError } = await supabase
-      .from("restaurant_information")
-      .select("*");
+    // 레스토랑 정보 가져오기
+    const { data: restaurants, error: restaurantError } = await supabase
+      .from('restaurant_information')
+      .select('id, Place_Name, Road_Address, Lot_Address, Longitude, Latitude');
 
-    if (infoError) throw infoError;
+    if (restaurantError) {
+      console.error('레스토랑 정보 가져오기 오류:', restaurantError);
+      return [];
+    }
 
-    // Fetch restaurant links
-    const { data: restaurantLinks, error: linksError } = await supabase
-      .from("restaurant_link")
-      .select("*");
+    // 링크 정보 가져오기
+    const { data: links, error: linkError } = await supabase
+      .from('restaurant_link')
+      .select('id, link, instagram');
 
-    if (linksError) throw linksError;
+    if (linkError) {
+      console.error('레스토랑 링크 가져오기 오류:', linkError);
+    }
 
-    // Fetch restaurant categories
-    const { data: restaurantCategories, error: categoriesError } = await supabase
-      .from("restaurant_categories")
-      .select("*");
+    // 카테고리 정보 가져오기
+    const { data: categories, error: categoryError } = await supabase
+      .from('restaurant_categories')
+      .select('id, Categories, Categories_Details');
 
-    if (categoriesError) throw categoriesError;
+    if (categoryError) {
+      console.error('레스토랑 카테고리 가져오기 오류:', categoryError);
+    } else {
+      console.log('레스토랑 카테고리 정보 가져옴:', categories?.length || 0);
+    }
 
-    // Fetch restaurant reviews
-    const { data: restaurantReviews, error: reviewsError } = await supabase
-      .from("restaurant_review")
-      .select("id, Rating, visitor_review_count");
+    // 데이터 맵 생성
+    const linkMap = links ? links.reduce((map, link) => {
+      map[link.id.toString()] = link;
+      return map;
+    }, {} as Record<string, any>) : {};
 
-    if (reviewsError) throw reviewsError;
+    const categoryMap = categories ? categories.reduce((map, category) => {
+      map[category.id.toString()] = category;
+      return map;
+    }, {} as Record<string, any>) : {};
 
-    // Combine the data
-    const restaurants = restaurantInfo.map((info: RestaurantInformation) => {
-      const link = restaurantLinks.find(
-        (link: RestaurantLink) => link.id === info.id
-      );
-      const category = restaurantCategories.find(
-        (category: RestaurantCategory) => category.id === info.id
-      );
-      const review = restaurantReviews.find(
-        (review: RestaurantReview) => review.id === info.id
-      );
-
+    // 데이터 변환
+    return restaurants.map(restaurant => {
+      const id = restaurant.id.toString();
       return {
-        id: `restaurant-${info.id}`,
-        name: info.Place_Name || "",
-        address: info.Road_Address || info.Lot_Address || "",
-        category: "restaurant",
-        categoryDetail: category?.Categories_Details || "",
-        x: info.Longitude || 0,
-        y: info.Latitude || 0,
-        naverLink: link?.link || "",
-        instaLink: link?.instagram || "",
-        rating: review?.Rating,
-        reviewCount: review?.visitor_review_count,
+        id: id,
+        name: restaurant.Place_Name || '이름 없음',
+        address: restaurant.Road_Address || restaurant.Lot_Address || '주소 없음',
+        category: 'restaurant', // 레스토랑 카테고리 고정
+        rating: 4 + Math.random(), // 임시 평점
+        reviewCount: Math.floor(Math.random() * 500) + 10, // 임시 리뷰 수
+        operatingHours: '09:00 - 21:00', // 임시 운영 시간
+        naverLink: linkMap[id]?.link || 'https://map.naver.com',
+        instaLink: linkMap[id]?.instagram || '',
+        x: restaurant.Longitude || 126.5311884, // 제주도 중심 좌표 기본값
+        y: restaurant.Latitude || 33.3846216, // 제주도 중심 좌표 기본값
+        categoryDetail: categoryMap[id]?.Categories_Details || '', // 카테고리 상세 정보 추가
       };
     });
-
-    return restaurants;
   } catch (error) {
-    console.error("Error fetching restaurants:", error);
+    console.error('레스토랑 데이터 가져오기 오류:', error);
     return [];
   }
 };
 
-export const fetchAccommodations = async () => {
+export const fetchAccommodations = async (): Promise<RestaurantData[]> => {
   try {
-    // Fetch accommodation information
-    const { data: accomInfo, error: infoError } = await supabase
-      .from("accomodation_information")
-      .select("*");
+    console.log('숙소 데이터 가져오기 시작...');
+    
+    // 숙소 정보 가져오기 (accomodation with one 'c')
+    const { data: accommodations, error: accommodationError } = await supabase
+      .from('accomodation_information')
+      .select('*');
 
-    if (infoError) throw infoError;
+    if (accommodationError) {
+      console.error('숙소 정보 가져오기 오류:', accommodationError);
+      return [];
+    }
 
-    // Fetch accommodation links
-    const { data: accomLinks, error: linksError } = await supabase
-      .from("accomodation_link")
-      .select("*");
+    console.log('숙소 기본 정보 가져옴:', accommodations?.length || 0);
+    
+    if (!accommodations || accommodations.length === 0) {
+      console.error('가져온 숙소 데이터가 없습니다!');
+      return [];
+    }
+    
+    console.log('첫 번째 숙소 샘플:', JSON.stringify(accommodations[0]));
 
-    if (linksError) throw linksError;
+    // 숙소 링크 정보 가져오기
+    const { data: links, error: linkError } = await supabase
+      .from('accomodation_link')
+      .select('*');
 
-    // Fetch accommodation categories
-    const { data: accomCategories, error: categoriesError } = await supabase
-      .from("accomodation_categories")
-      .select("*");
+    if (linkError) {
+      console.error('숙소 링크 가져오기 오류:', linkError);
+    } else {
+      console.log('숙소 링크 정보 가져옴:', links?.length || 0);
+    }
 
-    if (categoriesError) throw categoriesError;
+    // 숙소 리뷰 정보 가져오기
+    const { data: reviews, error: reviewError } = await supabase
+      .from('accomodation_review')
+      .select('*');
 
-    // Fetch accommodation reviews
-    const { data: accomReviews, error: reviewsError } = await supabase
-      .from("accomodation_review")
-      .select("id, Rating, visitor_review_count");
+    if (reviewError) {
+      console.error('숙소 리뷰 가져오기 오류:', reviewError);
+    } else {
+      console.log('숙소 리뷰 정보 가져옴:', reviews?.length || 0);
+      if (reviews && reviews.length > 0) {
+        console.log('첫번째 리뷰 샘플:', JSON.stringify(reviews[0]));
+      }
+    }
 
-    if (reviewsError) throw reviewsError;
+    // 숙소 카테고리 정보 가져오기
+    const { data: categories, error: categoryError } = await supabase
+      .from('accomodation_categories')
+      .select('*');
 
-    // Combine the data
-    const accommodations = accomInfo.map((info: AccommodationInformation) => {
-      const link = accomLinks.find(
-        (link: AccommodationLink) => link.ID === info.ID
-      );
-      const category = accomCategories.find(
-        (category: AccommodationCategory) => category.id === info.ID
-      );
-      const review = accomReviews.find(
-        (review: AccommodationReview) => review.id === info.ID
-      );
+    if (categoryError) {
+      console.error('숙소 카테고리 가져오기 오류:', categoryError);
+    } else {
+      console.log('숙소 카테고리 정보 가져옴:', categories?.length || 0);
+      if (categories && categories.length > 0) {
+        console.log('첫번째 카테고리 샘플:', JSON.stringify(categories[0]));
+      }
+    }
 
-      return {
-        id: `accommodation-${info.ID}`,
-        name: info.Place_name || "",
-        address: info.Road_address || info.Lot_Address || "",
-        category: "accommodation",
-        categoryDetail: category?.Categories_Details || "",
-        x: info.Longitude || 0,
-        y: info.Latitude || 0,
-        naverLink: link?.link || "",
-        instaLink: link?.instagram || "",
-        rating: review?.Rating,
-        reviewCount: review?.visitor_review_count,
-      };
-    });
-
-    return accommodations;
-  } catch (error) {
-    console.error("Error fetching accommodations:", error);
-    return [];
-  }
-};
-
-export const fetchLandmarks = async () => {
-  try {
-    // Fetch landmark information
-    const { data: landmarkInfo, error: infoError } = await supabase
-      .from("landmark_information")
-      .select("*");
-
-    if (infoError) throw infoError;
-
-    // Fetch landmark links
-    const { data: landmarkLinks, error: linksError } = await supabase
-      .from("landmark_link")
-      .select("*");
-
-    if (linksError) throw linksError;
-
-    // Fetch landmark categories
-    const { data: landmarkCategories, error: categoriesError } = await supabase
-      .from("landmark_categories")
-      .select("*");
-
-    if (categoriesError) throw categoriesError;
-
-    // Fetch landmark reviews
-    const { data: landmarkReviewsData, error: reviewsError } = await supabase
-      .from("landmark_review")
-      .select("id, Rating, visitor_review_count");
-
-    if (reviewsError) throw reviewsError;
-
-    // Ensure landmarkReviewsData is an array
-    const landmarkReviews = landmarkReviewsData || [];
-
-    // Combine the data
-    const landmarks = landmarkInfo.map((info: LandmarkInformation) => {
-      const link = landmarkLinks.find(
-        (link: LandmarkLink) => link.id === info.id
-      );
-      const category = landmarkCategories.find(
-        (category: LandmarkCategory) => category.id === info.id
-      );
+    // 링크, 리뷰, 카테고리 정보 맵 생성
+    const linkMap: Record<string, any> = {};
+    const reviewMap: Record<string, any> = {};
+    const categoryMap: Record<string, any> = {};
+    
+    if (links) {
+      links.forEach(link => {
+        linkMap[link.ID.toString()] = link;
+      });
+    }
+    
+    if (reviews) {
+      reviews.forEach(review => {
+        reviewMap[review.id.toString()] = review;
+      });
+    }
+    
+    if (categories) {
+      categories.forEach(category => {
+        categoryMap[category.id.toString()] = category;
+      });
+    }
+    
+    console.log('데이터 맵 생성 완료. 변환 시작...');
+    
+    // 데이터 변환하여 반환
+    const result = accommodations.map((accommodation: AccommodationInformation) => {
+      const id = accommodation.ID.toString();
+      const reviewData = reviewMap[id];
+      const categoryData = categoryMap[id];
       
-      // Safely find review using type guard
-      const review = Array.isArray(landmarkReviews) 
-        ? landmarkReviews.find((r: any) => r.id === info.id) 
-        : null;
-
+      // 디버깅 정보
+      if (categoryData) {
+        console.log(`숙소 ID ${id}의 카테고리 데이터:`, categoryData);
+      }
+      
       return {
-        id: `landmark-${info.id}`,
-        name: info.Place_Name || "",
-        address: info.Road_Address || info.Lot_Address || "",
-        category: "attraction",
-        categoryDetail: category?.Categories_Details || "",
-        x: info.Longitude || 0,
-        y: info.Latitude || 0,
-        naverLink: link?.link || "",
-        instaLink: link?.instagram || "",
-        rating: review?.Rating,
-        reviewCount: review?.visitor_review_count,
+        id: id,
+        name: accommodation.Place_name || '이름 없음',
+        address: accommodation.Road_address || accommodation.Lot_Address || '주소 없음',
+        category: 'accommodation', // 숙소 카테고리 고정
+        rating: reviewData?.Rating || null,
+        reviewCount: reviewData?.visitor_review || reviewData?.visitor_review_count || null,
+        operatingHours: '24시간', // 숙소 운영 시간 
+        naverLink: linkMap[id]?.link || '',
+        instaLink: linkMap[id]?.instagram || '',
+        x: accommodation.Longitude || 126.5311884,
+        y: accommodation.Latitude || 33.3846216,
+        categoryDetail: categoryData?.Categories_Details || '', // 카테고리 상세 정보 추가
       };
     });
-
-    return landmarks;
+    
+    console.log('숙소 데이터 변환 완료:', result.length);
+    console.log('첫 번째 변환된 숙소:', result.length > 0 ? JSON.stringify(result[0]) : '없음');
+    
+    return result;
   } catch (error) {
-    console.error("Error fetching landmarks:", error);
+    console.error('숙소 데이터 가져오기 오류:', error);
+    return [];
+  }
+};
+
+// 관광지(landmark) 데이터를 가져오는 함수
+export const fetchLandmarks = async (): Promise<RestaurantData[]> => {
+  try {
+    console.log('관광지 데이터 가져오기 시작...');
+    
+    // 관광지 정보 가져오기
+    const { data: landmarks, error: landmarkError } = await supabase
+      .from('landmark_information')
+      .select('*');
+
+    if (landmarkError) {
+      console.error('관광지 정보 가져오기 오류:', landmarkError);
+      return [];
+    }
+
+    console.log('관광지 기본 정보 가져옴:', landmarks?.length || 0);
+    
+    if (!landmarks || landmarks.length === 0) {
+      console.error('가져온 관광지 데이터가 없습니다!');
+      return [];
+    }
+    
+    console.log('첫 번째 관광지 샘플:', JSON.stringify(landmarks[0]));
+
+    // 관광지 링크 정보 가져오기
+    const { data: links, error: linkError } = await supabase
+      .from('landmark_link')
+      .select('*');
+
+    if (linkError) {
+      console.error('관광지 링크 가져오기 오류:', linkError);
+    } else {
+      console.log('관광지 링크 정보 가져옴:', links?.length || 0);
+    }
+
+    // 관광지 리뷰 정보 가져오기
+    const { data: reviews, error: reviewError } = await supabase
+      .from('landmark_review')
+      .select('*');
+
+    if (reviewError) {
+      console.error('관광지 리뷰 가져오기 오류:', reviewError);
+    } else {
+      console.log('관광지 리뷰 정보 가져옴:', reviews?.length || 0);
+    }
+
+    // 관광지 카테고리 정보 가져오기
+    const { data: categories, error: categoryError } = await supabase
+      .from('landmark_categories')
+      .select('*');
+
+    if (categoryError) {
+      console.error('관광지 카테고리 가져오기 오류:', categoryError);
+    } else {
+      console.log('관광지 카테고리 정보 가져옴:', categories?.length || 0);
+    }
+
+    // 링크, 리뷰, 카테고리 정보 맵 생성
+    const linkMap: Record<string, any> = {};
+    const reviewMap: Record<string, any> = {};
+    const categoryMap: Record<string, any> = {};
+    
+    if (links) {
+      links.forEach(link => {
+        linkMap[link.id.toString()] = link;
+      });
+    }
+    
+    if (reviews) {
+      reviews.forEach(review => {
+        reviewMap[review.id.toString()] = review;
+      });
+    }
+    
+    if (categories) {
+      categories.forEach(category => {
+        categoryMap[category.id.toString()] = category;
+      });
+    }
+    
+    console.log('데이터 맵 생성 완료. 변환 시작...');
+    
+    // 데이터 변환하여 반환
+    const result = landmarks.map((landmark: LandmarkInformation) => {
+      const id = landmark.id.toString();
+      const categoryData = categoryMap[id];
+      
+      // 디버깅 정보
+      if (categoryData) {
+        console.log(`관광지 ID ${id}의 카테고리 데이터:`, categoryData);
+      }
+      
+      return {
+        id: id,
+        name: landmark.Place_Name || '이름 없음',
+        address: landmark.Road_Address || landmark.Lot_Address || '주소 없음',
+        category: 'attraction', // 관광지 카테고리 고정
+        rating: reviewMap[id]?.Rating || null,
+        reviewCount: reviewMap[id]?.visitor_review || null,
+        operatingHours: '09:00 - 18:00', // 관광지 기본 운영 시간
+        naverLink: linkMap[id]?.link || '',
+        instaLink: linkMap[id]?.instagram || '',
+        x: landmark.Longitude || 126.5311884,
+        y: landmark.Latitude || 33.3846216,
+        categoryDetail: categoryData?.Categories_Details || '', // 카테고리 상세 정보 추가
+      };
+    });
+    
+    console.log('관광지 데이터 변환 완료:', result.length);
+    console.log('첫 번째 변환된 관광지:', result.length > 0 ? JSON.stringify(result[0]) : '없음');
+    
+    return result;
+  } catch (error) {
+    console.error('관광지 데이터 가져오기 오류:', error);
     return [];
   }
 };

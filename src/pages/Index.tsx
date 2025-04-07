@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { categoryColors, getCategoryName } from '@/utils/categoryColors';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { fetchRestaurants, fetchAccommodations, fetchLandmarks } from '@/services/restaurantService';
+import NaverMap from "../components/NaverMap";
 
 const DEFAULT_PROMPT = '';
 
@@ -736,13 +737,16 @@ const Index: React.FC = () => {
       </div>
       
       <div className="w-[70%] h-full p-4 animate-fade-in" style={{ animationDelay: '200ms' }}>
-        <div className="w-full h-full rounded-lg overflow-hidden shadow-lg bg-white">
+        {/* <div className="w-full h-full rounded-lg overflow-hidden shadow-lg bg-white">
           <Map
             places={filteredPlaces}
             selectedPlace={selectedPlace}
             itinerary={itinerary}
             selectedDay={selectedItineraryDay}
           />
+        </div> */}
+        <div className="w-full h-full rounded-lg overflow-hidden shadow-lg bg-white">
+        <NaverMap />
         </div>
       </div>
     </div>

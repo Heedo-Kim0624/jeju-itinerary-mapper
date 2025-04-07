@@ -1,6 +1,5 @@
-
 import React, { useEffect, useRef, useState } from 'react';
-import { ExternalLink, MapPin, Star, MessageCircle, Clock, ArrowUpDown, Instagram, Filter, RefreshCw } from 'lucide-react';
+import { ExternalLink, MapPin, Star, MessageCircle, Clock, ArrowUpDown, Instagram } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -143,18 +142,6 @@ const PlaceList: React.FC<PlaceListProps> = ({
     }
   };
 
-  const handleRefreshList = () => {
-    // 목록 새로고침 기능
-    console.log("목록 새로고침");
-    // 여기에 새로고침 로직 추가 (예: 현재 목록을 다시 불러오기)
-  };
-
-  const handleFilterPlaces = () => {
-    // 필터링 기능
-    console.log("장소 필터링");
-    // 여기에 필터링 로직 추가 (예: 필터 모달 표시)
-  };
-
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center p-8 h-full">
@@ -240,127 +227,124 @@ const PlaceList: React.FC<PlaceListProps> = ({
         </div>
       </div>
       
-      <div className="flex-1 overflow-hidden">
-        <ScrollArea className="h-[calc(100vh-320px)] md:h-[calc(100vh-390px)]">
-          <div className="pr-4">
-            {currentPlaces.map((place) => (
-              <Card
-                key={place.id}
-                className={`mb-2 cursor-pointer overflow-hidden transition ${
-                  selectedPlaces[place.id] ? 'ring-2 ring-jeju-green' : ''
-                }`}
-                onClick={() => handlePlaceClick(place)}
-              >
-                <CardContent className="p-3">
-                  <div className="flex justify-between items-start">
-                    <div className="flex items-center mb-1">
-                      <Checkbox 
-                        id={`place-${place.id}`}
-                        checked={!!selectedPlaces[place.id]} 
-                        onCheckedChange={(checked) => {
-                          handleCheckboxChange(place, checked === true);
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                        className="mr-2"
-                      />
-                      <span 
-                        className={`${categoryColors[place.category]?.bg || 'bg-gray-200'} ${categoryColors[place.category]?.text || 'text-gray-800'} text-[10px] rounded-sm px-1.5 py-0.5 mr-1.5`}
-                      >
-                        {getCategoryName(place.category)}
-                      </span>
-                      <h3 className="text-sm font-medium truncate">{place.name}</h3>
+      <div className="mb-2">
+        <ScrollArea className="h-[calc(100vh-280px)] md:h-[calc(100vh-350px)]">
+          {currentPlaces.map((place) => (
+            <Card
+              key={place.id}
+              className={`mb-2 cursor-pointer overflow-hidden transition ${
+                selectedPlaces[place.id] ? 'ring-2 ring-jeju-green' : ''
+              }`}
+              onClick={() => handlePlaceClick(place)}
+            >
+              <CardContent className="p-3">
+                <div className="flex justify-between items-start">
+                  <div className="flex items-center mb-1">
+                    <Checkbox 
+                      id={`place-${place.id}`}
+                      checked={!!selectedPlaces[place.id]} 
+                      onCheckedChange={(checked) => {
+                        handleCheckboxChange(place, checked === true);
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      className="mr-2"
+                    />
+                    <span 
+                      className={`${categoryColors[place.category]?.bg || 'bg-gray-200'} ${categoryColors[place.category]?.text || 'text-gray-800'} text-[10px] rounded-sm px-1.5 py-0.5 mr-1.5`}
+                    >
+                      {getCategoryName(place.category)}
+                    </span>
+                    <h3 className="text-sm font-medium truncate">{place.name}</h3>
+                  </div>
+                </div>
+                
+                <div className="flex justify-between items-start mt-1">
+                  <div className="flex-1 min-w-0 pl-6">
+                    {place.address && (
+                      <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
+                        <MapPin className="h-3 w-3" />
+                        <span className="truncate">{place.address}</span>
+                      </div>
+                    )}
+                    
+                    {place.operatingHours && (
+                      <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
+                        <Clock className="h-3 w-3" />
+                        <span>{place.operatingHours}</span>
+                      </div>
+                    )}
+                    
+                    <div className="flex items-center gap-2 mt-1.5">
+                      {place.rating !== undefined && place.rating !== null && (
+                        <div className="flex items-center gap-1">
+                          <Star className="h-3 w-3 text-amber-400" />
+                          <span className="text-xs font-medium">{typeof place.rating === 'number' ? place.rating.toFixed(1) : place.rating}</span>
+                        </div>
+                      )}
+                      
+                      {place.reviewCount !== undefined && place.reviewCount !== null && (
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <MessageCircle className="h-3 w-3" />
+                          <span>{place.reviewCount}</span>
+                        </div>
+                      )}
+
+                      {place.categoryDetail && (
+                        <Badge variant="outline" className="text-[9px] h-4 px-1 ml-1">
+                          {place.categoryDetail}
+                        </Badge>
+                      )}
                     </div>
                   </div>
                   
-                  <div className="flex justify-between items-start mt-1">
-                    <div className="flex-1 min-w-0 pl-6">
-                      {place.address && (
-                        <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
-                          <MapPin className="h-3 w-3" />
-                          <span className="truncate">{place.address}</span>
-                        </div>
-                      )}
-                      
-                      {place.operatingHours && (
-                        <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
-                          <Clock className="h-3 w-3" />
-                          <span>{place.operatingHours}</span>
-                        </div>
-                      )}
-                      
-                      <div className="flex items-center gap-2 mt-1.5">
-                        {place.rating !== undefined && place.rating !== null && (
-                          <div className="flex items-center gap-1">
-                            <Star className="h-3 w-3 text-amber-400" />
-                            <span className="text-xs font-medium">{typeof place.rating === 'number' ? place.rating.toFixed(1) : place.rating}</span>
-                          </div>
-                        )}
-                        
-                        {place.reviewCount !== undefined && place.reviewCount !== null && (
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <MessageCircle className="h-3 w-3" />
-                            <span>{place.reviewCount}</span>
-                          </div>
-                        )}
-
-                        {place.categoryDetail && (
-                          <Badge variant="outline" className="text-[9px] h-4 px-1 ml-1">
-                            {place.categoryDetail}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
+                  <div className="flex gap-1 ml-2">
+                    {place.naverLink && (
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-6 w-6"
+                        asChild
+                        onClick={(e) => {
+                          e.stopPropagation();
+                        }}
+                      >
+                        <a href={place.naverLink} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </Button>
+                    )}
                     
-                    <div className="flex gap-1 ml-2">
-                      {place.naverLink && (
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-6 w-6"
-                          asChild
-                          onClick={(e) => {
-                            e.stopPropagation();
-                          }}
-                        >
-                          <a href={place.naverLink} target="_blank" rel="noopener noreferrer">
-                            <ExternalLink className="h-3 w-3" />
-                          </a>
-                        </Button>
-                      )}
-                      
-                      {place.instaLink && (
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-6 w-6"
-                          asChild
-                          onClick={(e) => {
-                            e.stopPropagation();
-                          }}
-                        >
-                          <a href={place.instaLink} target="_blank" rel="noopener noreferrer">
-                            <Instagram className="h-3 w-3 text-pink-500" />
-                          </a>
-                        </Button>
-                      )}
-                    </div>
+                    {place.instaLink && (
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-6 w-6"
+                        asChild
+                        onClick={(e) => {
+                          e.stopPropagation();
+                        }}
+                      >
+                        <a href={place.instaLink} target="_blank" rel="noopener noreferrer">
+                          <Instagram className="h-3 w-3 text-pink-500" />
+                        </a>
+                      </Button>
+                    )}
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </ScrollArea>
       </div>
       
       {totalPages > 1 && (
-        <Pagination className="mt-4">
+        <Pagination className="mt-2">
           <PaginationContent>
             <PaginationItem>
               <PaginationPrevious 
-                className={cn("cursor-pointer", page <= 1 ? "opacity-50 pointer-events-none" : "")}
+                className="cursor-pointer" 
                 onClick={() => page > 1 && onPageChange(page - 1)}
                 tabIndex={0}
-                aria-disabled={page <= 1}
               />
             </PaginationItem>
             
@@ -384,38 +368,14 @@ const PlaceList: React.FC<PlaceListProps> = ({
             
             <PaginationItem>
               <PaginationNext 
-                className={cn("cursor-pointer", page >= totalPages ? "opacity-50 pointer-events-none" : "")}
+                className="cursor-pointer"
                 onClick={() => page < totalPages && onPageChange(page + 1)}
                 tabIndex={0}
-                aria-disabled={page >= totalPages}
               />
             </PaginationItem>
           </PaginationContent>
         </Pagination>
       )}
-      
-      {/* 추가 버튼 영역 */}
-      <div className="flex gap-2 mt-3 items-center justify-center">
-        <Button 
-          variant="outline"
-          size="sm"
-          className="flex-1"
-          onClick={handleRefreshList}
-        >
-          <RefreshCw className="h-4 w-4 mr-1" />
-          목록 새로고침
-        </Button>
-        
-        <Button 
-          variant="outline"
-          size="sm"
-          className="flex-1"
-          onClick={handleFilterPlaces}
-        >
-          <Filter className="h-4 w-4 mr-1" />
-          필터 설정
-        </Button>
-      </div>
     </div>
   );
 };

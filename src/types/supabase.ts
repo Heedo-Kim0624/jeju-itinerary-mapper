@@ -92,11 +92,3 @@ export interface LandmarkCategory {
   Categories?: string;
   Categories_Details?: string;
 }
-
-// Naver Maps 타입 정의
-declare global {
-  interface Window {
-    naver: any;
-    navermap_authFailure?: () => void;
-  }
-}
