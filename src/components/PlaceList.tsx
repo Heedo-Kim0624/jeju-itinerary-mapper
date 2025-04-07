@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 import { ExternalLink, MapPin, Star, MessageCircle, Clock, ArrowUpDown, Instagram } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -342,9 +343,10 @@ const PlaceList: React.FC<PlaceListProps> = ({
           <PaginationContent>
             <PaginationItem>
               <PaginationPrevious 
-                className="cursor-pointer" 
+                className={cn("cursor-pointer", page <= 1 ? "opacity-50 pointer-events-none" : "")}
                 onClick={() => page > 1 && onPageChange(page - 1)}
                 tabIndex={0}
+                aria-disabled={page <= 1}
               />
             </PaginationItem>
             
@@ -368,9 +370,10 @@ const PlaceList: React.FC<PlaceListProps> = ({
             
             <PaginationItem>
               <PaginationNext 
-                className="cursor-pointer"
+                className={cn("cursor-pointer", page >= totalPages ? "opacity-50 pointer-events-none" : "")}
                 onClick={() => page < totalPages && onPageChange(page + 1)}
                 tabIndex={0}
+                aria-disabled={page >= totalPages}
               />
             </PaginationItem>
           </PaginationContent>
