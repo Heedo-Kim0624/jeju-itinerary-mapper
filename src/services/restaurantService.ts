@@ -166,47 +166,9 @@ export const fetchLandmarks = async () => {
 
     if (categoriesError) throw categoriesError;
 
-    // Fixed the error here - used "landmark_review" instead of "landmark_reviews"
-    // Fetch landmark reviews (this table seems to be called "landmark_review" not "landmark_reviews")
-    const { data: landmarkReviewsData, error: reviewsError } = await supabase
-      .from("landmark_review") // Changed from "landmark_reviews" to "landmark_review"
-      .select("id, Rating, visitor_review_count");
-
-    if (reviewsError) {
-      console.error("Error fetching landmark reviews:", reviewsError);
-      // Proceed with empty reviews rather than throwing
-      const landmarkReviews: LandmarkReview[] = [];
-      
-      // Combine the data
-      const landmarks = landmarkInfo.map((info: LandmarkInformation) => {
-        const link = landmarkLinks.find(
-          (link: LandmarkLink) => link.id === info.id
-        );
-        const category = landmarkCategories.find(
-          (category: LandmarkCategory) => category.id === info.id
-        );
-
-        return {
-          id: `landmark-${info.id}`,
-          name: info.Place_Name || "",
-          address: info.Road_Address || info.Lot_Address || "",
-          category: "attraction",
-          categoryDetail: category?.Categories_Details || "",
-          x: info.Longitude || 0,
-          y: info.Latitude || 0,
-          naverLink: link?.link || "",
-          instaLink: link?.instagram || "",
-          rating: null, // No reviews available
-          reviewCount: null,
-        };
-      });
-
-      return landmarks;
-    }
-
-    // Process with reviews if they were found
-    const landmarkReviews = landmarkReviewsData || [];
-
+    // IMPORTANT: For now, we'll skip fetching landmark reviews since the table doesn't seem to exist
+    // Instead, we'll just return the landmarks without review data
+    
     // Combine the data
     const landmarks = landmarkInfo.map((info: LandmarkInformation) => {
       const link = landmarkLinks.find(
@@ -215,11 +177,6 @@ export const fetchLandmarks = async () => {
       const category = landmarkCategories.find(
         (category: LandmarkCategory) => category.id === info.id
       );
-      
-      // Safely find review using type guard
-      const review = Array.isArray(landmarkReviews) 
-        ? landmarkReviews.find((r: any) => r.id === info.id) 
-        : null;
 
       return {
         id: `landmark-${info.id}`,
@@ -231,8 +188,8 @@ export const fetchLandmarks = async () => {
         y: info.Latitude || 0,
         naverLink: link?.link || "",
         instaLink: link?.instagram || "",
-        rating: review?.Rating,
-        reviewCount: review?.visitor_review_count,
+        rating: null, // No reviews available
+        reviewCount: null,
       };
     });
 

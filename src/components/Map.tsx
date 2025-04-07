@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import { toast } from "sonner";
 import { getCategoryColor } from '@/utils/categoryColors';
@@ -10,8 +9,24 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { loadNaverMaps } from "@/utils/loadNaverMaps";
 import JejuVisualizer from './JejuVisualizer';
 
-// Removed the duplicate imports that were causing conflicts
-// and use the jejuMapStyles imports only through the JejuVisualizer component
+const JEJU_CENTER = { lat: 33.3846216, lng: 126.5311884 };
+const JEJU_BOUNDARY = [
+  { lat: 33.5427, lng: 126.5426 }, // 제주시
+  { lat: 33.4996, lng: 126.5312 }, // 조천읍
+  { lat: 33.4841, lng: 126.4831 }, // 애월읍
+  { lat: 33.4567, lng: 126.3387 }, // 한림읍
+  { lat: 33.3936, lng: 126.2422 }, // 한경면
+  { lat: 33.2905, lng: 126.1638 }, // 대정읍
+  { lat: 33.2500, lng: 126.2853 }, // 안덕면
+  { lat: 33.2482, lng: 126.4155 }, // 중문
+  { lat: 33.2439, lng: 126.5631 }, // 서귀포시
+  { lat: 33.2510, lng: 126.6224 }, // 남원읍
+  { lat: 33.3183, lng: 126.7446 }, // 표선면
+  { lat: 33.3825, lng: 126.8284 }, // 성산읍
+  { lat: 33.4943, lng: 126.8369 }, // 구좌읍
+  { lat: 33.5427, lng: 126.6597 }, // 우도면
+  { lat: 33.5427, lng: 126.5426 }  // 다시 제주시 (폐곡선을 위해)
+];
 
 interface MapProps {
   places: Place[];
@@ -39,26 +54,6 @@ interface ItineraryDay {
   day: number;
   places: Place[];
 }
-
-// Use the JEJU_CENTER and JEJU_BOUNDARY directly without importing them again
-const JEJU_CENTER = { lat: 33.3846216, lng: 126.5311884 };
-const JEJU_BOUNDARY = [
-  { lat: 33.5427, lng: 126.5426 }, // 제주시
-  { lat: 33.4996, lng: 126.5312 }, // 조천읍
-  { lat: 33.4841, lng: 126.4831 }, // 애월읍
-  { lat: 33.4567, lng: 126.3387 }, // 한림읍
-  { lat: 33.3936, lng: 126.2422 }, // 한경면
-  { lat: 33.2905, lng: 126.1638 }, // 대정읍
-  { lat: 33.2500, lng: 126.2853 }, // 안덕면
-  { lat: 33.2482, lng: 126.4155 }, // 중문
-  { lat: 33.2439, lng: 126.5631 }, // 서귀포시
-  { lat: 33.2510, lng: 126.6224 }, // 남원읍
-  { lat: 33.3183, lng: 126.7446 }, // 표선면
-  { lat: 33.3825, lng: 126.8284 }, // 성산읍
-  { lat: 33.4943, lng: 126.8369 }, // 구좌읍
-  { lat: 33.5427, lng: 126.6597 }, // 우도면
-  { lat: 33.5427, lng: 126.5426 }  // 다시 제주시 (폐곡선을 위해)
-];
 
 const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
@@ -91,7 +86,6 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
     
     initNaverMaps();
     
-    // Cleanup function to handle unmounting
     return () => {
       if (map.current) {
         console.log("Cleaning up map instance");
@@ -166,7 +160,6 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
         mapTypeControl: true,
         scaleControl: true,
         logoControl: true,
-        mapDataControl: true,
         mapTypeControlOptions: {
           style: window.naver.maps.MapTypeControlStyle.DROPDOWN
         },
@@ -177,14 +170,12 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
 
       map.current = new window.naver.maps.Map(mapContainer.current, options);
       
-      // 지도가 로드된 후 이벤트 처리
       window.naver.maps.Event.once(map.current, 'init', function() {
         console.log("Map init event fired");
         setIsMapInitialized(true);
         toast.success("지도가 로드되었습니다");
         drawJejuBoundary();
         
-        // 지도 컨트롤러에 대한 스타일 조정
         const mapEl = mapContainer.current;
         if (mapEl) {
           const naverControlsElements = mapEl.querySelectorAll('.nm-toolbar');
@@ -218,12 +209,10 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
     try {
       console.log("Drawing Jeju boundary...");
       
-      // 제주도 경계선 그리기
       const jejuBoundaryPath = JEJU_BOUNDARY.map(coord => 
         new window.naver.maps.LatLng(coord.lat, coord.lng)
       );
       
-      // 제주도 해안선 표시
       const polygon = new window.naver.maps.Polygon({
         map: map.current,
         paths: jejuBoundaryPath,
@@ -234,7 +223,6 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
         fillOpacity: 0.2
       });
       
-      // 제주도 이름 라벨 표시 (커스텀 오버레이)
       const jejuLabel = new window.naver.maps.Marker({
         position: new window.naver.maps.LatLng(JEJU_CENTER.lat, JEJU_CENTER.lng),
         map: map.current,
@@ -344,7 +332,6 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
         
         const markerColor = getCategoryColor(place.category);
         
-        // Create custom HTML for marker
         const markerDiv = document.createElement('div');
         markerDiv.className = 'custom-marker animate-fade-in';
         markerDiv.style.width = '30px';
@@ -368,7 +355,6 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
           markerDiv.textContent = place.category.charAt(0).toUpperCase();
         }
         
-        // Create InfoWindow for each marker
         const infoWindow = new window.naver.maps.InfoWindow({
           content: createInfoWindowContent(place),
           borderWidth: 0,
@@ -391,7 +377,6 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
           }
         });
         
-        // 마커에 호버 효과 추가
         window.naver.maps.Event.addListener(marker, 'mouseover', () => {
           markerDiv.style.transform = 'scale(1.2)';
         });
@@ -400,15 +385,8 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
           markerDiv.style.transform = 'scale(1)';
         });
         
-        // Add click event to show place details
         window.naver.maps.Event.addListener(marker, 'click', () => {
-          // Close all other InfoWindows
-          infoWindows.current.forEach(iw => iw.close());
-          
-          // Open this InfoWindow
           infoWindow.open(map.current, marker);
-          
-          // Set the place for the popup dialog
           setPopupPlace(place);
           setShowDialog(true);
         });
@@ -418,7 +396,6 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
       
       if (placesToMark.length > 0) {
         console.log("Fitting map to bounds");
-        // 적절한 줌 레벨로 경계 맞추기 (여백 추가)
         map.current.fitBounds(bounds, {
           top: 50,
           right: 50,
@@ -457,7 +434,6 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
       
       polylines.current.push(polyline);
       
-      // 출발지와 도착지 표시
       const startMarker = new window.naver.maps.Marker({
         position: linePath[0],
         map: map.current,
