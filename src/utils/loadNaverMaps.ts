@@ -1,5 +1,6 @@
 
-const NAVER_CLIENT_ID = "w2r5am4bmr"; // 네이버 API Client ID
+// 네이버 API Client ID
+const NAVER_CLIENT_ID = "w2r5am4bmr";
 
 /**
  * 네이버 지도 API를 동적으로 로드하는 함수
@@ -31,3 +32,10 @@ export const loadNaverMaps = (): Promise<void> => {
     document.head.appendChild(script);
   });
 };
+
+// naver 객체를 위한 전역 타입 선언 추가
+declare global {
+  interface Window {
+    naver: any;
+  }
+}

@@ -12,7 +12,6 @@ import {
   LandmarkInformation,
   LandmarkLink,
   LandmarkCategory,
-  LandmarkReview,
 } from "@/types/supabase";
 
 export const fetchRestaurants = async () => {
@@ -166,8 +165,8 @@ export const fetchLandmarks = async () => {
 
     if (categoriesError) throw categoriesError;
 
-    // IMPORTANT: For now, we'll skip fetching landmark reviews since the table doesn't seem to exist
-    // Instead, we'll just return the landmarks without review data
+    // 테이블이 없을 가능성이 있으므로 리뷰 데이터는 건너뜁니다
+    // IMPORTANT: 리뷰 테이블이 존재하지 않으므로 리뷰 데이터 없이 랜드마크 정보만 반환합니다
     
     // Combine the data
     const landmarks = landmarkInfo.map((info: LandmarkInformation) => {
@@ -188,7 +187,7 @@ export const fetchLandmarks = async () => {
         y: info.Latitude || 0,
         naverLink: link?.link || "",
         instaLink: link?.instagram || "",
-        rating: null, // No reviews available
+        rating: null, // 리뷰 데이터 없음
         reviewCount: null,
       };
     });

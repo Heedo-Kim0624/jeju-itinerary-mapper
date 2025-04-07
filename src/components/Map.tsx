@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 import { toast } from "sonner";
 import { getCategoryColor } from '@/utils/categoryColors';
@@ -9,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { loadNaverMaps } from "@/utils/loadNaverMaps";
 import JejuVisualizer from './JejuVisualizer';
 
+// 제주도 좌표 정의 (로컬에서 정의)
 const JEJU_CENTER = { lat: 33.3846216, lng: 126.5311884 };
 const JEJU_BOUNDARY = [
   { lat: 33.5427, lng: 126.5426 }, // 제주시
