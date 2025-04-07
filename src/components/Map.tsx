@@ -48,10 +48,13 @@ const Map: React.FC<MapProps> = ({
   const markers = useRef<any[]>([]);
   const infoWindows = useRef<any[]>([]);
   const polylines = useRef<any[]>([]);
+  const linkFeatures = useRef<any[]>([]);
+  const nodeFeatures = useRef<any[]>([]);
   const [isMapInitialized, setIsMapInitialized] = useState<boolean>(false);
   const [isNaverLoaded, setIsNaverLoaded] = useState<boolean>(false);
   const [isMapError, setIsMapError] = useState<boolean>(false);
   const [loadAttempts, setLoadAttempts] = useState<number>(0);
+  
 
   // Jeju Island center coordinates
   const JEJU_CENTER = { lat: 33.3617, lng: 126.5292 };
@@ -171,39 +174,17 @@ const Map: React.FC<MapProps> = ({
         nodeRes.json()
       ]);
   
-      // 1. 선(LINK): LineString → Polyline으로 렌더링
-      linkGeoJson.features.forEach(feature => {
-        if (feature.geometry.type === 'LineString') {
-          const coords = feature.geometry.coordinates.map(
-            ([lng, lat]) => new window.naver.maps.LatLng(lat, lng)
-          );
-          new window.naver.maps.Polyline({
-            path: coords,
-            strokeColor: '#FF5733',
-            strokeWeight: 2,
-            strokeOpacity: 0.8,
-            map: map.current
-          });
-        }
-      });
+      console.log('🧪 linkGeoJson', linkGeoJson);
+      console.log('🧪 nodeGeoJson', nodeGeoJson);
   
-      // 2. 점(NODE): Point → Marker로 렌더링
-      nodeGeoJson.features.forEach(feature => {
-        if (feature.geometry.type === 'Point') {
-          const [lng, lat] = feature.geometry.coordinates;
-          new window.naver.maps.Marker({
-            position: new window.naver.maps.LatLng(lat, lng),
-            map: map.current,
-            icon: {
-              content: '<div style="width:8px;height:8px;border-radius:50%;background:#2E86DE;"></div>',
-              size: new window.naver.maps.Size(8, 8),
-              anchor: new window.naver.maps.Point(4, 4)
-            }
-          });
-        }
-      });
+      // ✅ 지도에 그리는 건 지금 안함. 대신 메모리에 저장
+      linkFeatures.current = window.naver.maps.GeoJSON.read(linkGeoJson);
+      nodeFeatures.current = window.naver.maps.GeoJSON.read(nodeGeoJson);
   
-      console.log("✅ GeoJSON 오버레이 렌더링 완료");
+      console.log('✅ GeoJSON 메모리에 저장 완료', {
+        linkCount: linkFeatures.current.length,
+        nodeCount: nodeFeatures.current.length
+      });
     } catch (err) {
       console.error('❌ GeoJSON 파일 로드 오류:', err);
     }
@@ -239,6 +220,17 @@ const Map: React.FC<MapProps> = ({
       renderData();
     }
   }, [places, selectedPlace, itinerary, selectedDay, selectedPlaces, isMapInitialized]);
+
+  const showGeoJsonOnMap = () => {
+    if (!map.current) return;
+    linkFeatures.current.forEach(f => f.setMap(map.current));
+    nodeFeatures.current.forEach(f => f.setMap(map.current));
+  };
+  
+  const hideGeoJsonFromMap = () => {
+    linkFeatures.current.forEach(f => f.setMap(null));
+    nodeFeatures.current.forEach(f => f.setMap(null));
+  };
 
   const clearMarkers = () => {
     if (markers.current && markers.current.length > 0) {
