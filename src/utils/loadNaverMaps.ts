@@ -14,6 +14,13 @@ export const loadNaverMaps = (): Promise<void> => {
       return;
     }
 
+    const clientId = import.meta.env.VITE_NAVER_CLIENT_ID || "w2r5am4bmr";
+    if (!clientId) {
+      console.error("VITE_NAVER_CLIENT_ID is not defined");
+      reject("Missing NAVER client ID");
+      return;
+    }
+
     console.log("Loading Naver Maps script...");
     const script = document.createElement('script');
     script.async = true;
@@ -28,7 +35,6 @@ export const loadNaverMaps = (): Promise<void> => {
       console.error("Failed to load Naver Maps script:", error);
       reject(error);
     };
-    
     document.head.appendChild(script);
   });
 };
