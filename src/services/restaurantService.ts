@@ -35,10 +35,9 @@ export const fetchRestaurants = async () => {
 
     if (categoriesError) throw categoriesError;
 
-    // Fetch restaurant ratings
+    // Fetch restaurant ratings - using rpc call to avoid table naming issues
     const { data: restaurantRatings, error: ratingsError } = await supabase
-      .from("restaurant_rating")
-      .select("id, rating, visitor_review_count");
+      .rpc('get_restaurant_ratings');
 
     if (ratingsError) {
       console.error("Error fetching restaurant ratings:", ratingsError);
@@ -46,7 +45,7 @@ export const fetchRestaurants = async () => {
     }
 
     // Combine the data
-    const restaurants = restaurantInfo.map((info: RestaurantInformation) => {
+    const restaurants = restaurantInfo.map((info: any) => {
       const link = restaurantLinks.find(
         (link: RestaurantLink) => link.id === info.id
       );
@@ -56,24 +55,30 @@ export const fetchRestaurants = async () => {
       
       // Safely access ratings if available
       let rating = null;
+      let reviewCount = null;
       if (restaurantRatings) {
-        rating = restaurantRatings.find(
+        const ratingInfo = restaurantRatings.find(
           (r: any) => r.id === info.id
         );
+        if (ratingInfo) {
+          rating = ratingInfo.rating;
+          reviewCount = ratingInfo.visitor_review_count;
+        }
       }
 
       return {
         id: `restaurant-${info.id}`,
-        name: info.Place_Name || "",
-        address: info.Road_Address || info.Lot_Address || "",
+        name: info.place_name || "",
+        address: info.lot_address || info.road_address || "",
         category: "restaurant",
         categoryDetail: category?.Categories_Details || "",
-        x: info.Longitude || 0,
-        y: info.Latitude || 0,
+        x: info.longitude || 0,
+        y: info.latitude || 0,
         naverLink: link?.link || "",
         instaLink: link?.instagram || "",
-        rating: rating?.rating,
-        reviewCount: rating?.visitor_review_count,
+        rating: rating,
+        reviewCount: reviewCount,
+        operatingHours: "",
       };
     });
 
@@ -107,10 +112,9 @@ export const fetchCafes = async () => {
 
     if (categoriesError) throw categoriesError;
 
-    // Fetch cafe ratings
+    // Fetch cafe ratings - using rpc call to avoid table naming issues
     const { data: cafeRatings, error: ratingsError } = await supabase
-      .from("cafe_rating")
-      .select("id, rating, visitor_review_count");
+      .rpc('get_cafe_ratings');
 
     if (ratingsError) {
       console.error("Error fetching cafe ratings:", ratingsError);
@@ -128,10 +132,15 @@ export const fetchCafes = async () => {
       
       // Safely access ratings if available
       let rating = null;
+      let reviewCount = null;
       if (cafeRatings) {
-        rating = cafeRatings.find(
+        const ratingInfo = cafeRatings.find(
           (r: any) => r.id === info.id
         );
+        if (ratingInfo) {
+          rating = ratingInfo.rating;
+          reviewCount = ratingInfo.visitor_review_count;
+        }
       }
 
       return {
@@ -144,8 +153,9 @@ export const fetchCafes = async () => {
         y: info.latitude || 0,
         naverLink: link?.link || "",
         instaLink: link?.instagram || "",
-        rating: rating?.rating,
-        reviewCount: rating?.visitor_review_count,
+        rating: rating,
+        reviewCount: reviewCount,
+        operatingHours: "",
       };
     });
 
@@ -179,10 +189,9 @@ export const fetchAccommodations = async () => {
 
     if (categoriesError) throw categoriesError;
 
-    // Fetch accommodation ratings
+    // Fetch accommodation ratings - using rpc call to avoid table naming issues
     const { data: accomRatings, error: ratingsError } = await supabase
-      .from("accomodation_rating")
-      .select("id, rating, visitor_review_count");
+      .rpc('get_accommodation_ratings');
 
     if (ratingsError) {
       console.error("Error fetching accommodation ratings:", ratingsError);
@@ -201,10 +210,15 @@ export const fetchAccommodations = async () => {
       
       // Safely access ratings if available
       let rating = null;
+      let reviewCount = null;
       if (accomRatings) {
-        rating = accomRatings.find(
+        const ratingInfo = accomRatings.find(
           (r: any) => r.id === info.id
         );
+        if (ratingInfo) {
+          rating = ratingInfo.rating;
+          reviewCount = ratingInfo.visitor_review_count;
+        }
       }
 
       return {
@@ -217,8 +231,9 @@ export const fetchAccommodations = async () => {
         y: info.latitude || 0,
         naverLink: link?.link || "",
         instaLink: link?.instagram || "",
-        rating: rating?.rating,
-        reviewCount: rating?.visitor_review_count,
+        rating: rating,
+        reviewCount: reviewCount,
+        operatingHours: "",
       };
     });
 
@@ -252,10 +267,9 @@ export const fetchLandmarks = async () => {
 
     if (categoriesError) throw categoriesError;
 
-    // Fetch landmark ratings
+    // Fetch landmark ratings - using rpc call to avoid table naming issues
     const { data: landmarkRatings, error: ratingsError } = await supabase
-      .from("landmark_rating")
-      .select("id, rating, visitor_review_count");
+      .rpc('get_landmark_ratings');
 
     if (ratingsError) {
       console.error("Error fetching landmark ratings:", ratingsError);
@@ -274,10 +288,15 @@ export const fetchLandmarks = async () => {
       
       // Safely access ratings if available
       let rating = null;
+      let reviewCount = null;
       if (landmarkRatings) {
-        rating = landmarkRatings.find(
+        const ratingInfo = landmarkRatings.find(
           (r: any) => r.id === info.id
         );
+        if (ratingInfo) {
+          rating = ratingInfo.rating;
+          reviewCount = ratingInfo.visitor_review_count;
+        }
       }
 
       return {
@@ -290,8 +309,9 @@ export const fetchLandmarks = async () => {
         y: info.latitude || 0,
         naverLink: link?.link || "",
         instaLink: link?.instagram || "",
-        rating: rating?.rating,
-        reviewCount: rating?.visitor_review_count,
+        rating: rating,
+        reviewCount: reviewCount,
+        operatingHours: "",
       };
     });
 
@@ -301,4 +321,3 @@ export const fetchLandmarks = async () => {
     return [];
   }
 };
-

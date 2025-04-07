@@ -1,11 +1,11 @@
 
 export interface RestaurantInformation {
   id: number;
-  Place_Name?: string;
-  Road_Address?: string;
-  Lot_Address?: string;
-  Longitude?: number;
-  Latitude?: number;
+  place_name?: string;
+  road_address?: string;
+  lot_address?: string;
+  longitude?: number;
+  latitude?: number;
 }
 
 export interface RestaurantLink {
@@ -118,6 +118,26 @@ export interface LandmarkCategory {
   id: number;
   categories?: string;
   categories_details?: string;
+}
+
+// Place interface for normalized data
+export interface Place {
+  id: string;
+  name: string;
+  address: string;
+  category: string;
+  categoryDetail?: string;
+  x: number;
+  y: number;
+  naverLink?: string;
+  instaLink?: string;
+  rating?: number;
+  reviewCount?: number;
+  operatingHours: string;
+  operationTimeData?: {
+    [key: string]: number;
+  };
+  nodeId?: string;
 }
 
 // Naver Maps 타입 정의
