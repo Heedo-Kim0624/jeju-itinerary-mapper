@@ -5,8 +5,9 @@ import { getCategoryColor } from '@/utils/categoryColors';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Button } from "@/components/ui/button";
-import { MapPin, Star, Clock, ExternalLink, AlertCircle } from "lucide-react";
+import { MapPin, Star, Clock, ExternalLink, AlertCircle, Instagram } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { loadNaverMaps } from "@/utils/loadNaverMaps";
 
 interface MapProps {
   places: Place[];
@@ -27,30 +28,12 @@ interface Place {
   reviewCount?: number;
   naverLink?: string;
   instaLink?: string;
+  categoryDetail?: string;
 }
 
 interface ItineraryDay {
   day: number;
   places: Place[];
-}
-
-interface OSMNode {
-  id: string;
-  x: number;
-  y: number;
-}
-
-interface OSMLink {
-  id: string;
-  fromNodeId: string;
-  toNodeId: string;
-  turnType?: string;
-}
-
-declare global {
-  interface Window {
-    naver: any;
-  }
 }
 
 const NAVER_CLIENT_ID = "w2r5am4bmr"; // 네이버 API Client ID
@@ -81,6 +64,7 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
   const map = useRef<any>(null);
   const markers = useRef<any[]>([]);
   const polylines = useRef<any[]>([]);
+  const infoWindows = useRef<any[]>([]);
   const [isMapInitialized, setIsMapInitialized] = useState<boolean>(false);
   const [isNaverLoaded, setIsNaverLoaded] = useState<boolean>(false);
   const [isMapError, setIsMapError] = useState<boolean>(false);
@@ -88,31 +72,68 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
   const [popupPlace, setPopupPlace] = useState<Place | null>(null);
   const [showDialog, setShowDialog] = useState<boolean>(false);
 
-  const loadNaverMapScript = () => {
-    if (window.naver && window.naver.maps) {
-      console.log("Naver Maps already loaded");
-      setIsNaverLoaded(true);
-      return;
-    }
-
+  // Effect to load the Naver Maps script
+  useEffect(() => {
     console.log("Loading Naver Maps script...");
-    const script = document.createElement('script');
-    script.async = true;
-    script.src = `https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${NAVER_CLIENT_ID}`;
     
-    script.onload = () => {
-      console.log("Naver Maps script loaded successfully");
-      setIsNaverLoaded(true);
+    const initNaverMaps = async () => {
+      try {
+        await loadNaverMaps();
+        setIsNaverLoaded(true);
+        console.log("Naver Maps loaded successfully");
+      } catch (error) {
+        console.error("Failed to load Naver Maps:", error);
+        setIsMapError(true);
+        toast.error("지도 로드에 실패했습니다. 새로고침해주세요.");
+      }
     };
     
-    script.onerror = (error) => {
-      console.error("Failed to load Naver Maps script:", error);
-      setIsMapError(true);
-      toast.error("지도 로드에 실패했습니다. 새로고침해주세요.");
+    initNaverMaps();
+    
+    // Cleanup function to handle unmounting
+    return () => {
+      if (map.current) {
+        console.log("Cleaning up map instance");
+        markers.current.forEach(marker => marker.setMap(null));
+        polylines.current.forEach(polyline => polyline.setMap(null));
+        infoWindows.current.forEach(infoWindow => infoWindow.close());
+      }
+    };
+  }, []);
+
+  // Initialize the map when the script is loaded
+  useEffect(() => {
+    if (isNaverLoaded) {
+      setTimeout(initializeMap, 300);
+    }
+  }, [isNaverLoaded]);
+
+  // Effect to retry loading if needed
+  useEffect(() => {
+    if (isMapError && loadAttempts < 3) {
+      console.log("Map error detected, retrying...");
+      const timer = setTimeout(() => {
+        setIsMapError(false);
+        setLoadAttempts(prev => prev + 1);
+        loadNaverMaps().then(() => setIsNaverLoaded(true)).catch(() => setIsMapError(true));
+      }, 2000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isMapError, loadAttempts]);
+
+  // Add resize event listener to handle responsive behavior
+  useEffect(() => {
+    const handleResize = () => {
+      if (map.current && mapContainer.current && window.naver) {
+        console.log("Window resized, triggering map resize");
+        window.naver.maps.Event.trigger(map.current, 'resize');
+      }
     };
     
-    document.head.appendChild(script);
-  };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const initializeMap = () => {
     if (!mapContainer.current || !window.naver || !window.naver.maps) {
@@ -128,9 +149,7 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
     try {
       console.log("Initializing map...");
       console.log("Map container dimensions:", mapContainer.current.offsetWidth, "x", mapContainer.current.offsetHeight);
-      console.log("Naver maps object available:", !!window.naver.maps);
       
-      // Check if container has dimensions
       if (mapContainer.current.offsetWidth === 0 || mapContainer.current.offsetHeight === 0) {
         console.warn("Map container has zero dimensions, waiting...");
         setTimeout(initializeMap, 500);
@@ -140,8 +159,8 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
       const options = {
         center: new window.naver.maps.LatLng(JEJU_CENTER.lat, JEJU_CENTER.lng),
         zoom: 10,
-        minZoom: 7,  // 최소 줌 레벨
-        maxZoom: 18, // 최대 줌 레벨
+        minZoom: 7,
+        maxZoom: 18,
         zoomControl: true,
         zoomControlOptions: {
           position: window.naver.maps.Position.TOP_RIGHT
@@ -153,9 +172,9 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
         mapTypeControlOptions: {
           style: window.naver.maps.MapTypeControlStyle.DROPDOWN
         },
-        draggable: true, // 드래그 가능하도록 설정
-        pinchZoom: true, // 핀치 줌 가능하도록 설정
-        scrollWheel: true, // 스크롤로 줌 가능하도록 설정
+        draggable: true,
+        pinchZoom: true,
+        scrollWheel: true,
       };
 
       map.current = new window.naver.maps.Map(mapContainer.current, options);
@@ -170,7 +189,6 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
         // 지도 컨트롤러에 대한 스타일 조정
         const mapEl = mapContainer.current;
         if (mapEl) {
-          // 네이버 지도의 기본 UI 스타일 조정
           const naverControlsElements = mapEl.querySelectorAll('.nm-toolbar');
           naverControlsElements.forEach(element => {
             (element as HTMLElement).style.zIndex = '100';
@@ -235,65 +253,18 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
     }
   };
 
-  // Effect to load the Naver Maps script
-  useEffect(() => {
-    console.log("Initial useEffect - loading Naver Maps script");
-    loadNaverMapScript();
-    
-    // Cleanup function to handle unmounting
-    return () => {
-      if (map.current) {
-        console.log("Cleaning up map instance");
-        markers.current.forEach(marker => marker.setMap(null));
-        polylines.current.forEach(polyline => polyline.setMap(null));
-      }
-    };
-  }, []);
-
-  // Effect to initialize the map when the script is loaded
-  useEffect(() => {
-    console.log("useEffect - isNaverLoaded:", isNaverLoaded);
-    if (isNaverLoaded) {
-      // 약간의 지연을 두고 초기화 시도 (DOM이 준비되었는지 확인)
-      setTimeout(() => {
-        console.log("Delayed map initialization");
-        initializeMap();
-      }, 300);
-    }
-  }, [isNaverLoaded]);
-
-  // Effect to retry loading if needed
-  useEffect(() => {
-    if (isMapError && loadAttempts < 3) {
-      console.log("Map error detected, retrying...");
-      const timer = setTimeout(() => {
-        setIsMapError(false);
-        setLoadAttempts(prev => prev + 1);
-        loadNaverMapScript();
-      }, 2000);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [isMapError, loadAttempts]);
-
-  // Add resize event listener to handle responsive behavior
-  useEffect(() => {
-    const handleResize = () => {
-      if (map.current && mapContainer.current) {
-        console.log("Window resized, triggering map resize");
-        window.naver.maps.Event.trigger(map.current, 'resize');
-      }
-    };
-    
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
   const clearMarkers = () => {
     markers.current.forEach(marker => {
       marker.setMap(null);
     });
     markers.current = [];
+  };
+
+  const clearInfoWindows = () => {
+    infoWindows.current.forEach(infoWindow => {
+      infoWindow.close();
+    });
+    infoWindows.current = [];
   };
 
   const clearPolylines = () => {
@@ -303,10 +274,61 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
     polylines.current = [];
   };
 
+  const createInfoWindowContent = (place: Place) => {
+    return `
+      <div class="p-4 bg-white rounded-lg shadow-sm max-w-xs">
+        <h3 class="text-base font-medium mb-2">${place.name}</h3>
+        
+        ${place.address ? 
+          `<div class="flex items-start gap-2 mb-2">
+            <span class="flex-shrink-0 mt-1">
+              <svg width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                <circle cx="12" cy="10" r="3"></circle>
+              </svg>
+            </span>
+            <span class="text-sm text-gray-600">${place.address}</span>
+          </div>` : ''
+        }
+        
+        ${place.operatingHours ? 
+          `<div class="flex items-start gap-2 mb-2">
+            <span class="flex-shrink-0 mt-1">
+              <svg width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+            </span>
+            <span class="text-sm text-gray-600">${place.operatingHours}</span>
+          </div>` : ''
+        }
+        
+        ${place.rating ? 
+          `<div class="flex items-center gap-1 mb-2">
+            <span class="text-amber-400">
+              <svg width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+              </svg>
+            </span>
+            <span class="text-sm font-medium">${place.rating.toFixed(1)}</span>
+            ${place.reviewCount ? `<span class="text-xs text-gray-500">(${place.reviewCount})</span>` : ''}
+          </div>` : ''
+        }
+        
+        ${place.categoryDetail ? 
+          `<div class="inline-block px-2 py-1 rounded-full bg-gray-100 text-xs font-medium text-gray-800 mb-2">
+            ${place.categoryDetail}
+          </div>` : ''
+        }
+      </div>
+    `;
+  };
+
   const addMarkers = (placesToMark: Place[], isItinerary: boolean = false) => {
     if (!map.current || !isMapInitialized || !window.naver) return;
     
     clearMarkers();
+    clearInfoWindows();
     
     console.log(`Adding ${placesToMark.length} markers, isItinerary:`, isItinerary);
     
@@ -348,15 +370,17 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
           markerDiv.textContent = place.category.charAt(0).toUpperCase();
         }
         
-        // Add CSS animation for markers
-        const style = document.createElement('style');
-        style.innerHTML = `
-          @keyframes dropIn {
-            0% { transform: translateY(-20px); opacity: 0; }
-            100% { transform: translateY(0); opacity: 1; }
-          }
-        `;
-        document.head.appendChild(style);
+        // Create InfoWindow for each marker
+        const infoWindow = new window.naver.maps.InfoWindow({
+          content: createInfoWindowContent(place),
+          borderWidth: 0,
+          disableAnchor: true,
+          backgroundColor: "transparent",
+          borderColor: "transparent",
+          pixelOffset: new window.naver.maps.Point(0, -10)
+        });
+        
+        infoWindows.current.push(infoWindow);
         
         const marker = new window.naver.maps.Marker({
           position: position,
@@ -378,13 +402,20 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
           markerDiv.style.transform = 'scale(1)';
         });
         
-        markers.current.push(marker);
-        
         // Add click event to show place details
         window.naver.maps.Event.addListener(marker, 'click', () => {
+          // Close all other InfoWindows
+          infoWindows.current.forEach(iw => iw.close());
+          
+          // Open this InfoWindow
+          infoWindow.open(map.current, marker);
+          
+          // Set the place for the popup dialog
           setPopupPlace(place);
           setShowDialog(true);
         });
+        
+        markers.current.push(marker);
       });
       
       if (placesToMark.length > 0) {
@@ -463,7 +494,6 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
     }
     
     console.log("Data changed, updating map visualization");
-    console.log("- isMapInitialized:", isMapInitialized);
     console.log("- selectedPlace:", selectedPlace?.name);
     console.log("- places count:", places?.length);
     console.log("- itinerary days:", itinerary?.length);
@@ -514,7 +544,7 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
             onClick={() => {
               setIsMapError(false);
               setLoadAttempts(prev => prev + 1);
-              loadNaverMapScript();
+              loadNaverMaps().then(() => setIsNaverLoaded(true)).catch(() => setIsMapError(true));
             }}
           >
             다시 시도
@@ -610,6 +640,12 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
                   </div>
                 )}
                 
+                {popupPlace.categoryDetail && (
+                  <div className="inline-block px-2 py-1 rounded-full bg-gray-100 text-xs font-medium text-gray-800 mb-2">
+                    {popupPlace.categoryDetail}
+                  </div>
+                )}
+                
                 <div className="flex gap-2 mt-3">
                   {popupPlace.naverLink && (
                     <Button 
@@ -630,7 +666,7 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
                       onClick={() => window.open(popupPlace.instaLink, '_blank')}
                       className="flex gap-1"
                     >
-                      <ExternalLink className="h-3.5 w-3.5" />
+                      <Instagram className="h-3.5 w-3.5" />
                       인스타그램
                     </Button>
                   )}
