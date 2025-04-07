@@ -167,11 +167,14 @@ export const fetchLandmarks = async () => {
     if (categoriesError) throw categoriesError;
 
     // Fetch landmark reviews
-    const { data: landmarkReviews, error: reviewsError } = await supabase
+    const { data: landmarkReviewsData, error: reviewsError } = await supabase
       .from("landmark_review")
-      .select("id, Rating, visitor_review");
+      .select("id, Rating, visitor_review_count");
 
     if (reviewsError) throw reviewsError;
+
+    // Ensure landmarkReviewsData is an array
+    const landmarkReviews = landmarkReviewsData || [];
 
     // Combine the data
     const landmarks = landmarkInfo.map((info: LandmarkInformation) => {
@@ -181,9 +184,11 @@ export const fetchLandmarks = async () => {
       const category = landmarkCategories.find(
         (category: LandmarkCategory) => category.id === info.id
       );
-      const review = landmarkReviews.find(
-        (review: LandmarkReview) => review.id === info.id
-      );
+      
+      // Safely find review using type guard
+      const review = Array.isArray(landmarkReviews) 
+        ? landmarkReviews.find((r: any) => r.id === info.id) 
+        : null;
 
       return {
         id: `landmark-${info.id}`,
@@ -196,7 +201,7 @@ export const fetchLandmarks = async () => {
         naverLink: link?.link || "",
         instaLink: link?.instagram || "",
         rating: review?.Rating,
-        reviewCount: review?.visitor_review,
+        reviewCount: review?.visitor_review_count,
       };
     });
 
