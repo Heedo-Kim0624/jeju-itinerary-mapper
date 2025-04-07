@@ -159,18 +159,21 @@ const Map: React.FC<MapProps> = ({
 
   const loadGeoJsonOverlay = async () => {
     if (!map.current || !window.naver) return;
-
+  
     try {
       const [linkRes, nodeRes] = await Promise.all([
         fetch('/data/LINK_JSON.geojson'),
         fetch('/data/NODE_JSON.geojson')
       ]);
-
+  
       const [linkGeoJson, nodeGeoJson] = await Promise.all([
         linkRes.json(),
         nodeRes.json()
       ]);
-
+  
+      console.log("🧪 linkGeoJson", linkGeoJson);
+      console.log("🧪 nodeGeoJson", nodeGeoJson);
+  
       const linkFeatures = window.naver.maps.GeoJSON.read(linkGeoJson, {
         map: map.current,
         style: {
@@ -179,7 +182,7 @@ const Map: React.FC<MapProps> = ({
           strokeOpacity: 0.8
         }
       });
-
+  
       const nodeFeatures = window.naver.maps.GeoJSON.read(nodeGeoJson, {
         map: map.current,
         style: {
@@ -190,13 +193,14 @@ const Map: React.FC<MapProps> = ({
           strokeWeight: 1
         }
       });
-
-      console.log('GeoJSON 오버레이 로드 완료:', {
+  
+      console.log('✅ GeoJSON 오버레이 로드 완료:', {
         linkCount: linkFeatures.length,
         nodeCount: nodeFeatures.length
       });
+  
     } catch (err) {
-      console.error('GeoJSON 파일 로드 오류:', err);
+      console.error('❌ GeoJSON 파일 로드 오류:', err);
     }
   };
 
