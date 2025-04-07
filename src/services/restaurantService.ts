@@ -10,6 +10,8 @@ import {
   LandmarkInformation,
   LandmarkLink,
   LandmarkCategory,
+  CafeCategory,
+  CafeLink,
 } from "@/types/supabase";
 
 export const fetchRestaurants = async () => {
@@ -35,9 +37,9 @@ export const fetchRestaurants = async () => {
 
     if (categoriesError) throw categoriesError;
 
-    // Fetch restaurant ratings - using rpc call to avoid table naming issues
-    const { data: restaurantRatings, error: ratingsError } = await supabase
-      .rpc('get_restaurant_ratings');
+    // Fetch restaurant ratings - using rpc call with explicit typing
+    const { data: restaurantRatingsData, error: ratingsError } = await supabase
+      .rpc("get_restaurant_ratings") as { data: Array<{ id: number; rating: number; visitor_review_count: number }> | null, error: any };
 
     if (ratingsError) {
       console.error("Error fetching restaurant ratings:", ratingsError);
@@ -56,9 +58,9 @@ export const fetchRestaurants = async () => {
       // Safely access ratings if available
       let rating = null;
       let reviewCount = null;
-      if (restaurantRatings) {
-        const ratingInfo = restaurantRatings.find(
-          (r: any) => r.id === info.id
+      if (restaurantRatingsData) {
+        const ratingInfo = restaurantRatingsData.find(
+          (r) => r.id === info.id
         );
         if (ratingInfo) {
           rating = ratingInfo.rating;
@@ -112,9 +114,9 @@ export const fetchCafes = async () => {
 
     if (categoriesError) throw categoriesError;
 
-    // Fetch cafe ratings - using rpc call to avoid table naming issues
-    const { data: cafeRatings, error: ratingsError } = await supabase
-      .rpc('get_cafe_ratings');
+    // Fetch cafe ratings - using rpc call with explicit typing
+    const { data: cafeRatingsData, error: ratingsError } = await supabase
+      .rpc("get_cafe_ratings") as { data: Array<{ id: number; rating: number; visitor_review_count: number }> | null, error: any };
 
     if (ratingsError) {
       console.error("Error fetching cafe ratings:", ratingsError);
@@ -124,18 +126,18 @@ export const fetchCafes = async () => {
     // Combine the data
     const cafes = cafeInfo.map((info: any) => {
       const link = cafeLinks.find(
-        (link: any) => link.id === info.id
+        (link: CafeLink) => link.id === info.id
       );
       const category = cafeCategories.find(
-        (category: any) => category.id === info.id
+        (category: CafeCategory) => category.id === info.id
       );
       
       // Safely access ratings if available
       let rating = null;
       let reviewCount = null;
-      if (cafeRatings) {
-        const ratingInfo = cafeRatings.find(
-          (r: any) => r.id === info.id
+      if (cafeRatingsData) {
+        const ratingInfo = cafeRatingsData.find(
+          (r) => r.id === info.id
         );
         if (ratingInfo) {
           rating = ratingInfo.rating;
@@ -189,9 +191,9 @@ export const fetchAccommodations = async () => {
 
     if (categoriesError) throw categoriesError;
 
-    // Fetch accommodation ratings - using rpc call to avoid table naming issues
-    const { data: accomRatings, error: ratingsError } = await supabase
-      .rpc('get_accommodation_ratings');
+    // Fetch accommodation ratings - using rpc call with explicit typing
+    const { data: accomRatingsData, error: ratingsError } = await supabase
+      .rpc("get_accommodation_ratings") as { data: Array<{ id: number; rating: number; visitor_review_count: number }> | null, error: any };
 
     if (ratingsError) {
       console.error("Error fetching accommodation ratings:", ratingsError);
@@ -211,9 +213,9 @@ export const fetchAccommodations = async () => {
       // Safely access ratings if available
       let rating = null;
       let reviewCount = null;
-      if (accomRatings) {
-        const ratingInfo = accomRatings.find(
-          (r: any) => r.id === info.id
+      if (accomRatingsData) {
+        const ratingInfo = accomRatingsData.find(
+          (r) => r.id === info.id
         );
         if (ratingInfo) {
           rating = ratingInfo.rating;
@@ -267,9 +269,9 @@ export const fetchLandmarks = async () => {
 
     if (categoriesError) throw categoriesError;
 
-    // Fetch landmark ratings - using rpc call to avoid table naming issues
-    const { data: landmarkRatings, error: ratingsError } = await supabase
-      .rpc('get_landmark_ratings');
+    // Fetch landmark ratings - using rpc call with explicit typing
+    const { data: landmarkRatingsData, error: ratingsError } = await supabase
+      .rpc("get_landmark_ratings") as { data: Array<{ id: number; rating: number; visitor_review_count: number }> | null, error: any };
 
     if (ratingsError) {
       console.error("Error fetching landmark ratings:", ratingsError);
@@ -289,9 +291,9 @@ export const fetchLandmarks = async () => {
       // Safely access ratings if available
       let rating = null;
       let reviewCount = null;
-      if (landmarkRatings) {
-        const ratingInfo = landmarkRatings.find(
-          (r: any) => r.id === info.id
+      if (landmarkRatingsData) {
+        const ratingInfo = landmarkRatingsData.find(
+          (r) => r.id === info.id
         );
         if (ratingInfo) {
           rating = ratingInfo.rating;
@@ -304,7 +306,7 @@ export const fetchLandmarks = async () => {
         name: info.place_name || "",  // Adjusted field names
         address: info.lot_address || info.road_address || "",  // Adjusted field names
         category: "attraction",
-        categoryDetail: category?.categories_details || "",
+        categoryDetail: category?.Categories_Details || "",
         x: info.longitude || 0,
         y: info.latitude || 0,
         naverLink: link?.link || "",

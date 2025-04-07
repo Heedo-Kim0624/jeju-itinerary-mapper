@@ -1,4 +1,3 @@
-
 export interface RestaurantInformation {
   id: number;
   place_name?: string;
@@ -66,7 +65,7 @@ export interface CafeRating {
 
 // accomodation with one 'c' (철자 주의)
 export interface AccommodationInformation {
-  id: number; // Changed from ID to lowercase id
+  id: number;
   place_name?: string;
   road_address?: string;
   lot_address?: string;
@@ -117,7 +116,7 @@ export interface LandmarkRating {
 export interface LandmarkCategory {
   id: number;
   categories?: string;
-  categories_details?: string;
+  Categories_Details?: string;
 }
 
 // Place interface for normalized data

@@ -616,6 +616,35 @@ export type Database = {
           },
         ]
       }
+      cafe_rating: {
+        Row: {
+          blog_review_count: number | null
+          id: number
+          Rating: number | null
+          visitor_review_count: number | null
+        }
+        Insert: {
+          blog_review_count?: number | null
+          id: number
+          Rating?: number | null
+          visitor_review_count?: number | null
+        }
+        Update: {
+          blog_review_count?: number | null
+          id?: number
+          Rating?: number | null
+          visitor_review_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cafe_rating_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "cafe_information"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       landmark_categories: {
         Row: {
           Categories: string | null
@@ -1017,35 +1046,192 @@ export type Database = {
           },
         ]
       }
+      landmark_rating: {
+        Row: {
+          blog_review_count: number | null
+          id: number
+          Rating: number | null
+          visitor_review_count: number | null
+        }
+        Insert: {
+          blog_review_count?: number | null
+          id: number
+          Rating?: number | null
+          visitor_review_count?: number | null
+        }
+        Update: {
+          blog_review_count?: number | null
+          id?: number
+          Rating?: number | null
+          visitor_review_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "landmark_rating_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "landmark_information"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      landmark_review: {
+        Row: {
+          Beautiful_Natural_Scenery: number | null
+          Clean_Restrooms: number | null
+          Convenient_Public_Transport: number | null
+          Diverse_Experience_Programs: number | null
+          Easy_Parking: number | null
+          Easy_Reservation: number | null
+          Friendly_Staff: number | null
+          Great_for_Picnics: number | null
+          Great_for_Water_Activities: number | null
+          Great_View: number | null
+          High_Visitor_Traffic: number | null
+          id: number
+          Ideal_for_Relaxation: number | null
+          Informative: number | null
+          Interesting_Exhibition_Themes: number | null
+          Kid_Friendly: number | null
+          Large_Scale: number | null
+          Long_Course: number | null
+          Many_Attractions: number | null
+          Not_Crowded: number | null
+          Pet_Friendly: number | null
+          Photogenic_Spot: number | null
+          Rare_and_Unique_Plants: number | null
+          Reasonable_Pricing: number | null
+          Spacious_Area: number | null
+          Stylish_Interior: number | null
+          Unique_Concept: number | null
+          Unique_Scenery: number | null
+          Variety_of_Rides: number | null
+          Well_Equipped_Facilities: number | null
+          Well_Explained_Information: number | null
+          Well_Kept_Facilities: number | null
+          Well_Maintained: number | null
+          Well_Maintained_Animals: number | null
+          Well_Maintained_Walking_Trails: number | null
+          Well_Organized_Exhibitions: number | null
+          Well_Structured_Programs: number | null
+        }
+        Insert: {
+          Beautiful_Natural_Scenery?: number | null
+          Clean_Restrooms?: number | null
+          Convenient_Public_Transport?: number | null
+          Diverse_Experience_Programs?: number | null
+          Easy_Parking?: number | null
+          Easy_Reservation?: number | null
+          Friendly_Staff?: number | null
+          Great_for_Picnics?: number | null
+          Great_for_Water_Activities?: number | null
+          Great_View?: number | null
+          High_Visitor_Traffic?: number | null
+          id: number
+          Ideal_for_Relaxation?: number | null
+          Informative?: number | null
+          Interesting_Exhibition_Themes?: number | null
+          Kid_Friendly?: number | null
+          Large_Scale?: number | null
+          Long_Course?: number | null
+          Many_Attractions?: number | null
+          Not_Crowded?: number | null
+          Pet_Friendly?: number | null
+          Photogenic_Spot?: number | null
+          Rare_and_Unique_Plants?: number | null
+          Reasonable_Pricing?: number | null
+          Spacious_Area?: number | null
+          Stylish_Interior?: number | null
+          Unique_Concept?: number | null
+          Unique_Scenery?: number | null
+          Variety_of_Rides?: number | null
+          Well_Equipped_Facilities?: number | null
+          Well_Explained_Information?: number | null
+          Well_Kept_Facilities?: number | null
+          Well_Maintained?: number | null
+          Well_Maintained_Animals?: number | null
+          Well_Maintained_Walking_Trails?: number | null
+          Well_Organized_Exhibitions?: number | null
+          Well_Structured_Programs?: number | null
+        }
+        Update: {
+          Beautiful_Natural_Scenery?: number | null
+          Clean_Restrooms?: number | null
+          Convenient_Public_Transport?: number | null
+          Diverse_Experience_Programs?: number | null
+          Easy_Parking?: number | null
+          Easy_Reservation?: number | null
+          Friendly_Staff?: number | null
+          Great_for_Picnics?: number | null
+          Great_for_Water_Activities?: number | null
+          Great_View?: number | null
+          High_Visitor_Traffic?: number | null
+          id?: number
+          Ideal_for_Relaxation?: number | null
+          Informative?: number | null
+          Interesting_Exhibition_Themes?: number | null
+          Kid_Friendly?: number | null
+          Large_Scale?: number | null
+          Long_Course?: number | null
+          Many_Attractions?: number | null
+          Not_Crowded?: number | null
+          Pet_Friendly?: number | null
+          Photogenic_Spot?: number | null
+          Rare_and_Unique_Plants?: number | null
+          Reasonable_Pricing?: number | null
+          Spacious_Area?: number | null
+          Stylish_Interior?: number | null
+          Unique_Concept?: number | null
+          Unique_Scenery?: number | null
+          Variety_of_Rides?: number | null
+          Well_Equipped_Facilities?: number | null
+          Well_Explained_Information?: number | null
+          Well_Kept_Facilities?: number | null
+          Well_Maintained?: number | null
+          Well_Maintained_Animals?: number | null
+          Well_Maintained_Walking_Trails?: number | null
+          Well_Organized_Exhibitions?: number | null
+          Well_Structured_Programs?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "landmark_review_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "landmark_information"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       restaurant_categories: {
         Row: {
           Categories: string | null
           Categories_Details: string | null
-          id: number
+          ID: number
         }
         Insert: {
           Categories?: string | null
           Categories_Details?: string | null
-          id: number
+          ID: number
         }
         Update: {
           Categories?: string | null
           Categories_Details?: string | null
-          id?: number
+          ID?: number
         }
         Relationships: [
           {
-            foreignKeyName: "restaurant_categories_id_fkey"
-            columns: ["id"]
+            foreignKeyName: "restaurant_categories_ID_fkey"
+            columns: ["ID"]
             isOneToOne: true
             referencedRelation: "restaurant_information"
-            referencedColumns: ["id"]
+            referencedColumns: ["ID"]
           },
         ]
       }
       restaurant_information: {
         Row: {
-          id: number
+          ID: number
           Latitude: number | null
           Longitude: number | null
           Lot_Address: string | null
@@ -1055,7 +1241,7 @@ export type Database = {
           Road_Address: string | null
         }
         Insert: {
-          id: number
+          ID: number
           Latitude?: number | null
           Longitude?: number | null
           Lot_Address?: string | null
@@ -1065,7 +1251,7 @@ export type Database = {
           Road_Address?: string | null
         }
         Update: {
-          id?: number
+          ID?: number
           Latitude?: number | null
           Longitude?: number | null
           Lot_Address?: string | null
@@ -1078,27 +1264,27 @@ export type Database = {
       }
       restaurant_link: {
         Row: {
-          id: number
+          ID: number
           instagram: string | null
           link: string | null
         }
         Insert: {
-          id: number
+          ID: number
           instagram?: string | null
           link?: string | null
         }
         Update: {
-          id?: number
+          ID?: number
           instagram?: string | null
           link?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "restaurant_link_id_fkey"
-            columns: ["id"]
+            foreignKeyName: "restaurant_link_ID_fkey"
+            columns: ["ID"]
             isOneToOne: true
             referencedRelation: "restaurant_information"
-            referencedColumns: ["id"]
+            referencedColumns: ["ID"]
           },
         ]
       }
@@ -1117,7 +1303,7 @@ export type Database = {
           Fri_19: string | null
           Fri_20: string | null
           Fri_21: string | null
-          Id: number
+          ID: number
           Mon_09: string | null
           Mon_10: string | null
           Mon_11: string | null
@@ -1211,7 +1397,7 @@ export type Database = {
           Fri_19?: string | null
           Fri_20?: string | null
           Fri_21?: string | null
-          Id: number
+          ID: number
           Mon_09?: string | null
           Mon_10?: string | null
           Mon_11?: string | null
@@ -1305,7 +1491,7 @@ export type Database = {
           Fri_19?: string | null
           Fri_20?: string | null
           Fri_21?: string | null
-          Id?: number
+          ID?: number
           Mon_09?: string | null
           Mon_10?: string | null
           Mon_11?: string | null
@@ -1387,13 +1573,314 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "restaurant_openinghours_logical_Id_fkey"
-            columns: ["Id"]
+            foreignKeyName: "restaurant_openinghours_logical_ID_fkey"
+            columns: ["ID"]
             isOneToOne: true
             referencedRelation: "restaurant_information"
-            referencedColumns: ["id"]
+            referencedColumns: ["ID"]
           },
         ]
+      }
+      restaurant_rating: {
+        Row: {
+          blog_review_count: number | null
+          ID: number
+          Rating: number | null
+          visitor_review_count: number | null
+        }
+        Insert: {
+          blog_review_count?: number | null
+          ID: number
+          Rating?: number | null
+          visitor_review_count?: number | null
+        }
+        Update: {
+          blog_review_count?: number | null
+          ID?: number
+          Rating?: number | null
+          visitor_review_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "restaurant_rating_ID_fkey"
+            columns: ["ID"]
+            isOneToOne: true
+            referencedRelation: "restaurant_information"
+            referencedColumns: ["ID"]
+          },
+        ]
+      }
+      restaurant_review: {
+        Row: {
+          Authentic_local_taste: number | null
+          Calm_atmosphere: number | null
+          Clean_restrooms: number | null
+          Clean_store: number | null
+          Comfortable_seating: number | null
+          Cozy: number | null
+          Delicious_desserts: number | null
+          Delicious_food: number | null
+          Easy_parking: number | null
+          Fast_service: number | null
+          Fresh_ingredients: number | null
+          Friendly: number | null
+          Good_complimentary_side_dishes: number | null
+          Good_for_conversation: number | null
+          Good_for_families_with_kids: number | null
+          Good_for_long_stays: number | null
+          Good_for_photos: number | null
+          Good_for_solo_dining: number | null
+          Good_for_solo_drinking: number | null
+          Good_value_for_money: number | null
+          Great_for_group_gatherings: number | null
+          Great_for_special_occasions: number | null
+          Great_outdoor_space: number | null
+          Great_side_dishes: number | null
+          Healthy_taste: number | null
+          High_quality_meat: number | null
+          ID: number
+          Large_portions: number | null
+          Little_odor: number | null
+          Nice_music: number | null
+          Nice_view: number | null
+          Pet_friendly: number | null
+          Spacious_store: number | null
+          Special_menu_available: number | null
+          Staff_grills_food_well: number | null
+          Stylish_interior: number | null
+          Tasty_drinks: number | null
+          Unique_concept: number | null
+          Variety_of_alcohol: number | null
+          Well_curated_menu: number | null
+          Worth_the_price: number | null
+        }
+        Insert: {
+          Authentic_local_taste?: number | null
+          Calm_atmosphere?: number | null
+          Clean_restrooms?: number | null
+          Clean_store?: number | null
+          Comfortable_seating?: number | null
+          Cozy?: number | null
+          Delicious_desserts?: number | null
+          Delicious_food?: number | null
+          Easy_parking?: number | null
+          Fast_service?: number | null
+          Fresh_ingredients?: number | null
+          Friendly?: number | null
+          Good_complimentary_side_dishes?: number | null
+          Good_for_conversation?: number | null
+          Good_for_families_with_kids?: number | null
+          Good_for_long_stays?: number | null
+          Good_for_photos?: number | null
+          Good_for_solo_dining?: number | null
+          Good_for_solo_drinking?: number | null
+          Good_value_for_money?: number | null
+          Great_for_group_gatherings?: number | null
+          Great_for_special_occasions?: number | null
+          Great_outdoor_space?: number | null
+          Great_side_dishes?: number | null
+          Healthy_taste?: number | null
+          High_quality_meat?: number | null
+          ID: number
+          Large_portions?: number | null
+          Little_odor?: number | null
+          Nice_music?: number | null
+          Nice_view?: number | null
+          Pet_friendly?: number | null
+          Spacious_store?: number | null
+          Special_menu_available?: number | null
+          Staff_grills_food_well?: number | null
+          Stylish_interior?: number | null
+          Tasty_drinks?: number | null
+          Unique_concept?: number | null
+          Variety_of_alcohol?: number | null
+          Well_curated_menu?: number | null
+          Worth_the_price?: number | null
+        }
+        Update: {
+          Authentic_local_taste?: number | null
+          Calm_atmosphere?: number | null
+          Clean_restrooms?: number | null
+          Clean_store?: number | null
+          Comfortable_seating?: number | null
+          Cozy?: number | null
+          Delicious_desserts?: number | null
+          Delicious_food?: number | null
+          Easy_parking?: number | null
+          Fast_service?: number | null
+          Fresh_ingredients?: number | null
+          Friendly?: number | null
+          Good_complimentary_side_dishes?: number | null
+          Good_for_conversation?: number | null
+          Good_for_families_with_kids?: number | null
+          Good_for_long_stays?: number | null
+          Good_for_photos?: number | null
+          Good_for_solo_dining?: number | null
+          Good_for_solo_drinking?: number | null
+          Good_value_for_money?: number | null
+          Great_for_group_gatherings?: number | null
+          Great_for_special_occasions?: number | null
+          Great_outdoor_space?: number | null
+          Great_side_dishes?: number | null
+          Healthy_taste?: number | null
+          High_quality_meat?: number | null
+          ID?: number
+          Large_portions?: number | null
+          Little_odor?: number | null
+          Nice_music?: number | null
+          Nice_view?: number | null
+          Pet_friendly?: number | null
+          Spacious_store?: number | null
+          Special_menu_available?: number | null
+          Staff_grills_food_well?: number | null
+          Stylish_interior?: number | null
+          Tasty_drinks?: number | null
+          Unique_concept?: number | null
+          Variety_of_alcohol?: number | null
+          Well_curated_menu?: number | null
+          Worth_the_price?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "restaurant_review_ID_fkey"
+            columns: ["ID"]
+            isOneToOne: true
+            referencedRelation: "restaurant_information"
+            referencedColumns: ["ID"]
+          },
+        ]
+      }
+      review: {
+        Row: {
+          Authentic_local_taste: number | null
+          Calm_atmosphere: number | null
+          Clean_restrooms: number | null
+          Clean_store: number | null
+          Comfortable_seating: number | null
+          Cozy: number | null
+          Delicious_desserts: number | null
+          Delicious_food: number | null
+          Easy_parking: number | null
+          Fast_service: number | null
+          Fresh_ingredients: number | null
+          Friendly: number | null
+          Good_complimentary_side_dishes: number | null
+          Good_for_conversation: number | null
+          Good_for_families_with_kids: number | null
+          Good_for_long_stays: number | null
+          Good_for_photos: number | null
+          Good_for_solo_dining: number | null
+          Good_for_solo_drinking: number | null
+          Goodvalue_for_money: number | null
+          Great_for_group_gatherings: number | null
+          Great_for_special_occasions: number | null
+          Great_outdoor_space: number | null
+          Great_side_dishes: number | null
+          Healthy_taste: number | null
+          Highquality_meat: number | null
+          ID: number
+          Large_portions: number | null
+          Little_odor: number | null
+          Nice_music: number | null
+          Nice_view: number | null
+          Pet_friendly: number | null
+          Spacious_store: number | null
+          Special_menu_available: number | null
+          Staff_grills_food_well: string | null
+          Stylish_interior: number | null
+          Tasty_drinks: number | null
+          Unique_concept: number | null
+          Variety_of_alcohol: number | null
+          Well_curated_menu: number | null
+          Worth_the_price: number | null
+        }
+        Insert: {
+          Authentic_local_taste?: number | null
+          Calm_atmosphere?: number | null
+          Clean_restrooms?: number | null
+          Clean_store?: number | null
+          Comfortable_seating?: number | null
+          Cozy?: number | null
+          Delicious_desserts?: number | null
+          Delicious_food?: number | null
+          Easy_parking?: number | null
+          Fast_service?: number | null
+          Fresh_ingredients?: number | null
+          Friendly?: number | null
+          Good_complimentary_side_dishes?: number | null
+          Good_for_conversation?: number | null
+          Good_for_families_with_kids?: number | null
+          Good_for_long_stays?: number | null
+          Good_for_photos?: number | null
+          Good_for_solo_dining?: number | null
+          Good_for_solo_drinking?: number | null
+          Goodvalue_for_money?: number | null
+          Great_for_group_gatherings?: number | null
+          Great_for_special_occasions?: number | null
+          Great_outdoor_space?: number | null
+          Great_side_dishes?: number | null
+          Healthy_taste?: number | null
+          Highquality_meat?: number | null
+          ID: number
+          Large_portions?: number | null
+          Little_odor?: number | null
+          Nice_music?: number | null
+          Nice_view?: number | null
+          Pet_friendly?: number | null
+          Spacious_store?: number | null
+          Special_menu_available?: number | null
+          Staff_grills_food_well?: string | null
+          Stylish_interior?: number | null
+          Tasty_drinks?: number | null
+          Unique_concept?: number | null
+          Variety_of_alcohol?: number | null
+          Well_curated_menu?: number | null
+          Worth_the_price?: number | null
+        }
+        Update: {
+          Authentic_local_taste?: number | null
+          Calm_atmosphere?: number | null
+          Clean_restrooms?: number | null
+          Clean_store?: number | null
+          Comfortable_seating?: number | null
+          Cozy?: number | null
+          Delicious_desserts?: number | null
+          Delicious_food?: number | null
+          Easy_parking?: number | null
+          Fast_service?: number | null
+          Fresh_ingredients?: number | null
+          Friendly?: number | null
+          Good_complimentary_side_dishes?: number | null
+          Good_for_conversation?: number | null
+          Good_for_families_with_kids?: number | null
+          Good_for_long_stays?: number | null
+          Good_for_photos?: number | null
+          Good_for_solo_dining?: number | null
+          Good_for_solo_drinking?: number | null
+          Goodvalue_for_money?: number | null
+          Great_for_group_gatherings?: number | null
+          Great_for_special_occasions?: number | null
+          Great_outdoor_space?: number | null
+          Great_side_dishes?: number | null
+          Healthy_taste?: number | null
+          Highquality_meat?: number | null
+          ID?: number
+          Large_portions?: number | null
+          Little_odor?: number | null
+          Nice_music?: number | null
+          Nice_view?: number | null
+          Pet_friendly?: number | null
+          Spacious_store?: number | null
+          Special_menu_available?: number | null
+          Staff_grills_food_well?: string | null
+          Stylish_interior?: number | null
+          Tasty_drinks?: number | null
+          Unique_concept?: number | null
+          Variety_of_alcohol?: number | null
+          Well_curated_menu?: number | null
+          Worth_the_price?: number | null
+        }
+        Relationships: []
       }
       spatial_ref_sys: {
         Row: {
