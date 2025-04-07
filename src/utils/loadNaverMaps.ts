@@ -1,6 +1,16 @@
 
 // 네이버 API Client ID
-const NAVER_CLIENT_ID = "w2r5am4bmr";
+const clientId = import.meta.env.VITE_NAVER_CLIENT_ID;
+
+if (!clientId) {
+  console.error("VITE_NAVER_CLIENT_ID is not defined");
+  reject("Missing NAVER client ID");
+  return;
+}
+
+const script = document.createElement('script');
+script.src = `https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${clientId}&submodules=geocoder,drawing,geojson`;
+
 
 /**
  * 네이버 지도 API를 동적으로 로드하는 함수
