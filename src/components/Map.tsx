@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 import { toast } from "sonner";
 import { getCategoryColor } from '@/utils/categoryColors';
@@ -8,7 +9,9 @@ import { MapPin, Star, Clock, ExternalLink, AlertCircle, Instagram } from "lucid
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { loadNaverMaps } from "@/utils/loadNaverMaps";
 import JejuVisualizer from './JejuVisualizer';
-import { JEJU_CENTER, JEJU_BOUNDARY } from '@/utils/jejuMapStyles';
+
+// Removed the duplicate imports that were causing conflicts
+// and use the jejuMapStyles imports only through the JejuVisualizer component
 
 interface MapProps {
   places: Place[];
@@ -37,11 +40,8 @@ interface ItineraryDay {
   places: Place[];
 }
 
-const NAVER_CLIENT_ID = "w2r5am4bmr"; // 네이버 API Client ID
-
-// 제주도 중심 좌표
+// Use the JEJU_CENTER and JEJU_BOUNDARY directly without importing them again
 const JEJU_CENTER = { lat: 33.3846216, lng: 126.5311884 };
-// 제주도 경계 좌표 (정확한 해안선 형태를 위한 상세 좌표)
 const JEJU_BOUNDARY = [
   { lat: 33.5427, lng: 126.5426 }, // 제주시
   { lat: 33.4996, lng: 126.5312 }, // 조천읍
