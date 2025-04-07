@@ -1,8 +1,9 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 import { toast } from "sonner";
 import { getCategoryColor } from '@/utils/categoryColors';
 import { loadNaverMaps } from "@/utils/loadNaverMaps";
-import { MapStyles } from '@/utils/mapStyles.css';
+// Remove the invalid import for MapStyles
 
 interface Place {
   id: string;
@@ -251,7 +252,7 @@ const Map: React.FC<MapProps> = ({ places, selectedPlace, itinerary, selectedDay
   };
 
   return (
-    <div ref={mapContainer} className={MapStyles}>
+    <div ref={mapContainer} className="w-full h-full relative">
       {!isNaverLoaded && !isMapError && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
           <div className="text-center">

@@ -30,12 +30,12 @@ export type Database = {
             foreignKeyName: "accomodation_categories_id_fkey1"
             columns: ["id"]
             isOneToOne: true
-            referencedRelation: "accomodation_information_node"
+            referencedRelation: "accomodation_information"
             referencedColumns: ["ID"]
           },
         ]
       }
-      accomodation_information_node: {
+      accomodation_information: {
         Row: {
           ID: number
           Latitude: number | null
@@ -89,7 +89,7 @@ export type Database = {
             foreignKeyName: "accomodation_link_ID_fkey1"
             columns: ["ID"]
             isOneToOne: true
-            referencedRelation: "accomodation_information_node"
+            referencedRelation: "accomodation_information"
             referencedColumns: ["ID"]
           },
         ]
@@ -118,7 +118,7 @@ export type Database = {
             foreignKeyName: "accomodation_rating_id_fkey"
             columns: ["id"]
             isOneToOne: true
-            referencedRelation: "accomodation_information_node"
+            referencedRelation: "accomodation_information"
             referencedColumns: ["ID"]
           },
         ]
@@ -210,7 +210,7 @@ export type Database = {
             foreignKeyName: "accomodation_review_id_fkey"
             columns: ["id"]
             isOneToOne: true
-            referencedRelation: "accomodation_information_node"
+            referencedRelation: "accomodation_information"
             referencedColumns: ["ID"]
           },
         ]
@@ -637,12 +637,12 @@ export type Database = {
             foreignKeyName: "landmark_categories_id_fkey1"
             columns: ["id"]
             isOneToOne: true
-            referencedRelation: "landmark_information_node"
+            referencedRelation: "landmark_information"
             referencedColumns: ["id"]
           },
         ]
       }
-      landmark_information_node: {
+      landmark_information: {
         Row: {
           id: number
           Latitude: number | null
@@ -696,7 +696,7 @@ export type Database = {
             foreignKeyName: "landmark_link_id_fkey1"
             columns: ["id"]
             isOneToOne: true
-            referencedRelation: "landmark_information_node"
+            referencedRelation: "landmark_information"
             referencedColumns: ["id"]
           },
         ]
@@ -989,7 +989,7 @@ export type Database = {
             foreignKeyName: "landmark_openinghours_logical_id_fkey1"
             columns: ["id"]
             isOneToOne: true
-            referencedRelation: "landmark_information_node"
+            referencedRelation: "landmark_information"
             referencedColumns: ["id"]
           },
         ]
@@ -1012,7 +1012,7 @@ export type Database = {
             foreignKeyName: "landmark_openinghours_note_id_fkey1"
             columns: ["id"]
             isOneToOne: true
-            referencedRelation: "landmark_information_node"
+            referencedRelation: "landmark_information"
             referencedColumns: ["id"]
           },
         ]
