@@ -1,15 +1,5 @@
 
 // 네이버 API Client ID
-const clientId = import.meta.env.VITE_NAVER_CLIENT_ID;
-
-if (!clientId) {
-  console.error("VITE_NAVER_CLIENT_ID is not defined");
-  reject("Missing NAVER client ID");
-  return;
-}
-
-const script = document.createElement('script');
-script.src = `https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${clientId}&submodules=geocoder,drawing,geojson`;
 
 
 /**
@@ -18,23 +8,24 @@ script.src = `https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${cli
  */
 export const loadNaverMaps = (): Promise<void> => {
   return new Promise((resolve, reject) => {
+    const clientId = import.meta.env.VITE_NAVER_CLIENT_ID;
+
+    if (!clientId) {
+      console.error("VITE_NAVER_CLIENT_ID is not defined");
+      reject("Missing NAVER client ID"); // ✅ 이제 됨!
+      return;
+    }
+
     if (window.naver && window.naver.maps) {
       console.log("Naver Maps already loaded");
       resolve();
       return;
     }
 
-    const clientId = import.meta.env.VITE_NAVER_CLIENT_ID || "w2r5am4bmr";
-    if (!clientId) {
-      console.error("VITE_NAVER_CLIENT_ID is not defined");
-      reject("Missing NAVER client ID");
-      return;
-    }
-
     console.log("Loading Naver Maps script...");
     const script = document.createElement('script');
     script.async = true;
-    script.src = `https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${clientId}&submodules=geocoder,drawing`;
+    script.src = `https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${clientId}&submodules=geocoder,drawing,geojson`;
 
     script.onload = () => {
       console.log("Naver Maps script loaded successfully");

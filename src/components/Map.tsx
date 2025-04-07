@@ -171,34 +171,39 @@ const Map: React.FC<MapProps> = ({
         nodeRes.json()
       ]);
   
-      console.log("🧪 linkGeoJson", linkGeoJson);
-      console.log("🧪 nodeGeoJson", nodeGeoJson);
-  
-      const linkFeatures = window.naver.maps.GeoJSON.read(linkGeoJson, {
-        map: map.current,
-        style: {
-          strokeColor: '#FF5733',
-          strokeWeight: 2,
-          strokeOpacity: 0.8
+      // 1. 선(LINK): LineString → Polyline으로 렌더링
+      linkGeoJson.features.forEach(feature => {
+        if (feature.geometry.type === 'LineString') {
+          const coords = feature.geometry.coordinates.map(
+            ([lng, lat]) => new window.naver.maps.LatLng(lat, lng)
+          );
+          new window.naver.maps.Polyline({
+            path: coords,
+            strokeColor: '#FF5733',
+            strokeWeight: 2,
+            strokeOpacity: 0.8,
+            map: map.current
+          });
         }
       });
   
-      const nodeFeatures = window.naver.maps.GeoJSON.read(nodeGeoJson, {
-        map: map.current,
-        style: {
-          fillColor: '#2E86DE',
-          fillOpacity: 0.9,
-          radius: 3,
-          strokeColor: '#1B4F72',
-          strokeWeight: 1
+      // 2. 점(NODE): Point → Marker로 렌더링
+      nodeGeoJson.features.forEach(feature => {
+        if (feature.geometry.type === 'Point') {
+          const [lng, lat] = feature.geometry.coordinates;
+          new window.naver.maps.Marker({
+            position: new window.naver.maps.LatLng(lat, lng),
+            map: map.current,
+            icon: {
+              content: '<div style="width:8px;height:8px;border-radius:50%;background:#2E86DE;"></div>',
+              size: new window.naver.maps.Size(8, 8),
+              anchor: new window.naver.maps.Point(4, 4)
+            }
+          });
         }
       });
   
-      console.log('✅ GeoJSON 오버레이 로드 완료:', {
-        linkCount: linkFeatures.length,
-        nodeCount: nodeFeatures.length
-      });
-  
+      console.log("✅ GeoJSON 오버레이 렌더링 완료");
     } catch (err) {
       console.error('❌ GeoJSON 파일 로드 오류:', err);
     }
