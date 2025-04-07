@@ -148,11 +148,55 @@ const Map: React.FC<MapProps> = ({
       window.naver.maps.Event.once(map.current, 'init', () => {
         console.log("Naver Map initialized");
         renderData();
+        loadGeoJsonOverlay();
       });
     } catch (error) {
       console.error("Error initializing map:", error);
       setIsMapError(true);
       toast.error("지도 초기화에 실패했습니다.");
+    }
+  };
+
+  const loadGeoJsonOverlay = async () => {
+    if (!map.current || !window.naver) return;
+
+    try {
+      const [linkRes, nodeRes] = await Promise.all([
+        fetch('/data/LINK_JSON.geojson'),
+        fetch('/data/NODE_JSON.geojson')
+      ]);
+
+      const [linkGeoJson, nodeGeoJson] = await Promise.all([
+        linkRes.json(),
+        nodeRes.json()
+      ]);
+
+      const linkFeatures = window.naver.maps.GeoJSON.read(linkGeoJson, {
+        map: map.current,
+        style: {
+          strokeColor: '#FF5733',
+          strokeWeight: 2,
+          strokeOpacity: 0.8
+        }
+      });
+
+      const nodeFeatures = window.naver.maps.GeoJSON.read(nodeGeoJson, {
+        map: map.current,
+        style: {
+          fillColor: '#2E86DE',
+          fillOpacity: 0.9,
+          radius: 3,
+          strokeColor: '#1B4F72',
+          strokeWeight: 1
+        }
+      });
+
+      console.log('GeoJSON 오버레이 로드 완료:', {
+        linkCount: linkFeatures.length,
+        nodeCount: nodeFeatures.length
+      });
+    } catch (err) {
+      console.error('GeoJSON 파일 로드 오류:', err);
     }
   };
 
