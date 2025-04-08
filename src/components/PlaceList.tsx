@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 import { ExternalLink, MapPin, Star, MessageCircle, Clock, ArrowUpDown, Instagram, Filter, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -241,6 +242,23 @@ const PlaceList: React.FC<PlaceListProps> = ({
                       </span>
                       <h3 className="text-sm font-medium truncate">{place.name}</h3>
                     </div>
+                    
+                    {/* Rating and review count display next to category */}
+                    <div className="flex items-center gap-1">
+                      {place.rating !== undefined && place.rating !== null && (
+                        <div className="flex items-center">
+                          <Star className="h-3 w-3 text-amber-400" />
+                          <span className="text-xs font-medium ml-0.5">{typeof place.rating === 'number' ? place.rating.toFixed(1) : place.rating}</span>
+                        </div>
+                      )}
+                      
+                      {place.reviewCount !== undefined && place.reviewCount !== null && (
+                        <div className="flex items-center text-xs text-muted-foreground">
+                          <MessageCircle className="h-3 w-3 ml-1" />
+                          <span className="ml-0.5">{place.reviewCount}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                   
                   <div className="flex justify-between items-start mt-1">
@@ -260,22 +278,8 @@ const PlaceList: React.FC<PlaceListProps> = ({
                       )}
                       
                       <div className="flex items-center gap-2 mt-1.5">
-                        {place.rating !== undefined && place.rating !== null && (
-                          <div className="flex items-center gap-1">
-                            <Star className="h-3 w-3 text-amber-400" />
-                            <span className="text-xs font-medium">{typeof place.rating === 'number' ? place.rating.toFixed(1) : place.rating}</span>
-                          </div>
-                        )}
-                        
-                        {place.reviewCount !== undefined && place.reviewCount !== null && (
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <MessageCircle className="h-3 w-3" />
-                            <span>{place.reviewCount}</span>
-                          </div>
-                        )}
-
                         {place.categoryDetail && (
-                          <Badge variant="outline" className="text-[9px] h-4 px-1 ml-1">
+                          <Badge variant="outline" className="text-[9px] h-4 px-1">
                             {place.categoryDetail}
                           </Badge>
                         )}
@@ -323,6 +327,7 @@ const PlaceList: React.FC<PlaceListProps> = ({
         </ScrollArea>
       </div>
       
+      {/* Pagination section */}
       {totalPages > 1 && (
         <Pagination className="mt-4">
           <PaginationContent>

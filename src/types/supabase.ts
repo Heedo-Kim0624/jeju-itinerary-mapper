@@ -132,7 +132,7 @@ export interface Place {
   instaLink: string;
   rating?: number;
   reviewCount?: number;
-  operatingHours: string;
+  operatingHours?: string;
   operationTimeData?: {
     [key: string]: number;
   };

@@ -25,9 +25,10 @@ export const fetchRestaurants = async (): Promise<Place[]> => {
 
     if (categoriesError) throw categoriesError;
 
-    // Fetch restaurant ratings using RPC
+    // Fetch restaurant ratings - using a direct query rather than RPC
     const { data: restaurantRatings, error: ratingsError } = await supabase
-      .rpc("get_restaurant_ratings") as { data: any[], error: any };
+      .from("restaurant_rating")
+      .select("*");
 
     if (ratingsError) {
       console.error("Error fetching restaurant ratings:", ratingsError);
@@ -43,7 +44,7 @@ export const fetchRestaurants = async (): Promise<Place[]> => {
       let rating = null;
       let reviewCount = null;
       if (restaurantRatings) {
-        const ratingInfo = restaurantRatings.find((r: any) => r.id === info.ID);
+        const ratingInfo = restaurantRatings.find((r: any) => r.ID === info.ID);
         if (ratingInfo) {
           rating = ratingInfo.rating;
           reviewCount = ratingInfo.visitor_review_count;
@@ -60,8 +61,8 @@ export const fetchRestaurants = async (): Promise<Place[]> => {
         y: info.Latitude || 0,
         naverLink: link?.link || "",
         instaLink: link?.instagram || "",
-        rating: rating,
-        reviewCount: reviewCount,
+        rating,
+        reviewCount,
         operatingHours: "",
       };
     });
@@ -98,7 +99,8 @@ export const fetchCafes = async (): Promise<Place[]> => {
 
     // Fetch cafe ratings
     const { data: cafeRatings, error: ratingsError } = await supabase
-      .rpc("get_cafe_ratings") as { data: any[], error: any };
+      .from("cafe_rating")
+      .select("*");
 
     if (ratingsError) {
       console.error("Error fetching cafe ratings:", ratingsError);
@@ -131,8 +133,8 @@ export const fetchCafes = async (): Promise<Place[]> => {
         y: info.Latitude || 0,
         naverLink: link?.link || "",
         instaLink: link?.instagram || "",
-        rating: rating,
-        reviewCount: reviewCount,
+        rating,
+        reviewCount,
         operatingHours: "",
       };
     });
@@ -169,7 +171,8 @@ export const fetchAccommodations = async (): Promise<Place[]> => {
 
     // Fetch accommodation ratings
     const { data: accomRatings, error: ratingsError } = await supabase
-      .rpc("get_accommodation_ratings") as { data: any[], error: any };
+      .from("accomodation_rating")
+      .select("*");
 
     if (ratingsError) {
       console.error("Error fetching accommodation ratings:", ratingsError);
@@ -186,7 +189,7 @@ export const fetchAccommodations = async (): Promise<Place[]> => {
       let rating = null;
       let reviewCount = null;
       if (accomRatings) {
-        const ratingInfo = accomRatings.find((r: any) => r.id === info.ID);
+        const ratingInfo = accomRatings.find((r: any) => r.ID === info.ID);
         if (ratingInfo) {
           rating = ratingInfo.rating;
           reviewCount = ratingInfo.visitor_review_count;
@@ -203,8 +206,8 @@ export const fetchAccommodations = async (): Promise<Place[]> => {
         y: info.Latitude || 0,
         naverLink: link?.link || "",
         instaLink: link?.instagram || "",
-        rating: rating,
-        reviewCount: reviewCount,
+        rating,
+        reviewCount,
         operatingHours: "",
       };
     });
@@ -241,7 +244,8 @@ export const fetchLandmarks = async (): Promise<Place[]> => {
 
     // Fetch landmark ratings
     const { data: landmarkRatings, error: ratingsError } = await supabase
-      .rpc("get_landmark_ratings") as { data: any[], error: any };
+      .from("landmark_rating")
+      .select("*");
 
     if (ratingsError) {
       console.error("Error fetching landmark ratings:", ratingsError);
@@ -275,8 +279,8 @@ export const fetchLandmarks = async (): Promise<Place[]> => {
         y: info.Latitude || 0,
         naverLink: link?.link || "",
         instaLink: link?.instagram || "",
-        rating: rating,
-        reviewCount: reviewCount,
+        rating,
+        reviewCount,
         operatingHours: "",
       };
     });
