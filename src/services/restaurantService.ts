@@ -46,7 +46,7 @@ export const fetchRestaurants = async (): Promise<Place[]> => {
       if (restaurantRatings) {
         const ratingInfo = restaurantRatings.find((r: any) => r.ID === info.ID);
         if (ratingInfo) {
-          rating = ratingInfo.rating;
+          rating = ratingInfo.Rating; // Using Rating with capital R
           reviewCount = ratingInfo.visitor_review_count;
         }
       }
@@ -110,6 +110,7 @@ export const fetchCafes = async (): Promise<Place[]> => {
     // Combine the data
     const cafes = cafeInfo?.map((info: any) => {
       const link = cafeLinks?.find((link: any) => link.id === info.id);
+      // Use cafe_categories properly - this table might have different structure than expected
       const category = cafeCategories?.find((category: any) => category.id === info.id);
       
       // Safely access ratings if available
@@ -118,7 +119,7 @@ export const fetchCafes = async (): Promise<Place[]> => {
       if (cafeRatings) {
         const ratingInfo = cafeRatings.find((r: any) => r.id === info.id);
         if (ratingInfo) {
-          rating = ratingInfo.rating;
+          rating = ratingInfo.Rating; // Using Rating with capital R
           reviewCount = ratingInfo.visitor_review_count;
         }
       }
@@ -128,7 +129,7 @@ export const fetchCafes = async (): Promise<Place[]> => {
         name: info.Place_Name || "",
         address: info.Lot_Address || info.Road_Address || "",
         category: "cafe",
-        categoryDetail: category?.categories || "",
+        categoryDetail: category?.categories || category?.Categories_Details || "", // Try both possible field names
         x: info.Longitude || 0,
         y: info.Latitude || 0,
         naverLink: link?.link || "",
@@ -189,9 +190,9 @@ export const fetchAccommodations = async (): Promise<Place[]> => {
       let rating = null;
       let reviewCount = null;
       if (accomRatings) {
-        const ratingInfo = accomRatings.find((r: any) => r.ID === info.ID);
+        const ratingInfo = accomRatings.find((r: any) => r.id === info.ID);
         if (ratingInfo) {
-          rating = ratingInfo.rating;
+          rating = ratingInfo.Rating; // Using Rating with capital R
           reviewCount = ratingInfo.visitor_review_count;
         }
       }
@@ -264,7 +265,7 @@ export const fetchLandmarks = async (): Promise<Place[]> => {
       if (landmarkRatings) {
         const ratingInfo = landmarkRatings.find((r: any) => r.id === info.id);
         if (ratingInfo) {
-          rating = ratingInfo.rating;
+          rating = ratingInfo.Rating; // Using Rating with capital R
           reviewCount = ratingInfo.visitor_review_count;
         }
       }
