@@ -1,3 +1,4 @@
+
 export interface RestaurantInformation {
   id: number;
   place_name?: string;

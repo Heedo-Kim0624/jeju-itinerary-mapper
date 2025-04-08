@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import { ExternalLink, MapPin, Star, MessageCircle, Clock, ArrowUpDown, Instagram, Filter, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -19,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { Place } from '@/types/supabase';
 
 interface PlaceListProps {
   places: Place[];
@@ -29,31 +29,6 @@ interface PlaceListProps {
   onPageChange: (page: number) => void;
   totalPages: number;
   orderedIds?: string[];
-}
-
-interface Place {
-  id: string;
-  name: string;
-  address?: string;
-  category: string;
-  rating?: number;
-  reviewCount?: number;
-  operatingHours?: string;
-  naverLink?: string;
-  instaLink?: string;
-  x: number;
-  y: number;
-  categoryDetail?: string;
-}
-
-interface ItineraryDay {
-  day: number;
-  places: Place[];
-  totalDistance?: number;
-}
-
-interface ScheduleTable {
-  [dayHour: string]: Place | null;
 }
 
 type SortOption = "recommendation" | "rating" | "reviews";
@@ -144,15 +119,11 @@ const PlaceList: React.FC<PlaceListProps> = ({
   };
 
   const handleRefreshList = () => {
-    // 목록 새로고침 기능
     console.log("목록 새로고침");
-    // 여기에 새로고침 로직 추가 (예: 현재 목록을 다시 불러오기)
   };
 
   const handleFilterPlaces = () => {
-    // 필터링 기능
     console.log("장소 필터링");
-    // 여기에 필터링 로직 추가 (예: 필터 모달 표시)
   };
 
   if (loading) {
@@ -394,7 +365,6 @@ const PlaceList: React.FC<PlaceListProps> = ({
         </Pagination>
       )}
       
-      {/* 추가 버튼 영역 */}
       <div className="flex gap-2 mt-3 items-center justify-center">
         <Button 
           variant="outline"

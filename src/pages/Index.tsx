@@ -11,27 +11,10 @@ import DaySelector from '@/components/DaySelector';
 import { toast } from 'sonner';
 import { categoryColors, getCategoryName } from '@/utils/categoryColors';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { fetchRestaurants, fetchAccommodations, fetchLandmarks, fetchCafes } from '@/services/restaurantService';
+import { fetchRestaurants, fetchAccommodations, fetchLandmarks, fetchCafes, fetchPlacesByCategory } from '@/services/restaurantService';
+import { Place } from '@/types/supabase';
 
 const DEFAULT_PROMPT = '';
-
-interface Place {
-  id: string;
-  name: string;
-  address: string;
-  operatingHours: string;
-  naverLink: string;
-  instaLink: string;
-  rating: number;
-  reviewCount: number;
-  category: string;
-  x: number;
-  y: number;
-  operationTimeData?: {
-    [key: string]: number;
-  };
-  nodeId?: string;
-}
 
 interface ItineraryDay {
   day: number;
@@ -248,11 +231,9 @@ const Index: React.FC = () => {
         
         const accommodations = await fetchAccommodations();
         console.log('숙소 데이터 가져옴:', accommodations.length, '개');
-        console.log('첫 번째 숙소 데이터:', accommodations.length > 0 ? accommodations[0].name : '없음');
         
         const attractions = await fetchLandmarks();
         console.log('관광지 데이터 가져옴:', attractions.length, '개');
-        console.log('첫 번째 관광지 데이터:', attractions.length > 0 ? attractions[0].name : '없음');
         
         const cafes = await fetchCafes();
         console.log('카페 데이터 가져옴:', cafes.length, '개');
@@ -262,25 +243,13 @@ const Index: React.FC = () => {
           ...accommodations,
           ...attractions,
           ...cafes
-        ] as Place[];
+        ];
         
         console.log('총 로드된 장소 수:', allPlaces.length);
-        console.log('숙소 수:', accommodations.length);
-        console.log('관광지 수:', attractions.length);
-        console.log('카페 수:', cafes.length);
         
         setPlaces(allPlaces);
       } catch (error) {
         console.error('초기 데이터 로드 오류:', error);
-        
-        const allPlaces = [
-          ...generateMockPlaces('restaurant', 200),
-          ...generateMockPlaces('cafe', 200),
-          ...generateMockPlaces('attraction', 200),
-          ...generateMockPlaces('accommodation', 200)
-        ];
-        setPlaces(allPlaces);
-        
         toast.error('데이터 로딩 중 오류가 발생했습니다.');
       }
     };
@@ -306,21 +275,37 @@ const Index: React.FC = () => {
     setPromptText(e.target.value);
   };
   
-  const handleCategoryClick = (category: string) => {
+  const handleCategoryClick = async (category: string) => {
     if (!isSearchComplete) {
       toast.error('먼저 검색을 해주세요');
       return;
     }
     
-    if (selectedCategory === category) {
-      setSelectedCategory(null);
-    } else {
-      setSelectedCategory(category);
-      const filtered = places.filter(place => place.category === category);
-      setFilteredPlaces(filtered);
+    setLoading(true);
+    
+    try {
+      const categoryPlaces = await fetchPlacesByCategory(category);
+      
+      if (categoryPlaces.length === 0) {
+        toast.warning(`${getCategoryName(category)} 데이터를 찾을 수 없습니다.`);
+      }
+      
+      if (selectedCategory === category) {
+        setSelectedCategory(null);
+        setFilteredPlaces(places);
+      } else {
+        setSelectedCategory(category);
+        setFilteredPlaces(categoryPlaces);
+      }
+      
+      setHasCategorySelected(true);
+      setCurrentPage(1);
+    } catch (error) {
+      console.error(`${category} 데이터 로드 중 오류 발생:`, error);
+      toast.error(`${getCategoryName(category)} 데이터를 불러오는데 실패했습니다.`);
+    } finally {
+      setLoading(false);
     }
-    setHasCategorySelected(true);
-    setCurrentPage(1);
   };
   
   const handlePlaceSelect = (place: Place) => {
@@ -354,19 +339,20 @@ const Index: React.FC = () => {
     setLoading(true);
     
     try {
+      setSelectedCategory(null);
+      
       setTimeout(() => {
-        let result = [...places];
-        
-        if (selectedCategory) {
-          result = result.filter(place => place.category === selectedCategory);
-        }
-        
-        result.sort((a, b) => b.rating - a.rating);
+        const result = [...places];
+        result.sort((a, b) => {
+          const ratingA = a.rating || 0;
+          const ratingB = b.rating || 0;
+          return ratingB - ratingA;
+        });
         
         setFilteredPlaces(result);
+        setHasSearched(true);
         setLoading(false);
         setCurrentPage(1);
-        setHasSearched(true);
         
         toast.success('검색이 완료되었습니다');
       }, 1000);
