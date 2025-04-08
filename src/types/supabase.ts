@@ -1,4 +1,3 @@
-
 export interface RestaurantInformation {
   id: number;
   place_name?: string;
@@ -129,8 +128,8 @@ export interface Place {
   categoryDetail?: string;
   x: number;
   y: number;
-  naverLink?: string;
-  instaLink?: string;
+  naverLink: string;
+  instaLink: string;
   rating?: number;
   reviewCount?: number;
   operatingHours: string;

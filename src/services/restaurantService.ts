@@ -1,20 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import {
-  RestaurantInformation,
-  RestaurantLink,
-  RestaurantCategory,
-  AccommodationInformation,
-  AccommodationLink,
-  AccommodationCategory,
-  LandmarkInformation,
-  LandmarkLink,
-  LandmarkCategory,
-  CafeCategory,
-  CafeLink,
-  CafeInformation,
-  Place
-} from "@/types/supabase";
+import { Place } from "@/types/supabase";
 
 export const fetchRestaurants = async (): Promise<Place[]> => {
   try {
@@ -39,9 +25,9 @@ export const fetchRestaurants = async (): Promise<Place[]> => {
 
     if (categoriesError) throw categoriesError;
 
-    // Fetch restaurant ratings
-    const { data: restaurantRatingsData, error: ratingsError } = await supabase
-      .rpc("get_restaurant_ratings");
+    // Fetch restaurant ratings using RPC
+    const { data: restaurantRatings, error: ratingsError } = await supabase
+      .rpc("get_restaurant_ratings") as { data: any[], error: any };
 
     if (ratingsError) {
       console.error("Error fetching restaurant ratings:", ratingsError);
@@ -49,21 +35,15 @@ export const fetchRestaurants = async (): Promise<Place[]> => {
     }
 
     // Combine the data
-    const restaurants = restaurantInfo?.map((info: RestaurantInformation) => {
-      const link = restaurantLinks?.find(
-        (link: RestaurantLink) => link.id === info.id
-      );
-      const category = restaurantCategories?.find(
-        (category: RestaurantCategory) => category.id === info.id
-      );
+    const restaurants = restaurantInfo?.map((info: any) => {
+      const link = restaurantLinks?.find((link: any) => link.ID === info.ID);
+      const category = restaurantCategories?.find((category: any) => category.ID === info.ID);
       
       // Safely access ratings if available
       let rating = null;
       let reviewCount = null;
-      if (restaurantRatingsData) {
-        const ratingInfo = restaurantRatingsData.find(
-          (r: any) => r.id === info.id
-        );
+      if (restaurantRatings) {
+        const ratingInfo = restaurantRatings.find((r: any) => r.id === info.ID);
         if (ratingInfo) {
           rating = ratingInfo.rating;
           reviewCount = ratingInfo.visitor_review_count;
@@ -71,13 +51,13 @@ export const fetchRestaurants = async (): Promise<Place[]> => {
       }
 
       return {
-        id: `restaurant-${info.id}`,
-        name: info.place_name || "",
-        address: info.lot_address || info.road_address || "",
+        id: `restaurant-${info.ID}`,
+        name: info.Place_Name || "",
+        address: info.Lot_Address || info.Road_Address || "",
         category: "restaurant",
         categoryDetail: category?.Categories_Details || "",
-        x: info.longitude || 0,
-        y: info.latitude || 0,
+        x: info.Longitude || 0,
+        y: info.Latitude || 0,
         naverLink: link?.link || "",
         instaLink: link?.instagram || "",
         rating: rating,
@@ -117,8 +97,8 @@ export const fetchCafes = async (): Promise<Place[]> => {
     if (categoriesError) throw categoriesError;
 
     // Fetch cafe ratings
-    const { data: cafeRatingsData, error: ratingsError } = await supabase
-      .rpc("get_cafe_ratings");
+    const { data: cafeRatings, error: ratingsError } = await supabase
+      .rpc("get_cafe_ratings") as { data: any[], error: any };
 
     if (ratingsError) {
       console.error("Error fetching cafe ratings:", ratingsError);
@@ -126,21 +106,15 @@ export const fetchCafes = async (): Promise<Place[]> => {
     }
 
     // Combine the data
-    const cafes = cafeInfo?.map((info: CafeInformation) => {
-      const link = cafeLinks?.find(
-        (link: CafeLink) => link.id === info.id
-      );
-      const category = cafeCategories?.find(
-        (category: CafeCategory) => category.id === info.id
-      );
+    const cafes = cafeInfo?.map((info: any) => {
+      const link = cafeLinks?.find((link: any) => link.id === info.id);
+      const category = cafeCategories?.find((category: any) => category.id === info.id);
       
       // Safely access ratings if available
       let rating = null;
       let reviewCount = null;
-      if (cafeRatingsData) {
-        const ratingInfo = cafeRatingsData.find(
-          (r: any) => r.id === info.id
-        );
+      if (cafeRatings) {
+        const ratingInfo = cafeRatings.find((r: any) => r.id === info.id);
         if (ratingInfo) {
           rating = ratingInfo.rating;
           reviewCount = ratingInfo.visitor_review_count;
@@ -149,12 +123,12 @@ export const fetchCafes = async (): Promise<Place[]> => {
 
       return {
         id: `cafe-${info.id}`,
-        name: info.place_name || "",
-        address: info.lot_address || info.road_address || "",
+        name: info.Place_Name || "",
+        address: info.Lot_Address || info.Road_Address || "",
         category: "cafe",
-        categoryDetail: category?.categories_details || "",
-        x: info.longitude || 0,
-        y: info.latitude || 0,
+        categoryDetail: category?.categories || "",
+        x: info.Longitude || 0,
+        y: info.Latitude || 0,
         naverLink: link?.link || "",
         instaLink: link?.instagram || "",
         rating: rating,
@@ -194,8 +168,8 @@ export const fetchAccommodations = async (): Promise<Place[]> => {
     if (categoriesError) throw categoriesError;
 
     // Fetch accommodation ratings
-    const { data: accomRatingsData, error: ratingsError } = await supabase
-      .rpc("get_accommodation_ratings");
+    const { data: accomRatings, error: ratingsError } = await supabase
+      .rpc("get_accommodation_ratings") as { data: any[], error: any };
 
     if (ratingsError) {
       console.error("Error fetching accommodation ratings:", ratingsError);
@@ -203,22 +177,16 @@ export const fetchAccommodations = async (): Promise<Place[]> => {
     }
 
     // Combine the data - handle different field names
-    const accommodations = accomInfo?.map((info: AccommodationInformation) => {
-      const link = accomLinks?.find(
-        (link: AccommodationLink) => link.ID === info.id  // Adjust ID matching
-      );
+    const accommodations = accomInfo?.map((info: any) => {
+      const link = accomLinks?.find((link: any) => link.ID === info.ID);
       
-      const category = accomCategories?.find(
-        (category: AccommodationCategory) => category.id === info.id
-      );
+      const category = accomCategories?.find((category: any) => category.id === info.ID);
       
       // Safely access ratings if available
       let rating = null;
       let reviewCount = null;
-      if (accomRatingsData) {
-        const ratingInfo = accomRatingsData.find(
-          (r: any) => r.id === info.id
-        );
+      if (accomRatings) {
+        const ratingInfo = accomRatings.find((r: any) => r.id === info.ID);
         if (ratingInfo) {
           rating = ratingInfo.rating;
           reviewCount = ratingInfo.visitor_review_count;
@@ -226,13 +194,13 @@ export const fetchAccommodations = async (): Promise<Place[]> => {
       }
 
       return {
-        id: `accommodation-${info.id}`,
-        name: info.place_name || "",
-        address: info.lot_address || info.road_address || "",
+        id: `accommodation-${info.ID}`,
+        name: info.Place_name || "",
+        address: info.Lot_Address || info.Road_address || "",
         category: "accommodation",
         categoryDetail: category?.Categories_Details || "",
-        x: info.longitude || 0,
-        y: info.latitude || 0,
+        x: info.Longitude || 0,
+        y: info.Latitude || 0,
         naverLink: link?.link || "",
         instaLink: link?.instagram || "",
         rating: rating,
@@ -272,8 +240,8 @@ export const fetchLandmarks = async (): Promise<Place[]> => {
     if (categoriesError) throw categoriesError;
 
     // Fetch landmark ratings
-    const { data: landmarkRatingsData, error: ratingsError } = await supabase
-      .rpc("get_landmark_ratings");
+    const { data: landmarkRatings, error: ratingsError } = await supabase
+      .rpc("get_landmark_ratings") as { data: any[], error: any };
 
     if (ratingsError) {
       console.error("Error fetching landmark ratings:", ratingsError);
@@ -281,22 +249,16 @@ export const fetchLandmarks = async (): Promise<Place[]> => {
     }
 
     // Combine the data - handling different field names
-    const landmarks = landmarkInfo?.map((info: LandmarkInformation) => {
-      const link = landmarkLinks?.find(
-        (link: LandmarkLink) => link.id === info.id
-      );
+    const landmarks = landmarkInfo?.map((info: any) => {
+      const link = landmarkLinks?.find((link: any) => link.id === info.id);
       
-      const category = landmarkCategories?.find(
-        (category: LandmarkCategory) => category.id === info.id
-      );
+      const category = landmarkCategories?.find((category: any) => category.id === info.id);
       
       // Safely access ratings if available
       let rating = null;
       let reviewCount = null;
-      if (landmarkRatingsData) {
-        const ratingInfo = landmarkRatingsData.find(
-          (r: any) => r.id === info.id
-        );
+      if (landmarkRatings) {
+        const ratingInfo = landmarkRatings.find((r: any) => r.id === info.id);
         if (ratingInfo) {
           rating = ratingInfo.rating;
           reviewCount = ratingInfo.visitor_review_count;
@@ -305,12 +267,12 @@ export const fetchLandmarks = async (): Promise<Place[]> => {
 
       return {
         id: `landmark-${info.id}`,
-        name: info.place_name || "",
-        address: info.lot_address || info.road_address || "",
+        name: info.Place_Name || "",
+        address: info.Lot_Address || info.Road_Address || "",
         category: "attraction",
         categoryDetail: category?.Categories_Details || "",
-        x: info.longitude || 0,
-        y: info.latitude || 0,
+        x: info.Longitude || 0,
+        y: info.Latitude || 0,
         naverLink: link?.link || "",
         instaLink: link?.instagram || "",
         rating: rating,
