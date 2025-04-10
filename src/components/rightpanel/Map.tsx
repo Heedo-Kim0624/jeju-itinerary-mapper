@@ -3,24 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { toast } from "sonner";
 import { getCategoryColor } from '@/utils/categoryColors';
 import { loadNaverMaps } from "@/utils/loadNaverMaps";
-
-interface Place {
-  id: string;
-  name: string;
-  address: string;
-  operatingHours: string;
-  naverLink: string;
-  instaLink: string;
-  rating: number;
-  reviewCount: number;
-  category: string;
-  x: number;
-  y: number;
-  operationTimeData?: {
-    [key: string]: number;
-  };
-  nodeId?: string;
-}
+import { Place } from '@/types/supabase';
 
 interface ItineraryDay {
   day: number;

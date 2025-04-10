@@ -1,8 +1,8 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import PlaceList from '@/components/PlaceList';
-import ItineraryView from '@/components/ItineraryView';
+import PlaceList from '@/components/leftpanel/PlaceList';
+import ItineraryView from '@/components/leftpanel/ItineraryView';
 import { Place } from '@/types/supabase';
 
 interface ItineraryDay {

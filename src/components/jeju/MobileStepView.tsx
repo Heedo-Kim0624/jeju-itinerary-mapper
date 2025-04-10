@@ -1,12 +1,13 @@
+
 import React from 'react';
 import { ArrowLeft, ArrowRight, ChevronDown, ChevronUp, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import DatePicker from '@/components/DatePicker';
-import PlaceList from '@/components/PlaceList';
-import ItineraryView from '@/components/ItineraryView';
-import DaySelector from '@/components/DaySelector';
+import DatePicker from '@/components/leftpanel/DatePicker';
+import PlaceList from '@/components/leftpanel/PlaceList';
+import ItineraryView from '@/components/leftpanel/ItineraryView';
+import DaySelector from '@/components/leftpanel/DaySelector';
 import { Place } from '@/types/supabase';
 import Map from '@/components/rightpanel/Map';
 import { categoryColors, getCategoryName } from '@/utils/categoryColors';
