@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Place } from "@/types/supabase";
 
@@ -90,7 +89,7 @@ export const fetchCafes = async (): Promise<Place[]> => {
 
     if (linksError) throw linksError;
 
-    // Fetch cafe categories
+    // Fetch cafe categories - using correct table name
     const { data: cafeCategories, error: categoriesError } = await supabase
       .from("cafe_categories")
       .select("*");
@@ -110,8 +109,8 @@ export const fetchCafes = async (): Promise<Place[]> => {
     // Combine the data
     const cafes = cafeInfo?.map((info: any) => {
       const link = cafeLinks?.find((link: any) => link.id === info.id);
-      // Use cafe_categories properly - this table might have different structure than expected
-      const category = cafeCategories?.find((category: any) => category.id === info.id);
+      // The cafe_categories table has a different structure - it has link and instagram fields
+      const categoryDetail = ""; // Since cafe_categories doesn't have categories/Categories_Details fields
       
       // Safely access ratings if available
       let rating = null;
@@ -129,7 +128,7 @@ export const fetchCafes = async (): Promise<Place[]> => {
         name: info.Place_Name || "",
         address: info.Lot_Address || info.Road_Address || "",
         category: "cafe",
-        categoryDetail: category?.categories || category?.Categories_Details || "", // Try both possible field names
+        categoryDetail: categoryDetail,
         x: info.Longitude || 0,
         y: info.Latitude || 0,
         naverLink: link?.link || "",

@@ -119,7 +119,7 @@ export interface LandmarkCategory {
   Categories_Details?: string;
 }
 
-// Place interface for normalized data
+// Place interface for normalized data - updated to make operatingHours optional
 export interface Place {
   id: string;
   name: string;

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { ArrowLeft, ArrowRight, ChevronDown, ChevronUp, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -9,6 +8,8 @@ import PlaceList from '@/components/PlaceList';
 import ItineraryView from '@/components/ItineraryView';
 import DaySelector from '@/components/DaySelector';
 import { Place } from '@/types/supabase';
+import Map from '@/components/rightpanel/Map';
+import { categoryColors, getCategoryName } from '@/utils/categoryColors';
 
 interface ItineraryDay {
   day: number;
@@ -78,7 +79,6 @@ const MobileStepView: React.FC<MobileStepViewProps> = ({
   goToPrevStep,
   togglePanel
 }) => {
-  // Mobile content based on current step
   const getMobileStepContent = () => {
     switch (mobileStep) {
       case 1: // Date selection
@@ -244,6 +244,7 @@ const MobileStepView: React.FC<MobileStepViewProps> = ({
           selectedPlace={selectedPlace}
           itinerary={itinerary}
           selectedDay={selectedItineraryDay}
+          selectedPlaces={[]}
         />
       </div>
       
@@ -277,8 +278,5 @@ const MobileStepView: React.FC<MobileStepViewProps> = ({
     </div>
   );
 };
-
-import Map from '@/components/Map';
-import { categoryColors, getCategoryName } from '@/utils/categoryColors';
 
 export default MobileStepView;

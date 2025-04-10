@@ -27,7 +27,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "accomodation_categories_id_fkey1"
+            foreignKeyName: "accomodation_categories_id_fkey"
             columns: ["id"]
             isOneToOne: true
             referencedRelation: "accomodation_information"
@@ -39,6 +39,7 @@ export type Database = {
         Row: {
           ID: number
           Latitude: number | null
+          location: string | null
           Longitude: number | null
           Lot_Address: string | null
           NEAR_DIST: number | null
@@ -49,6 +50,7 @@ export type Database = {
         Insert: {
           ID: number
           Latitude?: number | null
+          location?: string | null
           Longitude?: number | null
           Lot_Address?: string | null
           NEAR_DIST?: number | null
@@ -59,6 +61,7 @@ export type Database = {
         Update: {
           ID?: number
           Latitude?: number | null
+          location?: string | null
           Longitude?: number | null
           Lot_Address?: string | null
           NEAR_DIST?: number | null
@@ -86,7 +89,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "accomodation_link_ID_fkey1"
+            foreignKeyName: "accomodation_link_ID_fkey"
             columns: ["ID"]
             isOneToOne: true
             referencedRelation: "accomodation_information"
@@ -245,6 +248,7 @@ export type Database = {
         Row: {
           id: number
           Latitude: number | null
+          location: string | null
           Longitude: number | null
           Lot_Address: string | null
           NEAR_DIST: number | null
@@ -255,6 +259,7 @@ export type Database = {
         Insert: {
           id: number
           Latitude?: number | null
+          location?: string | null
           Longitude?: number | null
           Lot_Address?: string | null
           NEAR_DIST?: number | null
@@ -265,6 +270,7 @@ export type Database = {
         Update: {
           id?: number
           Latitude?: number | null
+          location?: string | null
           Longitude?: number | null
           Lot_Address?: string | null
           NEAR_DIST?: number | null
@@ -276,21 +282,29 @@ export type Database = {
       }
       cafe_link: {
         Row: {
-          id: number | null
+          id: number
           instagram: string | null
           link: string | null
         }
         Insert: {
-          id?: number | null
+          id: number
           instagram?: string | null
           link?: string | null
         }
         Update: {
-          id?: number | null
+          id?: number
           instagram?: string | null
           link?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "cafe_link_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "cafe_information"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       cafe_openinghours_logical: {
         Row: {
@@ -580,7 +594,7 @@ export type Database = {
             foreignKeyName: "cafe_openinghours_logical_id_fkey"
             columns: ["id"]
             isOneToOne: true
-            referencedRelation: "cafe_information"
+            referencedRelation: "cafe_link"
             referencedColumns: ["id"]
           },
         ]
@@ -637,6 +651,134 @@ export type Database = {
           },
         ]
       }
+      cafe_review: {
+        Row: {
+          Calm_atmosphere: number | null
+          Clean_restrooms: number | null
+          Clean_store: number | null
+          Comfortable_seating: number | null
+          Cozy: number | null
+          Delicious_bread: number | null
+          Delicious_coffee: number | null
+          Delicious_desserts: number | null
+          Delicious_food: number | null
+          Easy_parking: number | null
+          Fast_service: number | null
+          Fresh_ingredients: number | null
+          Friendly: number | null
+          Good_for_conversation: number | null
+          Good_for_families_with_kids: number | null
+          Good_for_focus: number | null
+          Good_for_long_stays: number | null
+          Good_for_photos: number | null
+          Good_for_solo_dining: number | null
+          Good_value_for_money: number | null
+          Great_for_gifting: number | null
+          Great_for_special_occasions: number | null
+          Great_outdoor_space: number | null
+          Healthy_taste: number | null
+          id: number
+          Large_portions: number | null
+          Nice_music: number | null
+          Nice_view: number | null
+          Pet_friendly: number | null
+          Spacious_store: number | null
+          Special_menu_available: number | null
+          Stylish_interior: number | null
+          Tasty_drinks: number | null
+          Unique_concept: number | null
+          Variety_of_options: number | null
+          Well_curated_menu: number | null
+          Worth_the_price: number | null
+        }
+        Insert: {
+          Calm_atmosphere?: number | null
+          Clean_restrooms?: number | null
+          Clean_store?: number | null
+          Comfortable_seating?: number | null
+          Cozy?: number | null
+          Delicious_bread?: number | null
+          Delicious_coffee?: number | null
+          Delicious_desserts?: number | null
+          Delicious_food?: number | null
+          Easy_parking?: number | null
+          Fast_service?: number | null
+          Fresh_ingredients?: number | null
+          Friendly?: number | null
+          Good_for_conversation?: number | null
+          Good_for_families_with_kids?: number | null
+          Good_for_focus?: number | null
+          Good_for_long_stays?: number | null
+          Good_for_photos?: number | null
+          Good_for_solo_dining?: number | null
+          Good_value_for_money?: number | null
+          Great_for_gifting?: number | null
+          Great_for_special_occasions?: number | null
+          Great_outdoor_space?: number | null
+          Healthy_taste?: number | null
+          id: number
+          Large_portions?: number | null
+          Nice_music?: number | null
+          Nice_view?: number | null
+          Pet_friendly?: number | null
+          Spacious_store?: number | null
+          Special_menu_available?: number | null
+          Stylish_interior?: number | null
+          Tasty_drinks?: number | null
+          Unique_concept?: number | null
+          Variety_of_options?: number | null
+          Well_curated_menu?: number | null
+          Worth_the_price?: number | null
+        }
+        Update: {
+          Calm_atmosphere?: number | null
+          Clean_restrooms?: number | null
+          Clean_store?: number | null
+          Comfortable_seating?: number | null
+          Cozy?: number | null
+          Delicious_bread?: number | null
+          Delicious_coffee?: number | null
+          Delicious_desserts?: number | null
+          Delicious_food?: number | null
+          Easy_parking?: number | null
+          Fast_service?: number | null
+          Fresh_ingredients?: number | null
+          Friendly?: number | null
+          Good_for_conversation?: number | null
+          Good_for_families_with_kids?: number | null
+          Good_for_focus?: number | null
+          Good_for_long_stays?: number | null
+          Good_for_photos?: number | null
+          Good_for_solo_dining?: number | null
+          Good_value_for_money?: number | null
+          Great_for_gifting?: number | null
+          Great_for_special_occasions?: number | null
+          Great_outdoor_space?: number | null
+          Healthy_taste?: number | null
+          id?: number
+          Large_portions?: number | null
+          Nice_music?: number | null
+          Nice_view?: number | null
+          Pet_friendly?: number | null
+          Spacious_store?: number | null
+          Special_menu_available?: number | null
+          Stylish_interior?: number | null
+          Tasty_drinks?: number | null
+          Unique_concept?: number | null
+          Variety_of_options?: number | null
+          Well_curated_menu?: number | null
+          Worth_the_price?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cafe_review_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "cafe_information"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       landmark_categories: {
         Row: {
           Categories: string | null
@@ -655,7 +797,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "landmark_categories_id_fkey1"
+            foreignKeyName: "landmark_categories_id_fkey"
             columns: ["id"]
             isOneToOne: true
             referencedRelation: "landmark_information"
@@ -667,6 +809,7 @@ export type Database = {
         Row: {
           id: number
           Latitude: number | null
+          location: string | null
           Longitude: number | null
           Lot_Address: string | null
           NEAR_DIST: number | null
@@ -677,6 +820,7 @@ export type Database = {
         Insert: {
           id: number
           Latitude?: number | null
+          location?: string | null
           Longitude?: number | null
           Lot_Address?: string | null
           NEAR_DIST?: number | null
@@ -687,6 +831,7 @@ export type Database = {
         Update: {
           id?: number
           Latitude?: number | null
+          location?: string | null
           Longitude?: number | null
           Lot_Address?: string | null
           NEAR_DIST?: number | null
@@ -714,7 +859,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "landmark_link_id_fkey1"
+            foreignKeyName: "landmark_link_id_fkey"
             columns: ["id"]
             isOneToOne: true
             referencedRelation: "landmark_information"
@@ -1007,7 +1152,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "landmark_openinghours_logical_id_fkey1"
+            foreignKeyName: "landmark_openinghours_logical_id_fkey"
             columns: ["id"]
             isOneToOne: true
             referencedRelation: "landmark_information"
@@ -1030,7 +1175,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "landmark_openinghours_note_id_fkey1"
+            foreignKeyName: "landmark_openinghours_note_id_fkey"
             columns: ["id"]
             isOneToOne: true
             referencedRelation: "landmark_information"
@@ -1225,6 +1370,7 @@ export type Database = {
         Row: {
           ID: number
           Latitude: number | null
+          location: string | null
           Longitude: number | null
           Lot_Address: string | null
           NEAR_DIST: number | null
@@ -1235,6 +1381,7 @@ export type Database = {
         Insert: {
           ID: number
           Latitude?: number | null
+          location?: string | null
           Longitude?: number | null
           Lot_Address?: string | null
           NEAR_DIST?: number | null
@@ -1245,6 +1392,7 @@ export type Database = {
         Update: {
           ID?: number
           Latitude?: number | null
+          location?: string | null
           Longitude?: number | null
           Lot_Address?: string | null
           NEAR_DIST?: number | null
@@ -1602,7 +1750,7 @@ export type Database = {
           },
         ]
       }
-      review: {
+      restaurant_review: {
         Row: {
           Authentic_local_taste: number | null
           Calm_atmosphere: number | null
@@ -1623,13 +1771,13 @@ export type Database = {
           Good_for_photos: number | null
           Good_for_solo_dining: number | null
           Good_for_solo_drinking: number | null
-          Goodvalue_for_money: number | null
+          Good_value_for_money: number | null
           Great_for_group_gatherings: number | null
           Great_for_special_occasions: number | null
           Great_outdoor_space: number | null
           Great_side_dishes: number | null
           Healthy_taste: number | null
-          Highquality_meat: number | null
+          High_quality_meat: number | null
           ID: number
           Large_portions: number | null
           Little_odor: number | null
@@ -1638,7 +1786,7 @@ export type Database = {
           Pet_friendly: number | null
           Spacious_store: number | null
           Special_menu_available: number | null
-          Staff_grills_food_well: string | null
+          Staff_grills_food_well: number | null
           Stylish_interior: number | null
           Tasty_drinks: number | null
           Unique_concept: number | null
@@ -1666,13 +1814,13 @@ export type Database = {
           Good_for_photos?: number | null
           Good_for_solo_dining?: number | null
           Good_for_solo_drinking?: number | null
-          Goodvalue_for_money?: number | null
+          Good_value_for_money?: number | null
           Great_for_group_gatherings?: number | null
           Great_for_special_occasions?: number | null
           Great_outdoor_space?: number | null
           Great_side_dishes?: number | null
           Healthy_taste?: number | null
-          Highquality_meat?: number | null
+          High_quality_meat?: number | null
           ID: number
           Large_portions?: number | null
           Little_odor?: number | null
@@ -1681,7 +1829,7 @@ export type Database = {
           Pet_friendly?: number | null
           Spacious_store?: number | null
           Special_menu_available?: number | null
-          Staff_grills_food_well?: string | null
+          Staff_grills_food_well?: number | null
           Stylish_interior?: number | null
           Tasty_drinks?: number | null
           Unique_concept?: number | null
@@ -1709,13 +1857,13 @@ export type Database = {
           Good_for_photos?: number | null
           Good_for_solo_dining?: number | null
           Good_for_solo_drinking?: number | null
-          Goodvalue_for_money?: number | null
+          Good_value_for_money?: number | null
           Great_for_group_gatherings?: number | null
           Great_for_special_occasions?: number | null
           Great_outdoor_space?: number | null
           Great_side_dishes?: number | null
           Healthy_taste?: number | null
-          Highquality_meat?: number | null
+          High_quality_meat?: number | null
           ID?: number
           Large_portions?: number | null
           Little_odor?: number | null
@@ -1724,7 +1872,7 @@ export type Database = {
           Pet_friendly?: number | null
           Spacious_store?: number | null
           Special_menu_available?: number | null
-          Staff_grills_food_well?: string | null
+          Staff_grills_food_well?: number | null
           Stylish_interior?: number | null
           Tasty_drinks?: number | null
           Unique_concept?: number | null
@@ -1732,7 +1880,15 @@ export type Database = {
           Well_curated_menu?: number | null
           Worth_the_price?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "restaurant_review_ID_fkey"
+            columns: ["ID"]
+            isOneToOne: true
+            referencedRelation: "restaurant_information"
+            referencedColumns: ["ID"]
+          },
+        ]
       }
       spatial_ref_sys: {
         Row: {

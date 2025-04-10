@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import Map from '@/components/rightpanel/Map';
 import SearchSection from '@/components/jeju/SearchSection';
@@ -37,6 +36,7 @@ const Index: React.FC = () => {
     selectedPlace,
     selectedPlaces,
     loading,
+    setLoading,
     hasSearched,
     hasCategorySelected,
     currentPage,
@@ -57,17 +57,14 @@ const Index: React.FC = () => {
     generateItinerary
   } = useItinerary();
 
-  // Calculate derived state
   const isDateSelectionComplete = dateRange.startDate !== null && dateRange.endDate !== null;
   const isSearchComplete = hasSearched;
   const isCategorySelectionComplete = hasSearched && (selectedCategory !== null || hasCategorySelected);
   const isPlaceListReady = isCategorySelectionComplete && filteredPlaces.length > 0;
   
-  // Pagination
   const itemsPerPage = 20;
   const totalPages = Math.ceil(filteredPlaces.length / itemsPerPage);
   
-  // Event handlers
   const handleDatesSelected = (dates: {
     startDate: Date;
     endDate: Date;
@@ -135,7 +132,6 @@ const Index: React.FC = () => {
     setIsPanelHidden(!isPanelHidden);
   };
 
-  // Render based on device orientation
   if (isMobile && isPortrait) {
     return (
       <MobileStepView
@@ -169,7 +165,6 @@ const Index: React.FC = () => {
     );
   }
   
-  // Desktop layout
   return (
     <div className="flex h-screen overflow-hidden bg-jeju-light-gray">
       <div className="w-[30%] h-full p-4 flex flex-col">
