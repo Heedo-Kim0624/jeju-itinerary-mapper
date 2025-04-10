@@ -6,26 +6,13 @@ import { Button } from '@/components/ui/button';
 import { format, addDays } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { categoryColors, getCategoryName } from '@/utils/categoryColors';
+import type { Place, ItineraryDay } from '@/types/supabase';
 
 interface ItineraryViewProps {
   itinerary: ItineraryDay[];
   startDate: Date;
   onSelectDay: (day: number) => void;
   selectedDay: number | null;
-}
-
-interface ItineraryDay {
-  day: number;
-  places: Place[];
-  totalDistance: number;
-}
-
-interface Place {
-  id: string;
-  name: string;
-  address: string;
-  operatingHours: string;
-  category: string;
 }
 
 const ItineraryView: React.FC<ItineraryViewProps> = ({

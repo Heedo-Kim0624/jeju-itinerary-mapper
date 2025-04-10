@@ -1,15 +1,8 @@
-import JejuOSMLayer from './JejuOSMLayer';
 import React, { useEffect, useRef, useState } from 'react';
 import { toast } from "sonner";
 import { getCategoryColor } from '@/utils/categoryColors';
 import { loadNaverMaps } from "@/utils/loadNaverMaps";
-import { Place } from '@/types/supabase';
-
-interface ItineraryDay {
-  day: number;
-  places: Place[];
-  totalDistance: number;
-}
+import type { Place, ItineraryDay } from '@/types/supabase';
 
 interface MapProps {
   places: Place[];

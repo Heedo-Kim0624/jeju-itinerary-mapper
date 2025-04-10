@@ -1,3 +1,29 @@
+// src/types/supabase.ts
+export interface Place {
+  id: string;
+  name: string;
+  address: string;
+  category: string;
+  categoryDetail?: string;
+  x: number;
+  y: number;
+  naverLink: string;
+  instaLink: string;
+  rating?: number;
+  reviewCount?: number;
+  operatingHours?: string;
+  operationTimeData?: {
+    [key: string]: number;
+  };
+  nodeId?: string;
+}
+
+export interface ItineraryDay {
+  day: number;
+  places: Place[];
+  totalDistance: number;
+}
+
 export interface RestaurantInformation {
   id: number;
   place_name?: string;
@@ -120,24 +146,7 @@ export interface LandmarkCategory {
 }
 
 // Place interface for normalized data - updated to make operatingHours optional
-export interface Place {
-  id: string;
-  name: string;
-  address: string;
-  category: string;
-  categoryDetail?: string;
-  x: number;
-  y: number;
-  naverLink: string;
-  instaLink: string;
-  rating?: number;
-  reviewCount?: number;
-  operatingHours?: string;
-  operationTimeData?: {
-    [key: string]: number;
-  };
-  nodeId?: string;
-}
+
 
 // Naver Maps 타입 정의
 declare global {

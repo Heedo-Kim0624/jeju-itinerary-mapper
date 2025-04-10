@@ -3,7 +3,7 @@ import { Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import DatePicker from '@/components/leftpanel/DatePicker';
-import { toast } from 'sonner';
+
 
 interface SearchSectionProps {
   dateRange: {

@@ -8,15 +8,9 @@ import DatePicker from '@/components/leftpanel/DatePicker';
 import PlaceList from '@/components/leftpanel/PlaceList';
 import ItineraryView from '@/components/leftpanel/ItineraryView';
 import DaySelector from '@/components/leftpanel/DaySelector';
-import { Place } from '@/types/supabase';
+import type { Place, ItineraryDay } from '@/types/supabase';
 import Map from '@/components/rightpanel/Map';
 import { categoryColors, getCategoryName } from '@/utils/categoryColors';
-
-interface ItineraryDay {
-  day: number;
-  places: Place[];
-  totalDistance: number;
-}
 
 interface MobileStepViewProps {
   mobileStep: number;
