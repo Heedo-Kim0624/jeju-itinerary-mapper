@@ -1,6 +1,6 @@
 
 import React, { useState, useRef } from 'react';
-import Map from '@/components/Map';
+import Map from '@/components/rightpanel/Map';
 import SearchSection from '@/components/jeju/SearchSection';
 import CategorySelector from '@/components/jeju/CategorySelector';
 import ContentSection from '@/components/jeju/ContentSection';
