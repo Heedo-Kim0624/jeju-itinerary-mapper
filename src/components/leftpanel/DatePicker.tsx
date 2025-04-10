@@ -218,7 +218,7 @@ const DatePicker: React.FC<DatePickerProps> = ({ onDatesSelected }) => {
             </Button>
             <div className="grid grid-cols-1 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="mobile-start-time">관광 시작 시간</Label>
+                <Label htmlFor="mobile-start-time">도착 비행기 시간</Label>
                 <Select 
                   value={startTime} 
                   onValueChange={setStartTime}
@@ -240,7 +240,7 @@ const DatePicker: React.FC<DatePickerProps> = ({ onDatesSelected }) => {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="mobile-end-time">관광 종료 시간</Label>
+                <Label htmlFor="mobile-end-time">돌아가는 비행기 시간</Label>
                 <Select 
                   value={endTime} 
                   onValueChange={setEndTime}
