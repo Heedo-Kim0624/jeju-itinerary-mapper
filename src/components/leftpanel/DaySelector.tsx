@@ -1,16 +1,12 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
+import { ItineraryDay } from '@/types/supabase';
 
 interface DaySelectorProps {
   itinerary: ItineraryDay[] | null;
   selectedDay: number | null;
   onSelectDay: (day: number) => void;
-}
-
-interface ItineraryDay {
-  day: number;
-  places: any[];
 }
 
 const DaySelector: React.FC<DaySelectorProps> = ({

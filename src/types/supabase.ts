@@ -147,7 +147,6 @@ export interface LandmarkCategory {
 
 // Place interface for normalized data - updated to make operatingHours optional
 
-
 // Naver Maps 타입 정의
 declare global {
   interface Window {

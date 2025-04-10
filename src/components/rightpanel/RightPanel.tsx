@@ -1,13 +1,7 @@
 
 import React from 'react';
 import Map from './Map';
-import { Place } from '@/types/supabase';
-
-interface ItineraryDay {
-  day: number;
-  places: Place[];
-  totalDistance: number;
-}
+import { Place, ItineraryDay } from '@/types/supabase';
 
 interface RightPanelProps {
   places: Place[];

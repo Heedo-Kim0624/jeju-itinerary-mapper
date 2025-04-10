@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Place } from '@/types/supabase';
 import DatePicker from './DatePicker';
 import DaySelector from './DaySelector';
 import RegionSelector from './RegionSelector';
