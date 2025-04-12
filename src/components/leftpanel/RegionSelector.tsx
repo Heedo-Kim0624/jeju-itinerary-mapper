@@ -5,7 +5,7 @@ const RegionSelector: React.FC<RegionSelectorProps> = ({
   onConfirm,
 }) => {
   return (
-    <div className="space-y-6 mt-4 bg-white border rounded p-4">
+    <div className="space-y-6 p-4 bg-white border rounded-md shadow-inner">
       {/* 헤더 */}
       <div className="flex justify-between items-center mb-2">
         <h2 className="text-md font-semibold">지역 선택</h2>
