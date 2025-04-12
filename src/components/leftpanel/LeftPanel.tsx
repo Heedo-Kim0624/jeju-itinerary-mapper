@@ -103,10 +103,7 @@ const LeftPanel = () => {
         <div className="p-4 w-[300px] space-y-6 bg-white shadow-md h-screen overflow-y-auto">
           <h1 className="text-xl font-semibold">제주도 여행 플래너</h1>
 
-          {/* ✅ 날짜 선택이 가장 위 */}
-          <DatePicker onDatesSelected={handleDateSelect} />
-
-          {/* 지역 선택 */}
+          {/* 🔄 지역 선택을 날짜 선택 전으로 이동 */}
           <button
             onClick={() => setShowRegionPanel(true)}
             className="w-full bg-blue-100 text-blue-800 rounded px-4 py-2 text-sm font-medium hover:bg-blue-200"
@@ -125,6 +122,9 @@ const LeftPanel = () => {
               }}
             />
           )}
+
+          {/* ✅ 날짜 선택을 지역 선택 밑으로 이동 */}
+          <DatePicker onDatesSelected={handleDateSelect} />
 
           {dates && selectedRegions.length > 0 && (
             <>
