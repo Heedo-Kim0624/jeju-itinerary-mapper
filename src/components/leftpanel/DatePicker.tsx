@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { CalendarIcon, Clock, ArrowLeft } from 'lucide-react';
@@ -178,7 +179,7 @@ const DatePicker: React.FC<DatePickerProps> = ({ onDatesSelected }) => {
                 <SelectTrigger id="start-time">
                   <SelectValue placeholder="시작 시간" />
                 </SelectTrigger>
-                <SelectContent className="overflow-y-auto max-h-60" onOpenAutoFocus={(e) => e.preventDefault()}>
+                <SelectContent className="overflow-y-auto max-h-60">
                   {timeOptions.map((time) => (
                     <SelectItem key={`start-${time}`} value={time} disabled={startDate && isDateTimeInPast(startDate, time)}>
                       {time}
@@ -193,7 +194,7 @@ const DatePicker: React.FC<DatePickerProps> = ({ onDatesSelected }) => {
                 <SelectTrigger id="end-time">
                   <SelectValue placeholder="종료 시간" />
                 </SelectTrigger>
-                <SelectContent className="overflow-y-auto max-h-60" onOpenAutoFocus={(e) => e.preventDefault()}>
+                <SelectContent className="overflow-y-auto max-h-60">
                   {timeOptions.map((time) => (
                     <SelectItem key={`end-${time}`} value={time}>
                       {time}
