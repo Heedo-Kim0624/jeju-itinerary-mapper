@@ -105,26 +105,7 @@ const LeftPanel = () => {
 
           {/*날짜 선택*/}
           <DatePicker onDatesSelected={handleDateSelect} />
-          {dates && selectedRegions.length > 0 && (
-            <>
-              {categoryOrder.length === 4 ? (
-                <PlaceList
-                  places={filteredPlaces}
-                  loading={isPlaceLoading}
-                  selectedPlace={selectedPlace}
-                  onSelectPlace={setSelectedPlace}
-                  page={placePage}
-                  onPageChange={setPlacePage}
-                  totalPages={totalPlacePages}
-                />
-              ) : (
-                <>
-                  <PromptKeywordBox keywords={promptKeywords} />
-                </>
-              )}
-            </>
-          )}
-
+          
           {/*지역 선택*/}
           <button
             onClick={() => setShowRegionPanel(true)}
@@ -132,7 +113,7 @@ const LeftPanel = () => {
           >
             지역 선택
           </button>
-
+          {/*지역선택 패널*/}
           {showRegionPanel && (
             <RegionSelector
               selectedRegions={selectedRegions}
@@ -144,7 +125,6 @@ const LeftPanel = () => {
               }}
             />
           )}
-
 
 
           {regionConfirmed && (
@@ -185,7 +165,25 @@ const LeftPanel = () => {
               })}
             </div>
           )}
-
+          {dates && selectedRegions.length > 0 && (
+            <>
+              {categoryOrder.length === 4 ? (
+                <PlaceList
+                  places={filteredPlaces}
+                  loading={isPlaceLoading}
+                  selectedPlace={selectedPlace}
+                  onSelectPlace={setSelectedPlace}
+                  page={placePage}
+                  onPageChange={setPlacePage}
+                  totalPages={totalPlacePages}
+                />
+              ) : (
+                <>
+                  <PromptKeywordBox keywords={promptKeywords} />
+                </>
+              )}
+            </>
+          )}
           {activeMiddlePanelCategory && (
             <MiddlePanel
               category={activeMiddlePanelCategory}
