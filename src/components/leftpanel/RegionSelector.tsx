@@ -1,3 +1,29 @@
+
+import React from 'react';
+
+interface RegionSelectorProps {
+  selectedRegions: string[];
+  onToggle: (region: string) => void;
+  onClose: () => void;
+  onConfirm: () => void;
+}
+
+// Define the region groups that were missing
+const REGION_GROUPS = [
+  {
+    title: '제주시',
+    regions: [
+      '애월', '조천', '구좌', '한경', '한림', '제주시내'
+    ]
+  },
+  {
+    title: '서귀포시',
+    regions: [
+      '중문', '대정', '안덕', '남원', '표선', '성산', '서귀포시내'
+    ]
+  }
+];
+
 const RegionSelector: React.FC<RegionSelectorProps> = ({
   selectedRegions,
   onToggle,
