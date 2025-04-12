@@ -103,29 +103,8 @@ const LeftPanel = () => {
         <div className="p-4 w-[300px] space-y-6 bg-white shadow-md h-screen overflow-y-auto">
           <h1 className="text-xl font-semibold">제주도 여행 플래너</h1>
 
-          {/* 🔄 지역 선택을 날짜 선택 전으로 이동 */}
-          <button
-            onClick={() => setShowRegionPanel(true)}
-            className="w-full bg-blue-100 text-blue-800 rounded px-4 py-2 text-sm font-medium hover:bg-blue-200"
-          >
-            지역 선택
-          </button>
-
-          {showRegionPanel && (
-            <RegionSelector
-              selectedRegions={selectedRegions}
-              onToggle={toggleRegion}
-              onClose={() => setShowRegionPanel(false)}
-              onConfirm={() => {
-                setRegionConfirmed(true);
-                setShowRegionPanel(false);
-              }}
-            />
-          )}
-
-          {/* ✅ 날짜 선택을 지역 선택 밑으로 이동 */}
+          {/*날짜 선택*/}
           <DatePicker onDatesSelected={handleDateSelect} />
-
           {dates && selectedRegions.length > 0 && (
             <>
               {categoryOrder.length === 4 ? (
@@ -145,6 +124,28 @@ const LeftPanel = () => {
               )}
             </>
           )}
+
+          {/*지역 선택*/}
+          <button
+            onClick={() => setShowRegionPanel(true)}
+            className="w-full bg-blue-100 text-blue-800 rounded px-4 py-2 text-sm font-medium hover:bg-blue-200"
+          >
+            지역 선택
+          </button>
+
+          {showRegionPanel && (
+            <RegionSelector
+              selectedRegions={selectedRegions}
+              onToggle={toggleRegion}
+              onClose={() => setShowRegionPanel(false)}
+              onConfirm={() => {
+                setRegionConfirmed(true);
+                setShowRegionPanel(false);
+              }}
+            />
+          )}
+
+
 
           {regionConfirmed && (
             <div className="mt-6">
