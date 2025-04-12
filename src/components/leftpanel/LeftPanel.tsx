@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Place } from '@/types/supabase';
 import DatePicker from './DatePicker';
-import DaySelector from './DaySelector';
 import RegionSelector from './RegionSelector';
 import PromptKeywordBox from './PromptKeywordBox';
 import CategoryPrioritySelector from './CategoryPrioritySelector';
@@ -99,116 +98,119 @@ const LeftPanel = () => {
 
   return (
     <div className="relative h-full">
-      <div className={showItinerary ? 'hidden' : ''}>
-        <div className="p-4 w-[300px] space-y-6 bg-white shadow-md h-screen overflow-y-auto">
-          <h1 className="text-xl font-semibold">제주도 여행 플래너</h1>
+      {!showItinerary && (
+        <div className="w-[300px] h-screen bg-white shadow-md flex flex-col">
+          {/* 상단 콘텐츠 (스크롤) */}
+          <div className="p-4 flex-1 overflow-y-auto space-y-6">
+            <h1 className="text-xl font-semibold">제주도 여행 플래너</h1>
 
-          {/*날짜 선택*/}
-          <DatePicker onDatesSelected={handleDateSelect} />
-          
-          {/*지역 선택*/}
-          <button
-            onClick={() => setShowRegionPanel(true)}
-            className="w-full bg-blue-100 text-blue-800 rounded px-4 py-2 text-sm font-medium hover:bg-blue-200"
-          >
-            지역 선택
-          </button>
-          {/*지역선택 패널*/}
-          {showRegionPanel && (
-            <RegionSelector
-              selectedRegions={selectedRegions}
-              onToggle={toggleRegion}
-              onClose={() => setShowRegionPanel(false)}
-              onConfirm={() => {
-                setRegionConfirmed(true);
-                setShowRegionPanel(false);
-              }}
-            />
-          )}
+            <DatePicker onDatesSelected={handleDateSelect} />
 
+            <button
+              onClick={() => setShowRegionPanel(prev => !prev)}
+              className="w-full bg-blue-100 text-blue-800 rounded px-4 py-2 text-sm font-medium hover:bg-blue-200"
+            >
+              지역 선택
+            </button>
 
-          {regionConfirmed && (
-            <div className="mt-6">
-              <h3 className="text-sm font-medium text-gray-800 mb-2">카테고리 중요도 순서 선택</h3>
-              <CategoryPrioritySelector
-                selectedOrder={categoryOrder}
-                onSelect={handleCategoryClick}
-                onBack={() => {
-                  setRegionConfirmed(false);
-                  setCategoryOrder([]);
-                }}
-                onConfirm={() => {
-                  setCategorySelectionConfirmed(true);
+            {showRegionPanel && (
+              <div className="w-full mt-2">
+                <RegionSelector
+                  selectedRegions={selectedRegions}
+                  onToggle={toggleRegion}
+                  onClose={() => setShowRegionPanel(false)}
+                  onConfirm={() => {
+                    setRegionConfirmed(true);
+                    setShowRegionPanel(false);
+                  }}
+                />
+              </div>
+            )}
+
+            {regionConfirmed && (
+              <div className="mt-6">
+                <h3 className="text-sm font-medium text-gray-800 mb-2">카테고리 중요도 순서 선택</h3>
+                <CategoryPrioritySelector
+                  selectedOrder={categoryOrder}
+                  onSelect={handleCategoryClick}
+                  onBack={() => {
+                    setRegionConfirmed(false);
+                    setCategoryOrder([]);
+                  }}
+                  onConfirm={() => {
+                    setCategorySelectionConfirmed(true);
+                  }}
+                />
+              </div>
+            )}
+
+            {categorySelectionConfirmed && (
+              <div className="mt-6 space-y-2">
+                {categoryOrder.map((category, index) => {
+                  const isActive = index === currentCategoryIndex;
+                  return (
+                    <button
+                      key={category}
+                      disabled={!isActive}
+                      onClick={() => setActiveMiddlePanelCategory(category)}
+                      className={`w-full py-2 rounded border ${
+                        isActive
+                          ? 'bg-white text-black hover:bg-gray-100'
+                          : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      }`}
+                    >
+                      {category}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {activeMiddlePanelCategory && (
+              <MiddlePanel
+                category={activeMiddlePanelCategory}
+                keywords={getKeywordsForCategory(activeMiddlePanelCategory)}
+                selectedKeywords={selectedKeywordsByCategory[activeMiddlePanelCategory] || []}
+                onToggleKeyword={(kw) => toggleKeyword(activeMiddlePanelCategory, kw)}
+                onClose={() => {
+                  setActiveMiddlePanelCategory(null);
+                  setCurrentCategoryIndex((prev) => prev + 1);
+                  setKeywordPriorityByCategory((prev) => ({
+                    ...prev,
+                    [activeMiddlePanelCategory!]: [],
+                  }));
                 }}
               />
-            </div>
-          )}
+            )}
 
-          {categorySelectionConfirmed && (
-            <div className="mt-6 space-y-2">
-              {categoryOrder.map((category, index) => {
-                const isActive = index === currentCategoryIndex;
-                return (
-                  <button
-                    key={category}
-                    disabled={!isActive}
-                    onClick={() => setActiveMiddlePanelCategory(category)}
-                    className={`w-full py-2 rounded border ${
-                      isActive
-                        ? 'bg-white text-black hover:bg-gray-100'
-                        : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    }`}
-                  >
-                    {category}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-          {dates && selectedRegions.length > 0 && (
-            <>
-              {categoryOrder.length === 4 ? (
-                <PlaceList
-                  places={filteredPlaces}
-                  loading={isPlaceLoading}
-                  selectedPlace={selectedPlace}
-                  onSelectPlace={setSelectedPlace}
-                  page={placePage}
-                  onPageChange={setPlacePage}
-                  totalPages={totalPlacePages}
-                />
-              ) : (
-                <>
-                  <PromptKeywordBox keywords={promptKeywords} />
-                </>
-              )}
-            </>
-          )}
-          {activeMiddlePanelCategory && (
-            <MiddlePanel
-              category={activeMiddlePanelCategory}
-              keywords={getKeywordsForCategory(activeMiddlePanelCategory)}
-              selectedKeywords={selectedKeywordsByCategory[activeMiddlePanelCategory] || []}
-              onToggleKeyword={(kw) => toggleKeyword(activeMiddlePanelCategory, kw)}
-              onClose={() => {
-                setActiveMiddlePanelCategory(null);
-                setCurrentCategoryIndex((prev) => prev + 1);
-                setKeywordPriorityByCategory((prev) => ({
-                  ...prev,
-                  [activeMiddlePanelCategory!]: [],
-                }));
-              }}
-            />
-          )}
+            {selectedPlace && (
+              <PlaceDetailsPopup
+                place={selectedPlace}
+                onClose={() => setSelectedPlace(null)}
+              />
+            )}
 
-          {selectedPlace && (
-            <PlaceDetailsPopup
-              place={selectedPlace}
-              onClose={() => setSelectedPlace(null)}
-            />
+            {categoryOrder.length === 4 && dates && selectedRegions.length > 0 && (
+              <PlaceList
+                places={filteredPlaces}
+                loading={isPlaceLoading}
+                selectedPlace={selectedPlace}
+                onSelectPlace={setSelectedPlace}
+                page={placePage}
+                onPageChange={setPlacePage}
+                totalPages={totalPlacePages}
+              />
+            )}
+          </div>
+
+          {/* 하단 고정 Prompt */}
+          {dates && selectedRegions.length > 0 && categoryOrder.length !== 4 && (
+            <div className="border-t p-4">
+              <PromptKeywordBox keywords={promptKeywords} />
+            </div>
           )}
         </div>
-      </div>
+      )}
 
       {showItinerary && (
         <div className="absolute inset-0 z-10 bg-white p-4 overflow-y-auto">
