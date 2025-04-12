@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Place } from '@/types/supabase';
 import DatePicker from './DatePicker';
-import RegionSelector from './RegionSelector';
+import { RegionSelector } from './RegionSelector';
 import PromptKeywordBox from './PromptKeywordBox';
 import CategoryPrioritySelector from './CategoryPrioritySelector';
 import MiddlePanel from '../middlepanel/MiddlePanel';

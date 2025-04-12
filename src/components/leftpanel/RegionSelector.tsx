@@ -49,3 +49,5 @@ const RegionSelector: React.FC<RegionSelectorProps> = ({
     </div>
   );
 };
+
+export default RegionSelector;
