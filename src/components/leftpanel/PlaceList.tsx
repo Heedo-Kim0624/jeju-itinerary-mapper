@@ -1,6 +1,3 @@
-// ✨ 리팩터링된 PlaceList.tsx (LeftPanel 전용)
-// 기존 기능 유지 + 내부 로직 정리만 수행됨
-
 import React, { useEffect, useRef, useState } from 'react';
 import { ExternalLink, MapPin, Star, MessageCircle, Clock, Instagram, RefreshCw, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
