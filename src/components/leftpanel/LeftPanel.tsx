@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Place } from '@/types/supabase';
 import DatePicker from './DatePicker';
-import RegionSelector from './RegionSelector'; 
 import PromptKeywordBox from './PromptKeywordBox';
 import CategoryPrioritySelector from './CategoryPrioritySelector';
 import MiddlePanel from '../middlepanel/MiddlePanel';
@@ -9,10 +8,13 @@ import PlaceDetailsPopup from './PlaceDetailsPopup';
 import PlaceList from './PlaceList';
 import ItineraryView from './ItineraryView';
 
-const LeftPanel = () => {
+interface LeftPanelProps {
+  onToggleRegionPanel?: () => void;
+}
+
+const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
   const [showItinerary, setShowItinerary] = useState(false);
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
-  const [showRegionPanel, setShowRegionPanel] = useState(false);
   const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
   const [regionConfirmed, setRegionConfirmed] = useState(false);
   const [categoryOrder, setCategoryOrder] = useState<string[]>([]);
@@ -41,12 +43,6 @@ const LeftPanel = () => {
 
   const handleDateSelect = (selectedDates: typeof dates) => {
     setDates(selectedDates);
-  };
-
-  const toggleRegion = (region: string) => {
-    setSelectedRegions((prev) =>
-      prev.includes(region) ? prev.filter((r) => r !== region) : [...prev, region]
-    );
   };
 
   const buildPromptKeywords = () => {
@@ -78,10 +74,7 @@ const LeftPanel = () => {
 
   const getKeywordsForCategory = (category: string) => {
     const dummy: Record<string, string[]> = {
-      숙소: [],
-      관광지: [],
-      음식점: [],
-      카페: [],
+      숙소: [], 관광지: [], 음식점: [], 카페: [],
     };
     return dummy[category] || [];
   };
@@ -100,32 +93,17 @@ const LeftPanel = () => {
     <div className="relative h-full">
       {!showItinerary && (
         <div className="w-[300px] h-screen bg-white shadow-md flex flex-col">
-          {/* 상단 콘텐츠 (스크롤) */}
           <div className="p-4 flex-1 overflow-y-auto space-y-6">
             <h1 className="text-xl font-semibold">제주도 여행 플래너</h1>
 
             <DatePicker onDatesSelected={handleDateSelect} />
 
             <button
-              onClick={() => setShowRegionPanel(prev => !prev)}
+              onClick={() => onToggleRegionPanel?.()}
               className="w-full bg-blue-100 text-blue-800 rounded px-4 py-2 text-sm font-medium hover:bg-blue-200"
             >
               지역 선택
             </button>
-
-            {showRegionPanel && (
-              <div className="w-full mt-2">
-                <RegionSelector
-                  selectedRegions={selectedRegions}
-                  onToggle={toggleRegion}
-                  onClose={() => setShowRegionPanel(false)}
-                  onConfirm={() => {
-                    setRegionConfirmed(true);
-                    setShowRegionPanel(false);
-                  }}
-                />
-              </div>
-            )}
 
             {regionConfirmed && (
               <div className="mt-6">
@@ -203,7 +181,6 @@ const LeftPanel = () => {
             )}
           </div>
 
-          {/* 하단 고정 Prompt */}
           {dates && selectedRegions.length > 0 && categoryOrder.length !== 4 && (
             <div className="border-t p-4">
               <PromptKeywordBox keywords={promptKeywords} />
