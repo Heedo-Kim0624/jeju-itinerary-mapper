@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
-import { CalendarIcon, Clock, ArrowLeft } from 'lucide-react';
+import { CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -19,16 +19,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { useIsMobile } from '@/hooks/use-mobile';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogClose,
-} from "@/components/ui/dialog";
 
 interface DatePickerProps {
   onDatesSelected: (dates: {
@@ -46,10 +36,6 @@ const DatePicker: React.FC<DatePickerProps> = ({ onDatesSelected }) => {
   const [endTime, setEndTime] = useState<string>('18:00');
   const [open, setOpen] = useState(false);
   const [currentDateTime, setCurrentDateTime] = useState<Date>(new Date());
-  const [mobileStep, setMobileStep] = useState<'start' | 'end' | 'time'>('start');
-  const [dialogOpen, setDialogOpen] = useState(false);
-
-  const { isMobile, isPortrait } = useIsMobile();
 
   useEffect(() => {
     setCurrentDateTime(new Date());
@@ -78,22 +64,8 @@ const DatePicker: React.FC<DatePickerProps> = ({ onDatesSelected }) => {
     }
     onDatesSelected({ startDate, endDate, startTime, endTime });
     setOpen(false);
-    setDialogOpen(false);
     toast.success('일정이 설정되었습니다');
   };
-
-  const handleMobileStartDateSelect = (date: Date | undefined) => {
-    setStartDate(date);
-    if (date) setMobileStep('end');
-  };
-
-  const handleMobileEndDateSelect = (date: Date | undefined) => {
-    setEndDate(date);
-    if (date) setMobileStep('time');
-  };
-
-  const handleBackToStartDate = () => setMobileStep('start');
-  const handleBackToEndDate = () => setMobileStep('end');
 
   const generateTimeOptions = () => {
     const options = [];
@@ -110,12 +82,8 @@ const DatePicker: React.FC<DatePickerProps> = ({ onDatesSelected }) => {
     if (startDate && endDate) {
       return (
         <div className="flex flex-col">
-          <div className="flex items-center gap-1">
-            <span>시작: {format(startDate, 'yyyy.MM.dd')} {startTime}</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <span>종료: {format(endDate, 'yyyy.MM.dd')} {endTime}</span>
-          </div>
+          <span>시작: {format(startDate, 'yyyy.MM.dd')} {startTime}</span>
+          <span>종료: {format(endDate, 'yyyy.MM.dd')} {endTime}</span>
         </div>
       );
     }
@@ -128,31 +96,15 @@ const DatePicker: React.FC<DatePickerProps> = ({ onDatesSelected }) => {
     return date < today;
   };
 
-  if (isMobile && isPortrait) {
-    return (
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogTrigger asChild>
-          <Button variant="outline" className="date-picker-trigger w-full justify-between h-auto">
-            <div className="flex items-center gap-2">
-              <CalendarIcon className="h-4 w-4 text-muted-foreground shrink-0" />
-              <span className={cn("text-sm", (!startDate || !endDate) ? "text-muted-foreground" : "text-foreground")}>{formatDateRange()}</span>
-            </div>
-          </Button>
-        </DialogTrigger>
-        <DialogContent className="glass-panel">
-          {/* 모바일 콘텐츠 생략 */}
-        </DialogContent>
-      </Dialog>
-    );
-  }
-
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="outline" className="date-picker-trigger w-full justify-between h-auto">
+        <Button variant="outline" className="w-full h-12 justify-between border-blue-300 bg-blue-50">
           <div className="flex items-center gap-2">
-            <CalendarIcon className="h-4 w-4 text-muted-foreground shrink-0" />
-            <span className={cn("text-sm", (!startDate || !endDate) ? "text-muted-foreground" : "text-foreground")}>{formatDateRange()}</span>
+            <CalendarIcon className="h-4 w-4 text-blue-500 shrink-0" />
+            <span className={cn("text-sm", (!startDate || !endDate) ? "text-gray-400" : "text-blue-800")}>
+              {formatDateRange()}
+            </span>
           </div>
         </Button>
       </PopoverTrigger>
