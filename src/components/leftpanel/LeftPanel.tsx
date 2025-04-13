@@ -7,6 +7,7 @@ import MiddlePanel from '../middlepanel/MiddlePanel';
 import PlaceDetailsPopup from './PlaceDetailsPopup';
 import PlaceList from './PlaceList';
 import ItineraryView from './ItineraryView';
+import RegionSlidePanel from '../middlepanel/RegionSlidePanel';
 
 interface LeftPanelProps {
   onToggleRegionPanel?: () => void;
@@ -33,6 +34,9 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
     startTime: string;
     endTime: string;
   } | null>(null);
+
+  // RegionSlidePanel 제어를 위한 상태
+  const [regionSlidePanelOpen, setRegionSlidePanelOpen] = useState(false);
 
   const itinerary = [
     { day: 1, places: [], totalDistance: 0 },
@@ -99,7 +103,14 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
             <DatePicker onDatesSelected={handleDateSelect} />
 
             <button
-              onClick={() => onToggleRegionPanel?.()}
+              onClick={() => {
+                if (!dates) {
+                  alert("먼저 날짜를 선택해주세요.");
+                  return;
+                }
+                // 날짜 선택이 완료되면 RegionSlidePanel을 토글하여 열기/닫기
+                setRegionSlidePanelOpen(!regionSlidePanelOpen);
+              }}
               className="w-full bg-blue-100 text-blue-800 rounded px-4 py-2 text-sm font-medium hover:bg-blue-200"
             >
               지역 선택
@@ -180,12 +191,6 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
               />
             )}
           </div>
-
-          {dates && selectedRegions.length > 0 && categoryOrder.length !== 4 && (
-            <div className="border-t p-4">
-              <PromptKeywordBox keywords={promptKeywords} />
-            </div>
-          )}
         </div>
       )}
 
@@ -205,6 +210,31 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
           />
         </div>
       )}
+
+      {/* LeftPanel 하단에 고정된 프롬프트 키워드 박스: 지역 선택이 완료되면 보여줌 */}
+      {regionConfirmed && (
+        <div className="absolute bottom-0 left-0 w-full border-t p-4 bg-white">
+          <PromptKeywordBox keywords={promptKeywords} />
+        </div>
+      )}
+
+      {/* 지역 선택 버튼 클릭 시 RegionSlidePanel 렌더링 */}
+      <RegionSlidePanel
+        open={regionSlidePanelOpen}
+        onClose={() => setRegionSlidePanelOpen(false)}
+        selectedRegions={selectedRegions}
+        onToggle={(region) => {
+          if (selectedRegions.includes(region)) {
+            setSelectedRegions(selectedRegions.filter(r => r !== region));
+          } else {
+            setSelectedRegions([...selectedRegions, region]);
+          }
+        }}
+        onConfirm={() => {
+          setRegionSlidePanelOpen(false);
+          setRegionConfirmed(true);
+        }}
+      />
     </div>
   );
 };
