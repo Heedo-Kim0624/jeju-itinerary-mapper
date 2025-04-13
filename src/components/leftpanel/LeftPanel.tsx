@@ -3,11 +3,14 @@ import { Place } from '@/types/supabase';
 import DatePicker from './DatePicker';
 import PromptKeywordBox from './PromptKeywordBox';
 import CategoryPrioritySelector from './CategoryPrioritySelector';
-// 기존 MiddlePanel 대신 CategorySelectKeyword를 import 합니다.
-import CategorySelectKeyword from '../middlepanel/CategorySelectKeyword';
-import PlaceDetailsPopup from './PlaceDetailsPopup';
-import PlaceList from './PlaceList';
-import ItineraryView from './ItineraryView';
+// CategorySelectKeyword 관련 코드는 제거됨
+import AccomodationPanel from '../middlepanel/AccomodationPanel';
+import LandmarkPanel from '../middlepanel/LandmarkPanel';
+import RestaurantPanel from '../middlepanel/RestaurantPanel';
+import CafePanel from '../middlepanel/CafePanel';
+// import PlaceDetailsPopup from './PlaceDetailsPopup'; // 사용하지 않으므로 주석 처리
+// import PlaceList from './PlaceList'; // 사용하지 않으므로 주석 처리
+// import ItineraryView from './ItineraryView'; // 사용하지 않으므로 주석 처리
 import RegionSlidePanel from '../middlepanel/RegionSlidePanel';
 
 interface LeftPanelProps {
@@ -25,16 +28,25 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
   const [activeMiddlePanelCategory, setActiveMiddlePanelCategory] = useState<string | null>(null);
   const [selectedKeywordsByCategory, setSelectedKeywordsByCategory] = useState<Record<string, string[]>>({});
   const [keywordPriorityByCategory, setKeywordPriorityByCategory] = useState<Record<string, string[]>>({});
-  const [placePage, setPlacePage] = useState(1);
-  const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
-  const [filteredPlaces, setFilteredPlaces] = useState<Place[]>([]);
-  const [isPlaceLoading, setIsPlaceLoading] = useState(false);
+  // const [placePage, setPlacePage] = useState(1);
+  // const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
+  // const [filteredPlaces, setFilteredPlaces] = useState<Place[]>([]);
+  // const [isPlaceLoading, setIsPlaceLoading] = useState(false);
   const [dates, setDates] = useState<{
     startDate: Date;
     endDate: Date;
     startTime: string;
     endTime: string;
   } | null>(null);
+
+  // 숙소 패널의 직접 입력값 상태
+  const [accomodationDirectInput, setAccomodationDirectInput] = useState('');
+  // 관광지 패널 직접 입력 상태 (추후 별도 상태 관리 가능)
+  const [landmarkDirectInput, setLandmarkDirectInput] = useState('');
+  // 음식점 패널 직접 입력 상태 (추후 별도 상태 관리 가능)
+  const [restaurantDirectInput, setRestaurantDirectInput] = useState('');
+  // 카페 패널 직접 입력 상태 (추후 별도 상태 관리 가능)
+  const [cafeDirectInput, setCafeDirectInput] = useState('');
 
   // RegionSlidePanel 제어를 위한 상태
   const [regionSlidePanelOpen, setRegionSlidePanelOpen] = useState(false);
@@ -44,21 +56,55 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
     { day: 2, places: [], totalDistance: 0 },
   ];
 
-  const totalPlacePages = Math.ceil(filteredPlaces.length / 10);
+  // const totalPlacePages = Math.ceil(filteredPlaces.length / 10);
+
+  // 영어 키워드를 한글로 변환하는 매핑 객체
+  const keywordMapping: Record<string, string> = {
+    'kind_service': '친절함',
+    'cleanliness': '청결도',
+    'good_view': '좋은 뷰',
+    'quiet_and_relax': '방음',
+    'good_bedding': '침구',
+    'stylish_interior': '인테리어',
+    'good_aircon_heating': '냉난방',
+    'well_equipped_bathroom': '욕실',
+    'good_breakfast': '조식',
+    'easy_parking': '주차',
+    'Many_Attractions': '많은 볼거리',
+    'Photogenic_Spot': '인생샷',
+    'Diverse_Experience_Programs': '체험활동',
+    'Friendly_Staff': '친절함',
+    'Good_value_for_money': '가성비',
+    'Great_for_group_gatherings': '단체',
+    'Spacious_store': '공간감',
+    'Clean_store': '깔끔함',
+    'Large_portions': '푸짐함',
+    'Delicious_food': '맛',
+    'Special_menu_available': '특별함',
+    'Good_for_solo_dining': '혼밥',
+    'Tasty_drinks': '음료',
+    'Delicious_coffee': '커피',
+    'Good_for_photos': '포토존',
+    'Delicious_desserts': '디저트',
+    'Delicious_bread': '빵'
+  };
 
   const handleDateSelect = (selectedDates: typeof dates) => {
     setDates(selectedDates);
   };
 
+  // 프롬프트 키워드를 지역 정보와 각 카테고리에서 선택된 키워드들을 키워드 매핑을 통해 한글로 변환하여 구성
   const buildPromptKeywords = () => {
     const allKeywords: string[] = [];
+    // 지역 선택은 이미 한글로 입력된 값으로 가정
     allKeywords.push(...selectedRegions);
     categoryOrder.forEach((category) => {
       const keywords = selectedKeywordsByCategory[category] || [];
       const priorityKeywords = keywordPriorityByCategory[category] || [];
-      const result = keywords.map((kw) =>
-        priorityKeywords.includes(kw) ? `{${kw}}` : kw
-      );
+      const result = keywords.map((kw) => {
+        const translated = keywordMapping[kw] || kw;
+        return priorityKeywords.includes(kw) ? `{${translated}}` : translated;
+      });
       allKeywords.push(...result);
     });
     return allKeywords;
@@ -77,9 +123,13 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
     }
   };
 
+  // 더미 데이터용: getKeywordsForCategory는 현재 빈 배열을 리턴 (실제 데이터 추후 구현)
   const getKeywordsForCategory = (category: string) => {
     const dummy: Record<string, string[]> = {
-      숙소: [], 관광지: [], 음식점: [], 카페: [],
+      숙소: [],
+      관광지: [],
+      음식점: [],
+      카페: [],
     };
     return dummy[category] || [];
   };
@@ -156,30 +206,97 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
               </div>
             )}
 
-            {activeMiddlePanelCategory && (
-              // 활성 카테고리가 있을 때, CategorySelectKeyword 컴포넌트 실행
-              <CategorySelectKeyword
-                category={activeMiddlePanelCategory}
-                keywords={getKeywordsForCategory(activeMiddlePanelCategory)}
-                selectedKeywords={selectedKeywordsByCategory[activeMiddlePanelCategory] || []}
-                onToggleKeyword={(kw) => toggleKeyword(activeMiddlePanelCategory, kw)}
+            {/* 카테고리별 패널 렌더링 */}
+            {activeMiddlePanelCategory === '숙소' && (
+              <AccomodationPanel
+                selectedKeywords={selectedKeywordsByCategory['숙소'] || []}
+                onToggleKeyword={(kw) => toggleKeyword('숙소', kw)}
+                directInputValue={accomodationDirectInput}
+                onDirectInputChange={setAccomodationDirectInput}
+                onConfirmAccomodation={(finalKeywords) => {
+                  setSelectedKeywordsByCategory({
+                    ...selectedKeywordsByCategory,
+                    숙소: finalKeywords,
+                  });
+                  setActiveMiddlePanelCategory(null);
+                  setCurrentCategoryIndex((prev) => prev + 1);
+                }}
                 onClose={() => {
                   setActiveMiddlePanelCategory(null);
                   setCurrentCategoryIndex((prev) => prev + 1);
-                  setKeywordPriorityByCategory((prev) => ({
-                    ...prev,
-                    [activeMiddlePanelCategory!]: [],
-                  }));
+                }}
+              />
+            )}
+            {activeMiddlePanelCategory === '관광지' && (
+              <LandmarkPanel
+                selectedKeywords={selectedKeywordsByCategory['관광지'] || []}
+                onToggleKeyword={(kw) => toggleKeyword('관광지', kw)}
+                directInputValue={landmarkDirectInput}
+                onDirectInputChange={setLandmarkDirectInput}
+                onConfirmLandmark={(finalKeywords) => {
+                  setSelectedKeywordsByCategory({
+                    ...selectedKeywordsByCategory,
+                    관광지: finalKeywords,
+                  });
+                  setActiveMiddlePanelCategory(null);
+                  setCurrentCategoryIndex((prev) => prev + 1);
+                }}
+                onClose={() => {
+                  setActiveMiddlePanelCategory(null);
+                  setCurrentCategoryIndex((prev) => prev + 1);
+                }}
+              />
+            )}
+            {activeMiddlePanelCategory === '음식점' && (
+              <RestaurantPanel
+                selectedKeywords={selectedKeywordsByCategory['음식점'] || []}
+                onToggleKeyword={(kw) => toggleKeyword('음식점', kw)}
+                directInputValue={restaurantDirectInput}
+                onDirectInputChange={setRestaurantDirectInput}
+                onConfirmRestaurant={(finalKeywords) => {
+                  setSelectedKeywordsByCategory({
+                    ...selectedKeywordsByCategory,
+                    음식점: finalKeywords,
+                  });
+                  setActiveMiddlePanelCategory(null);
+                  setCurrentCategoryIndex((prev) => prev + 1);
+                }}
+                onClose={() => {
+                  setActiveMiddlePanelCategory(null);
+                  setCurrentCategoryIndex((prev) => prev + 1);
+                }}
+              />
+            )}
+            {activeMiddlePanelCategory === '카페' && (
+              <CafePanel
+                selectedKeywords={selectedKeywordsByCategory['카페'] || []}
+                onToggleKeyword={(kw) => toggleKeyword('카페', kw)}
+                directInputValue={cafeDirectInput}
+                onDirectInputChange={setCafeDirectInput}
+                onConfirmCafe={(finalKeywords) => {
+                  setSelectedKeywordsByCategory({
+                    ...selectedKeywordsByCategory,
+                    카페: finalKeywords,
+                  });
+                  setActiveMiddlePanelCategory(null);
+                  setCurrentCategoryIndex((prev) => prev + 1);
+                }}
+                onClose={() => {
+                  setActiveMiddlePanelCategory(null);
+                  setCurrentCategoryIndex((prev) => prev + 1);
                 }}
               />
             )}
 
+            {/* 아래 부분은 현재 사용하지 않으므로 주석 처리 */}
+            {/*
             {selectedPlace && (
               <PlaceDetailsPopup
                 place={selectedPlace}
                 onClose={() => setSelectedPlace(null)}
               />
             )}
+            */}
           </div>
         </div>
       )}
@@ -192,12 +309,14 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
           >
             ← 뒤로
           </button>
+          {/*
           <ItineraryView
             itinerary={itinerary}
             startDate={dates?.startDate || new Date()}
             selectedDay={selectedDay}
             onSelectDay={setSelectedDay}
           />
+          */}
         </div>
       )}
 
@@ -215,7 +334,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
         selectedRegions={selectedRegions}
         onToggle={(region) => {
           if (selectedRegions.includes(region)) {
-            setSelectedRegions(selectedRegions.filter(r => r !== region));
+            setSelectedRegions(selectedRegions.filter((r) => r !== region));
           } else {
             setSelectedRegions([...selectedRegions, region]);
           }
