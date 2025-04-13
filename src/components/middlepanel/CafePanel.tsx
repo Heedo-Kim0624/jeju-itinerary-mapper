@@ -23,6 +23,12 @@ const defaultKeywords = [
   { eng: 'Delicious_bread', kr: '빵' },
 ];
 
+// 변경됨: defaultKeywords를 기반으로 영어→한글 매핑 딕셔너리 생성
+const keywordMapping: Record<string, string> = defaultKeywords.reduce((acc, curr) => {
+  acc[curr.eng] = curr.kr;
+  return acc;
+}, {} as Record<string, string>);
+
 const CafePanel: React.FC<CafePanelProps> = ({
   selectedKeywords,
   onToggleKeyword,
@@ -33,12 +39,6 @@ const CafePanel: React.FC<CafePanelProps> = ({
 }) => {
   // 드래그 앤 드롭으로 순위 지정 (최대 3개)
   const [ranking, setRanking] = useState<string[]>([]);
-
-  // **변경됨: defaultKeywords를 기반으로 영어→한글 매핑 딕셔너리 생성**
-  const keywordMapping: Record<string, string> = defaultKeywords.reduce((acc, curr) => {
-    acc[curr.eng] = curr.kr;
-    return acc;
-  }, {} as Record<string, string>);
 
   // 순위에 추가하는 함수 (최대 3개까지)
   const addToRanking = (keyword: string) => {
@@ -56,22 +56,18 @@ const CafePanel: React.FC<CafePanelProps> = ({
     setRanking(newRank);
   };
 
-  // **변경됨: handleConfirm 함수 수정**
-  // 순위에 지정된 키워드를 한글로 변환 후 하나의 문자열로 합쳐 중괄호로 감싸고,
+  // 변경됨: handleConfirm 함수 수정  
+  // 순위에 지정된 키워드를 한글로 변환 후 하나의 문자열로 합쳐 중괄호로 감싸고,  
   // 순위에 포함되지 않은 선택된 키워드도 한글로 변환하여 결합
   const handleConfirm = () => {
     const rankedSet = new Set(ranking);
     const unranked = selectedKeywords.filter((kw) => !rankedSet.has(kw));
     
-    // 순위에 지정된 키워드들을 한글로 변환
     const translatedRanked = ranking.map((kw) => keywordMapping[kw] || kw);
-    // 합쳐서 중괄호로 감싼 문자열 생성 (예: {친절함,깔끔함})
     const rankedString = translatedRanked.length > 0 ? `{${translatedRanked.join(',')}}` : '';
     
-    // 순위에 없는 키워드도 한글로 변환
     const translatedUnranked = unranked.map((kw) => keywordMapping[kw] || kw);
     
-    // 최종 결과 배열 구성
     const finalKeywords: string[] = [];
     if (rankedString) {
       finalKeywords.push(rankedString);
@@ -83,12 +79,21 @@ const CafePanel: React.FC<CafePanelProps> = ({
     onConfirmCafe(finalKeywords);
   };
 
+  // 변경됨: 닫기 버튼 클릭 시 내부 상태 초기화 후 onClose 콜백 호출
+  const handleClose = () => {
+    setRanking([]); // 순위 초기화
+    onDirectInputChange(''); // 직접 입력값 초기화
+    // (필요에 따라 부모에서 선택된 키워드(selectedKeywords) 상태도 초기화 필요)
+    onClose();
+  };
+
   return (
     <div className="fixed top-0 left-[300px] w-[300px] h-full bg-white border-l border-r border-gray-200 z-40 shadow-md p-4 overflow-y-auto">
       {/* 헤더 */}
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold">카페 키워드 선택</h2>
-        <button onClick={onClose} className="text-sm text-blue-600 hover:underline">
+        {/* 변경됨: onClose 대신 handleClose 호출 */}
+        <button onClick={handleClose} className="text-sm text-blue-600 hover:underline">
           닫기
         </button>
       </div>
@@ -159,11 +164,7 @@ const CafePanel: React.FC<CafePanelProps> = ({
         <DragDropContext onDragEnd={onDragEnd}>
           <Droppable droppableId="ranking">
             {(provided) => (
-              <div
-                ref={provided.innerRef}
-                {...provided.droppableProps}
-                className="flex flex-col space-y-2"
-              >
+              <div ref={provided.innerRef} {...provided.droppableProps} className="flex flex-col space-y-2">
                 {ranking.map((kw, index) => {
                   const item = defaultKeywords.find((i) => i.eng === kw);
                   const displayText = item ? item.kr : kw;

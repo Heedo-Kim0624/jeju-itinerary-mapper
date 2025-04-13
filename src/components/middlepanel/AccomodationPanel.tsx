@@ -1,3 +1,4 @@
+// AccomodationPanel.tsx
 import React, { useState } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 
@@ -23,6 +24,12 @@ const defaultKeywords = [
   { eng: 'easy_parking', kr: '주차' },
 ];
 
+// defaultKeywords를 이용해 영어→한글 매핑 생성 (변경됨)
+const keywordMapping: Record<string, string> = defaultKeywords.reduce((acc, curr) => {
+  acc[curr.eng] = curr.kr;
+  return acc;
+}, {} as Record<string, string>);
+
 const AccomodationPanel: React.FC<AccomodationPanelProps> = ({
   selectedKeywords,
   onToggleKeyword,
@@ -34,13 +41,7 @@ const AccomodationPanel: React.FC<AccomodationPanelProps> = ({
   // 순위 목록: 드래그 앤 드롭으로 순서를 조정 (최대 3개)
   const [ranking, setRanking] = useState<string[]>([]);
 
-  // **변경됨: defaultKeywords를 기반으로 영어→한글 매핑 딕셔너리 생성**
-  const keywordMapping: Record<string, string> = defaultKeywords.reduce((acc, curr) => {
-    acc[curr.eng] = curr.kr;
-    return acc;
-  }, {} as Record<string, string>);
-
-  // 선택된 키워드 중에서 아직 순위 목록에 없는 항목을 추가하는 함수
+  // 선택된 키워드 중 순위에 추가되지 않은 항목을 순위에 추가하는 함수
   const addToRanking = (keyword: string) => {
     if (!ranking.includes(keyword) && ranking.length < 3) {
       setRanking([...ranking, keyword]);
@@ -56,22 +57,19 @@ const AccomodationPanel: React.FC<AccomodationPanelProps> = ({
     setRanking(newRank);
   };
 
-  // **변경됨: handleConfirm 함수 수정**
-  // 순위에 지정된 키워드를 한글로 변환 후 하나의 문자열로 합쳐 중괄호로 감싸고,
-  // 순위에 포함되지 않은 선택된 키워드도 한글로 변환하여 결합
+  // 최종 확인 시, 순위에 지정된 키워드를 한글로 변환 후 하나의 문자열로 결합하고,
+  // 순위에 포함되지 않은 선택된 키워드도 한글로 변환하여 결합한 최종 배열을 생성
   const handleConfirm = () => {
     const rankedSet = new Set(ranking);
     const unranked = selectedKeywords.filter((kw) => !rankedSet.has(kw));
     
-    // 순위에 지정된 키워드들을 한글로 변환
+    // 순위에 지정된 키워드를 한글로 변환하고 합치기 (예: {친절함,깔끔함})
     const translatedRanked = ranking.map((kw) => keywordMapping[kw] || kw);
-    // 합쳐서 중괄호로 감싼 문자열 생성 (예: {친절함,깔끔함})
     const rankedString = translatedRanked.length > 0 ? `{${translatedRanked.join(',')}}` : '';
     
     // 순위에 없는 키워드도 한글로 변환
     const translatedUnranked = unranked.map((kw) => keywordMapping[kw] || kw);
     
-    // 최종 결과 배열 구성
     const finalKeywords: string[] = [];
     if (rankedString) {
       finalKeywords.push(rankedString);
@@ -80,7 +78,15 @@ const AccomodationPanel: React.FC<AccomodationPanelProps> = ({
     if (directInputValue.trim() !== '') {
       finalKeywords.push(directInputValue.trim());
     }
-    onConfirmCafe(finalKeywords);
+    onConfirmAccomodation(finalKeywords);
+  };
+
+  // 변경됨: 닫기 버튼 클릭 시, 내부 상태(순위, 직접 입력값 등)를 초기화한 후 부모의 onClose를 호출하는 함수
+  const handleClose = () => {
+    setRanking([]); // 순위 초기화
+    onDirectInputChange(''); // 직접입력값 초기화
+    // 추가적으로, 만약 선택된 키워드 초기화가 필요하면 부모를 통해 처리하거나 콜백 호출
+    onClose(); // 패널 닫기 처리
   };
 
   return (
@@ -88,7 +94,8 @@ const AccomodationPanel: React.FC<AccomodationPanelProps> = ({
       {/* Header */}
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold">숙소 키워드 선택</h2>
-        <button onClick={onClose} className="text-sm text-blue-600 hover:underline">
+        {/* 변경됨: onClose 대신 handleClose 호출 */}
+        <button onClick={handleClose} className="text-sm text-blue-600 hover:underline">
           닫기
         </button>
       </div>
@@ -113,7 +120,7 @@ const AccomodationPanel: React.FC<AccomodationPanelProps> = ({
         })}
       </div>
 
-      {/* 직접 입력 영역: 기존 순서보다 위쪽으로 이동 */}
+      {/* 직접 입력 영역 (이전보다 위쪽에 위치하도록 이동됨 - 변경됨) */}
       <div className="mb-4">
         <label className="block text-sm font-medium text-gray-700 mb-1">직접 입력</label>
         <input
@@ -128,10 +135,9 @@ const AccomodationPanel: React.FC<AccomodationPanelProps> = ({
       {/* 선택된 키워드 목록에서 순위에 추가할 항목 표시 */}
       {selectedKeywords.length > 0 && (
         <div className="mb-4">
-          <h3 className="text-sm font-semibold mb-2">선택된 키워드 (순위에 추가)</h3>
+          <h3 className="text-sm font-semibold mb-2">선택된 키워드 (순위 추가)</h3>
           <div className="flex flex-wrap gap-2">
             {selectedKeywords.map((kw) => {
-              // 키워드의 한글 표기는 defaultKeywords 배열에서 찾습니다.
               const item = defaultKeywords.find((i) => i.eng === kw);
               const displayText = item ? item.kr : kw;
               return (
