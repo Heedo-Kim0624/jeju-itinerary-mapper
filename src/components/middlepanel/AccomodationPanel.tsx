@@ -41,7 +41,7 @@ const AccomodationPanel: React.FC<AccomodationPanelProps> = ({
     }
   };
 
-  // 드래그앤드롭 순서 재정렬 처리
+  // 드래그 앤 드롭 순서 재정렬 처리
   const onDragEnd = (result: DropResult) => {
     if (!result.destination) return;
     const newRank = Array.from(ranking);
@@ -91,6 +91,18 @@ const AccomodationPanel: React.FC<AccomodationPanelProps> = ({
         })}
       </div>
 
+      {/* 직접 입력 영역: 기존 순서보다 위쪽으로 이동 */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-1">직접 입력</label>
+        <input
+          type="text"
+          value={directInputValue}
+          onChange={(e) => onDirectInputChange(e.target.value)}
+          placeholder="키워드를 입력하세요"
+          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring focus:border-blue-300 whitespace-nowrap overflow-hidden text-ellipsis"
+        />
+      </div>
+
       {/* 선택된 키워드 목록에서 순위에 추가할 항목 표시 */}
       {selectedKeywords.length > 0 && (
         <div className="mb-4">
@@ -120,17 +132,13 @@ const AccomodationPanel: React.FC<AccomodationPanelProps> = ({
         </div>
       )}
 
-      {/* 드래그 앤 드롭을 통한 순위 영역 */}
+      {/* 드래그 앤 드롭을 통한 순위 영역 (세로 배열, 라벨 추가) */}
       <div className="mb-4">
         <h3 className="text-sm font-semibold mb-2">키워드 순위 (최대 3개)</h3>
         <DragDropContext onDragEnd={onDragEnd}>
           <Droppable droppableId="ranking">
             {(provided) => (
-              <div
-                ref={provided.innerRef}
-                {...provided.droppableProps}
-                className="flex space-x-2 mb-2"
-              >
+              <div ref={provided.innerRef} {...provided.droppableProps} className="flex flex-col space-y-2">
                 {ranking.map((kw, index) => {
                   const item = defaultKeywords.find((i) => i.eng === kw);
                   const displayText = item ? item.kr : kw;
@@ -141,9 +149,12 @@ const AccomodationPanel: React.FC<AccomodationPanelProps> = ({
                           ref={provided.innerRef}
                           {...provided.draggableProps}
                           {...provided.dragHandleProps}
-                          className="w-24 h-10 rounded border border-dashed border-gray-300 flex items-center justify-center text-gray-400"
+                          className="flex items-center space-x-2 p-2 border rounded border-dashed border-gray-300"
                         >
-                          {displayText}
+                          <span className="text-xs text-gray-500">{index + 1}순위:</span>
+                          <span className="text-sm text-gray-700 whitespace-nowrap overflow-hidden text-ellipsis">
+                            {displayText}
+                          </span>
                         </div>
                       )}
                     </Draggable>
@@ -154,18 +165,6 @@ const AccomodationPanel: React.FC<AccomodationPanelProps> = ({
             )}
           </Droppable>
         </DragDropContext>
-      </div>
-
-      {/* 직접 입력 영역 */}
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-1">직접 입력</label>
-        <input
-          type="text"
-          value={directInputValue}
-          onChange={(e) => onDirectInputChange(e.target.value)}
-          placeholder="키워드를 입력하세요"
-          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring focus:border-blue-300 whitespace-nowrap overflow-hidden text-ellipsis"
-        />
       </div>
 
       {/* 확인 버튼 */}

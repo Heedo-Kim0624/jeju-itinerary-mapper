@@ -31,10 +31,10 @@ const LandmarkPanel: React.FC<LandmarkPanelProps> = ({
   onConfirmLandmark,
   onClose,
 }) => {
-  // 드래그 앤 드롭을 위한 순위 목록 (최대 3개)
+  // 순위 목록: 드래그 앤 드롭으로 순서를 조정 (최대 3개)
   const [ranking, setRanking] = useState<string[]>([]);
 
-  // 드래그앤드롭 순서 재정렬 처리
+  // 드래그 앤 드롭 순서 재정렬 처리
   const onDragEnd = (result: DropResult) => {
     if (!result.destination) return;
     const newRank = Array.from(ranking);
@@ -43,7 +43,14 @@ const LandmarkPanel: React.FC<LandmarkPanelProps> = ({
     setRanking(newRank);
   };
 
-  // 최종 확인 시 처리: 순위 지정된 키워드는 중괄호({})로 감싸고, 나머지는 그대로
+  // 순위 목록에 선택된 키워드를 추가하는 함수
+  const addToRanking = (keyword: string) => {
+    if (!ranking.includes(keyword) && ranking.length < 3) {
+      setRanking([...ranking, keyword]);
+    }
+  };
+
+  // 최종 확인 시 처리: 순위에 지정된 키워드는 중괄호({})로 감싸고 나머지는 그대로
   const handleConfirm = () => {
     const rankedSet = new Set(ranking);
     const unranked = selectedKeywords.filter((kw) => !rankedSet.has(kw));
@@ -52,13 +59,6 @@ const LandmarkPanel: React.FC<LandmarkPanelProps> = ({
       finalKeywords.push(directInputValue.trim());
     }
     onConfirmLandmark(finalKeywords);
-  };
-
-  // 순위 목록에 선택된 키워드를 추가하는 함수 (선택된 키워드 중 드래그앤드롭으로 추가할 항목은 별도로 추가)
-  const addToRanking = (keyword: string) => {
-    if (!ranking.includes(keyword) && ranking.length < 3) {
-      setRanking([...ranking, keyword]);
-    }
   };
 
   return (
@@ -71,7 +71,7 @@ const LandmarkPanel: React.FC<LandmarkPanelProps> = ({
         </button>
       </div>
 
-      {/* 키워드 버튼 그룹 (선택은 버튼 클릭) */}
+      {/* 키워드 버튼 그룹 (버튼 클릭으로 선택) */}
       <div className="grid grid-cols-2 gap-2 mb-4">
         {defaultKeywords.map((keyword) => {
           const isSelected = selectedKeywords.includes(keyword.eng);
@@ -91,7 +91,7 @@ const LandmarkPanel: React.FC<LandmarkPanelProps> = ({
         })}
       </div>
 
-      {/* 직접 입력 영역 */}
+      {/* 직접 입력 영역 (선택된 키워드보다 위쪽에 위치) */}
       <div className="mb-4">
         <label className="block text-sm font-medium text-gray-700 mb-1">직접 입력</label>
         <input
@@ -103,7 +103,7 @@ const LandmarkPanel: React.FC<LandmarkPanelProps> = ({
         />
       </div>
 
-      {/* 선택된 키워드 목록에서 순위에 추가할 항목 표시 */}
+      {/* 선택된 키워드 목록 (순위 추가 가능) */}
       {selectedKeywords.length > 0 && (
         <div className="mb-4">
           <h3 className="text-sm font-semibold mb-2">선택된 키워드 (순위 추가)</h3>
@@ -116,7 +116,7 @@ const LandmarkPanel: React.FC<LandmarkPanelProps> = ({
                   <span className="px-2 py-1 bg-gray-200 rounded text-sm whitespace-nowrap overflow-hidden text-ellipsis">
                     {displayText}
                   </span>
-                  { !ranking.includes(kw) && ranking.length < 3 && (
+                  {!ranking.includes(kw) && ranking.length < 3 && (
                     <button
                       onClick={() => addToRanking(kw)}
                       className="text-xs text-blue-600 hover:underline"
@@ -131,17 +131,13 @@ const LandmarkPanel: React.FC<LandmarkPanelProps> = ({
         </div>
       )}
 
-      {/* 드래그 앤드롭을 통한 순위 영역 */}
+      {/* 드래그 앤 드롭을 통한 순위 영역 (세로 배열, 순위 라벨 추가) */}
       <div className="mb-4">
         <h3 className="text-sm font-semibold mb-2">키워드 순위 (최대 3개)</h3>
         <DragDropContext onDragEnd={onDragEnd}>
           <Droppable droppableId="ranking">
             {(provided) => (
-              <div
-                ref={provided.innerRef}
-                {...provided.droppableProps}
-                className="flex space-x-2 mb-2"
-              >
+              <div ref={provided.innerRef} {...provided.droppableProps} className="flex flex-col space-y-2">
                 {ranking.map((kw, index) => {
                   const item = defaultKeywords.find((i) => i.eng === kw);
                   const displayText = item ? item.kr : kw;
@@ -152,9 +148,12 @@ const LandmarkPanel: React.FC<LandmarkPanelProps> = ({
                           ref={provided.innerRef}
                           {...provided.draggableProps}
                           {...provided.dragHandleProps}
-                          className="w-24 h-10 rounded border border-dashed border-gray-300 flex items-center justify-center text-gray-400"
+                          className="flex items-center space-x-2 p-2 border rounded border-dashed border-gray-300"
                         >
-                          {displayText}
+                          <span className="text-xs text-gray-500">{index + 1}순위:</span>
+                          <span className="text-sm text-gray-700 whitespace-nowrap overflow-hidden text-ellipsis">
+                            {displayText}
+                          </span>
                         </div>
                       )}
                     </Draggable>

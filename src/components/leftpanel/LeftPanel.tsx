@@ -1,16 +1,13 @@
+// LeftPanel.tsx
 import React, { useState } from 'react';
 import { Place } from '@/types/supabase';
 import DatePicker from './DatePicker';
 import PromptKeywordBox from './PromptKeywordBox';
 import CategoryPrioritySelector from './CategoryPrioritySelector';
-// CategorySelectKeyword 관련 코드는 제거됨
 import AccomodationPanel from '../middlepanel/AccomodationPanel';
 import LandmarkPanel from '../middlepanel/LandmarkPanel';
 import RestaurantPanel from '../middlepanel/RestaurantPanel';
 import CafePanel from '../middlepanel/CafePanel';
-// import PlaceDetailsPopup from './PlaceDetailsPopup'; // 사용하지 않으므로 주석 처리
-// import PlaceList from './PlaceList'; // 사용하지 않으므로 주석 처리
-// import ItineraryView from './ItineraryView'; // 사용하지 않으므로 주석 처리
 import RegionSlidePanel from '../middlepanel/RegionSlidePanel';
 
 interface LeftPanelProps {
@@ -23,15 +20,12 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
   const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
   const [regionConfirmed, setRegionConfirmed] = useState(false);
   const [categoryOrder, setCategoryOrder] = useState<string[]>([]);
+  // categorySelectionConfirmed : 카테고리 우선순위 선택 완료 여부 (추후 활용)
   const [categorySelectionConfirmed, setCategorySelectionConfirmed] = useState(false);
   const [currentCategoryIndex, setCurrentCategoryIndex] = useState(0);
   const [activeMiddlePanelCategory, setActiveMiddlePanelCategory] = useState<string | null>(null);
   const [selectedKeywordsByCategory, setSelectedKeywordsByCategory] = useState<Record<string, string[]>>({});
   const [keywordPriorityByCategory, setKeywordPriorityByCategory] = useState<Record<string, string[]>>({});
-  // const [placePage, setPlacePage] = useState(1);
-  // const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
-  // const [filteredPlaces, setFilteredPlaces] = useState<Place[]>([]);
-  // const [isPlaceLoading, setIsPlaceLoading] = useState(false);
   const [dates, setDates] = useState<{
     startDate: Date;
     endDate: Date;
@@ -39,16 +33,12 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
     endTime: string;
   } | null>(null);
 
-  // 숙소 패널의 직접 입력값 상태
+  // 각 카테고리 패널의 직접 입력 상태
   const [accomodationDirectInput, setAccomodationDirectInput] = useState('');
-  // 관광지 패널 직접 입력 상태 (추후 별도 상태 관리 가능)
   const [landmarkDirectInput, setLandmarkDirectInput] = useState('');
-  // 음식점 패널 직접 입력 상태 (추후 별도 상태 관리 가능)
   const [restaurantDirectInput, setRestaurantDirectInput] = useState('');
-  // 카페 패널 직접 입력 상태 (추후 별도 상태 관리 가능)
   const [cafeDirectInput, setCafeDirectInput] = useState('');
 
-  // RegionSlidePanel 제어를 위한 상태
   const [regionSlidePanelOpen, setRegionSlidePanelOpen] = useState(false);
 
   const itinerary = [
@@ -56,10 +46,18 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
     { day: 2, places: [], totalDistance: 0 },
   ];
 
-  // const totalPlacePages = Math.ceil(filteredPlaces.length / 10);
-
   // 영어 키워드를 한글로 변환하는 매핑 객체
   const keywordMapping: Record<string, string> = {
+    'Many_Attractions': '많은 볼거리',
+    'Photogenic_Spot': '인생샷',
+    'Easy_Parking': '주차',
+    'Well_Maintained_Walking_Trails': '산책로',
+    'Kid_Friendly': '아이와 함께',
+    'Great_View': '뷰',
+    'Reasonable_Pricing': '가성비',
+    'Diverse_Experience_Programs': '체험활동',
+    'Large_Scale': '공간감',
+    'Friendly_Staff': '친절함',
     'kind_service': '친절함',
     'cleanliness': '청결도',
     'good_view': '좋은 뷰',
@@ -70,33 +68,38 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
     'well_equipped_bathroom': '욕실',
     'good_breakfast': '조식',
     'easy_parking': '주차',
-    'Many_Attractions': '많은 볼거리',
-    'Photogenic_Spot': '인생샷',
-    'Diverse_Experience_Programs': '체험활동',
-    'Friendly_Staff': '친절함',
     'Good_value_for_money': '가성비',
     'Great_for_group_gatherings': '단체',
     'Spacious_store': '공간감',
     'Clean_store': '깔끔함',
+    'Nice_view': '좋은 뷰',
     'Large_portions': '푸짐함',
     'Delicious_food': '맛',
+    'Stylish_interior': '세련됨',
+    'Fresh_ingredients': '신선함',
+    'Easy_parking': '주차',
+    'Friendly': '친절함',
     'Special_menu_available': '특별함',
     'Good_for_solo_dining': '혼밥',
     'Tasty_drinks': '음료',
+    'Stylish_interior': '인테리어',
+    'Friendly': '친절',
     'Delicious_coffee': '커피',
+    'Special_menu_available': '특메',
+    'Nice_view': '뷰',
+    'Clean_store': '깔끔매장',
     'Good_for_photos': '포토존',
     'Delicious_desserts': '디저트',
     'Delicious_bread': '빵'
-  };
+}
 
   const handleDateSelect = (selectedDates: typeof dates) => {
     setDates(selectedDates);
   };
 
-  // 프롬프트 키워드를 지역 정보와 각 카테고리에서 선택된 키워드들을 키워드 매핑을 통해 한글로 변환하여 구성
+  // 프롬프트 키워드 구성 : 각 카테고리의 키워드를 keywordMapping 사용하여 한글로 변환
   const buildPromptKeywords = () => {
     const allKeywords: string[] = [];
-    // 지역 선택은 이미 한글로 입력된 값으로 가정
     allKeywords.push(...selectedRegions);
     categoryOrder.forEach((category) => {
       const keywords = selectedKeywordsByCategory[category] || [];
@@ -123,7 +126,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
     }
   };
 
-  // 더미 데이터용: getKeywordsForCategory는 현재 빈 배열을 리턴 (실제 데이터 추후 구현)
+  // 더미 데이터용: getKeywordsForCategory는 현재 빈 배열 (추후 구현)
   const getKeywordsForCategory = (category: string) => {
     const dummy: Record<string, string[]> = {
       숙소: [],
@@ -144,9 +147,22 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
     });
   };
 
+  // 공통 "뒤로" 액션: 현재 카테고리의 키워드 초기화하고, currentCategoryIndex 하나 감소
+  const handlePanelBack = (category: string) => {
+    setSelectedKeywordsByCategory((prev) => {
+      const newObj = { ...prev };
+      delete newObj[category];
+      return newObj;
+    });
+    setCurrentCategoryIndex((prev) => {
+      const newIndex = prev > 0 ? prev - 1 : 0;
+      setActiveMiddlePanelCategory(categoryOrder[newIndex] || null);
+      return newIndex;
+    });
+  };
+
   return (
     <div className="relative h-full">
-      {/* 메인 콘텐츠 영역 (스크롤 가능한 영역) */}
       {!showItinerary && (
         <div className="w-[300px] h-screen bg-white shadow-md flex flex-col">
           <div className="p-4 flex-1 overflow-y-auto space-y-6">
@@ -187,15 +203,19 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
             {categorySelectionConfirmed && (
               <div className="mt-6 space-y-2">
                 {categoryOrder.map((category, index) => {
-                  const isActive = index === currentCategoryIndex;
+                  const isCurrent = index === currentCategoryIndex;
+                  const isConfirmed = index < currentCategoryIndex;
+                  const disabled = index > currentCategoryIndex;
                   return (
                     <button
                       key={category}
-                      disabled={!isActive}
+                      disabled={disabled}
                       onClick={() => setActiveMiddlePanelCategory(category)}
                       className={`w-full py-2 rounded border ${
-                        isActive
+                        isCurrent
                           ? 'bg-white text-black hover:bg-gray-100'
+                          : isConfirmed
+                          ? 'bg-blue-100 text-blue-800'
                           : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                       }`}
                     >
@@ -221,10 +241,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
                   setActiveMiddlePanelCategory(null);
                   setCurrentCategoryIndex((prev) => prev + 1);
                 }}
-                onClose={() => {
-                  setActiveMiddlePanelCategory(null);
-                  setCurrentCategoryIndex((prev) => prev + 1);
-                }}
+                onClose={() => handlePanelBack('숙소')}
               />
             )}
             {activeMiddlePanelCategory === '관광지' && (
@@ -241,10 +258,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
                   setActiveMiddlePanelCategory(null);
                   setCurrentCategoryIndex((prev) => prev + 1);
                 }}
-                onClose={() => {
-                  setActiveMiddlePanelCategory(null);
-                  setCurrentCategoryIndex((prev) => prev + 1);
-                }}
+                onClose={() => handlePanelBack('관광지')}
               />
             )}
             {activeMiddlePanelCategory === '음식점' && (
@@ -261,10 +275,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
                   setActiveMiddlePanelCategory(null);
                   setCurrentCategoryIndex((prev) => prev + 1);
                 }}
-                onClose={() => {
-                  setActiveMiddlePanelCategory(null);
-                  setCurrentCategoryIndex((prev) => prev + 1);
-                }}
+                onClose={() => handlePanelBack('음식점')}
               />
             )}
             {activeMiddlePanelCategory === '카페' && (
@@ -281,22 +292,11 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
                   setActiveMiddlePanelCategory(null);
                   setCurrentCategoryIndex((prev) => prev + 1);
                 }}
-                onClose={() => {
-                  setActiveMiddlePanelCategory(null);
-                  setCurrentCategoryIndex((prev) => prev + 1);
-                }}
+                onClose={() => handlePanelBack('카페')}
               />
             )}
 
-            {/* 아래 부분은 현재 사용하지 않으므로 주석 처리 */}
-            {/*
-            {selectedPlace && (
-              <PlaceDetailsPopup
-                place={selectedPlace}
-                onClose={() => setSelectedPlace(null)}
-              />
-            )}
-            */}
+            {/* Itinerary 관련은 주석 처리 */}
           </div>
         </div>
       )}
@@ -309,14 +309,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
           >
             ← 뒤로
           </button>
-          {/*
-          <ItineraryView
-            itinerary={itinerary}
-            startDate={dates?.startDate || new Date()}
-            selectedDay={selectedDay}
-            onSelectDay={setSelectedDay}
-          />
-          */}
+          {/* ItineraryView 주석 처리 */}
         </div>
       )}
 
@@ -327,7 +320,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
         </div>
       )}
 
-      {/* 지역 선택 버튼 클릭 시 RegionSlidePanel 렌더링 */}
+      {/* 지역 선택 패널 */}
       <RegionSlidePanel
         open={regionSlidePanelOpen}
         onClose={() => setRegionSlidePanelOpen(false)}

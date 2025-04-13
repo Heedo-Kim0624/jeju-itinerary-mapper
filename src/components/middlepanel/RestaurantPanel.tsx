@@ -134,13 +134,13 @@ const RestaurantPanel: React.FC<RestaurantPanelProps> = ({
         </div>
       )}
 
-      {/* 드래그 앤 드롭 순위 영역 */}
-      <div className="mb-4">
+    {/* 드래그 앤 드롭을 통한 순위 영역 (세로 배열, 순위 라벨 추가) */}
+    <div className="mb-4">
         <h3 className="text-sm font-semibold mb-2">키워드 순위 (최대 3개)</h3>
         <DragDropContext onDragEnd={onDragEnd}>
           <Droppable droppableId="ranking">
             {(provided) => (
-              <div ref={provided.innerRef} {...provided.droppableProps} className="flex space-x-2 mb-2">
+              <div ref={provided.innerRef} {...provided.droppableProps} className="flex flex-col space-y-2">
                 {ranking.map((kw, index) => {
                   const item = defaultKeywords.find((i) => i.eng === kw);
                   const displayText = item ? item.kr : kw;
@@ -151,9 +151,12 @@ const RestaurantPanel: React.FC<RestaurantPanelProps> = ({
                           ref={provided.innerRef}
                           {...provided.draggableProps}
                           {...provided.dragHandleProps}
-                          className="w-24 h-10 rounded border border-dashed border-gray-300 flex items-center justify-center text-gray-400"
+                          className="flex items-center space-x-2 p-2 border rounded border-dashed border-gray-300"
                         >
-                          {displayText}
+                          <span className="text-xs text-gray-500">{index + 1}순위:</span>
+                          <span className="text-sm text-gray-700 whitespace-nowrap overflow-hidden text-ellipsis">
+                            {displayText}
+                          </span>
                         </div>
                       )}
                     </Draggable>
