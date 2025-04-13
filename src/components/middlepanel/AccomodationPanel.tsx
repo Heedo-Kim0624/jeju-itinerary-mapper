@@ -34,6 +34,12 @@ const AccomodationPanel: React.FC<AccomodationPanelProps> = ({
   // 순위 목록: 드래그 앤 드롭으로 순서를 조정 (최대 3개)
   const [ranking, setRanking] = useState<string[]>([]);
 
+  // **변경됨: defaultKeywords를 기반으로 영어→한글 매핑 딕셔너리 생성**
+  const keywordMapping: Record<string, string> = defaultKeywords.reduce((acc, curr) => {
+    acc[curr.eng] = curr.kr;
+    return acc;
+  }, {} as Record<string, string>);
+
   // 선택된 키워드 중에서 아직 순위 목록에 없는 항목을 추가하는 함수
   const addToRanking = (keyword: string) => {
     if (!ranking.includes(keyword) && ranking.length < 3) {
@@ -50,15 +56,31 @@ const AccomodationPanel: React.FC<AccomodationPanelProps> = ({
     setRanking(newRank);
   };
 
-  // 최종 확인 시 처리: 순위에 지정된 키워드는 중괄호로 감싸고 나머지는 그대로
+  // **변경됨: handleConfirm 함수 수정**
+  // 순위에 지정된 키워드를 한글로 변환 후 하나의 문자열로 합쳐 중괄호로 감싸고,
+  // 순위에 포함되지 않은 선택된 키워드도 한글로 변환하여 결합
   const handleConfirm = () => {
     const rankedSet = new Set(ranking);
     const unranked = selectedKeywords.filter((kw) => !rankedSet.has(kw));
-    const finalKeywords = ranking.map((kw) => `{${kw}}`).concat(unranked);
+    
+    // 순위에 지정된 키워드들을 한글로 변환
+    const translatedRanked = ranking.map((kw) => keywordMapping[kw] || kw);
+    // 합쳐서 중괄호로 감싼 문자열 생성 (예: {친절함,깔끔함})
+    const rankedString = translatedRanked.length > 0 ? `{${translatedRanked.join(',')}}` : '';
+    
+    // 순위에 없는 키워드도 한글로 변환
+    const translatedUnranked = unranked.map((kw) => keywordMapping[kw] || kw);
+    
+    // 최종 결과 배열 구성
+    const finalKeywords: string[] = [];
+    if (rankedString) {
+      finalKeywords.push(rankedString);
+    }
+    finalKeywords.push(...translatedUnranked);
     if (directInputValue.trim() !== '') {
       finalKeywords.push(directInputValue.trim());
     }
-    onConfirmAccomodation(finalKeywords);
+    onConfirmCafe(finalKeywords);
   };
 
   return (

@@ -77,21 +77,15 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
     'Delicious_food': '맛',
     'Stylish_interior': '세련됨',
     'Fresh_ingredients': '신선함',
-    'Easy_parking': '주차',
-    'Friendly': '친절함',
+    'Friendly': '친절',
     'Special_menu_available': '특별함',
     'Good_for_solo_dining': '혼밥',
     'Tasty_drinks': '음료',
-    'Stylish_interior': '인테리어',
-    'Friendly': '친절',
     'Delicious_coffee': '커피',
-    'Special_menu_available': '특메',
-    'Nice_view': '뷰',
-    'Clean_store': '깔끔매장',
     'Good_for_photos': '포토존',
     'Delicious_desserts': '디저트',
     'Delicious_bread': '빵'
-}
+  };
 
   const handleDateSelect = (selectedDates: typeof dates) => {
     setDates(selectedDates);
@@ -100,6 +94,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
   // 프롬프트 키워드 구성 : 각 카테고리의 키워드를 keywordMapping 사용하여 한글로 변환
   const buildPromptKeywords = () => {
     const allKeywords: string[] = [];
+    // 지역 선택은 이미 한글로 입력된 값으로 가정
     allKeywords.push(...selectedRegions);
     categoryOrder.forEach((category) => {
       const keywords = selectedKeywordsByCategory[category] || [];
@@ -296,7 +291,22 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
               />
             )}
 
-            {/* Itinerary 관련은 주석 처리 */}
+            {/* 일정생성 버튼 추가: 카테고리 4개가 모두 선택되고, 순위 지정도 완료된 상태에서 표시됨 */}
+            {categorySelectionConfirmed &&
+              categoryOrder.length === 4 &&
+              currentCategoryIndex >= categoryOrder.length && (
+                <div className="mt-4">
+                  <button
+                    className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 text-sm"
+                    onClick={() => {
+                      // 일정생성 버튼을 눌렀을 때의 동작을 여기에 구현 (예: 계획 생성 함수 호출)
+                      console.log('일정생성 버튼 클릭됨', buildPromptKeywords());
+                    }}
+                  >
+                    일정생성
+                  </button>
+                </div>
+              )}
           </div>
         </div>
       )}
@@ -309,7 +319,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
           >
             ← 뒤로
           </button>
-          {/* ItineraryView 주석 처리 */}
+          {/* ItineraryView 관련 코드는 주석 처리 */}
         </div>
       )}
 
