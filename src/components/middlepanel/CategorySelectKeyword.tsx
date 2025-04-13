@@ -1,6 +1,6 @@
 import React from 'react';
 
-interface MiddlePanelProps {
+interface CategorySelectKeywordProps {
   category: string;
   keywords: string[];
   selectedKeywords: string[];
@@ -8,7 +8,7 @@ interface MiddlePanelProps {
   onClose: () => void;
 }
 
-const MiddlePanel: React.FC<MiddlePanelProps> = ({
+const CategorySelectKeyword: React.FC<CategorySelectKeywordProps> = ({
   category,
   keywords,
   selectedKeywords,
@@ -20,7 +20,9 @@ const MiddlePanel: React.FC<MiddlePanelProps> = ({
       {/* 상단 */}
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold">{category} 관련 키워드 선택</h2>
-        <button onClick={onClose} className="text-sm text-blue-600 hover:underline">닫기</button>
+        <button onClick={onClose} className="text-sm text-blue-600 hover:underline">
+          닫기
+        </button>
       </div>
 
       {/* 키워드 선택 버튼들 */}
@@ -60,4 +62,4 @@ const MiddlePanel: React.FC<MiddlePanelProps> = ({
   );
 };
 
-export default MiddlePanel;
+export default CategorySelectKeyword;

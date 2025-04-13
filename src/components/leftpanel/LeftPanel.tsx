@@ -3,7 +3,8 @@ import { Place } from '@/types/supabase';
 import DatePicker from './DatePicker';
 import PromptKeywordBox from './PromptKeywordBox';
 import CategoryPrioritySelector from './CategoryPrioritySelector';
-import MiddlePanel from '../middlepanel/MiddlePanel';
+// 기존 MiddlePanel 대신 CategorySelectKeyword를 import 합니다.
+import CategorySelectKeyword from '../middlepanel/CategorySelectKeyword';
 import PlaceDetailsPopup from './PlaceDetailsPopup';
 import PlaceList from './PlaceList';
 import ItineraryView from './ItineraryView';
@@ -95,20 +96,18 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
 
   return (
     <div className="relative h-full">
+      {/* 메인 콘텐츠 영역 (스크롤 가능한 영역) */}
       {!showItinerary && (
         <div className="w-[300px] h-screen bg-white shadow-md flex flex-col">
           <div className="p-4 flex-1 overflow-y-auto space-y-6">
             <h1 className="text-xl font-semibold">제주도 여행 플래너</h1>
-
             <DatePicker onDatesSelected={handleDateSelect} />
-
             <button
               onClick={() => {
                 if (!dates) {
                   alert("먼저 날짜를 선택해주세요.");
                   return;
                 }
-                // 날짜 선택이 완료되면 RegionSlidePanel을 토글하여 열기/닫기
                 setRegionSlidePanelOpen(!regionSlidePanelOpen);
               }}
               className="w-full bg-blue-100 text-blue-800 rounded px-4 py-2 text-sm font-medium hover:bg-blue-200"
@@ -118,7 +117,9 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
 
             {regionConfirmed && (
               <div className="mt-6">
-                <h3 className="text-sm font-medium text-gray-800 mb-2">카테고리 중요도 순서 선택</h3>
+                <h3 className="text-sm font-medium text-gray-800 mb-2">
+                  카테고리 중요도 순서 선택
+                </h3>
                 <CategoryPrioritySelector
                   selectedOrder={categoryOrder}
                   onSelect={handleCategoryClick}
@@ -156,7 +157,8 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
             )}
 
             {activeMiddlePanelCategory && (
-              <MiddlePanel
+              // 활성 카테고리가 있을 때, CategorySelectKeyword 컴포넌트 실행
+              <CategorySelectKeyword
                 category={activeMiddlePanelCategory}
                 keywords={getKeywordsForCategory(activeMiddlePanelCategory)}
                 selectedKeywords={selectedKeywordsByCategory[activeMiddlePanelCategory] || []}
@@ -176,18 +178,6 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
               <PlaceDetailsPopup
                 place={selectedPlace}
                 onClose={() => setSelectedPlace(null)}
-              />
-            )}
-
-            {categoryOrder.length === 4 && dates && selectedRegions.length > 0 && (
-              <PlaceList
-                places={filteredPlaces}
-                loading={isPlaceLoading}
-                selectedPlace={selectedPlace}
-                onSelectPlace={setSelectedPlace}
-                page={placePage}
-                onPageChange={setPlacePage}
-                totalPages={totalPlacePages}
               />
             )}
           </div>
@@ -211,9 +201,9 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
         </div>
       )}
 
-      {/* LeftPanel 하단에 고정된 프롬프트 키워드 박스: 지역 선택이 완료되면 보여줌 */}
+      {/* 왼쪽 패널 하단에 고정된 프롬프트 키워드 박스 */}
       {regionConfirmed && (
-        <div className="absolute bottom-0 left-0 w-full border-t p-4 bg-white">
+        <div className="absolute bottom-0 left-0 w-[300px] border-t p-4 bg-white">
           <PromptKeywordBox keywords={promptKeywords} />
         </div>
       )}
