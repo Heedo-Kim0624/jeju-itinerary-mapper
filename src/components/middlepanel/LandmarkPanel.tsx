@@ -1,6 +1,5 @@
-// LandmarkPanel.tsx
 import React, { useState } from 'react';
-import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 
 interface LandmarkPanelProps {
   selectedKeywords: string[]; // 중복 선택 허용 (영어 값)
