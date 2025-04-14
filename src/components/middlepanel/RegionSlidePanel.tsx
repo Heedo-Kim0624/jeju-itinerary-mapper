@@ -1,7 +1,8 @@
 
 // RegionSlidePanel.tsx
-import React from 'react';
+import React, { useEffect } from 'react';
 import RegionSelector from './RegionSelector';
+import { AnimatePresence, motion } from 'framer-motion';
 
 interface RegionSlidePanelProps {
   open: boolean;
@@ -18,20 +19,39 @@ const RegionSlidePanel: React.FC<RegionSlidePanelProps> = ({
   onToggle,
   onConfirm,
 }) => {
-  if (!open) return null; // 초기 렌더 방지
+  // ESC 키를 눌렀을 때 패널을 닫는 기능 추가
+  useEffect(() => {
+    const handleEscKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && open) {
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleEscKey);
+    return () => {
+      window.removeEventListener('keydown', handleEscKey);
+    };
+  }, [open, onClose]);
 
   return (
-    <div
-      className="absolute top-0 left-[300px] w-[300px] h-full bg-white border-l shadow-md z-40 transition-transform duration-300 ease-in-out" // z-50로 변경됨
-      style={{ transform: open ? 'translateX(0)' : 'translateX(100%)' }}
-    >
-      <RegionSelector
-        selectedRegions={selectedRegions}
-        onToggle={onToggle}
-        onClose={onClose}
-        onConfirm={onConfirm}
-      />
-    </div>
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          initial={{ x: '100%', opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          exit={{ x: '100%', opacity: 0 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+          className="absolute top-0 left-[300px] w-[300px] h-full bg-white border-l shadow-md z-40"
+        >
+          <RegionSelector
+            selectedRegions={selectedRegions}
+            onToggle={onToggle}
+            onClose={onClose}
+            onConfirm={onConfirm}
+          />
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };
 
