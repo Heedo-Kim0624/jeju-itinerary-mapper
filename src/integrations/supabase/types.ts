@@ -102,18 +102,21 @@ export type Database = {
           blog_review_count: number | null
           id: number
           Rating: number | null
+          visitor_norm: number | null
           visitor_review_count: number | null
         }
         Insert: {
           blog_review_count?: number | null
           id: number
           Rating?: number | null
+          visitor_norm?: number | null
           visitor_review_count?: number | null
         }
         Update: {
           blog_review_count?: number | null
           id?: number
           Rating?: number | null
+          visitor_norm?: number | null
           visitor_review_count?: number | null
         }
         Relationships: [
@@ -630,18 +633,21 @@ export type Database = {
           blog_review_count: number | null
           id: number
           Rating: number | null
+          visitor_norm: number | null
           visitor_review_count: number | null
         }
         Insert: {
           blog_review_count?: number | null
           id: number
           Rating?: number | null
+          visitor_norm?: number | null
           visitor_review_count?: number | null
         }
         Update: {
           blog_review_count?: number | null
           id?: number
           Rating?: number | null
+          visitor_norm?: number | null
           visitor_review_count?: number | null
         }
         Relationships: [
@@ -1190,19 +1196,22 @@ export type Database = {
         Row: {
           blog_review_count: number | null
           id: number
-          Rating: number | null
+          Rating: string | null
+          visitor_norm: number | null
           visitor_review_count: number | null
         }
         Insert: {
           blog_review_count?: number | null
           id: number
-          Rating?: number | null
+          Rating?: string | null
+          visitor_norm?: number | null
           visitor_review_count?: number | null
         }
         Update: {
           blog_review_count?: number | null
           id?: number
-          Rating?: number | null
+          Rating?: string | null
+          visitor_norm?: number | null
           visitor_review_count?: number | null
         }
         Relationships: [
@@ -1729,18 +1738,21 @@ export type Database = {
           blog_review_count: number | null
           ID: number
           Rating: number | null
+          visitor_norm: number | null
           visitor_review_count: number | null
         }
         Insert: {
           blog_review_count?: number | null
           ID: number
           Rating?: number | null
+          visitor_norm?: number | null
           visitor_review_count?: number | null
         }
         Update: {
           blog_review_count?: number | null
           ID?: number
           Rating?: number | null
+          visitor_norm?: number | null
           visitor_review_count?: number | null
         }
         Relationships: [

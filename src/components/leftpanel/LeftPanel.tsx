@@ -31,7 +31,6 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
     endTime: string;
   } | null>(null);
 
-  // 각 카테고리 패널의 직접 입력 상태
   const [accomodationDirectInput, setAccomodationDirectInput] = useState('');
   const [landmarkDirectInput, setLandmarkDirectInput] = useState('');
   const [restaurantDirectInput, setRestaurantDirectInput] = useState('');
@@ -44,7 +43,6 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
     { day: 2, places: [], totalDistance: 0 },
   ];
 
-  // 영어 키워드를 한글로 변환하는 매핑 객체
   const keywordMapping: Record<string, string> = {
     'Many_Attractions': '많은 볼거리',
     'Photogenic_Spot': '인생샷',
@@ -91,7 +89,6 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
 
   function buildPromptKeywords() {
     const allKeywords: string[] = [];
-    // 지역 선택은 이미 한글로 입력된 값으로 가정
     allKeywords.push(...selectedRegions);
     categoryOrder.forEach((category) => {
       const keywords = selectedKeywordsByCategory[category] || [];
@@ -105,7 +102,6 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
     return allKeywords;
   }
 
-  // promptKeywords가 selectedRegions 등 상태 변경에 따라 재계산되도록 useMemo 사용
   const promptKeywords = useMemo(() => buildPromptKeywords(), [
     selectedRegions,
     categoryOrder,
@@ -124,7 +120,6 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
     }
   };
 
-  // 더미 데이터용: getKeywordsForCategory는 현재 빈 배열 (추후 구현)
   const getKeywordsForCategory = (category: string) => {
     const dummy: Record<string, string[]> = {
       숙소: [],
@@ -145,7 +140,6 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
     });
   };
 
-  // 공통 "뒤로" 액션: 현재 카테고리 키워드 초기화, currentCategoryIndex 감소
   const handlePanelBack = (category: string) => {
     setSelectedKeywordsByCategory((prev) => {
       const newObj = { ...prev };
@@ -224,7 +218,6 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
               </div>
             )}
 
-            {/* 카테고리별 패널 렌더링 */}
             {activeMiddlePanelCategory === '숙소' && (
               <AccomodationPanel
                 selectedKeywords={selectedKeywordsByCategory['숙소'] || []}
@@ -294,7 +287,6 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
               />
             )}
 
-            {/* 일정 생성 버튼 (카테고리 4개가 모두 선택되고 순위 지정 완료 시) */}
             {categorySelectionConfirmed &&
               categoryOrder.length === 4 &&
               currentCategoryIndex >= categoryOrder.length && (
@@ -321,18 +313,15 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
           >
             ← 뒤로
           </button>
-          {/* ItineraryView 관련 코드는 주석 처리 */}
         </div>
       )}
 
-      {/* 왼쪽 패널 하단에 고정된 프롬프트 키워드 박스 */}
       {regionConfirmed && (
         <div className="absolute bottom-0 left-0 w-[300px] max-h-60 border-t p-4 bg-white overflow-y-auto z-50">
           <PromptKeywordBox keywords={promptKeywords} />
         </div>
       )}
 
-      {/* 지역 선택 패널 */}
       <RegionSlidePanel
         open={regionSlidePanelOpen}
         onClose={() => setRegionSlidePanelOpen(false)}
@@ -346,7 +335,6 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
         }}
         onConfirm={() => {
           setRegionSlidePanelOpen(false);
-          // 지역이 하나라도 선택되었을 때만 확인 처리
           if (selectedRegions.length > 0) {
             setRegionConfirmed(true);
           } else {
