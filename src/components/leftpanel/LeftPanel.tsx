@@ -90,14 +90,15 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
     setDates(selectedDates);
   };
 
-  // 프롬프트 키워드 구성 : 각 카테고리의 키워드를 keywordMapping 사용하여 한글로 변환
-  const buildPromptKeywords = () => {
+  // ★ 수정됨: buildPromptKeywords를 함수 선언문으로 변경하여 먼저 선언되도록 함.
+  function buildPromptKeywords() {
     const allKeywords: string[] = [];
     // 지역 선택은 이미 한글로 입력된 값으로 가정
     allKeywords.push(...selectedRegions);
     categoryOrder.forEach((category) => {
       const keywords = selectedKeywordsByCategory[category] || [];
       const priorityKeywords = keywordPriorityByCategory[category] || [];
+      // ★ 수정됨: 백틱을 사용하여 템플릿 문자열 올바르게 적용
       const result = keywords.map((kw) => {
         const translated = keywordMapping[kw] || kw;
         return priorityKeywords.includes(kw) ? `{${translated}}` : translated;
@@ -105,8 +106,9 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
       allKeywords.push(...result);
     });
     return allKeywords;
-  };
-  
+  }
+
+  // buildPromptKeywords 함수 선언 이후에 호출
   const promptKeywords = buildPromptKeywords();
 
   const handleCategoryClick = (category: string) => {
@@ -298,7 +300,6 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
                   <button
                     className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 text-sm"
                     onClick={() => {
-                      // 일정생성 버튼을 눌렀을 때의 동작을 여기에 구현 (예: 계획 생성 함수 호출)
                       console.log('일정생성 버튼 클릭됨', buildPromptKeywords());
                     }}
                   >
