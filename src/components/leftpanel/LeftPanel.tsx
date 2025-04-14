@@ -1,3 +1,4 @@
+
 // LeftPanel.tsx
 import React, { useState } from 'react';
 import { Place } from '@/types/supabase';
@@ -8,7 +9,7 @@ import AccomodationPanel from '../middlepanel/AccomodationPanel';
 import LandmarkPanel from '../middlepanel/LandmarkPanel';
 import RestaurantPanel from '../middlepanel/RestaurantPanel';
 import CafePanel from '../middlepanel/CafePanel';
-import RegionSelector from '../middlepanel/RegionSelector'; // 직접 import
+import RegionSelector from '../middlepanel/RegionSelector';
 
 interface LeftPanelProps {
   onToggleRegionPanel?: () => void;
@@ -96,15 +97,27 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
     const allKeywords: string[] = [];
     // 지역 선택은 이미 한글로 입력된 값으로 가정
     allKeywords.push(...selectedRegions);
+    
+    // 카테고리별 키워드 처리 - 중복 키워드 방지를 위한 Set 사용
+    const uniqueTranslatedKeywords = new Set<string>();
+    
     categoryOrder.forEach((category) => {
       const keywords = selectedKeywordsByCategory[category] || [];
       const priorityKeywords = keywordPriorityByCategory[category] || [];
-      const result = keywords.map((kw) => {
+      
+      keywords.forEach(kw => {
         const translated = keywordMapping[kw] || kw;
-        return priorityKeywords.includes(kw) ? `{${translated}}` : translated;
+        
+        // 중복 키워드는 건너뛰기 (우선순위 키워드는 중복 허용)
+        if (priorityKeywords.includes(kw)) {
+          allKeywords.push(`{${translated}}`);
+        } else if (!uniqueTranslatedKeywords.has(translated)) {
+          uniqueTranslatedKeywords.add(translated);
+          allKeywords.push(translated);
+        }
       });
-      allKeywords.push(...result);
     });
+    
     return allKeywords;
   }
   
