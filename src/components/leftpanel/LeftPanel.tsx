@@ -324,7 +324,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
 
       {/* 왼쪽 패널 하단에 고정된 프롬프트 키워드 박스 */}
       {regionConfirmed && (
-        <div className="absolute bottom-0 left-0 w-[300px] max-h-60 border-t p-4 bg-white overflow-y-auto">
+        <div className="absolute bottom-20 left-0 w-[300px] max-h-60 border-t p-4 bg-white overflow-y-auto">
           <PromptKeywordBox keywords={promptKeywords} />
         </div>
       )}
