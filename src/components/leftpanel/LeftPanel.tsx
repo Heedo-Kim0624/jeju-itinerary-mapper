@@ -159,7 +159,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
   return (
     <div className="relative h-full">
       {!showItinerary && (
-        <div className="fixed top-0 left-[300px] w-[300px] h-full bg-white border-l border-r border-gray-200 z-40 shadow-md flex flex-col">
+        <div className="fixed top-0 left-0 w-[300px] h-full bg-white border-l border-r border-gray-200 z-40 shadow-md flex flex-col">
           <div className="flex-1 overflow-y-auto p-4 space-y-6">
             <h1 className="text-xl font-semibold">제주도 여행 플래너</h1>
             <DatePicker onDatesSelected={handleDateSelect} />
