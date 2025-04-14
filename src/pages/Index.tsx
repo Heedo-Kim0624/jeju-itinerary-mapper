@@ -1,10 +1,11 @@
-
 import React, { useState } from 'react';
 import LeftPanel from '@/components/leftpanel/LeftPanel';
 import RightPanel from '@/components/rightpanel/RightPanel';
+import RegionSlidePanel from '@/components/middlepanel/RegionSlidePanel';
 import type { Place, ItineraryDay } from '@/types/supabase';
 
 const Index: React.FC = () => {
+  const [showRegionPanel, setShowRegionPanel] = useState(false);
   const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
 
   const toggleRegion = (region: string) => {
@@ -23,7 +24,7 @@ const Index: React.FC = () => {
   return (
     <div className="flex h-screen overflow-hidden bg-jeju-light-gray relative">
       {/* 왼쪽 패널 */}
-      <LeftPanel />
+      <LeftPanel onToggleRegionPanel={() => setShowRegionPanel(prev => !prev)} />
 
       {/* 오른쪽 지도 패널 */}
       <RightPanel
@@ -31,6 +32,15 @@ const Index: React.FC = () => {
         selectedPlace={selectedPlace}
         itinerary={itinerary}
         selectedDay={selectedDay}
+      />
+
+      {/* 오른쪽에 붙는 지역 슬라이드 패널 */}
+      <RegionSlidePanel
+        open={showRegionPanel}
+        onClose={() => setShowRegionPanel(false)}
+        selectedRegions={selectedRegions}
+        onToggle={toggleRegion}
+        onConfirm={() => setShowRegionPanel(false)}
       />
     </div>
   );

@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 interface RegionSelectorProps {
@@ -11,11 +12,15 @@ interface RegionSelectorProps {
 const REGION_GROUPS = [
   {
     title: '제주시',
-    regions: ['제주시내', '애월', '조천', '구좌', '한경/한림']
+    regions: [
+      '제주시내', '애월', '조천', '구좌', '한경/한림'
+    ]
   },
   {
     title: '서귀포시',
-    regions: ['서귀포시내', '중문', '안덕/대정', '남원/표선', '성산']
+    regions: [
+      '서귀포시내', '중문', '안덕/대정', '남원/표선', '성산'
+    ]
   }
 ];
 
@@ -26,50 +31,46 @@ const RegionSelector: React.FC<RegionSelectorProps> = ({
   onConfirm,
 }) => {
   return (
-    <div className="fixed top-0 left-[300px] w-[300px] h-full bg-white border-l border-r border-gray-200 z-40 shadow-md p-4 overflow-y-auto">
-      <div className="space-y-6 p-4 bg-white border rounded-md shadow-lg max-w-sm mx-auto">
-        {/* 헤더 */}
-        <div className="flex justify-between items-center mb-2">
-          <h2 className="text-md font-semibold">지역 선택</h2>
-          <button onClick={onClose} className="text-sm text-gray-500 hover:text-black">
-            닫기
-          </button>
-        </div>
+    <div className="space-y-6 p-4 bg-white border rounded-md shadow-inner">
+      {/* 헤더 */}
+      <div className="flex justify-between items-center mb-2">
+        <h2 className="text-md font-semibold">지역 선택</h2>
+        <button onClick={onClose} className="text-sm text-gray-500 hover:text-black">닫기</button>
+      </div>
 
-        <p className="text-xs text-gray-500 mb-4">중복 선택 가능</p>
+      <p className="text-xs text-gray-500 mb-4">중복 선택 가능</p>
 
-        {REGION_GROUPS.map((group) => (
-          <div key={group.title}>
-            <h4 className="text-xs font-medium text-gray-500 mb-1">{group.title}</h4>
-            <div className="flex flex-col gap-1">
-              {group.regions.map((region) => {
-                const isSelected = selectedRegions.includes(region);
-                return (
-                  <button
-                    key={region}
-                    onClick={() => onToggle(region)}
-                    className={`w-full text-left px-3 py-1.5 text-xs rounded border transition ${
-                      isSelected
-                        ? "bg-blue-600 text-white border-blue-600"
-                        : "bg-gray-100 text-gray-800 border-gray-300 hover:bg-gray-200"
-                    }`}
-                  >
-                    {region}
-                  </button>
-                );
-              })}
-            </div>
+      {REGION_GROUPS.map((group) => (
+        <div key={group.title}>
+          <h4 className="text-xs font-medium text-gray-500 mb-1">{group.title}</h4>
+          <div className="flex flex-col gap-1">
+            {group.regions.map((region) => {
+              const isSelected = selectedRegions.includes(region);
+              return (
+                <button
+                  key={region}
+                  onClick={() => onToggle(region)}
+                  className={`w-full text-left px-3 py-1.5 text-xs rounded border transition ${
+                    isSelected
+                      ? "bg-blue-600 text-white border-blue-600"
+                      : "bg-gray-100 text-gray-800 border-gray-300 hover:bg-gray-200"
+                  }`}
+                >
+                  {region}
+                </button>
+              );
+            })}
           </div>
-        ))}
-
-        <div className="flex justify-end pt-2">
-          <button
-            onClick={onConfirm}
-            className="bg-blue-600 text-white px-4 py-1.5 rounded hover:bg-blue-700 text-xs"
-          >
-            확인
-          </button>
         </div>
+      ))}
+
+      <div className="flex justify-end pt-2">
+        <button
+          onClick={onConfirm}
+          className="bg-blue-600 text-white px-4 py-1.5 rounded hover:bg-blue-700 text-xs"
+        >
+          확인
+        </button>
       </div>
     </div>
   );
