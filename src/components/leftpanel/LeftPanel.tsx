@@ -20,7 +20,6 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
   const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
   const [regionConfirmed, setRegionConfirmed] = useState(false);
   const [categoryOrder, setCategoryOrder] = useState<string[]>([]);
-  // categorySelectionConfirmed : 카테고리 우선순위 선택 완료 여부 (추후 활용)
   const [categorySelectionConfirmed, setCategorySelectionConfirmed] = useState(false);
   const [currentCategoryIndex, setCurrentCategoryIndex] = useState(0);
   const [activeMiddlePanelCategory, setActiveMiddlePanelCategory] = useState<string | null>(null);
