@@ -22,7 +22,7 @@ const RegionSlidePanel: React.FC<RegionSlidePanelProps> = ({
 
   return (
     <div
-      className="absolute top-0 left-full w-[280px] h-full bg-white border-l shadow-md z-10 transition-transform duration-300 ease-in-out"
+      className="absolute top-0 left-[300px] w-[300px] h-full bg-white border-l shadow-md z-40 transition-transform duration-300 ease-in-out" // z-50로 변경됨
       style={{ transform: open ? 'translateX(0)' : 'translateX(100%)' }}
     >
       <RegionSelector
