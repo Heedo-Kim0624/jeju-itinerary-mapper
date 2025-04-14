@@ -1,172 +1,60 @@
 
 // LeftPanel.tsx
-import React, { useState } from 'react';
-import { Place } from '@/types/supabase';
-import DatePicker from './DatePicker';
+import React from 'react';
+import { useLeftPanelState } from './useLeftPanelState';
+import PlannerHeader from './PlannerHeader';
+import CategorySelection from './CategorySelection';
 import PromptKeywordBox from './PromptKeywordBox';
-import CategoryPrioritySelector from './CategoryPrioritySelector';
+import ItineraryButton from './ItineraryButton';
+import RegionModal from './RegionModal';
 import AccomodationPanel from '../middlepanel/AccomodationPanel';
 import LandmarkPanel from '../middlepanel/LandmarkPanel';
 import RestaurantPanel from '../middlepanel/RestaurantPanel';
 import CafePanel from '../middlepanel/CafePanel';
-import RegionSelector from '../middlepanel/RegionSelector';
-
-interface LeftPanelProps {
-  onToggleRegionPanel?: () => void;
-}
+import { LeftPanelProps } from './types';
 
 const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
-  const [showItinerary, setShowItinerary] = useState(false);
-  const [selectedDay, setSelectedDay] = useState<number | null>(null);
-  const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
-  const [regionConfirmed, setRegionConfirmed] = useState(false);
-  const [categoryOrder, setCategoryOrder] = useState<string[]>([]);
-  const [categorySelectionConfirmed, setCategorySelectionConfirmed] = useState(false);
-  const [currentCategoryIndex, setCurrentCategoryIndex] = useState(0);
-  const [activeMiddlePanelCategory, setActiveMiddlePanelCategory] = useState<string | null>(null);
-  const [selectedKeywordsByCategory, setSelectedKeywordsByCategory] = useState<Record<string, string[]>>({});
-  const [keywordPriorityByCategory, setKeywordPriorityByCategory] = useState<Record<string, string[]>>({});
-  const [dates, setDates] = useState<{
-    startDate: Date;
-    endDate: Date;
-    startTime: string;
-    endTime: string;
-  } | null>(null);
-
-  // 각 카테고리 패널의 직접 입력 상태
-  const [accomodationDirectInput, setAccomodationDirectInput] = useState('');
-  const [landmarkDirectInput, setLandmarkDirectInput] = useState('');
-  const [restaurantDirectInput, setRestaurantDirectInput] = useState('');
-  const [cafeDirectInput, setCafeDirectInput] = useState('');
-
-  // RegionSelector 모달을 표시할 상태
-  const [regionSelectorOpen, setRegionSelectorOpen] = useState(false);
-
-  const itinerary = [
-    { day: 1, places: [], totalDistance: 0 },
-    { day: 2, places: [], totalDistance: 0 },
-  ];
-
-  // 영어 키워드를 한글로 변환하는 매핑 객체
-  const keywordMapping: Record<string, string> = {
-    'Many_Attractions': '많은 볼거리',
-    'Photogenic_Spot': '인생샷',
-    'Easy_Parking': '주차',
-    'Well_Maintained_Walking_Trails': '산책로',
-    'Kid_Friendly': '아이와 함께',
-    'Great_View': '뷰',
-    'Reasonable_Pricing': '가성비',
-    'Diverse_Experience_Programs': '체험활동',
-    'Large_Scale': '공간감',
-    'Friendly_Staff': '친절함',
-    'kind_service': '친절함',
-    'cleanliness': '청결도',
-    'good_view': '좋은 뷰',
-    'quiet_and_relax': '방음',
-    'good_bedding': '침구',
-    'stylish_interior': '인테리어',
-    'good_aircon_heating': '냉난방',
-    'well_equipped_bathroom': '욕실',
-    'good_breakfast': '조식',
-    'easy_parking': '주차',
-    'Good_value_for_money': '가성비',
-    'Great_for_group_gatherings': '단체',
-    'Spacious_store': '공간감',
-    'Clean_store': '깔끔함',
-    'Nice_view': '좋은 뷰',
-    'Large_portions': '푸짐함',
-    'Delicious_food': '맛',
-    'Stylish_interior': '세련됨',
-    'Fresh_ingredients': '신선함',
-    'Friendly': '친절',
-    'Special_menu_available': '특별함',
-    'Good_for_solo_dining': '혼밥',
-    'Tasty_drinks': '음료',
-    'Delicious_coffee': '커피',
-    'Good_for_photos': '포토존',
-    'Delicious_desserts': '디저트',
-    'Delicious_bread': '빵'
-  };
-
-  const handleDateSelect = (selectedDates: typeof dates) => {
-    setDates(selectedDates);
-  };
-
-  // 프롬프트 키워드 구성 : 각 카테고리의 키워드를 keywordMapping 사용하여 한글로 변환
-  function buildPromptKeywords() {
-    const allKeywords: string[] = [];
-    // 지역 선택은 이미 한글로 입력된 값으로 가정
-    allKeywords.push(...selectedRegions);
+  const {
+    // 상태
+    showItinerary,
+    selectedRegions,
+    regionConfirmed,
+    categoryOrder,
+    categorySelectionConfirmed,
+    currentCategoryIndex,
+    activeMiddlePanelCategory,
+    selectedKeywordsByCategory,
+    dates,
+    accomodationDirectInput,
+    landmarkDirectInput,
+    restaurantDirectInput,
+    cafeDirectInput,
+    regionSelectorOpen,
+    promptKeywords,
     
-    // 카테고리별 키워드 처리 - 중복 키워드 방지를 위한 Set 사용
-    const uniqueTranslatedKeywords = new Set<string>();
+    // 상태 변경 함수
+    setShowItinerary,
+    setSelectedRegions,
+    setRegionConfirmed,
+    setCategorySelectionConfirmed,
+    setCurrentCategoryIndex,
+    setActiveMiddlePanelCategory,
+    setRegionSelectorOpen,
+    setAccomodationDirectInput,
+    setLandmarkDirectInput,
+    setRestaurantDirectInput,
+    setCafeDirectInput,
     
-    categoryOrder.forEach((category) => {
-      const keywords = selectedKeywordsByCategory[category] || [];
-      const priorityKeywords = keywordPriorityByCategory[category] || [];
-      
-      keywords.forEach(kw => {
-        const translated = keywordMapping[kw] || kw;
-        
-        // 중복 키워드는 건너뛰기 (우선순위 키워드는 중복 허용)
-        if (priorityKeywords.includes(kw)) {
-          allKeywords.push(`{${translated}}`);
-        } else if (!uniqueTranslatedKeywords.has(translated)) {
-          uniqueTranslatedKeywords.add(translated);
-          allKeywords.push(translated);
-        }
-      });
-    });
-    
-    return allKeywords;
-  }
-  
-  const promptKeywords = buildPromptKeywords();
+    // 유틸리티 함수
+    handleDateSelect,
+    handleCategoryClick,
+    handlePanelBack,
+    toggleKeyword,
+  } = useLeftPanelState();
 
-  const handleCategoryClick = (category: string) => {
-    const index = categoryOrder.indexOf(category);
-    if (index !== -1) {
-      const newOrder = [...categoryOrder];
-      newOrder.splice(index, 1);
-      setCategoryOrder(newOrder);
-    } else if (categoryOrder.length < 4) {
-      setCategoryOrder([...categoryOrder, category]);
-    }
-  };
-
-  // 더미 데이터용: getKeywordsForCategory는 현재 빈 배열 (추후 구현)
-  const getKeywordsForCategory = (category: string) => {
-    const dummy: Record<string, string[]> = {
-      숙소: [],
-      관광지: [],
-      음식점: [],
-      카페: [],
-    };
-    return dummy[category] || [];
-  };
-
-  const toggleKeyword = (category: string, keyword: string) => {
-    setSelectedKeywordsByCategory((prev) => {
-      const current = prev[category] || [];
-      const updated = current.includes(keyword)
-        ? current.filter((k) => k !== keyword)
-        : [...current, keyword];
-      return { ...prev, [category]: updated };
-    });
-  };
-
-  // 공통 "뒤로" 액션: 현재 카테고리의 키워드 초기화하고, currentCategoryIndex 하나 감소
-  const handlePanelBack = (category: string) => {
-    setSelectedKeywordsByCategory((prev) => {
-      const newObj = { ...prev };
-      delete newObj[category];
-      return newObj;
-    });
-    setCurrentCategoryIndex((prev) => {
-      const newIndex = prev > 0 ? prev - 1 : 0;
-      setActiveMiddlePanelCategory(categoryOrder[newIndex] || null);
-      return newIndex;
-    });
+  // 일정 생성 버튼 클릭 핸들러
+  const handleGenerateItinerary = () => {
+    console.log('일정생성 버튼 클릭됨', promptKeywords);
   };
 
   return (
@@ -174,151 +62,37 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
       {!showItinerary && (
         <div className="fixed top-0 left-0 w-[300px] h-full bg-white border-l border-r border-gray-200 z-40 shadow-md flex flex-col">
           <div className="flex-1 overflow-y-auto p-4 space-y-6">
-            <h1 className="text-xl font-semibold">제주도 여행 플래너</h1>
-            <DatePicker onDatesSelected={handleDateSelect} />
-            <button
-              onClick={() => {
-                if (!dates) {
-                  alert("먼저 날짜를 선택해주세요.");
-                  return;
-                }
-                setRegionSelectorOpen(true);
-              }}
-              className="w-full bg-blue-100 text-blue-800 rounded px-4 py-2 text-sm font-medium hover:bg-blue-200"
-            >
-              지역 선택
-            </button>
+            {/* 헤더 및 날짜 선택 */}
+            <PlannerHeader 
+              onDatesSelected={handleDateSelect} 
+              dates={dates} 
+              onRegionSelect={() => setRegionSelectorOpen(true)} 
+            />
 
+            {/* 카테고리 선택 */}
             {regionConfirmed && (
-              <div className="mt-6">
-                <h3 className="text-sm font-medium text-gray-800 mb-2">
-                  카테고리 중요도 순서 선택
-                </h3>
-                <CategoryPrioritySelector
-                  selectedOrder={categoryOrder}
-                  onSelect={handleCategoryClick}
-                  onBack={() => {
-                    setRegionConfirmed(false);
-                    setCategoryOrder([]);
-                  }}
-                  onConfirm={() => {
-                    setCategorySelectionConfirmed(true);
-                  }}
-                />
-              </div>
-            )}
-
-            {categorySelectionConfirmed && (
-              <div className="mt-6 space-y-2">
-                {categoryOrder.map((category, index) => {
-                  const isCurrent = index === currentCategoryIndex;
-                  const isConfirmed = index < currentCategoryIndex;
-                  const disabled = index > currentCategoryIndex;
-                  return (
-                    <button
-                      key={category}
-                      disabled={disabled}
-                      onClick={() => setActiveMiddlePanelCategory(category)}
-                      className={`w-full py-2 rounded border ${
-                        isCurrent
-                          ? 'bg-white text-black hover:bg-gray-100'
-                          : isConfirmed
-                          ? 'bg-blue-100 text-blue-800'
-                          : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                      }`}
-                    >
-                      {category}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* 카테고리별 패널 렌더링 */}
-            {activeMiddlePanelCategory === '숙소' && (
-              <AccomodationPanel
-                selectedKeywords={selectedKeywordsByCategory['숙소'] || []}
-                onToggleKeyword={(kw) => toggleKeyword('숙소', kw)}
-                directInputValue={accomodationDirectInput}
-                onDirectInputChange={setAccomodationDirectInput}
-                onConfirmAccomodation={(finalKeywords) => {
-                  setSelectedKeywordsByCategory({
-                    ...selectedKeywordsByCategory,
-                    숙소: finalKeywords,
-                  });
-                  setActiveMiddlePanelCategory(null);
-                  setCurrentCategoryIndex((prev) => prev + 1);
+              <CategorySelection 
+                categoryOrder={categoryOrder}
+                onSelect={handleCategoryClick}
+                onBack={() => {
+                  setRegionConfirmed(false);
+                  setCategorySelectionConfirmed(false);
                 }}
-                onClose={() => handlePanelBack('숙소')}
-              />
-            )}
-            {activeMiddlePanelCategory === '관광지' && (
-              <LandmarkPanel
-                selectedKeywords={selectedKeywordsByCategory['관광지'] || []}
-                onToggleKeyword={(kw) => toggleKeyword('관광지', kw)}
-                directInputValue={landmarkDirectInput}
-                onDirectInputChange={setLandmarkDirectInput}
-                onConfirmLandmark={(finalKeywords) => {
-                  setSelectedKeywordsByCategory({
-                    ...selectedKeywordsByCategory,
-                    관광지: finalKeywords,
-                  });
-                  setActiveMiddlePanelCategory(null);
-                  setCurrentCategoryIndex((prev) => prev + 1);
-                }}
-                onClose={() => handlePanelBack('관광지')}
-              />
-            )}
-            {activeMiddlePanelCategory === '음식점' && (
-              <RestaurantPanel
-                selectedKeywords={selectedKeywordsByCategory['음식점'] || []}
-                onToggleKeyword={(kw) => toggleKeyword('음식점', kw)}
-                directInputValue={restaurantDirectInput}
-                onDirectInputChange={setRestaurantDirectInput}
-                onConfirmRestaurant={(finalKeywords) => {
-                  setSelectedKeywordsByCategory({
-                    ...selectedKeywordsByCategory,
-                    음식점: finalKeywords,
-                  });
-                  setActiveMiddlePanelCategory(null);
-                  setCurrentCategoryIndex((prev) => prev + 1);
-                }}
-                onClose={() => handlePanelBack('음식점')}
-              />
-            )}
-            {activeMiddlePanelCategory === '카페' && (
-              <CafePanel
-                selectedKeywords={selectedKeywordsByCategory['카페'] || []}
-                onToggleKeyword={(kw) => toggleKeyword('카페', kw)}
-                directInputValue={cafeDirectInput}
-                onDirectInputChange={setCafeDirectInput}
-                onConfirmCafe={(finalKeywords) => {
-                  setSelectedKeywordsByCategory({
-                    ...selectedKeywordsByCategory,
-                    카페: finalKeywords,
-                  });
-                  setActiveMiddlePanelCategory(null);
-                  setCurrentCategoryIndex((prev) => prev + 1);
-                }}
-                onClose={() => handlePanelBack('카페')}
+                onConfirm={() => setCategorySelectionConfirmed(true)}
+                currentCategoryIndex={currentCategoryIndex}
+                activeCategory={activeMiddlePanelCategory}
+                categorySelectionConfirmed={categorySelectionConfirmed}
+                onCategoryClick={setActiveMiddlePanelCategory}
               />
             )}
 
-            {/* 일정생성 버튼 추가: 카테고리 4개가 모두 선택되고, 순위 지정도 완료된 상태에서 표시됨 */}
-            {categorySelectionConfirmed &&
-              categoryOrder.length === 4 &&
-              currentCategoryIndex >= categoryOrder.length && (
-                <div className="mt-4">
-                  <button
-                    className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 text-sm"
-                    onClick={() => {
-                      console.log('일정생성 버튼 클릭됨', buildPromptKeywords());
-                    }}
-                  >
-                    일정생성
-                  </button>
-                </div>
-              )}
+            {/* 일정 생성 버튼 */}
+            <ItineraryButton
+              onGenerateItinerary={handleGenerateItinerary}
+              categorySelectionConfirmed={categorySelectionConfirmed}
+              categoryOrder={categoryOrder}
+              currentCategoryIndex={currentCategoryIndex}
+            />
           </div>
         </div>
       )}
@@ -342,28 +116,96 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
         </div>
       )}
 
-      {/* 지역 선택: RegionSlidePanel 대신 직접 RegionSelector 렌더링 (모달 형태) */}
-      {regionSelectorOpen && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="w-[300px]">
-            <RegionSelector
-              selectedRegions={selectedRegions}
-              onToggle={(region) => {
-                if (selectedRegions.includes(region)) {
-                  setSelectedRegions(selectedRegions.filter((r) => r !== region));
-                } else {
-                  setSelectedRegions([...selectedRegions, region]);
-                }
-              }}
-              onClose={() => setRegionSelectorOpen(false)}
-              onConfirm={() => {
-                setRegionSelectorOpen(false);
-                setRegionConfirmed(true);
-              }}
-            />
-          </div>
-        </div>
+      {/* 카테고리별 패널 렌더링 */}
+      {activeMiddlePanelCategory === '숙소' && (
+        <AccomodationPanel
+          selectedKeywords={selectedKeywordsByCategory['숙소'] || []}
+          onToggleKeyword={(kw) => toggleKeyword('숙소', kw)}
+          directInputValue={accomodationDirectInput}
+          onDirectInputChange={setAccomodationDirectInput}
+          onConfirmAccomodation={(finalKeywords) => {
+            setSelectedKeywordsByCategory({
+              ...selectedKeywordsByCategory,
+              숙소: finalKeywords,
+            });
+            setActiveMiddlePanelCategory(null);
+            setCurrentCategoryIndex((prev) => prev + 1);
+          }}
+          onClose={() => handlePanelBack('숙소')}
+        />
       )}
+
+      {activeMiddlePanelCategory === '관광지' && (
+        <LandmarkPanel
+          selectedKeywords={selectedKeywordsByCategory['관광지'] || []}
+          onToggleKeyword={(kw) => toggleKeyword('관광지', kw)}
+          directInputValue={landmarkDirectInput}
+          onDirectInputChange={setLandmarkDirectInput}
+          onConfirmLandmark={(finalKeywords) => {
+            setSelectedKeywordsByCategory({
+              ...selectedKeywordsByCategory,
+              관광지: finalKeywords,
+            });
+            setActiveMiddlePanelCategory(null);
+            setCurrentCategoryIndex((prev) => prev + 1);
+          }}
+          onClose={() => handlePanelBack('관광지')}
+        />
+      )}
+
+      {activeMiddlePanelCategory === '음식점' && (
+        <RestaurantPanel
+          selectedKeywords={selectedKeywordsByCategory['음식점'] || []}
+          onToggleKeyword={(kw) => toggleKeyword('음식점', kw)}
+          directInputValue={restaurantDirectInput}
+          onDirectInputChange={setRestaurantDirectInput}
+          onConfirmRestaurant={(finalKeywords) => {
+            setSelectedKeywordsByCategory({
+              ...selectedKeywordsByCategory,
+              음식점: finalKeywords,
+            });
+            setActiveMiddlePanelCategory(null);
+            setCurrentCategoryIndex((prev) => prev + 1);
+          }}
+          onClose={() => handlePanelBack('음식점')}
+        />
+      )}
+
+      {activeMiddlePanelCategory === '카페' && (
+        <CafePanel
+          selectedKeywords={selectedKeywordsByCategory['카페'] || []}
+          onToggleKeyword={(kw) => toggleKeyword('카페', kw)}
+          directInputValue={cafeDirectInput}
+          onDirectInputChange={setCafeDirectInput}
+          onConfirmCafe={(finalKeywords) => {
+            setSelectedKeywordsByCategory({
+              ...selectedKeywordsByCategory,
+              카페: finalKeywords,
+            });
+            setActiveMiddlePanelCategory(null);
+            setCurrentCategoryIndex((prev) => prev + 1);
+          }}
+          onClose={() => handlePanelBack('카페')}
+        />
+      )}
+
+      {/* 지역 선택 모달 */}
+      <RegionModal
+        isOpen={regionSelectorOpen}
+        selectedRegions={selectedRegions}
+        onToggleRegion={(region) => {
+          if (selectedRegions.includes(region)) {
+            setSelectedRegions(selectedRegions.filter((r) => r !== region));
+          } else {
+            setSelectedRegions([...selectedRegions, region]);
+          }
+        }}
+        onClose={() => setRegionSelectorOpen(false)}
+        onConfirm={() => {
+          setRegionSelectorOpen(false);
+          setRegionConfirmed(true);
+        }}
+      />
     </div>
   );
 };
