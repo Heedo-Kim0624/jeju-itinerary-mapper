@@ -98,13 +98,15 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
     categoryOrder.forEach((category) => {
       const keywords = selectedKeywordsByCategory[category] || [];
       const priorityKeywords = keywordPriorityByCategory[category] || [];
-      // ★ 수정됨: 백틱을 사용하여 템플릿 문자열 올바르게 적용
+
       const result = keywords.map((kw) => {
         const translated = keywordMapping[kw] || kw;
+        // 중괄호 감싸기
         return priorityKeywords.includes(kw) ? `{${translated}}` : translated;
       });
       allKeywords.push(...result);
     });
+
     return allKeywords;
   }
 

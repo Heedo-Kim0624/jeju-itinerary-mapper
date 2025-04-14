@@ -24,7 +24,7 @@ const defaultKeywords = [
   { eng: 'easy_parking', kr: '주차' },
 ];
 
-// defaultKeywords를 이용해 영어→한글 매핑 생성 (변경됨)
+// 영어 → 한글 매핑 생성
 const keywordMapping: Record<string, string> = defaultKeywords.reduce((acc, curr) => {
   acc[curr.eng] = curr.kr;
   return acc;
@@ -38,17 +38,14 @@ const AccomodationPanel: React.FC<AccomodationPanelProps> = ({
   onConfirmAccomodation,
   onClose,
 }) => {
-  // 순위 목록: 드래그 앤 드롭으로 순서를 조정 (최대 3개)
   const [ranking, setRanking] = useState<string[]>([]);
 
-  // 선택된 키워드 중 순위에 추가되지 않은 항목을 순위에 추가하는 함수
   const addToRanking = (keyword: string) => {
     if (!ranking.includes(keyword) && ranking.length < 3) {
       setRanking([...ranking, keyword]);
     }
   };
 
-  // 드래그 앤 드롭 순서 재정렬 처리
   const onDragEnd = (result: DropResult) => {
     if (!result.destination) return;
     const newRank = Array.from(ranking);
@@ -57,19 +54,12 @@ const AccomodationPanel: React.FC<AccomodationPanelProps> = ({
     setRanking(newRank);
   };
 
-  // 최종 확인 시, 순위에 지정된 키워드를 한글로 변환 후 하나의 문자열로 결합하고,
-  // 순위에 포함되지 않은 선택된 키워드도 한글로 변환하여 결합한 최종 배열을 생성
   const handleConfirm = () => {
     const rankedSet = new Set(ranking);
     const unranked = selectedKeywords.filter((kw) => !rankedSet.has(kw));
-    
-    // 순위에 지정된 키워드를 한글로 변환하고 합치기 (예: {친절함,깔끔함})
     const translatedRanked = ranking.map((kw) => keywordMapping[kw] || kw);
     const rankedString = translatedRanked.length > 0 ? `{${translatedRanked.join(',')}}` : '';
-    
-    // 순위에 없는 키워드도 한글로 변환
     const translatedUnranked = unranked.map((kw) => keywordMapping[kw] || kw);
-    
     const finalKeywords: string[] = [];
     if (rankedString) {
       finalKeywords.push(rankedString);
@@ -78,29 +68,26 @@ const AccomodationPanel: React.FC<AccomodationPanelProps> = ({
     if (directInputValue.trim() !== '') {
       finalKeywords.push(directInputValue.trim());
     }
+    console.log('최종 키워드:', finalKeywords); // 디버깅 로그
     onConfirmAccomodation(finalKeywords);
   };
 
-  // 변경됨: 닫기 버튼 클릭 시, 내부 상태(순위, 직접 입력값 등)를 초기화한 후 부모의 onClose를 호출하는 함수
   const handleClose = () => {
     setRanking([]); // 순위 초기화
-    onDirectInputChange(''); // 직접입력값 초기화
-    // 추가적으로, 만약 선택된 키워드 초기화가 필요하면 부모를 통해 처리하거나 콜백 호출
-    onClose(); // 패널 닫기 처리
+    onDirectInputChange(''); // 직접 입력값 초기화
+    console.log('AccomodationPanel 닫기'); // 디버깅 로그
+    onClose();
   };
 
   return (
     <div className="fixed top-0 left-[300px] w-[300px] h-full bg-white border-l border-r border-gray-200 z-40 shadow-md p-4 overflow-y-auto">
-      {/* Header */}
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold">숙소 키워드 선택</h2>
-        {/* 변경됨: onClose 대신 handleClose 호출 */}
         <button onClick={handleClose} className="text-sm text-blue-600 hover:underline">
           닫기
         </button>
       </div>
 
-      {/* 키워드 버튼 그룹 (선택은 버튼 클릭) */}
       <div className="grid grid-cols-2 gap-2 mb-4">
         {defaultKeywords.map((keyword) => {
           const isSelected = selectedKeywords.includes(keyword.eng);
@@ -120,7 +107,6 @@ const AccomodationPanel: React.FC<AccomodationPanelProps> = ({
         })}
       </div>
 
-      {/* 직접 입력 영역 (이전보다 위쪽에 위치하도록 이동됨 - 변경됨) */}
       <div className="mb-4">
         <label className="block text-sm font-medium text-gray-700 mb-1">직접 입력</label>
         <input
@@ -132,7 +118,6 @@ const AccomodationPanel: React.FC<AccomodationPanelProps> = ({
         />
       </div>
 
-      {/* 선택된 키워드 목록에서 순위에 추가할 항목 표시 */}
       {selectedKeywords.length > 0 && (
         <div className="mb-4">
           <h3 className="text-sm font-semibold mb-2">선택된 키워드 (순위 추가)</h3>
@@ -160,7 +145,6 @@ const AccomodationPanel: React.FC<AccomodationPanelProps> = ({
         </div>
       )}
 
-      {/* 드래그 앤 드롭을 통한 순위 영역 (세로 배열, 라벨 추가) */}
       <div className="mb-4">
         <h3 className="text-sm font-semibold mb-2">키워드 순위 (최대 3개)</h3>
         <DragDropContext onDragEnd={onDragEnd}>
@@ -195,7 +179,6 @@ const AccomodationPanel: React.FC<AccomodationPanelProps> = ({
         </DragDropContext>
       </div>
 
-      {/* 확인 버튼 */}
       <button
         onClick={handleConfirm}
         className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 text-sm"
