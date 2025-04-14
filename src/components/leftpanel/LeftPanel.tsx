@@ -294,10 +294,10 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
                   <button
                     className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 text-sm"
                     onClick={() => {
-                      console.log('일정생성 버튼 클릭됨', promptKeywords);
+                      console.log('장소생성 버튼 클릭됨', promptKeywords);
                     }}
                   >
-                    일정생성
+                    장소 생성
                   </button>
                 </div>
               )}
