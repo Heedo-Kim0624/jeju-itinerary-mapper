@@ -8,7 +8,7 @@ import AccomodationPanel from '../middlepanel/AccomodationPanel';
 import LandmarkPanel from '../middlepanel/LandmarkPanel';
 import RestaurantPanel from '../middlepanel/RestaurantPanel';
 import CafePanel from '../middlepanel/CafePanel';
-import RegionSlidePanel from '../middlepanel/RegionSlidePanel';
+import RegionSelector from '../middlepanel/RegionSelector'; // 직접 import
 
 interface LeftPanelProps {
   onToggleRegionPanel?: () => void;
@@ -38,7 +38,8 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
   const [restaurantDirectInput, setRestaurantDirectInput] = useState('');
   const [cafeDirectInput, setCafeDirectInput] = useState('');
 
-  const [regionSlidePanelOpen, setRegionSlidePanelOpen] = useState(false);
+  // RegionSelector 모달을 표시할 상태
+  const [regionSelectorOpen, setRegionSelectorOpen] = useState(false);
 
   const itinerary = [
     { day: 1, places: [], totalDistance: 0 },
@@ -91,7 +92,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
   };
 
   // 프롬프트 키워드 구성 : 각 카테고리의 키워드를 keywordMapping 사용하여 한글로 변환
-  const buildPromptKeywords = () => {
+  function buildPromptKeywords() {
     const allKeywords: string[] = [];
     // 지역 선택은 이미 한글로 입력된 값으로 가정
     allKeywords.push(...selectedRegions);
@@ -105,7 +106,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
       allKeywords.push(...result);
     });
     return allKeywords;
-  };
+  }
   
   const promptKeywords = buildPromptKeywords();
 
@@ -168,7 +169,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
                   alert("먼저 날짜를 선택해주세요.");
                   return;
                 }
-                setRegionSlidePanelOpen(!regionSlidePanelOpen);
+                setRegionSelectorOpen(true);
               }}
               className="w-full bg-blue-100 text-blue-800 rounded px-4 py-2 text-sm font-medium hover:bg-blue-200"
             >
@@ -298,7 +299,6 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
                   <button
                     className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 text-sm"
                     onClick={() => {
-                      // 일정생성 버튼을 눌렀을 때의 동작을 여기에 구현 (예: 계획 생성 함수 호출)
                       console.log('일정생성 버튼 클릭됨', buildPromptKeywords());
                     }}
                   >
@@ -329,23 +329,28 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
         </div>
       )}
 
-      {/* 지역 선택 패널 */}
-      <RegionSlidePanel
-        open={regionSlidePanelOpen}
-        onClose={() => setRegionSlidePanelOpen(false)}
-        selectedRegions={selectedRegions}
-        onToggle={(region) => {
-          if (selectedRegions.includes(region)) {
-            setSelectedRegions(selectedRegions.filter((r) => r !== region));
-          } else {
-            setSelectedRegions([...selectedRegions, region]);
-          }
-        }}
-        onConfirm={() => {
-          setRegionSlidePanelOpen(false);
-          setRegionConfirmed(true);
-        }}
-      />
+      {/* 지역 선택: RegionSlidePanel 대신 직접 RegionSelector 렌더링 (모달 형태) */}
+      {regionSelectorOpen && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="w-[300px]">
+            <RegionSelector
+              selectedRegions={selectedRegions}
+              onToggle={(region) => {
+                if (selectedRegions.includes(region)) {
+                  setSelectedRegions(selectedRegions.filter((r) => r !== region));
+                } else {
+                  setSelectedRegions([...selectedRegions, region]);
+                }
+              }}
+              onClose={() => setRegionSelectorOpen(false)}
+              onConfirm={() => {
+                setRegionSelectorOpen(false);
+                setRegionConfirmed(true);
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
