@@ -23,7 +23,7 @@ const defaultKeywords = [
   { eng: 'Delicious_bread', kr: '빵' },
 ];
 
-// 변경됨: defaultKeywords를 기반으로 영어→한글 매핑 딕셔너리 생성
+// defaultKeywords를 기반으로 영어→한글 매핑 딕셔너리 생성
 const keywordMapping: Record<string, string> = defaultKeywords.reduce((acc, curr) => {
   acc[curr.eng] = curr.kr;
   return acc;
@@ -56,10 +56,12 @@ const CafePanel: React.FC<CafePanelProps> = ({
     setRanking(newRank);
   };
 
-  // 변경됨: handleConfirm 함수 수정  
-  // 순위에 지정된 키워드를 한글로 변환 후 하나의 문자열로 합쳐 중괄호로 감싸고,  
+  // 순위에 지정된 키워드를 한글로 변환 후 하나의 문자열로 합치고,  
   // 순위에 포함되지 않은 선택된 키워드도 한글로 변환하여 결합
-  const handleConfirm = () => {
+  const handleConfirm = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+
     const rankedSet = new Set(ranking);
     const unranked = selectedKeywords.filter((kw) => !rankedSet.has(kw));
     
@@ -76,14 +78,18 @@ const CafePanel: React.FC<CafePanelProps> = ({
     if (directInputValue.trim() !== '') {
       finalKeywords.push(directInputValue.trim());
     }
+    // 내부 상태 초기화 후 부모 콜백 호출
+    setRanking([]);
+    onDirectInputChange('');
     onConfirmCafe(finalKeywords);
   };
 
-  // 변경됨: 닫기 버튼 클릭 시 내부 상태 초기화 후 onClose 콜백 호출
-  const handleClose = () => {
-    setRanking([]); // 순위 초기화
-    onDirectInputChange(''); // 직접 입력값 초기화
-    // (필요에 따라 부모에서 선택된 키워드(selectedKeywords) 상태도 초기화 필요)
+  // 닫기 버튼 클릭 시 내부 상태를 초기화하고 onClose 콜백 호출
+  const handleClose = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setRanking([]);
+    onDirectInputChange('');
     onClose();
   };
 
@@ -92,8 +98,7 @@ const CafePanel: React.FC<CafePanelProps> = ({
       {/* 헤더 */}
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold">카페 키워드 선택</h2>
-        {/* 변경됨: onClose 대신 handleClose 호출 */}
-        <button onClick={handleClose} className="text-sm text-blue-600 hover:underline">
+        <button type="button" onClick={handleClose} className="text-sm text-blue-600 hover:underline">
           닫기
         </button>
       </div>
@@ -104,6 +109,7 @@ const CafePanel: React.FC<CafePanelProps> = ({
           const isSelected = selectedKeywords.includes(keyword.eng);
           return (
             <button
+              type="button"
               key={keyword.eng}
               onClick={() => onToggleKeyword(keyword.eng)}
               className={`px-2 py-1 rounded border text-sm transition-colors duration-150 whitespace-nowrap overflow-hidden text-ellipsis ${
@@ -145,6 +151,7 @@ const CafePanel: React.FC<CafePanelProps> = ({
                   </span>
                   {!ranking.includes(kw) && ranking.length < 3 && (
                     <button
+                      type="button"
                       onClick={() => addToRanking(kw)}
                       className="text-xs text-blue-600 hover:underline"
                     >
@@ -195,6 +202,7 @@ const CafePanel: React.FC<CafePanelProps> = ({
 
       {/* 확인 버튼 */}
       <button
+        type="button"
         onClick={handleConfirm}
         className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 text-sm"
       >

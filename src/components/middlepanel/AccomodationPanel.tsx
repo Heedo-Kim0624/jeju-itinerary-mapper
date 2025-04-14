@@ -1,4 +1,3 @@
-// AccomodationPanel.tsx
 import React, { useState } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 
@@ -54,7 +53,10 @@ const AccomodationPanel: React.FC<AccomodationPanelProps> = ({
     setRanking(newRank);
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // build final keywords
     const rankedSet = new Set(ranking);
     const unranked = selectedKeywords.filter((kw) => !rankedSet.has(kw));
     const translatedRanked = ranking.map((kw) => keywordMapping[kw] || kw);
@@ -68,14 +70,20 @@ const AccomodationPanel: React.FC<AccomodationPanelProps> = ({
     if (directInputValue.trim() !== '') {
       finalKeywords.push(directInputValue.trim());
     }
-    console.log('최종 키워드:', finalKeywords); // 디버깅 로그
+    console.log('최종 키워드:', finalKeywords);
+    // 초기화 후 확인 콜백 호출
+    setRanking([]);
+    onDirectInputChange('');
     onConfirmAccomodation(finalKeywords);
   };
 
-  const handleClose = () => {
-    setRanking([]); // 순위 초기화
-    onDirectInputChange(''); // 직접 입력값 초기화
-    console.log('AccomodationPanel 닫기'); // 디버깅 로그
+  const handleClose = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // 초기화 후 닫기 콜백 호출
+    setRanking([]);
+    onDirectInputChange('');
+    console.log('AccomodationPanel 닫기');
     onClose();
   };
 
@@ -83,7 +91,7 @@ const AccomodationPanel: React.FC<AccomodationPanelProps> = ({
     <div className="fixed top-0 left-[300px] w-[300px] h-full bg-white border-l border-r border-gray-200 z-40 shadow-md p-4 overflow-y-auto">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold">숙소 키워드 선택</h2>
-        <button onClick={handleClose} className="text-sm text-blue-600 hover:underline">
+        <button type="button" onClick={handleClose} className="text-sm text-blue-600 hover:underline">
           닫기
         </button>
       </div>
@@ -93,6 +101,7 @@ const AccomodationPanel: React.FC<AccomodationPanelProps> = ({
           const isSelected = selectedKeywords.includes(keyword.eng);
           return (
             <button
+              type="button"
               key={keyword.eng}
               onClick={() => onToggleKeyword(keyword.eng)}
               className={`px-2 py-1 rounded border text-sm transition-colors duration-150 whitespace-nowrap overflow-hidden text-ellipsis ${
@@ -132,6 +141,7 @@ const AccomodationPanel: React.FC<AccomodationPanelProps> = ({
                   </span>
                   {!ranking.includes(kw) && ranking.length < 3 && (
                     <button
+                      type="button"
                       onClick={() => addToRanking(kw)}
                       className="text-xs text-blue-600 hover:underline"
                     >
@@ -180,6 +190,7 @@ const AccomodationPanel: React.FC<AccomodationPanelProps> = ({
       </div>
 
       <button
+        type="button"
         onClick={handleConfirm}
         className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 text-sm"
       >

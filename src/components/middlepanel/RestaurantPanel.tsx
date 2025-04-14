@@ -26,7 +26,7 @@ const defaultKeywords = [
   { eng: 'Good_for_solo_dining', kr: '혼밥' },
 ];
 
-// 변경됨: defaultKeywords를 기반으로 영어→한글 매핑 딕셔너리 생성
+// defaultKeywords를 기반으로 영어 → 한글 매핑 딕셔너리 생성
 const keywordMapping: Record<string, string> = defaultKeywords.reduce((acc, curr) => {
   acc[curr.eng] = curr.kr;
   return acc;
@@ -43,7 +43,7 @@ const RestaurantPanel: React.FC<RestaurantPanelProps> = ({
   // 드래그 앤 드롭을 통한 순위 지정 (최대 3개)
   const [ranking, setRanking] = useState<string[]>([]);
 
-  // 아직 순위 목록에 없는 선택된 키워드를 순위에 추가하는 함수 (버튼 클릭)
+  // 선택된 키워드 중 아직 순위에 없는 항목을 순위 목록에 추가하는 함수
   const addToRanking = (keyword: string) => {
     if (!ranking.includes(keyword) && ranking.length < 3) {
       setRanking([...ranking, keyword]);
@@ -59,19 +59,18 @@ const RestaurantPanel: React.FC<RestaurantPanelProps> = ({
     setRanking(newRank);
   };
 
-  // 변경됨: handleConfirm 함수 수정
-  // 순위에 지정된 키워드를 한글로 변환 후 하나의 문자열로 합쳐 중괄호로 감싸고,
-  // 순위에 포함되지 않은 선택된 키워드도 한글로 변환하여 결합함
-  const handleConfirm = () => {
+  // 확인 버튼 클릭 시: 순위에 지정된 키워드를 한글로 변환 후 결합,
+  // 직접 입력값 포함, 내부 상태 초기화 후 부모 onConfirmRestaurant 콜백 호출
+  const handleConfirm = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+
     const rankedSet = new Set(ranking);
     const unranked = selectedKeywords.filter((kw) => !rankedSet.has(kw));
 
-    // 순위에 지정된 키워드를 한글로 변환
     const translatedRanked = ranking.map((kw) => keywordMapping[kw] || kw);
-    // 한 줄의 중괄호 문자열 생성 (예: {친절함,깔끔함})
     const rankedString = translatedRanked.length > 0 ? `{${translatedRanked.join(',')}}` : '';
 
-    // 순위에 없는 키워드도 한글로 변환
     const translatedUnranked = unranked.map((kw) => keywordMapping[kw] || kw);
 
     const finalKeywords: string[] = [];
@@ -82,14 +81,19 @@ const RestaurantPanel: React.FC<RestaurantPanelProps> = ({
     if (directInputValue.trim() !== '') {
       finalKeywords.push(directInputValue.trim());
     }
+    
+    // 내부 상태 초기화 후 부모 콜백 호출
+    setRanking([]);
+    onDirectInputChange('');
     onConfirmRestaurant(finalKeywords);
   };
 
-  // 변경됨: 닫기 버튼 클릭 시 내부 상태 초기화 후 부모의 onClose 콜백 호출
-  const handleClose = () => {
-    setRanking([]); // 순위 초기화
-    onDirectInputChange(''); // 직접 입력값 초기화
-    // 필요한 경우 선택된 키워드(selectedKeywords)도 부모에서 초기화하도록 onClose에서 처리
+  // 닫기 버튼 클릭 시: 내부 상태 초기화 후 부모 onClose 콜백 호출
+  const handleClose = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setRanking([]);
+    onDirectInputChange('');
     onClose();
   };
 
@@ -98,8 +102,7 @@ const RestaurantPanel: React.FC<RestaurantPanelProps> = ({
       {/* Header */}
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold">음식점 키워드 선택</h2>
-        {/* 변경됨: onClose 대신 handleClose 사용 */}
-        <button onClick={handleClose} className="text-sm text-blue-600 hover:underline">
+        <button type="button" onClick={handleClose} className="text-sm text-blue-600 hover:underline">
           닫기
         </button>
       </div>
@@ -110,6 +113,7 @@ const RestaurantPanel: React.FC<RestaurantPanelProps> = ({
           const isSelected = selectedKeywords.includes(keyword.eng);
           return (
             <button
+              type="button"
               key={keyword.eng}
               onClick={() => onToggleKeyword(keyword.eng)}
               className={`px-2 py-1 rounded border text-sm transition-colors duration-150 whitespace-nowrap overflow-hidden text-ellipsis ${
@@ -151,6 +155,7 @@ const RestaurantPanel: React.FC<RestaurantPanelProps> = ({
                   </span>
                   {!ranking.includes(kw) && ranking.length < 3 && (
                     <button
+                      type="button"
                       onClick={() => addToRanking(kw)}
                       className="text-xs text-blue-600 hover:underline"
                     >
@@ -201,6 +206,7 @@ const RestaurantPanel: React.FC<RestaurantPanelProps> = ({
 
       {/* 확인 버튼 */}
       <button
+        type="button"
         onClick={handleConfirm}
         className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 text-sm"
       >

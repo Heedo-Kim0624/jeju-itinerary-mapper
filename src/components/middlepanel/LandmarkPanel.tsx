@@ -23,7 +23,7 @@ const defaultKeywords = [
   { eng: 'Friendly_Staff', kr: '친절함' },
 ];
 
-// 변경됨: defaultKeywords를 기반으로 영어→한글 매핑 딕셔너리 생성
+// defaultKeywords를 기반으로 영어→한글 매핑 딕셔너리 생성
 const keywordMapping: Record<string, string> = defaultKeywords.reduce((acc, curr) => {
   acc[curr.eng] = curr.kr;
   return acc;
@@ -56,22 +56,20 @@ const LandmarkPanel: React.FC<LandmarkPanelProps> = ({
     setRanking(newRank);
   };
 
-  // 변경됨: handleConfirm 함수 수정  
-  // 순위에 지정된 키워드를 한글로 변환 후 하나의 문자열로 합쳐 중괄호로 감싸고,  
-  // 순위에 포함되지 않은 선택된 키워드도 한글로 변환하여 결합
-  const handleConfirm = () => {
+  // 확인 버튼 클릭 시: 순위에 지정된 키워드를 한글로 변환 후 결합,
+  // 직접 입력값 포함, 내부 상태 초기화 후 부모 onConfirmLandmark 콜백 호출.
+  const handleConfirm = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+
     const rankedSet = new Set(ranking);
     const unranked = selectedKeywords.filter((kw) => !rankedSet.has(kw));
 
-    // 순위에 지정된 키워드들을 한글로 변환
     const translatedRanked = ranking.map((kw) => keywordMapping[kw] || kw);
-    // 합쳐서 중괄호로 감싼 문자열 생성 (예: {많은 볼거리,인생샷})
     const rankedString = translatedRanked.length > 0 ? `{${translatedRanked.join(',')}}` : '';
 
-    // 순위에 없는 키워드도 한글로 변환
     const translatedUnranked = unranked.map((kw) => keywordMapping[kw] || kw);
 
-    // 최종 결과 배열 구성
     const finalKeywords: string[] = [];
     if (rankedString) {
       finalKeywords.push(rankedString);
@@ -80,14 +78,19 @@ const LandmarkPanel: React.FC<LandmarkPanelProps> = ({
     if (directInputValue.trim() !== '') {
       finalKeywords.push(directInputValue.trim());
     }
+
+    // 내부 상태 초기화 후 부모 콜백 호출
+    setRanking([]);
+    onDirectInputChange('');
     onConfirmLandmark(finalKeywords);
   };
 
-  // 변경됨: 닫기 버튼 클릭 시 내부 상태 초기화 후 onClose 콜백 호출  
-  const handleClose = () => {
-    setRanking([]); // 순위 초기화
-    onDirectInputChange(''); // 직접 입력값 초기화
-    // (필요 시 부모에서 selectedKeywords 상태를 초기화하도록 처리)
+  // 닫기 버튼 클릭 시: 내부 상태 초기화 후 부모 onClose 콜백 호출.
+  const handleClose = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setRanking([]);
+    onDirectInputChange('');
     onClose();
   };
 
@@ -96,18 +99,18 @@ const LandmarkPanel: React.FC<LandmarkPanelProps> = ({
       {/* Header */}
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold">관광지 키워드 선택</h2>
-        {/* 변경됨: onClose 대신 handleClose 사용 */}
-        <button onClick={handleClose} className="text-sm text-blue-600 hover:underline">
+        <button type="button" onClick={handleClose} className="text-sm text-blue-600 hover:underline">
           닫기
         </button>
       </div>
 
-      {/* 키워드 버튼 그룹 (버튼 클릭으로 선택) */}
+      {/* 키워드 버튼 그룹 */}
       <div className="grid grid-cols-2 gap-2 mb-4">
         {defaultKeywords.map((keyword) => {
           const isSelected = selectedKeywords.includes(keyword.eng);
           return (
             <button
+              type="button"
               key={keyword.eng}
               onClick={() => onToggleKeyword(keyword.eng)}
               className={`px-2 py-1 rounded border text-sm transition-colors duration-150 whitespace-nowrap overflow-hidden text-ellipsis ${
@@ -122,7 +125,7 @@ const LandmarkPanel: React.FC<LandmarkPanelProps> = ({
         })}
       </div>
 
-      {/* 직접 입력 영역 (선택된 키워드보다 위쪽에 위치) */}
+      {/* 직접 입력 영역 */}
       <div className="mb-4">
         <label className="block text-sm font-medium text-gray-700 mb-1">직접 입력</label>
         <input
@@ -149,6 +152,7 @@ const LandmarkPanel: React.FC<LandmarkPanelProps> = ({
                   </span>
                   {!ranking.includes(kw) && ranking.length < 3 && (
                     <button
+                      type="button"
                       onClick={() => addToRanking(kw)}
                       className="text-xs text-blue-600 hover:underline"
                     >
@@ -162,7 +166,7 @@ const LandmarkPanel: React.FC<LandmarkPanelProps> = ({
         </div>
       )}
 
-      {/* 드래그 앤 드롭을 통한 순위 영역 (세로 배열, 순위 라벨 추가) */}
+      {/* 드래그 앤 드롭을 통한 순위 영역 */}
       <div className="mb-4">
         <h3 className="text-sm font-semibold mb-2">키워드 순위 (최대 3개)</h3>
         <DragDropContext onDragEnd={onDragEnd}>
@@ -199,6 +203,7 @@ const LandmarkPanel: React.FC<LandmarkPanelProps> = ({
 
       {/* 확인 버튼 */}
       <button
+        type="button"
         onClick={handleConfirm}
         className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 text-sm"
       >

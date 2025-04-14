@@ -1,5 +1,4 @@
-// LeftPanel.tsx
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Place } from '@/types/supabase';
 import DatePicker from './DatePicker';
 import PromptKeywordBox from './PromptKeywordBox';
@@ -90,7 +89,6 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
     setDates(selectedDates);
   };
 
-  // ★ 수정됨: buildPromptKeywords를 함수 선언문으로 변경하여 먼저 선언되도록 함.
   function buildPromptKeywords() {
     const allKeywords: string[] = [];
     // 지역 선택은 이미 한글로 입력된 값으로 가정
@@ -98,20 +96,22 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
     categoryOrder.forEach((category) => {
       const keywords = selectedKeywordsByCategory[category] || [];
       const priorityKeywords = keywordPriorityByCategory[category] || [];
-
       const result = keywords.map((kw) => {
         const translated = keywordMapping[kw] || kw;
-        // 중괄호 감싸기
         return priorityKeywords.includes(kw) ? `{${translated}}` : translated;
       });
       allKeywords.push(...result);
     });
-
     return allKeywords;
   }
 
-  // buildPromptKeywords 함수 선언 이후에 호출
-  const promptKeywords = buildPromptKeywords();
+  // promptKeywords가 selectedRegions 등 상태 변경에 따라 재계산되도록 useMemo 사용
+  const promptKeywords = useMemo(() => buildPromptKeywords(), [
+    selectedRegions,
+    categoryOrder,
+    selectedKeywordsByCategory,
+    keywordPriorityByCategory,
+  ]);
 
   const handleCategoryClick = (category: string) => {
     const index = categoryOrder.indexOf(category);
@@ -145,7 +145,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
     });
   };
 
-  // 공통 "뒤로" 액션: 현재 카테고리의 키워드 초기화하고, currentCategoryIndex 하나 감소
+  // 공통 "뒤로" 액션: 현재 카테고리 키워드 초기화, currentCategoryIndex 감소
   const handlePanelBack = (category: string) => {
     setSelectedKeywordsByCategory((prev) => {
       const newObj = { ...prev };
@@ -294,7 +294,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
               />
             )}
 
-            {/* 일정생성 버튼 추가: 카테고리 4개가 모두 선택되고, 순위 지정도 완료된 상태에서 표시됨 */}
+            {/* 일정 생성 버튼 (카테고리 4개가 모두 선택되고 순위 지정 완료 시) */}
             {categorySelectionConfirmed &&
               categoryOrder.length === 4 &&
               currentCategoryIndex >= categoryOrder.length && (
@@ -302,7 +302,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
                   <button
                     className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 text-sm"
                     onClick={() => {
-                      console.log('일정생성 버튼 클릭됨', buildPromptKeywords());
+                      console.log('일정생성 버튼 클릭됨', promptKeywords);
                     }}
                   >
                     일정생성
@@ -327,7 +327,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
 
       {/* 왼쪽 패널 하단에 고정된 프롬프트 키워드 박스 */}
       {regionConfirmed && (
-        <div className="absolute bottom-0 left-0 w-[300px] max-h-60 border-t p-4 bg-white overflow-y-auto">
+        <div className="absolute bottom-0 left-0 w-[300px] max-h-60 border-t p-4 bg-white overflow-y-auto z-50">
           <PromptKeywordBox keywords={promptKeywords} />
         </div>
       )}
@@ -346,7 +346,12 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
         }}
         onConfirm={() => {
           setRegionSlidePanelOpen(false);
-          setRegionConfirmed(true);
+          // 지역이 하나라도 선택되었을 때만 확인 처리
+          if (selectedRegions.length > 0) {
+            setRegionConfirmed(true);
+          } else {
+            alert("지역을 선택해주세요.");
+          }
         }}
       />
     </div>
