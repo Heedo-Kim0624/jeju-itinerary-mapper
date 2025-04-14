@@ -106,7 +106,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
     });
     return allKeywords;
   };
-
+  
   const promptKeywords = buildPromptKeywords();
 
   const handleCategoryClick = (category: string) => {
