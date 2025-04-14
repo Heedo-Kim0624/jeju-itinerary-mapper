@@ -220,19 +220,22 @@ export type Database = {
       }
       cafe_categories: {
         Row: {
+          Categories: string | null
+          Categories_Details: string | null
           id: number
-          instagram: string | null
-          link: string | null
+          Place_Name: string | null
         }
         Insert: {
+          Categories?: string | null
+          Categories_Details?: string | null
           id: number
-          instagram?: string | null
-          link?: string | null
+          Place_Name?: string | null
         }
         Update: {
+          Categories?: string | null
+          Categories_Details?: string | null
           id?: number
-          instagram?: string | null
-          link?: string | null
+          Place_Name?: string | null
         }
         Relationships: [
           {

@@ -1,3 +1,4 @@
+
 // RegionSlidePanel.tsx
 import React from 'react';
 import RegionSelector from '../middlepanel/RegionSelector';
@@ -22,6 +23,7 @@ const RegionSlidePanel: React.FC<RegionSlidePanelProps> = ({
   return (
     <div
       className="absolute top-0 left-full w-[280px] h-full bg-white border-l shadow-md z-10 transition-transform duration-300 ease-in-out"
+      style={{ transform: open ? 'translateX(0)' : 'translateX(100%)' }}
     >
       <RegionSelector
         selectedRegions={selectedRegions}
