@@ -1,7 +1,6 @@
-
 // RegionSlidePanel.tsx
 import React from 'react';
-import RegionSelector from '../middlepanel/RegionSelector';
+import RegionSelector from './RegionSelector';
 
 interface RegionSlidePanelProps {
   open: boolean;
