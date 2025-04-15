@@ -11,16 +11,16 @@ interface CafePanelProps {
 }
 
 const defaultKeywords = [
-  { eng: 'Tasty_drinks', kr: '음료' },
-  { eng: 'Stylish_interior', kr: '인테리어' },
-  { eng: 'Friendly', kr: '친절함' },
-  { eng: 'Delicious_coffee', kr: '커피' },
-  { eng: 'Special_menu_available', kr: '특별한 메뉴' },
-  { eng: 'Nice_view', kr: '뷰' },
-  { eng: 'Clean_store', kr: '깔끔함' },
-  { eng: 'Good_for_photos', kr: '포토존' },
-  { eng: 'Delicious_desserts', kr: '디저트' },
-  { eng: 'Delicious_bread', kr: '빵' },
+  { eng: 'Tasty_drinks', kr: '음료가 맛있어요' },
+  { eng: 'Stylish_interior', kr: '인테리어가 멋져요' },
+  { eng: 'Friendly', kr: '친절해요' },
+  { eng: 'Delicious_coffee', kr: '커피가 맛있어요' },
+  { eng: 'Special_menu_available', kr: '특별한 메뉴가 있어요' },
+  { eng: 'Nice_view', kr: '뷰가 좋아요' },
+  { eng: 'Clean_store', kr: '매장이 청결해요' },
+  { eng: 'Good_for_photos', kr: '사진이 잘 나와요' },
+  { eng: 'Delicious_desserts', kr: '디저트가 맛있어요' },
+  { eng: 'Delicious_bread', kr: '빵이 맛있어요' },
 ];
 
 // defaultKeywords를 기반으로 영어→한글 매핑 딕셔너리 생성
@@ -47,6 +47,11 @@ const CafePanel: React.FC<CafePanelProps> = ({
     }
   };
 
+  // 순위에서 항목 제거하는 함수
+  const removeFromRanking = (keyword: string) => {
+    setRanking((prev) => prev.filter((item) => item !== keyword));
+  };
+
   // 드래그 앤 드롭 순서 재정렬 처리
   const onDragEnd = (result: DropResult) => {
     if (!result.destination) return;
@@ -56,35 +61,46 @@ const CafePanel: React.FC<CafePanelProps> = ({
     setRanking(newRank);
   };
 
-  // 순위에 지정된 키워드를 한글로 변환 후 하나의 문자열로 합치고,  
-  // 순위에 포함되지 않은 선택된 키워드도 한글로 변환하여 결합
+  // 직접 입력 버튼 클릭 시 : 입력값을 바로 selectedKeywords에 추가
+  const handleAddDirectInput = () => {
+    if (directInputValue.trim() !== '') {
+      onToggleKeyword(directInputValue.trim());
+      onDirectInputChange('');
+    }
+  };
+
+  // 확인 버튼 클릭 시: 순위에 지정된 키워드를 한글로 번역하여 결합하고, 
+  // 순위에 없는 선택된 키워드를 번역 후 결합한다.
   const handleConfirm = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     e.stopPropagation();
 
     const rankedSet = new Set(ranking);
     const unranked = selectedKeywords.filter((kw) => !rankedSet.has(kw));
-    
+
     const translatedRanked = ranking.map((kw) => keywordMapping[kw] || kw);
     const rankedString = translatedRanked.length > 0 ? `{${translatedRanked.join(',')}}` : '';
-    
+
     const translatedUnranked = unranked.map((kw) => keywordMapping[kw] || kw);
-    
+
     const finalKeywords: string[] = [];
     if (rankedString) {
       finalKeywords.push(rankedString);
     }
     finalKeywords.push(...translatedUnranked);
+
+    // 직접 입력값 남아있으면 추가
     if (directInputValue.trim() !== '') {
       finalKeywords.push(directInputValue.trim());
     }
+
     // 내부 상태 초기화 후 부모 콜백 호출
     setRanking([]);
     onDirectInputChange('');
     onConfirmCafe(finalKeywords);
   };
 
-  // 닫기 버튼 클릭 시 내부 상태를 초기화하고 onClose 콜백 호출
+  // 닫기 버튼 클릭 시 내부 상태 초기화 후 부모 onClose 콜백 호출
   const handleClose = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     e.stopPropagation();
@@ -132,11 +148,20 @@ const CafePanel: React.FC<CafePanelProps> = ({
           value={directInputValue}
           onChange={(e) => onDirectInputChange(e.target.value)}
           placeholder="키워드를 입력하세요"
-          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring focus:border-blue-300 whitespace-nowrap overflow-hidden text-ellipsis"
+          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring focus:border-blue-300"
         />
+        <div className="mt-2">
+          <button
+            type="button"
+            onClick={handleAddDirectInput}
+            className="text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            확인
+          </button>
+        </div>
       </div>
 
-      {/* 선택된 키워드 목록에서 순위로 추가할 항목 표시 */}
+      {/* 선택된 키워드 목록 (순위 추가 가능) */}
       {selectedKeywords.length > 0 && (
         <div className="mb-4">
           <h3 className="text-sm font-semibold mb-2">선택된 키워드 (순위 추가)</h3>
@@ -165,7 +190,7 @@ const CafePanel: React.FC<CafePanelProps> = ({
         </div>
       )}
 
-      {/* 드래그 앤 드롭을 통한 순위 영역 (세로 배열, 순위 라벨 추가) */}
+      {/* 드래그 앤 드롭을 통한 순위 영역 (취소 버튼 포함) */}
       <div className="mb-4">
         <h3 className="text-sm font-semibold mb-2">키워드 순위 (최대 3개)</h3>
         <DragDropContext onDragEnd={onDragEnd}>
@@ -188,6 +213,13 @@ const CafePanel: React.FC<CafePanelProps> = ({
                           <span className="text-sm text-gray-700 whitespace-nowrap overflow-hidden text-ellipsis">
                             {displayText}
                           </span>
+                          <button
+                            type="button"
+                            onClick={() => removeFromRanking(kw)}
+                            className="text-xs text-blue-600 hover:underline"
+                          >
+                            취소
+                          </button>
                         </div>
                       )}
                     </Draggable>
@@ -200,7 +232,7 @@ const CafePanel: React.FC<CafePanelProps> = ({
         </DragDropContext>
       </div>
 
-      {/* 확인 버튼 */}
+      {/* 최종 확인 버튼 */}
       <button
         type="button"
         onClick={handleConfirm}

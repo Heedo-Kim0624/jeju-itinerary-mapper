@@ -157,7 +157,8 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
     <div className="relative h-full">
       {!showItinerary && (
         <div className="fixed top-0 left-0 w-[300px] h-full bg-white border-l border-r border-gray-200 z-40 shadow-md flex flex-col">
-          <div className="flex-1 overflow-y-auto p-4 space-y-6">
+          {/* 메인 내용 영역에 pb (padding-bottom) 추가하여 프롬프트 키워드 박스 공간 확보 */}
+          <div className="flex-1 overflow-y-auto p-4 pb-24 space-y-6">
             <h1 className="text-xl font-semibold">제주도 여행 플래너</h1>
             <DatePicker onDatesSelected={handleDateSelect} />
             <button
@@ -294,7 +295,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
                   <button
                     className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 text-sm"
                     onClick={() => {
-                      console.log('장소생성 버튼 클릭됨', promptKeywords);
+                      console.log('장소 생성 버튼 클릭됨', promptKeywords);
                     }}
                   >
                     장소 생성

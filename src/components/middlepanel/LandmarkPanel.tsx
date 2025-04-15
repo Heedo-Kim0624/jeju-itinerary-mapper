@@ -11,19 +11,19 @@ interface LandmarkPanelProps {
 }
 
 const defaultKeywords = [
-  { eng: 'Many_Attractions', kr: '많은 볼거리' },
-  { eng: 'Photogenic_Spot', kr: '인생샷' },
-  { eng: 'Easy_Parking', kr: '주차' },
-  { eng: 'Well_Maintained_Walking_Trails', kr: '산책로' },
-  { eng: 'Kid_Friendly', kr: '아이와 함께' },
-  { eng: 'Great_View', kr: '뷰' },
-  { eng: 'Reasonable_Pricing', kr: '가성비' },
-  { eng: 'Diverse_Experience_Programs', kr: '체험활동' },
-  { eng: 'Large_Scale', kr: '공간감' },
-  { eng: 'Friendly_Staff', kr: '친절함' },
+  { eng: 'Many_Attractions', kr: '볼거리가 많아요' },
+  { eng: 'Photogenic_Spot', kr: '사진이 잘 나와요' },
+  { eng: 'Easy_Parking', kr: '주차하기 편해요' },
+  { eng: 'Well_Maintained_Walking_Trails', kr: '산책로가 잘 되어있어요' },
+  { eng: 'Kid_Friendly', kr: '아이와 가기 좋아요' },
+  { eng: 'Great_View', kr: '뷰가 좋아요' },
+  { eng: 'Reasonable_Pricing', kr: '가격이 합리적이에요' },
+  { eng: 'Diverse_Experience_Programs', kr: '체험 프로그램이 다양해요' },
+  { eng: 'Large_Scale', kr: '규모가 커요' },
+  { eng: 'Friendly_Staff', kr: '설명이 잘 되어있어요' },
 ];
 
-// defaultKeywords를 기반으로 영어→한글 매핑 딕셔너리 생성
+// 영어 → 한글 매핑 딕셔너리 생성
 const keywordMapping: Record<string, string> = defaultKeywords.reduce((acc, curr) => {
   acc[curr.eng] = curr.kr;
   return acc;
@@ -40,11 +40,16 @@ const LandmarkPanel: React.FC<LandmarkPanelProps> = ({
   // 순위 목록: 드래그 앤 드롭으로 순서를 조정 (최대 3개)
   const [ranking, setRanking] = useState<string[]>([]);
 
-  // 순위 목록에 선택된 키워드를 추가하는 함수
+  // 선택된 키워드를 순위 목록에 추가 (최대 3개)
   const addToRanking = (keyword: string) => {
     if (!ranking.includes(keyword) && ranking.length < 3) {
       setRanking([...ranking, keyword]);
     }
+  };
+
+  // 순위 항목에서 제거하는 함수
+  const removeFromRanking = (keyword: string) => {
+    setRanking((prev) => prev.filter((item) => item !== keyword));
   };
 
   // 드래그 앤 드롭 순서 재정렬 처리
@@ -56,8 +61,15 @@ const LandmarkPanel: React.FC<LandmarkPanelProps> = ({
     setRanking(newRank);
   };
 
-  // 확인 버튼 클릭 시: 순위에 지정된 키워드를 한글로 변환 후 결합,
-  // 직접 입력값 포함, 내부 상태 초기화 후 부모 onConfirmLandmark 콜백 호출.
+  // 직접 입력 버튼 클릭 시: 입력값을 selectedKeywords에 추가
+  const handleAddDirectInput = () => {
+    if (directInputValue.trim() !== '') {
+      onToggleKeyword(directInputValue.trim());
+      onDirectInputChange('');
+    }
+  };
+
+  // 확인 버튼 클릭 시: 순위 및 직접 입력값을 반영한 최종 키워드를 계산하여 전달
   const handleConfirm = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     e.stopPropagation();
@@ -78,14 +90,13 @@ const LandmarkPanel: React.FC<LandmarkPanelProps> = ({
     if (directInputValue.trim() !== '') {
       finalKeywords.push(directInputValue.trim());
     }
-
-    // 내부 상태 초기화 후 부모 콜백 호출
+    // 초기화 후 부모 콜백 호출
     setRanking([]);
     onDirectInputChange('');
     onConfirmLandmark(finalKeywords);
   };
 
-  // 닫기 버튼 클릭 시: 내부 상태 초기화 후 부모 onClose 콜백 호출.
+  // 닫기 버튼 클릭 시 내부 상태 초기화 후 부모 onClose 콜백 호출
   const handleClose = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     e.stopPropagation();
@@ -104,7 +115,7 @@ const LandmarkPanel: React.FC<LandmarkPanelProps> = ({
         </button>
       </div>
 
-      {/* 키워드 버튼 그룹 */}
+      {/* 기본 키워드 버튼 그룹 */}
       <div className="grid grid-cols-2 gap-2 mb-4">
         {defaultKeywords.map((keyword) => {
           const isSelected = selectedKeywords.includes(keyword.eng);
@@ -133,11 +144,20 @@ const LandmarkPanel: React.FC<LandmarkPanelProps> = ({
           value={directInputValue}
           onChange={(e) => onDirectInputChange(e.target.value)}
           placeholder="키워드를 입력하세요"
-          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring focus:border-blue-300 whitespace-nowrap overflow-hidden text-ellipsis"
+          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring focus:border-blue-300"
         />
+        <div className="mt-2">
+          <button
+            type="button"
+            onClick={handleAddDirectInput}
+            className="text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            확인
+          </button>
+        </div>
       </div>
 
-      {/* 선택된 키워드 목록에서 순위 추가 가능한 영역 */}
+      {/* 선택된 키워드 목록 (순위 추가 가능) */}
       {selectedKeywords.length > 0 && (
         <div className="mb-4">
           <h3 className="text-sm font-semibold mb-2">선택된 키워드 (순위 추가)</h3>
@@ -189,6 +209,13 @@ const LandmarkPanel: React.FC<LandmarkPanelProps> = ({
                           <span className="text-sm text-gray-700 whitespace-nowrap overflow-hidden text-ellipsis">
                             {displayText}
                           </span>
+                          <button
+                            type="button"
+                            onClick={() => removeFromRanking(kw)}
+                            className="text-xs text-blue-600 hover:underline"
+                          >
+                            취소
+                          </button>
                         </div>
                       )}
                     </Draggable>
@@ -201,7 +228,7 @@ const LandmarkPanel: React.FC<LandmarkPanelProps> = ({
         </DragDropContext>
       </div>
 
-      {/* 확인 버튼 */}
+      {/* 최종 확인 버튼 */}
       <button
         type="button"
         onClick={handleConfirm}

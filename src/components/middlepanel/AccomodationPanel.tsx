@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 
 interface AccomodationPanelProps {
-  selectedKeywords: string[]; // 중복 선택 허용 (영어 값)
+  selectedKeywords: string[]; // 중복 선택 허용 (영어 값 or 임의 값)
   onToggleKeyword: (keyword: string) => void;
   directInputValue: string;
   onDirectInputChange: (value: string) => void;
@@ -11,16 +11,16 @@ interface AccomodationPanelProps {
 }
 
 const defaultKeywords = [
-  { eng: 'kind_service', kr: '친절함' },
-  { eng: 'cleanliness', kr: '청결도' },
-  { eng: 'good_view', kr: '좋은 뷰' },
-  { eng: 'quiet_and_relax', kr: '방음' },
-  { eng: 'good_bedding', kr: '침구' },
-  { eng: 'stylish_interior', kr: '인테리어' },
-  { eng: 'good_aircon_heating', kr: '냉난방' },
-  { eng: 'well_equipped_bathroom', kr: '욕실' },
-  { eng: 'good_breakfast', kr: '조식' },
-  { eng: 'easy_parking', kr: '주차' },
+  { eng: 'kind_service', kr: '친절해요' },
+  { eng: 'cleanliness', kr: '깨끗해요' },
+  { eng: 'good_view', kr: '뷰가 좋아요' },
+  { eng: 'quiet_and_relax', kr: '조용히 쉬기 좋아요' },
+  { eng: 'good_bedding', kr: '침구가 좋아요' },
+  { eng: 'stylish_interior', kr: '인테리어가 멋져요' },
+  { eng: 'good_aircon_heating', kr: '냉난방이 잘돼요' },
+  { eng: 'well_equipped_bathroom', kr: '화장실이 잘 되어 있어요' },
+  { eng: 'good_breakfast', kr: '조식이 맛있어요' },
+  { eng: 'easy_parking', kr: '주차하기 편해요' },
 ];
 
 // 영어 → 한글 매핑 생성
@@ -39,12 +39,19 @@ const AccomodationPanel: React.FC<AccomodationPanelProps> = ({
 }) => {
   const [ranking, setRanking] = useState<string[]>([]);
 
+  // 순위에 항목 추가 (최대 3개)
   const addToRanking = (keyword: string) => {
     if (!ranking.includes(keyword) && ranking.length < 3) {
-      setRanking([...ranking, keyword]);
+      setRanking((prev) => [...prev, keyword]);
     }
   };
 
+  // 순위에서 항목 제거
+  const removeFromRanking = (keyword: string) => {
+    setRanking((prev) => prev.filter((item) => item !== keyword));
+  };
+
+  // 드래그 앤 드롭을 통한 순위 재정렬
   const onDragEnd = (result: DropResult) => {
     if (!result.destination) return;
     const newRank = Array.from(ranking);
@@ -53,34 +60,54 @@ const AccomodationPanel: React.FC<AccomodationPanelProps> = ({
     setRanking(newRank);
   };
 
+  // "직접 입력" 버튼 클릭 시 입력값을 selectedKeywords에 추가
+  const handleAddDirectInput = () => {
+    if (directInputValue.trim() !== '') {
+      // onToggleKeyword를 활용해 selectedKeywords에 추가
+      // (이미 존재하면 제거 로직이 동작하지만, 일반적으로 없을 것으로 가정)
+      onToggleKeyword(directInputValue.trim());
+      onDirectInputChange(''); // 입력값 초기화
+    }
+  };
+
+  // "확인" 버튼 클릭 시 최종 키워드 산출
   const handleConfirm = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    // build final keywords
+
     const rankedSet = new Set(ranking);
     const unranked = selectedKeywords.filter((kw) => !rankedSet.has(kw));
+
+    // 순위에 있는 키워드를 번역 후 중괄호로 감싸기
     const translatedRanked = ranking.map((kw) => keywordMapping[kw] || kw);
     const rankedString = translatedRanked.length > 0 ? `{${translatedRanked.join(',')}}` : '';
+
+    // 순위에 없는 키워드도 번역
     const translatedUnranked = unranked.map((kw) => keywordMapping[kw] || kw);
+
+    // 최종 키워드 배열 생성
     const finalKeywords: string[] = [];
     if (rankedString) {
       finalKeywords.push(rankedString);
     }
     finalKeywords.push(...translatedUnranked);
+
+    // 직접 입력창에 남은 값이 있을 경우 마지막으로 추가
     if (directInputValue.trim() !== '') {
       finalKeywords.push(directInputValue.trim());
     }
+
     console.log('최종 키워드:', finalKeywords);
-    // 초기화 후 확인 콜백 호출
+    // 로컬 상태 초기화 후 부모 콜백 호출
     setRanking([]);
     onDirectInputChange('');
     onConfirmAccomodation(finalKeywords);
   };
 
+  // 닫기 버튼 클릭 시 패널 닫기
   const handleClose = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    // 초기화 후 닫기 콜백 호출
     setRanking([]);
     onDirectInputChange('');
     console.log('AccomodationPanel 닫기');
@@ -89,6 +116,7 @@ const AccomodationPanel: React.FC<AccomodationPanelProps> = ({
 
   return (
     <div className="fixed top-0 left-[300px] w-[300px] h-full bg-white border-l border-r border-gray-200 z-40 shadow-md p-4 overflow-y-auto">
+      {/* 헤더 */}
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold">숙소 키워드 선택</h2>
         <button type="button" onClick={handleClose} className="text-sm text-blue-600 hover:underline">
@@ -96,6 +124,7 @@ const AccomodationPanel: React.FC<AccomodationPanelProps> = ({
         </button>
       </div>
 
+      {/* 기본 키워드 목록 */}
       <div className="grid grid-cols-2 gap-2 mb-4">
         {defaultKeywords.map((keyword) => {
           const isSelected = selectedKeywords.includes(keyword.eng);
@@ -116,6 +145,7 @@ const AccomodationPanel: React.FC<AccomodationPanelProps> = ({
         })}
       </div>
 
+      {/* 직접 입력 영역 */}
       <div className="mb-4">
         <label className="block text-sm font-medium text-gray-700 mb-1">직접 입력</label>
         <input
@@ -123,10 +153,20 @@ const AccomodationPanel: React.FC<AccomodationPanelProps> = ({
           value={directInputValue}
           onChange={(e) => onDirectInputChange(e.target.value)}
           placeholder="키워드를 입력하세요"
-          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring focus:border-blue-300 whitespace-nowrap overflow-hidden text-ellipsis"
+          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring focus:border-blue-300"
         />
+        <div className="mt-2">
+          <button
+            type="button"
+            onClick={handleAddDirectInput}
+            className="text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            확인
+          </button>
+        </div>
       </div>
 
+      {/* 선택된 키워드 (순위로 추가 가능) */}
       {selectedKeywords.length > 0 && (
         <div className="mb-4">
           <h3 className="text-sm font-semibold mb-2">선택된 키워드 (순위 추가)</h3>
@@ -155,6 +195,7 @@ const AccomodationPanel: React.FC<AccomodationPanelProps> = ({
         </div>
       )}
 
+      {/* 키워드 순위 (드래그 앤 드롭) */}
       <div className="mb-4">
         <h3 className="text-sm font-semibold mb-2">키워드 순위 (최대 3개)</h3>
         <DragDropContext onDragEnd={onDragEnd}>
@@ -177,6 +218,14 @@ const AccomodationPanel: React.FC<AccomodationPanelProps> = ({
                           <span className="text-sm text-gray-700 whitespace-nowrap overflow-hidden text-ellipsis">
                             {displayText}
                           </span>
+                          {/* 추가: 취소 버튼 */}
+                          <button
+                            type="button"
+                            onClick={() => removeFromRanking(kw)}
+                            className="text-xs text-blue-600 hover:underline"
+                          >
+                            취소
+                          </button>
                         </div>
                       )}
                     </Draggable>
@@ -189,6 +238,7 @@ const AccomodationPanel: React.FC<AccomodationPanelProps> = ({
         </DragDropContext>
       </div>
 
+      {/* 최종 확인 버튼 */}
       <button
         type="button"
         onClick={handleConfirm}

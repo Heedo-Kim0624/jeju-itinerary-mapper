@@ -11,19 +11,19 @@ interface RestaurantPanelProps {
 }
 
 const defaultKeywords = [
-  { eng: 'Good_value_for_money', kr: '가성비' },
-  { eng: 'Great_for_group_gatherings', kr: '단체' },
-  { eng: 'Spacious_store', kr: '공간감' },
-  { eng: 'Clean_store', kr: '깔끔함' },
-  { eng: 'Nice_view', kr: '좋은 뷰' },
-  { eng: 'Large_portions', kr: '푸짐함' },
-  { eng: 'Delicious_food', kr: '맛' },
-  { eng: 'Stylish_interior', kr: '세련됨' },
-  { eng: 'Fresh_ingredients', kr: '신선함' },
-  { eng: 'Easy_parking', kr: '주차' },
-  { eng: 'Friendly', kr: '친절함' },
-  { eng: 'Special_menu_available', kr: '특별함' },
-  { eng: 'Good_for_solo_dining', kr: '혼밥' },
+  { eng: 'Good_value_for_money', kr: '가성비가 좋아요' },
+  { eng: 'Great_for_group_gatherings', kr: '단체모임 하기 좋아요' },
+  { eng: 'Spacious_store', kr: '매장이 넓어요' },
+  { eng: 'Clean_store', kr: '매장이 청결해요' },
+  { eng: 'Nice_view', kr: '뷰가 좋아요' },
+  { eng: 'Large_portions', kr: '양이 푸짐해요' },
+  { eng: 'Delicious_food', kr: '음식이 맛있어요' },
+  { eng: 'Stylish_interior', kr: '인테리어가 멋져요' },
+  { eng: 'Fresh_ingredients', kr: '재료가 신선해요' },
+  { eng: 'Easy_parking', kr: '주차하기 편해요' },
+  { eng: 'Friendly', kr: '친절해요' },
+  { eng: 'Special_menu_available', kr: '특별한 메뉴가 있어요' },
+  { eng: 'Good_for_solo_dining', kr: '혼밥하기 좋아요' },
 ];
 
 // defaultKeywords를 기반으로 영어 → 한글 매핑 딕셔너리 생성
@@ -40,7 +40,7 @@ const RestaurantPanel: React.FC<RestaurantPanelProps> = ({
   onConfirmRestaurant,
   onClose,
 }) => {
-  // 드래그 앤 드롭을 통한 순위 지정 (최대 3개)
+  // 드래그 앤 드롭으로 순위 지정 (최대 3개)
   const [ranking, setRanking] = useState<string[]>([]);
 
   // 선택된 키워드 중 아직 순위에 없는 항목을 순위 목록에 추가하는 함수
@@ -48,6 +48,11 @@ const RestaurantPanel: React.FC<RestaurantPanelProps> = ({
     if (!ranking.includes(keyword) && ranking.length < 3) {
       setRanking([...ranking, keyword]);
     }
+  };
+
+  // 순위 항목에서 제거하는 함수 (취소)
+  const removeFromRanking = (keyword: string) => {
+    setRanking((prev) => prev.filter((item) => item !== keyword));
   };
 
   // 드래그 앤 드롭 순서 재정렬 처리
@@ -59,8 +64,16 @@ const RestaurantPanel: React.FC<RestaurantPanelProps> = ({
     setRanking(newRank);
   };
 
-  // 확인 버튼 클릭 시: 순위에 지정된 키워드를 한글로 변환 후 결합,
-  // 직접 입력값 포함, 내부 상태 초기화 후 부모 onConfirmRestaurant 콜백 호출
+  // 직접 입력 버튼 클릭 시 : 입력값을 selectedKeywords에 추가
+  const handleAddDirectInput = () => {
+    if (directInputValue.trim() !== '') {
+      onToggleKeyword(directInputValue.trim());
+      onDirectInputChange('');
+    }
+  };
+
+  // 확인 버튼 클릭 시: 순위에 지정된 키워드를 한글로 번역 후 결합하고,
+  // 순위에 없는 선택된 키워드를 번역 후 결합하여 최종 키워드를 부모에 전달
   const handleConfirm = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     e.stopPropagation();
@@ -136,11 +149,20 @@ const RestaurantPanel: React.FC<RestaurantPanelProps> = ({
           value={directInputValue}
           onChange={(e) => onDirectInputChange(e.target.value)}
           placeholder="키워드를 입력하세요"
-          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring focus:border-blue-300 whitespace-nowrap overflow-hidden text-ellipsis"
+          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring focus:border-blue-300"
         />
+        <div className="mt-2">
+          <button
+            type="button"
+            onClick={handleAddDirectInput}
+            className="text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            확인
+          </button>
+        </div>
       </div>
 
-      {/* 선택된 키워드 목록에서 순위 추가 */}
+      {/* 선택된 키워드 목록 (순위 추가 가능) */}
       {selectedKeywords.length > 0 && (
         <div className="mb-4">
           <h3 className="text-sm font-semibold mb-2">선택된 키워드 (순위 추가)</h3>
@@ -169,7 +191,7 @@ const RestaurantPanel: React.FC<RestaurantPanelProps> = ({
         </div>
       )}
 
-      {/* 드래그 앤 드롭을 통한 순위 영역 (세로 배열, 순위 라벨 추가) */}
+      {/* 드래그 앤 드롭을 통한 순위 영역 (취소 버튼 포함) */}
       <div className="mb-4">
         <h3 className="text-sm font-semibold mb-2">키워드 순위 (최대 3개)</h3>
         <DragDropContext onDragEnd={onDragEnd}>
@@ -192,6 +214,13 @@ const RestaurantPanel: React.FC<RestaurantPanelProps> = ({
                           <span className="text-sm text-gray-700 whitespace-nowrap overflow-hidden text-ellipsis">
                             {displayText}
                           </span>
+                          <button
+                            type="button"
+                            onClick={() => removeFromRanking(kw)}
+                            className="text-xs text-blue-600 hover:underline"
+                          >
+                            취소
+                          </button>
                         </div>
                       )}
                     </Draggable>
@@ -204,7 +233,7 @@ const RestaurantPanel: React.FC<RestaurantPanelProps> = ({
         </DragDropContext>
       </div>
 
-      {/* 확인 버튼 */}
+      {/* 최종 확인 버튼 */}
       <button
         type="button"
         onClick={handleConfirm}
