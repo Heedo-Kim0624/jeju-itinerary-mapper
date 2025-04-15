@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useMapCore } from './useMapCore';
 import { MapProvider } from './MapContext';
