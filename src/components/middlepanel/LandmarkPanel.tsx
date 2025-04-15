@@ -75,7 +75,8 @@ const LandmarkPanel: React.FC<LandmarkPanelProps> = ({
     e.stopPropagation();
 
     const rankedSet = new Set(ranking);
-    const unranked = selectedKeywords.filter((kw) => !rankedSet.includes(kw));
+    // 수정: Set의 includes 대신 has 사용
+    const unranked = selectedKeywords.filter((kw) => !rankedSet.has(kw));
 
     const allKeywords: string[] = [];
     if (ranking.length > 0) {
@@ -88,14 +89,14 @@ const LandmarkPanel: React.FC<LandmarkPanelProps> = ({
       allKeywords.push(directInputValue.trim());
     }
 
-    // 최종 결과: "카페[영어키워드,영어키워드,...]"
+    // 최종 결과: "관광지[영어키워드,영어키워드,...]"
     const groupFinalKeyword = `관광지[${allKeywords.join(',')}]`;
     console.log('최종 키워드:', groupFinalKeyword);
 
-    // 초기화 후 부모 콜백 호출
+    // 수정: onConfirmLandmark가 string[] 타입을 받으므로 배열로 감싸서 전달
     setRanking([]);
     onDirectInputChange('');
-    onConfirmLandmark(groupFinalKeyword);
+    onConfirmLandmark([groupFinalKeyword]);
   };
 
   // 닫기 버튼 클릭 시 내부 상태 초기화 후 부모 onClose 콜백 호출
@@ -188,7 +189,7 @@ const LandmarkPanel: React.FC<LandmarkPanelProps> = ({
         </div>
       )}
 
-      {/* 드래그 앤 드롭을 통한 순위 영역 */}
+      {/* 드래그 앤 드롭을 통한 순위 영역 (취소 버튼 포함) */}
       <div className="mb-4">
         <h3 className="text-sm font-semibold mb-2">키워드 순위 (최대 3개)</h3>
         <DragDropContext onDragEnd={onDragEnd}>

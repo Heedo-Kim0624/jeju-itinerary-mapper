@@ -80,7 +80,7 @@ const RestaurantPanel: React.FC<RestaurantPanelProps> = ({
 
     // 순위와 나머지 선택 키워드(영어 값)를 사용
     const rankedSet = new Set(ranking);
-    const unranked = selectedKeywords.filter((kw) => !ranking.includes(kw));
+    const unranked = selectedKeywords.filter((kw) => !ranking.has(kw));
 
     const allKeywords: string[] = [];
     if (ranking.length > 0) {
@@ -100,7 +100,7 @@ const RestaurantPanel: React.FC<RestaurantPanelProps> = ({
     // 초기화 후 부모 콜백 호출 (영어 키워드 그룹을 배열로 전달)
     setRanking([]);
     onDirectInputChange('');
-    onConfirmCafe([groupFinalKeyword]);
+    onConfirmRestaurant([groupFinalKeyword]);
   };
 
   // 닫기 버튼 클릭 시: 내부 상태 초기화 후 부모 onClose 콜백 호출
