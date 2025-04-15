@@ -74,8 +74,9 @@ const LandmarkPanel: React.FC<LandmarkPanelProps> = ({
     e.preventDefault();
     e.stopPropagation();
 
+    // 순위가 지정된 키워드들 추출
     const rankedSet = new Set(ranking);
-    // 수정: Set의 includes 대신 has 사용
+    // 순위가 지정되지 않은 나머지 키워드들 추출
     const unranked = selectedKeywords.filter((kw) => !rankedSet.has(kw));
 
     const allKeywords: string[] = [];
@@ -84,12 +85,17 @@ const LandmarkPanel: React.FC<LandmarkPanelProps> = ({
       const rankedString = `{${ranking.join(',')}}`;
       allKeywords.push(rankedString);
     }
+    
+    // 나머지 선택된 키워드들 추가
     allKeywords.push(...unranked);
+    
+    // 직접 입력한 키워드가 있다면 추가
     if (directInputValue.trim() !== '') {
       allKeywords.push(directInputValue.trim());
     }
 
     // 최종 결과: "관광지[영어키워드,영어키워드,...]"
+    // 키워드가 없는 경우에도 빈 배열 []을 사용하여 안전한 문자열 생성
     const groupFinalKeyword = `관광지[${allKeywords.join(',')}]`;
     console.log('최종 키워드:', groupFinalKeyword);
 

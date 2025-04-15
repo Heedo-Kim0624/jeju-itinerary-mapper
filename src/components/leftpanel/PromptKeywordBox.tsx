@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 interface PromptKeywordBoxProps {
@@ -51,16 +52,40 @@ const PromptKeywordBox: React.FC<PromptKeywordBoxProps> = ({ keywords }) => {
   // mapGroup 함수는 전달받은 그룹 문자열(예: "숙소[kind_service,cleanliness]")를 분석해서
   // 카테고리별 영어 키워드를 keywordMapping 사전을 통해 한글로 변환합니다.
   const mapGroup = (groupStr: string) => {
-    const openBracket = groupStr.indexOf('[');
-    const closeBracket = groupStr.indexOf(']');
-    if (openBracket === -1 || closeBracket === -1) {
+    try {
+      const openBracket = groupStr.indexOf('[');
+      const closeBracket = groupStr.indexOf(']');
+      if (openBracket === -1 || closeBracket === -1) {
+        return groupStr;
+      }
+      const category = groupStr.slice(0, openBracket);
+      const inner = groupStr.slice(openBracket + 1, closeBracket);
+      
+      // 빈 괄호인 경우 그냥 카테고리만 반환
+      if (!inner) {
+        return category;
+      }
+      
+      // 중괄호로 감싸진 우선순위 키워드가 있는지 확인 (예: "{key1,key2}")
+      if (inner.startsWith('{') && inner.endsWith('}')) {
+        const priorityContent = inner.slice(1, -1);
+        if (!priorityContent) return category;
+        const priorityKeywords = priorityContent.split(',');
+        const mappedPriority = priorityKeywords.map((kw) => keywordMapping[kw] || kw);
+        return `${category}[${mappedPriority.join(',')}]`;
+      }
+      
+      // 일반적인 키워드 배열인 경우
+      const englishKeywords = inner.split(',');
+      if (!englishKeywords || englishKeywords.length === 0) {
+        return category;
+      }
+      const mappedKeywords = englishKeywords.map((kw) => keywordMapping[kw] || kw);
+      return `${category}[${mappedKeywords.join(',')}]`;
+    } catch (error) {
+      console.error("Error mapping keyword group:", error, groupStr);
       return groupStr;
     }
-    const category = groupStr.slice(0, openBracket);
-    const inner = groupStr.slice(openBracket + 1, closeBracket);
-    const englishKeywords = inner.split(',');
-    const mappedKeywords = englishKeywords.map((kw) => keywordMapping[kw] || kw);
-    return `${category}[${mappedKeywords.join(',')}]`;
   };
 
   return (

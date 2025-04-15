@@ -80,7 +80,7 @@ const RestaurantPanel: React.FC<RestaurantPanelProps> = ({
 
     // 순위와 나머지 선택 키워드(영어 값)를 사용
     const rankedSet = new Set(ranking);
-    const unranked = selectedKeywords.filter((kw) => !ranking.has(kw));
+    const unranked = selectedKeywords.filter((kw) => !rankedSet.has(kw));
 
     const allKeywords: string[] = [];
     if (ranking.length > 0) {
@@ -93,7 +93,7 @@ const RestaurantPanel: React.FC<RestaurantPanelProps> = ({
       allKeywords.push(directInputValue.trim());
     }
 
-    // 최종 결과: "카페[영어키워드,영어키워드,...]"
+    // 최종 결과: "음식점[영어키워드,영어키워드,...]"
     const groupFinalKeyword = `음식점[${allKeywords.join(',')}]`;
     console.log('최종 키워드:', groupFinalKeyword);
 
