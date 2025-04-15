@@ -89,27 +89,30 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
     setDates(selectedDates);
   };
 
-  // buildPromptKeywords 함수: 모든 정보를 그룹화해서 하나의 배열에 저장
+  // buildPromptKeywords 함수: 분석용 데이터(영어)는 그대로 유지하고, 그룹 문자열은 영어 그대로 생성
   function buildPromptKeywords() {
     const allKeywords: string[] = [];
 
-    // 날짜 및 시간 정보 그룹화: "일정[출발일,출발시간,도착일,돌아가는시간]"
+    // 날짜 및 시간 그룹화: "일정[MM.dd,출발시간,MM.dd,돌아가는시간]"
     if (dates) {
       const formattedStartDate = format(dates.startDate, 'MM.dd');
       const formattedEndDate = format(dates.endDate, 'MM.dd');
       allKeywords.push(`일정[${formattedStartDate},${dates.startTime},${formattedEndDate},${dates.endTime}]`);
     }
+
     // 지역 정보 그룹화: "지역[지역1,지역2,...]"
     if (selectedRegions.length > 0) {
       allKeywords.push(`지역[${selectedRegions.join(',')}]`);
     }
-    // 각 카테고리별 영어 키워드 그룹화 (DB에 저장할 값으로 사용)
+
+    // 각 카테고리별 영어 키워드 그룹화 (분석용 데이터: 영어 그대로)
     categoryOrder.forEach((category) => {
       const keywords = selectedKeywordsByCategory[category] || [];
       if (keywords.length > 0) {
         allKeywords.push(`${category}[${keywords.join(',')}]`);
       }
     });
+
     return allKeywords;
   }
 
