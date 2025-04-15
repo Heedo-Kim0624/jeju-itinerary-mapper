@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { format } from 'date-fns';
 import { Place } from '@/types/supabase';
 import DatePicker from './DatePicker';
 import PromptKeywordBox from './PromptKeywordBox';
@@ -43,6 +44,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
     { day: 2, places: [], totalDistance: 0 },
   ];
 
+  // UI용 한글 매핑 (사용자에게 표시)
   const keywordMapping: Record<string, string> = {
     'Many_Attractions': '많은 볼거리',
     'Photogenic_Spot': '인생샷',
@@ -87,17 +89,25 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
     setDates(selectedDates);
   };
 
+  // buildPromptKeywords 함수: 모든 정보를 그룹화해서 하나의 배열에 저장
   function buildPromptKeywords() {
     const allKeywords: string[] = [];
-    allKeywords.push(...selectedRegions);
+    // 지역 정보 그룹화: "지역[지역1,지역2,...]"
+    if (selectedRegions.length > 0) {
+      allKeywords.push(`지역[${selectedRegions.join(',')}]`);
+    }
+    // 날짜 및 시간 정보 그룹화: "일정[출발일,출발시간,도착일,돌아가는시간]"
+    if (dates) {
+      const formattedStartDate = format(dates.startDate, 'MM.dd');
+      const formattedEndDate = format(dates.endDate, 'MM.dd');
+      allKeywords.push(`일정[${formattedStartDate},${dates.startTime},${formattedEndDate},${dates.endTime}]`);
+    }
+    // 각 카테고리별 영어 키워드 그룹화 (DB에 저장할 값으로 사용)
     categoryOrder.forEach((category) => {
       const keywords = selectedKeywordsByCategory[category] || [];
-      const priorityKeywords = keywordPriorityByCategory[category] || [];
-      const result = keywords.map((kw) => {
-        const translated = keywordMapping[kw] || kw;
-        return priorityKeywords.includes(kw) ? `{${translated}}` : translated;
-      });
-      allKeywords.push(...result);
+      if (keywords.length > 0) {
+        allKeywords.push(`${category}[${keywords.join(',')}]`);
+      }
     });
     return allKeywords;
   }
@@ -107,6 +117,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
     categoryOrder,
     selectedKeywordsByCategory,
     keywordPriorityByCategory,
+    dates,
   ]);
 
   const handleCategoryClick = (category: string) => {
@@ -157,7 +168,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
     <div className="relative h-full">
       {!showItinerary && (
         <div className="fixed top-0 left-0 w-[300px] h-full bg-white border-l border-r border-gray-200 z-40 shadow-md flex flex-col">
-          {/* 메인 내용 영역에 pb (padding-bottom) 추가하여 프롬프트 키워드 박스 공간 확보 */}
+          {/* 메인 내용 영역: pb-24를 추가하여 프롬프트 키워드 박스 공간 확보 */}
           <div className="flex-1 overflow-y-auto p-4 pb-24 space-y-6">
             <h1 className="text-xl font-semibold">제주도 여행 플래너</h1>
             <DatePicker onDatesSelected={handleDateSelect} />
@@ -339,7 +350,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
           if (selectedRegions.length > 0) {
             setRegionConfirmed(true);
           } else {
-            alert("지역을 선택해주세요.");
+            alert('지역을 선택해주세요.');
           }
         }}
       />

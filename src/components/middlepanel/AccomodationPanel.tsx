@@ -63,45 +63,42 @@ const AccomodationPanel: React.FC<AccomodationPanelProps> = ({
   // "직접 입력" 버튼 클릭 시 입력값을 selectedKeywords에 추가
   const handleAddDirectInput = () => {
     if (directInputValue.trim() !== '') {
-      // onToggleKeyword를 활용해 selectedKeywords에 추가
-      // (이미 존재하면 제거 로직이 동작하지만, 일반적으로 없을 것으로 가정)
       onToggleKeyword(directInputValue.trim());
       onDirectInputChange(''); // 입력값 초기화
     }
   };
 
-  // "확인" 버튼 클릭 시 최종 키워드 산출
+  // "확인" 버튼 클릭 시 최종 키워드 산출 및 "숙소[키워드들]" 형식으로 그룹화
   const handleConfirm = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     e.stopPropagation();
-
+  
     const rankedSet = new Set(ranking);
     const unranked = selectedKeywords.filter((kw) => !rankedSet.has(kw));
-
-    // 순위에 있는 키워드를 번역 후 중괄호로 감싸기
-    const translatedRanked = ranking.map((kw) => keywordMapping[kw] || kw);
-    const rankedString = translatedRanked.length > 0 ? `{${translatedRanked.join(',')}}` : '';
-
-    // 순위에 없는 키워드도 번역
-    const translatedUnranked = unranked.map((kw) => keywordMapping[kw] || kw);
-
-    // 최종 키워드 배열 생성
-    const finalKeywords: string[] = [];
+  
+    // 순위에 있는 키워드는 그룹화하여 중괄호로 감싸고,
+    // 이때 사용되는 값은 영어 키워드 그대로 사용
+    const rankedString = ranking.length > 0 ? `{${ranking.join(',')}}` : '';
+  
+    // 최종 키워드 배열 구성 (영어 키워드 사용)
+    const allKeywords: string[] = [];
     if (rankedString) {
-      finalKeywords.push(rankedString);
+      allKeywords.push(rankedString);
     }
-    finalKeywords.push(...translatedUnranked);
-
-    // 직접 입력창에 남은 값이 있을 경우 마지막으로 추가
+    allKeywords.push(...unranked);
+  
     if (directInputValue.trim() !== '') {
-      finalKeywords.push(directInputValue.trim());
+      allKeywords.push(directInputValue.trim());
     }
-
-    console.log('최종 키워드:', finalKeywords);
-    // 로컬 상태 초기화 후 부모 콜백 호출
+  
+    // 예: 최종 결과 "숙소[kind_service,cleanliness,...]"
+    const groupFinalKeyword = `숙소[${allKeywords.join(',')}]`;
+    console.log('최종 키워드:', groupFinalKeyword);
+  
+    // 초기화 후, 최종 결과를 배열 형태로 부모에 전달합니다.
     setRanking([]);
     onDirectInputChange('');
-    onConfirmAccomodation(finalKeywords);
+    onConfirmAccomodation([groupFinalKeyword]);
   };
 
   // 닫기 버튼 클릭 시 패널 닫기
@@ -195,7 +192,7 @@ const AccomodationPanel: React.FC<AccomodationPanelProps> = ({
         </div>
       )}
 
-      {/* 키워드 순위 (드래그 앤 드롭) */}
+      {/* 키워드 순위 (드래그 앤 드롭, 취소 버튼 포함) */}
       <div className="mb-4">
         <h3 className="text-sm font-semibold mb-2">키워드 순위 (최대 3개)</h3>
         <DragDropContext onDragEnd={onDragEnd}>
@@ -218,7 +215,6 @@ const AccomodationPanel: React.FC<AccomodationPanelProps> = ({
                           <span className="text-sm text-gray-700 whitespace-nowrap overflow-hidden text-ellipsis">
                             {displayText}
                           </span>
-                          {/* 추가: 취소 버튼 */}
                           <button
                             type="button"
                             onClick={() => removeFromRanking(kw)}

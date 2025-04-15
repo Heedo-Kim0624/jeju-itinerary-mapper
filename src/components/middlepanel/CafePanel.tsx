@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 
 interface CafePanelProps {
-  selectedKeywords: string[]; // 중복 선택 허용 (영어 값)
+  selectedKeywords: string[]; // 영어 키워드 값
   onToggleKeyword: (keyword: string) => void;
   directInputValue: string;
   onDirectInputChange: (value: string) => void;
@@ -23,7 +23,7 @@ const defaultKeywords = [
   { eng: 'Delicious_bread', kr: '빵이 맛있어요' },
 ];
 
-// defaultKeywords를 기반으로 영어→한글 매핑 딕셔너리 생성
+// defaultKeywords를 기반으로 영어→한글 매핑 딕셔너리 생성 (UI 표시용)
 const keywordMapping: Record<string, string> = defaultKeywords.reduce((acc, curr) => {
   acc[curr.eng] = curr.kr;
   return acc;
@@ -37,22 +37,22 @@ const CafePanel: React.FC<CafePanelProps> = ({
   onConfirmCafe,
   onClose,
 }) => {
-  // 드래그 앤 드롭으로 순위 지정 (최대 3개)
+  // 순위 목록: 드래그 앤 드롭으로 순서를 조정 (최대 3개)
   const [ranking, setRanking] = useState<string[]>([]);
 
-  // 순위에 추가하는 함수 (최대 3개까지)
+  // 순위에 추가 (최대 3개)
   const addToRanking = (keyword: string) => {
     if (!ranking.includes(keyword) && ranking.length < 3) {
       setRanking([...ranking, keyword]);
     }
   };
 
-  // 순위에서 항목 제거하는 함수
+  // 순위 항목 제거
   const removeFromRanking = (keyword: string) => {
     setRanking((prev) => prev.filter((item) => item !== keyword));
   };
 
-  // 드래그 앤 드롭 순서 재정렬 처리
+  // 드래그 앤 드롭 순서 재정렬
   const onDragEnd = (result: DropResult) => {
     if (!result.destination) return;
     const newRank = Array.from(ranking);
@@ -61,7 +61,7 @@ const CafePanel: React.FC<CafePanelProps> = ({
     setRanking(newRank);
   };
 
-  // 직접 입력 버튼 클릭 시 : 입력값을 바로 selectedKeywords에 추가
+  // "직접 입력" 버튼 클릭 시 입력값을 selectedKeywords에 추가
   const handleAddDirectInput = () => {
     if (directInputValue.trim() !== '') {
       onToggleKeyword(directInputValue.trim());
@@ -69,38 +69,37 @@ const CafePanel: React.FC<CafePanelProps> = ({
     }
   };
 
-  // 확인 버튼 클릭 시: 순위에 지정된 키워드를 한글로 번역하여 결합하고, 
-  // 순위에 없는 선택된 키워드를 번역 후 결합한다.
+  // 최종 확인: 선택된 키워드와 순위 배열(영어 값)을 그룹화한 후 "카페[키워드,키워드,...]" 형태로 전달
   const handleConfirm = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     e.stopPropagation();
 
+    // 순위와 나머지 선택 키워드(영어 값)를 사용
     const rankedSet = new Set(ranking);
-    const unranked = selectedKeywords.filter((kw) => !rankedSet.has(kw));
+    const unranked = selectedKeywords.filter((kw) => !ranking.includes(kw));
 
-    const translatedRanked = ranking.map((kw) => keywordMapping[kw] || kw);
-    const rankedString = translatedRanked.length > 0 ? `{${translatedRanked.join(',')}}` : '';
-
-    const translatedUnranked = unranked.map((kw) => keywordMapping[kw] || kw);
-
-    const finalKeywords: string[] = [];
-    if (rankedString) {
-      finalKeywords.push(rankedString);
+    const allKeywords: string[] = [];
+    if (ranking.length > 0) {
+      // 순위 부분은 그룹화하여 중괄호로 감싼다
+      const rankedString = `{${ranking.join(',')}}`;
+      allKeywords.push(rankedString);
     }
-    finalKeywords.push(...translatedUnranked);
-
-    // 직접 입력값 남아있으면 추가
+    allKeywords.push(...unranked);
     if (directInputValue.trim() !== '') {
-      finalKeywords.push(directInputValue.trim());
+      allKeywords.push(directInputValue.trim());
     }
 
-    // 내부 상태 초기화 후 부모 콜백 호출
+    // 최종 결과: "카페[영어키워드,영어키워드,...]"
+    const groupFinalKeyword = `카페[${allKeywords.join(',')}]`;
+    console.log('최종 키워드:', groupFinalKeyword);
+
+    // 초기화 후 부모 콜백 호출 (영어 키워드 그룹을 배열로 전달)
     setRanking([]);
     onDirectInputChange('');
-    onConfirmCafe(finalKeywords);
+    onConfirmCafe([groupFinalKeyword]);
   };
 
-  // 닫기 버튼 클릭 시 내부 상태 초기화 후 부모 onClose 콜백 호출
+  // 닫기 버튼
   const handleClose = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     e.stopPropagation();
@@ -168,7 +167,7 @@ const CafePanel: React.FC<CafePanelProps> = ({
           <div className="flex flex-wrap gap-2">
             {selectedKeywords.map((kw) => {
               const item = defaultKeywords.find((i) => i.eng === kw);
-              const displayText = item ? item.kr : kw;
+              const displayText = item ? keywordMapping[item.eng] : kw;
               return (
                 <div key={kw} className="flex items-center gap-1">
                   <span className="px-2 py-1 bg-gray-200 rounded text-sm whitespace-nowrap overflow-hidden text-ellipsis">
@@ -190,7 +189,7 @@ const CafePanel: React.FC<CafePanelProps> = ({
         </div>
       )}
 
-      {/* 드래그 앤 드롭을 통한 순위 영역 (취소 버튼 포함) */}
+      {/* 드래그 앤 드롭 순위 영역 (취소 버튼 포함) */}
       <div className="mb-4">
         <h3 className="text-sm font-semibold mb-2">키워드 순위 (최대 3개)</h3>
         <DragDropContext onDragEnd={onDragEnd}>
@@ -199,7 +198,7 @@ const CafePanel: React.FC<CafePanelProps> = ({
               <div ref={provided.innerRef} {...provided.droppableProps} className="flex flex-col space-y-2">
                 {ranking.map((kw, index) => {
                   const item = defaultKeywords.find((i) => i.eng === kw);
-                  const displayText = item ? item.kr : kw;
+                  const displayText = item ? keywordMapping[item.eng] : kw;
                   return (
                     <Draggable key={kw} draggableId={kw} index={index}>
                       {(provided) => (

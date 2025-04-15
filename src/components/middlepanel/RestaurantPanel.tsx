@@ -78,27 +78,29 @@ const RestaurantPanel: React.FC<RestaurantPanelProps> = ({
     e.preventDefault();
     e.stopPropagation();
 
+    // 순위와 나머지 선택 키워드(영어 값)를 사용
     const rankedSet = new Set(ranking);
-    const unranked = selectedKeywords.filter((kw) => !rankedSet.has(kw));
+    const unranked = selectedKeywords.filter((kw) => !ranking.includes(kw));
 
-    const translatedRanked = ranking.map((kw) => keywordMapping[kw] || kw);
-    const rankedString = translatedRanked.length > 0 ? `{${translatedRanked.join(',')}}` : '';
-
-    const translatedUnranked = unranked.map((kw) => keywordMapping[kw] || kw);
-
-    const finalKeywords: string[] = [];
-    if (rankedString) {
-      finalKeywords.push(rankedString);
+    const allKeywords: string[] = [];
+    if (ranking.length > 0) {
+      // 순위 부분은 그룹화하여 중괄호로 감싼다
+      const rankedString = `{${ranking.join(',')}}`;
+      allKeywords.push(rankedString);
     }
-    finalKeywords.push(...translatedUnranked);
+    allKeywords.push(...unranked);
     if (directInputValue.trim() !== '') {
-      finalKeywords.push(directInputValue.trim());
+      allKeywords.push(directInputValue.trim());
     }
-    
-    // 내부 상태 초기화 후 부모 콜백 호출
+
+    // 최종 결과: "카페[영어키워드,영어키워드,...]"
+    const groupFinalKeyword = `음식점[${allKeywords.join(',')}]`;
+    console.log('최종 키워드:', groupFinalKeyword);
+
+    // 초기화 후 부모 콜백 호출 (영어 키워드 그룹을 배열로 전달)
     setRanking([]);
     onDirectInputChange('');
-    onConfirmRestaurant(finalKeywords);
+    onConfirmCafe([groupFinalKeyword]);
   };
 
   // 닫기 버튼 클릭 시: 내부 상태 초기화 후 부모 onClose 콜백 호출
