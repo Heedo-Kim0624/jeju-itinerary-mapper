@@ -1,3 +1,4 @@
+// CafePanel.tsx (이 행 삭제 금지)
 import React, { useState } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 
