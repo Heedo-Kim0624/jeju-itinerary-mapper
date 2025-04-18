@@ -1,3 +1,4 @@
+
 // src/components/leftpanel/LeftPanel.tsx  (이 행 삭제 금지)
 import React, { useState, useMemo, useEffect } from 'react';
 import PanelHeader from './PanelHeader';
@@ -22,9 +23,8 @@ const LeftPanel: React.FC = () => {
     categoryOrder,
     categorySelectionConfirmed,
     setCategorySelectionConfirmed,
-    currentCategoryIndex,
+    stepIndex: categoryStepIndex,
     activeMiddlePanelCategory,
-    setActiveMiddlePanelCategory,
     selectedKeywordsByCategory,
     handleCategoryClick,
     toggleKeyword,
@@ -63,8 +63,11 @@ const LeftPanel: React.FC = () => {
   // 날짜·지역 확정 후 첫 카테고리 자동 오픈
   useEffect(() => {
     if (regionConfirmed && categorySelectionConfirmed && stepIndex === 0) {
-      const firstCat = categoryOrder[0];
-      setActiveMiddlePanelCategory(firstCat);
+      // 첫번째 카테고리를 열어줍니다
+      if (categoryOrder.length > 0) {
+        const firstCat = categoryOrder[0];
+        // setActiveMiddlePanelCategory는 더 이상 prop으로 받지 않음
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [regionConfirmed, categorySelectionConfirmed]);
@@ -89,33 +92,33 @@ const LeftPanel: React.FC = () => {
       handleConfirmCategory('숙소', finalKeywords);
       setShowCategoryResult('숙소');
       panTo(selectedRegions[0]);                // ★ 해당 지역으로 줌
-      setActiveMiddlePanelCategory(null);      // ★ 입력 패널 숨기기
+      // activeMiddlePanelCategory는 hook 내부에서 관리되므로 직접 설정 불필요
     },
     landmark: (finalKeywords: string[]) => {
       handleConfirmCategory('관광지', finalKeywords);
       setShowCategoryResult('관광지');
       panTo(selectedRegions[0]);
-      setActiveMiddlePanelCategory(null);
+      // activeMiddlePanelCategory는 hook 내부에서 관리되므로 직접 설정 불필요
     },
     restaurant: (finalKeywords: string[]) => {
       handleConfirmCategory('음식점', finalKeywords);
       setShowCategoryResult('음식점');
       panTo(selectedRegions[0]);
-      setActiveMiddlePanelCategory(null);
+      // activeMiddlePanelCategory는 hook 내부에서 관리되므로 직접 설정 불필요
     },
     cafe: (finalKeywords: string[]) => {
       handleConfirmCategory('카페', finalKeywords);
       setShowCategoryResult('카페');
       panTo(selectedRegions[0]);
-      setActiveMiddlePanelCategory(null);
+      // activeMiddlePanelCategory는 hook 내부에서 관리되므로 직접 설정 불필요
     }
   };
 
   const handlePanelBackByCategory = {
-    accomodation: () => handlePanelBack('숙소'),
-    landmark:    () => handlePanelBack('관광지'),
-    restaurant:  () => handlePanelBack('음식점'),
-    cafe:        () => handlePanelBack('카페'),
+    accomodation: () => handlePanelBack(),
+    landmark:    () => handlePanelBack(),
+    restaurant:  () => handlePanelBack(),
+    cafe:        () => handlePanelBack()
   };
 
   // ★ 결과 패널 닫기 시: 다음 단계로 이동, 다음 입력 패널 오픈
@@ -124,11 +127,11 @@ const LeftPanel: React.FC = () => {
     const next = stepIndex + 1;
     if (next < categoryOrder.length) {
       setStepIndex(next);
-      setActiveMiddlePanelCategory(categoryOrder[next]);
+      // activeMiddlePanelCategory는 hook 내부에서 관리되므로 직접 설정 불필요
     } else {
       // 모든 카테고리 완료
       setStepIndex(0);
-      setActiveMiddlePanelCategory(null);
+      // activeMiddlePanelCategory는 hook 내부에서 관리되므로 직접 설정 불필요
     }
   };
 
@@ -153,8 +156,8 @@ const LeftPanel: React.FC = () => {
 
             <CategoryNavigation
               categoryOrder={categoryOrder}
-              currentCategoryIndex={currentCategoryIndex}
-              onCategoryClick={(cat) => setActiveMiddlePanelCategory(cat)}
+              currentCategoryIndex={categoryStepIndex}
+              onCategoryClick={handleCategoryClick}
               categorySelectionConfirmed={categorySelectionConfirmed}
             />
 

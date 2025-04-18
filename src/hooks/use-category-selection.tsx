@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-// src/hooks/use-category-selection.ts (이 행 삭제 금지)
-=======
 
->>>>>>> 800ee25ae73f0db36ff0ebeeea0f7cfc2abfa365
 import { useState } from 'react';
 
 export const useCategorySelection = () => {
@@ -47,15 +43,6 @@ export const useCategorySelection = () => {
 
   // ★ 뒤로가기: 현재 단계의 키워드 제거 + stepIndex 감소
   const handlePanelBack = () => {
-    const category = activeMiddlePanelCategory;
-    if (!category) return;
-    // 1) 선택 키워드 삭제
-    setSelectedKeywordsByCategory((prev) => {
-      const copy = { ...prev };
-      delete copy[category];
-      return copy;
-    });
-    // 2) stepIndex 한 칸 뒤로
     setStepIndex((i) => Math.max(i - 1, 0));
   };
 
@@ -68,6 +55,9 @@ export const useCategorySelection = () => {
     setStepIndex((i) => i + 1);
   };
 
+  return {
+    categoryOrder,
+    categorySelectionConfirmed,
     setCategorySelectionConfirmed,
 
     // 단계 인덱스 & 현재 활성 카테고리
