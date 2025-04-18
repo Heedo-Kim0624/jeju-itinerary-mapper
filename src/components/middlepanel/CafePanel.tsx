@@ -77,7 +77,7 @@ const CafePanel: React.FC<CafePanelProps> = ({
 
     // 순위와 나머지 선택 키워드(영어 값)를 사용
     const rankedSet = new Set(ranking);
-    const unranked = selectedKeywords.filter((kw) => !rankedSet.has(kw));
+    const unranked = selectedKeywords.filter((kw) => !rankedSet.includes(kw));
 
     const allKeywords: string[] = [];
     if (ranking.length > 0) {

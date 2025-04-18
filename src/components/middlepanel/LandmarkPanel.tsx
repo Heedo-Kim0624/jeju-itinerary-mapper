@@ -78,7 +78,7 @@ const LandmarkPanel: React.FC<LandmarkPanelProps> = ({
     // 순위가 지정된 키워드들 추출
     const rankedSet = new Set(ranking);
     // 순위가 지정되지 않은 나머지 키워드들 추출
-    const unranked = selectedKeywords.filter((kw) => !rankedSet.has(kw));
+    const unranked = selectedKeywords.filter((kw) => !rankedSet.includes(kw));
 
     const allKeywords: string[] = [];
     if (ranking.length > 0) {

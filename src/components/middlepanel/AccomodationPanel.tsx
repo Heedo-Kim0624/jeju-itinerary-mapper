@@ -75,7 +75,7 @@ const AccomodationPanel: React.FC<AccomodationPanelProps> = ({
     e.stopPropagation();
   
     const rankedSet = new Set(ranking);
-    const unranked = selectedKeywords.filter((kw) => !rankedSet.has(kw));
+    const unranked = selectedKeywords.filter((kw) => !rankedSet.includes(kw));
   
     // 순위에 있는 키워드는 그룹화하여 중괄호로 감싸고,
     // 이때 사용되는 값은 영어 키워드 그대로 사용
