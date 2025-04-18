@@ -24,6 +24,7 @@ const LeftPanel: React.FC<LeftPanelProps> = () => {
     setCategorySelectionConfirmed,
     currentCategoryIndex,
     activeMiddlePanelCategory,
+    setActiveMiddlePanelCategory, // Added this line to destructure the setter
     selectedKeywordsByCategory,
     handleCategoryClick,
     toggleKeyword,
