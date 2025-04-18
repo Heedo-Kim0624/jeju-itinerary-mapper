@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DropResult } from '@hello-pangea/dnd';
 import { KeywordPanelProps } from '@/types/keyword';
 import KeywordSelector from './KeywordSelector';
@@ -17,6 +17,9 @@ const BaseKeywordPanel: React.FC<KeywordPanelProps> = ({
   defaultKeywords,
 }) => {
   const [ranking, setRanking] = useState<string[]>([]);
+  
+  // 패널이 열릴 때 기존에 높은 우선순위로 설정된 키워드를 로드하기 위한 로직을 추가할 수 있습니다
+  // 여기에는 구현되지 않았으나, API 통합 시 추가할 수 있음
 
   const addToRanking = (keyword: string) => {
     if (!ranking.includes(keyword) && ranking.length < 3) {
@@ -66,6 +69,7 @@ const BaseKeywordPanel: React.FC<KeywordPanelProps> = ({
     onConfirm([groupFinalKeyword]);
   };
 
+  // 닫기 버튼 클릭 시 패널을 닫되 선택된 키워드를 유지하도록 수정
   const handleClose = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     e.stopPropagation();

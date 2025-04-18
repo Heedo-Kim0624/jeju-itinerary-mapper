@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 
 export const useCategorySelection = () => {
@@ -29,21 +30,14 @@ export const useCategorySelection = () => {
     });
   };
 
+  // 닫기 버튼 클릭 시 선택한 키워드를 유지하면서 패널만 닫도록 수정
   const handlePanelBack = (category: string) => {
-    setSelectedKeywordsByCategory((prev) => {
-      const newObj = { ...prev };
-      delete newObj[category];
-      return newObj;
-    });
-    setCurrentCategoryIndex((prev) => {
-      const newIndex = prev > 0 ? prev - 1 : 0;
-      setActiveMiddlePanelCategory(categoryOrder[newIndex] || null);
-      return newIndex;
-    });
+    // 키워드 선택 상태는 삭제하지 않고 패널만 닫음
+    setActiveMiddlePanelCategory(null);
   };
 
   const handleConfirmCategory = (category: string, finalKeywords: string[]) => {
-    setSelectedKeywordsByCategory({ ...selectedKeywordsByCategory, [category]: finalKeywords });
+    setSelectedKeywordsByCategory((prev) => ({ ...prev, [category]: finalKeywords }));
     setActiveMiddlePanelCategory(null);
     setCurrentCategoryIndex((prev) => prev + 1);
   };
