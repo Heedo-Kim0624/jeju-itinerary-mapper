@@ -1,13 +1,11 @@
 //LeftPanel.tsx (이 행 삭제 금지)
 import React, { useState, useMemo } from 'react';
 import { format } from 'date-fns';
-import { Place } from '@/types/supabase';
-import DatePicker from './DatePicker';
-import CategoryPrioritySelector from './CategoryPrioritySelector';
-import AccomodationPanel from '../middlepanel/AccomodationPanel';
-import LandmarkPanel from '../middlepanel/LandmarkPanel';
-import RestaurantPanel from '../middlepanel/RestaurantPanel';
-import CafePanel from '../middlepanel/CafePanel';
+import PanelHeader from './PanelHeader';
+import CategoryOrderingStep from './CategoryOrderingStep';
+import CategoryNavigation from './CategoryNavigation';
+import CategoryPanels from './CategoryPanels';
+import GenerateButton from './GenerateButton';
 import RegionSlidePanel from '../middlepanel/RegionSlidePanel';
 
 interface LeftPanelProps {
@@ -38,10 +36,6 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
   const [cafeDirectInput, setCafeDirectInput] = useState('');
 
   const [regionSlidePanelOpen, setRegionSlidePanelOpen] = useState(false);
-
-  const handleDateSelect = (selectedDates: typeof dates) => {
-    setDates(selectedDates);
-  };
 
   // 유지: 데이터를 백엔드로 보내기 위한 buildPromptKeywords 함수
   function buildPromptKeywords() {
@@ -86,6 +80,10 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
     }
   };
 
+  const handleDateSelect = (selectedDates: typeof dates) => {
+    setDates(selectedDates);
+  };
+
   const toggleKeyword = (category: string, keyword: string) => {
     setSelectedKeywordsByCategory((prev) => {
       const current = prev[category] || [];
@@ -109,134 +107,101 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
     });
   };
 
+  const handleCategorySelection = (category: string) => {
+    setActiveMiddlePanelCategory(category);
+  };
+
+  const handleConfirmCategory = {
+    accomodation: (finalKeywords: string[]) => {
+      setSelectedKeywordsByCategory({ ...selectedKeywordsByCategory, 숙소: finalKeywords });
+      setActiveMiddlePanelCategory(null);
+      setCurrentCategoryIndex((prev) => prev + 1);
+    },
+    landmark: (finalKeywords: string[]) => {
+      setSelectedKeywordsByCategory({ ...selectedKeywordsByCategory, 관광지: finalKeywords });
+      setActiveMiddlePanelCategory(null);
+      setCurrentCategoryIndex((prev) => prev + 1);
+    },
+    restaurant: (finalKeywords: string[]) => {
+      setSelectedKeywordsByCategory({ ...selectedKeywordsByCategory, 음식점: finalKeywords });
+      setActiveMiddlePanelCategory(null);
+      setCurrentCategoryIndex((prev) => prev + 1);
+    },
+    cafe: (finalKeywords: string[]) => {
+      setSelectedKeywordsByCategory({ ...selectedKeywordsByCategory, 카페: finalKeywords });
+      setActiveMiddlePanelCategory(null);
+      setCurrentCategoryIndex((prev) => prev + 1);
+    }
+  };
+
+  const handleGenerateClick = () => {
+    console.log('장소 생성 버튼 클릭됨', promptKeywords);
+  };
+
+  const directInputValues = {
+    accomodation: accomodationDirectInput,
+    landmark: landmarkDirectInput,
+    restaurant: restaurantDirectInput,
+    cafe: cafeDirectInput
+  };
+
+  const onDirectInputChange = {
+    accomodation: setAccomodationDirectInput,
+    landmark: setLandmarkDirectInput,
+    restaurant: setRestaurantDirectInput,
+    cafe: setCafeDirectInput
+  };
+
+  const handlePanelBackByCategory = {
+    accomodation: () => handlePanelBack('숙소'),
+    landmark: () => handlePanelBack('관광지'),
+    restaurant: () => handlePanelBack('음식점'),
+    cafe: () => { handlePanelBack('카페'); setActiveMiddlePanelCategory(null); }
+  };
+
   return (
     <div className="relative h-full">
       {!showItinerary && (
         <div className="fixed top-0 left-0 w-[300px] h-full bg-white border-l border-r border-gray-200 z-40 shadow-md flex flex-col">
           <div className="flex-1 overflow-y-auto p-4 pb-24 space-y-6">
-            <h1 className="text-xl font-semibold">제주도 여행 플래너</h1>
-            <DatePicker onDatesSelected={handleDateSelect} />
-            <button
-              onClick={() => {
-                if (!dates) {
-                  alert("먼저 날짜를 선택해주세요.");
-                  return;
-                }
-                setRegionSlidePanelOpen(!regionSlidePanelOpen);
-              }}
-              className="w-full bg-blue-100 text-blue-800 rounded px-4 py-2 text-sm font-medium hover:bg-blue-200"
-            >
-              지역 선택
-            </button>
+            <PanelHeader 
+              onDateSelect={handleDateSelect}
+              onOpenRegionPanel={() => setRegionSlidePanelOpen(!regionSlidePanelOpen)}
+              hasSelectedDates={!!dates}
+            />
 
-            {regionConfirmed && (
-              <div className="mt-6">
-                <h3 className="text-sm font-medium text-gray-800 mb-2">카테고리 중요도 순서 선택</h3>
-                <CategoryPrioritySelector
-                  selectedOrder={categoryOrder}
-                  onSelect={handleCategoryClick}
-                  onBack={() => { setRegionConfirmed(false); setCategoryOrder([]); }}
-                  onConfirm={() => setCategorySelectionConfirmed(true)}
-                />
-              </div>
-            )}
+            <CategoryOrderingStep
+              categoryOrder={categoryOrder}
+              onCategoryClick={handleCategoryClick}
+              onBackToRegionSelect={() => { setRegionConfirmed(false); setCategoryOrder([]); }}
+              onConfirmCategoryOrder={() => setCategorySelectionConfirmed(true)}
+              regionConfirmed={regionConfirmed}
+            />
 
-            {categorySelectionConfirmed && (
-              <div className="mt-6 space-y-2">
-                {categoryOrder.map((category, index) => {
-                  const isCurrent = index === currentCategoryIndex;
-                  const isConfirmed = index < currentCategoryIndex;
-                  const disabled = index > currentCategoryIndex;
-                  return (
-                    <button
-                      key={category}
-                      disabled={disabled}
-                      onClick={() => setActiveMiddlePanelCategory(category)}
-                      className={`w-full py-2 rounded border ${
-                        isCurrent
-                          ? 'bg-white text-black hover:bg-gray-100'
-                          : isConfirmed
-                          ? 'bg-blue-100 text-blue-800'
-                          : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                      }`}
-                    >
-                      {category}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+            <CategoryNavigation
+              categoryOrder={categoryOrder}
+              currentCategoryIndex={currentCategoryIndex}
+              onCategoryClick={handleCategorySelection}
+              categorySelectionConfirmed={categorySelectionConfirmed}
+            />
 
-            {activeMiddlePanelCategory === '숙소' && (
-              <AccomodationPanel
-                selectedKeywords={selectedKeywordsByCategory['숙소'] || []}
-                onToggleKeyword={(kw) => toggleKeyword('숙소', kw)}
-                directInputValue={accomodationDirectInput}
-                onDirectInputChange={setAccomodationDirectInput}
-                onConfirmAccomodation={(finalKeywords) => {
-                  setSelectedKeywordsByCategory({ ...selectedKeywordsByCategory, 숙소: finalKeywords });
-                  setActiveMiddlePanelCategory(null);
-                  setCurrentCategoryIndex((prev) => prev + 1);
-                }}
-                onClose={() => { handlePanelBack('숙소'); setActiveMiddlePanelCategory(null); }}
-              />
-            )}
+            <CategoryPanels
+              activeMiddlePanelCategory={activeMiddlePanelCategory}
+              selectedKeywordsByCategory={selectedKeywordsByCategory}
+              toggleKeyword={toggleKeyword}
+              directInputValues={directInputValues}
+              onDirectInputChange={onDirectInputChange}
+              onConfirmCategory={handleConfirmCategory}
+              handlePanelBack={handlePanelBackByCategory}
+            />
 
-            {activeMiddlePanelCategory === '관광지' && (
-              <LandmarkPanel
-                selectedKeywords={selectedKeywordsByCategory['관광지'] || []}
-                onToggleKeyword={(kw) => toggleKeyword('관광지', kw)}
-                directInputValue={landmarkDirectInput}
-                onDirectInputChange={setLandmarkDirectInput}
-                onConfirmLandmark={(finalKeywords) => {
-                  setSelectedKeywordsByCategory({ ...selectedKeywordsByCategory, 관광지: finalKeywords });
-                  setActiveMiddlePanelCategory(null);
-                  setCurrentCategoryIndex((prev) => prev + 1);
-                }}
-                onClose={() => handlePanelBack('관광지')}
-              />
-            )}
-
-            {activeMiddlePanelCategory === '음식점' && (
-              <RestaurantPanel
-                selectedKeywords={selectedKeywordsByCategory['음식점'] || []}
-                onToggleKeyword={(kw) => toggleKeyword('음식점', kw)}
-                directInputValue={restaurantDirectInput}
-                onDirectInputChange={setRestaurantDirectInput}
-                onConfirmRestaurant={(finalKeywords) => {
-                  setSelectedKeywordsByCategory({ ...selectedKeywordsByCategory, 음식점: finalKeywords });
-                  setActiveMiddlePanelCategory(null);
-                  setCurrentCategoryIndex((prev) => prev + 1);
-                }}
-                onClose={() => handlePanelBack('음식점')}
-              />
-            )}
-
-            {activeMiddlePanelCategory === '카페' && (
-              <CafePanel
-                selectedKeywords={selectedKeywordsByCategory['카페'] || []}
-                onToggleKeyword={(kw) => toggleKeyword('카페', kw)}
-                directInputValue={cafeDirectInput}
-                onDirectInputChange={setCafeDirectInput}
-                onConfirmCafe={(finalKeywords) => {
-                  setSelectedKeywordsByCategory({ ...selectedKeywordsByCategory, 카페: finalKeywords });
-                  setActiveMiddlePanelCategory(null);
-                  setCurrentCategoryIndex((prev) => prev + 1);
-                }}
-                onClose={() => handlePanelBack('카페')}
-              />
-            )}
-
-            {categorySelectionConfirmed && categoryOrder.length === 4 && currentCategoryIndex >= categoryOrder.length && (
-              <div className="mt-4">
-                <button
-                  className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 text-sm"
-                  onClick={() => console.log('장소 생성 버튼 클릭됨', promptKeywords)}
-                >
-                  장소 생성
-                </button>
-              </div>
-            )}
+            <GenerateButton
+              categorySelectionConfirmed={categorySelectionConfirmed}
+              categoryOrder={categoryOrder}
+              currentCategoryIndex={currentCategoryIndex}
+              promptKeywords={promptKeywords}
+              onGenerateClick={handleGenerateClick}
+            />
           </div>
         </div>
       )}
@@ -251,8 +216,6 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onToggleRegionPanel }) => {
           </button>
         </div>
       )}
-
-      {/* PromptKeywordBox 제거: UI에는 표시되지 않음, 데이터만 유지 */}
 
       <RegionSlidePanel
         open={regionSlidePanelOpen}

@@ -1,6 +1,6 @@
 
 import React from 'react';
-import Map from './Map';
+import MapContainer from './MapContainer';
 import { Place, ItineraryDay } from '@/types/supabase';
 
 interface RightPanelProps {
@@ -19,15 +19,13 @@ const RightPanel: React.FC<RightPanelProps> = ({
   selectedPlaces = [],
 }) => {
   return (
-    <div className="w-full h-full">
-      <Map
-        places={places}
-        selectedPlace={selectedPlace}
-        itinerary={itinerary}
-        selectedDay={selectedDay}
-        selectedPlaces={selectedPlaces}
-      />
-    </div>
+    <MapContainer
+      places={places}
+      selectedPlace={selectedPlace}
+      itinerary={itinerary}
+      selectedDay={selectedDay}
+      selectedPlaces={selectedPlaces}
+    />
   );
 };
 

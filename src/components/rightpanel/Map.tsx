@@ -1,11 +1,11 @@
+
 import React, { useState } from 'react';
 import { useMapCore } from './useMapCore';
 import { MapProvider } from './MapContext';
 import MapMarkers from './MapMarkers';
 import MapLoadingOverlay from './MapLoadingOverlay';
 import GeoJsonLayer from './GeoJsonLayer';
-import { Button } from '@/components/ui/button';
-import { LayersIcon } from 'lucide-react';
+import MapControls from './MapControls';
 import type { Place, ItineraryDay } from '@/types/supabase';
 
 interface MapProps {
@@ -60,20 +60,11 @@ const Map: React.FC<MapProps> = ({
         <GeoJsonLayer map={map} visible={showGeoJson} />
       )}
       
-      {isNaverLoaded && (
-        <div className="absolute bottom-4 right-4 z-10">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="bg-white" 
-            onClick={toggleGeoJsonVisibility}
-            title={showGeoJson ? "도로망 숨기기" : "도로망 표시하기"}
-          >
-            <LayersIcon className="w-4 h-4 mr-1" />
-            {showGeoJson ? "도로망 숨기기" : "도로망 표시하기"}
-          </Button>
-        </div>
-      )}
+      <MapControls
+        showGeoJson={showGeoJson}
+        onToggleGeoJson={toggleGeoJsonVisibility}
+        isMapInitialized={isMapInitialized}
+      />
       
       <MapLoadingOverlay
         isNaverLoaded={isNaverLoaded}
