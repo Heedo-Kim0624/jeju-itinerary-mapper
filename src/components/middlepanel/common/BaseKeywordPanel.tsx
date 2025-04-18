@@ -18,8 +18,10 @@ const BaseKeywordPanel: React.FC<KeywordPanelProps> = ({
 }) => {
   const [ranking, setRanking] = useState<string[]>([]);
   
-  // 패널이 열릴 때 기존에 높은 우선순위로 설정된 키워드를 로드하기 위한 로직을 추가할 수 있습니다
-  // 여기에는 구현되지 않았으나, API 통합 시 추가할 수 있음
+  // 패널이 열릴 때 이미 선택된 키워드를 우선순위로 설정하기 위한 초기화 로직
+  useEffect(() => {
+    // 필요 시 여기에 랭킹 정보 초기화 로직 추가 가능
+  }, []);
 
   const addToRanking = (keyword: string) => {
     if (!ranking.includes(keyword) && ranking.length < 3) {
@@ -69,7 +71,7 @@ const BaseKeywordPanel: React.FC<KeywordPanelProps> = ({
     onConfirm([groupFinalKeyword]);
   };
 
-  // 닫기 버튼 클릭 시 패널을 닫되 선택된 키워드를 유지하도록 수정
+  // 닫기 버튼 클릭 시 패널만 닫도록 수정
   const handleClose = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     e.stopPropagation();
