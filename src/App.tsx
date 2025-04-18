@@ -1,3 +1,4 @@
+
 // src/App.tsx (이 행 삭제 금지)
 import React from 'react';
 import { Toaster } from "@/components/ui/toaster";
@@ -8,9 +9,9 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 
-// ★ MapContext 및 useMapCore 추가
+// ★ MapContext 및 useMapCore 추가 - 수정된 임포트 구문
 import { MapProvider } from "@/components/rightpanel/MapContext";
-import useMapCore from "@/components/rightpanel/useMapCore";
+import { useMapCore } from "@/components/rightpanel/useMapCore";
 
 const queryClient = new QueryClient();
 

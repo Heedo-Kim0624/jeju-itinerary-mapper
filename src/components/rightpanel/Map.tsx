@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { useMapCore } from './useMapCore';
+import useMapCore from './useMapCore';
 import { MapProvider } from './MapContext';
 import MapMarkers from './MapMarkers';
 import MapLoadingOverlay from './MapLoadingOverlay';
@@ -23,6 +23,7 @@ const Map: React.FC<MapProps> = ({
   selectedDay,
   selectedPlaces = [] 
 }) => {
+  const mapCore = useMapCore();
   const {
     mapContainer,
     map,
@@ -33,8 +34,9 @@ const Map: React.FC<MapProps> = ({
     calculateRoutes,
     clearMarkersAndUiElements,
     showGeoJson,
-    toggleGeoJsonVisibility
-  } = useMapCore();
+    toggleGeoJsonVisibility,
+    panTo
+  } = mapCore;
 
   return (
     <div ref={mapContainer} className="w-full h-full relative">
@@ -45,7 +47,8 @@ const Map: React.FC<MapProps> = ({
         isMapError,
         addMarkers,
         calculateRoutes,
-        clearMarkersAndUiElements
+        clearMarkersAndUiElements,
+        panTo
       }}>
         <MapMarkers
           places={places}

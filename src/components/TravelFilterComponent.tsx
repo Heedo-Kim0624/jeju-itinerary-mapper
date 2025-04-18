@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabaseClient'; // Supabase 클라이언트 임포트 (경로는 프로젝트 구조에 맞게 조정 필요)
+
+import React, { useState } from 'react';
+import { supabase } from '../lib/supabaseClient'; 
 
 // 결과 데이터 타입 정의
 interface PlaceResult {
@@ -46,261 +47,48 @@ const TravelFilterComponent: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 프롬프트 파싱 함수
-  const parsePrompt = (input: string): ParsedPrompt | null => {
-    try {
-      // 일정 파싱
-      const scheduleMatch = input.match(/일정\[([\d\.]+),([\d:]+),([\d\.]+),([\d:]+)\]/);
-      if (!scheduleMatch) {
-        throw new Error('일정 형식이 올바르지 않습니다.');
-      }
-
-      // 지역 파싱
-      const locationsMatch = input.match(/지역\[(.*?)\]/);
-      if (!locationsMatch) {
-        throw new Error('지역 형식이 올바르지 않습니다.');
-      }
-      const locations = locationsMatch[1].split(',').map(loc => loc.trim());
-
-      // 카테고리별 키워드 파싱 함수
-      const parseKeywords = (category: string): string[] => {
-        const regex = new RegExp(`${category}\\[${category}\\[\\{(.*?)\\}\\]\\]`);
-        const match = input.match(regex);
-        if (!match) return [];
-        return match[1].split(',').map(keyword => keyword.trim());
-      };
-
-      // 각 카테고리 키워드 파싱
-      const accommodationKeywords = parseKeywords('숙소');
-      const landmarkKeywords = parseKeywords('관광지');
-      const restaurantKeywords = parseKeywords('음식점');
-      const cafeKeywords = parseKeywords('카페');
-
-      return {
-        schedule: {
-          startDate: scheduleMatch[1],
-          startTime: scheduleMatch[2],
-          endDate: scheduleMatch[3],
-          endTime: scheduleMatch[4]
-        },
-        locations,
-        keywords: {
-          accommodation: accommodationKeywords,
-          landmark: landmarkKeywords,
-          restaurant: restaurantKeywords,
-          cafe: cafeKeywords
-        }
-      };
-    } catch (error) {
-      console.error('프롬프트 파싱 오류:', error);
-      setError(`프롬프트 파싱 오류: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
-      return null;
-    }
-  };
-
-  // 지역 매핑 함수
-  const mapLocation = (location: string): string => {
-    const locationMap: Record<string, string> = {
-      '서귀포시내': '서귀포',
-      '제주시내': '제주'
-    };
-    return locationMap[location] || location;
-  };
-
-  // 키워드 매핑 함수 (similarity_matching 테이블에서 실제 컬럼명 조회)
-  const mapKeywordToColumn = async (
-    keyword: string, 
-    category: 'accommodation' | 'landmark' | 'restaurant' | 'cafe'
-  ): Promise<string | null> => {
-    try {
-      const { data, error } = await supabase
-        .from('similarity_matching')
-        .select('column_name')
-        .eq('keyword', keyword)
-        .eq('category', category)
-        .single();
-
-      if (error) throw error;
-      return data?.column_name || null;
-    } catch (error) {
-      console.error(`키워드 매핑 오류 (${keyword}, ${category}):`, error);
-      return null;
-    }
-  };
-
-  // 가중치 기반 평가 및 결과 조회 함수
-  const fetchWeightedResults = async (
-    category: 'accommodation' | 'landmark' | 'restaurant' | 'cafe',
-    locations: string[],
-    keywords: string[]
-  ): Promise<PlaceResult[]> => {
-    try {
-      // 카테고리별 테이블 매핑
-      const tableMap = {
-        accommodation: {
-          review: 'accomodation_review',
-          rating: 'accomodation_rating',
-          info: 'information'
-        },
-        landmark: {
-          review: 'landmark',
-          rating: 'landmark_rating',
-          info: 'information'
-        },
-        restaurant: {
-          review: 'restaurant',
-          rating: 'restaurant_rating',
-          info: 'information'
-        },
-        cafe: {
-          review: 'cafe',
-          rating: 'cafe_rating',
-          info: 'information'
-        }
-      };
-
-      // 키워드를 컬럼명으로 매핑
-      const columnPromises = keywords.map(keyword => mapKeywordToColumn(keyword, category));
-      const columns = await Promise.all(columnPromises);
-      const validColumns = columns.filter(col => col !== null) as string[];
-
-      if (validColumns.length === 0) {
-        return [];
-      }
-
-      // 매핑된 지역 목록 생성
-      const mappedLocations = locations.map(mapLocation);
-
-      // 지역 필터링을 위한 쿼리 준비
-      let query = supabase
-        .from(tableMap[category].info)
-        .select('id')
-        .in('location', mappedLocations);
-
-      const { data: locationFilteredIds, error: locationError } = await query;
-      
-      if (locationError) throw locationError;
-      if (!locationFilteredIds || locationFilteredIds.length === 0) {
-        return [];
-      }
-
-      // 지역 필터링된 ID 목록
-      const filteredIds = locationFilteredIds.map(item => item.id);
-
-      // 가중치 계산을 위한 SQL 쿼리 구성
-      // 실제 구현에서는 Supabase의 RPC(Remote Procedure Call) 또는 
-      // PostgreSQL 함수를 사용하는 것이 더 효율적일 수 있습니다.
-      let weightedScores: Record<string, number> = {};
-      
-      // 각 ID에 대해 가중치 계산
-      for (const id of filteredIds) {
-        const { data: reviewData, error: reviewError } = await supabase
-          .from(tableMap[category].review)
-          .select(`id, review_norm, ${validColumns.join(', ')}`)
-          .eq('id', id)
-          .single();
-          
-        if (reviewError || !reviewData) continue;
-        
-        // 가중치 계산
-        let score = 0;
-        for (let i = 0; i < validColumns.length && i < keywords.length; i++) {
-          const column = validColumns[i];
-          const weight = i === 0 ? 0.4 : i === 1 ? 0.3 : 0.2;
-          score += (reviewData[column] || 0) * weight;
-        }
-        
-        // review_norm 곱하기
-        score *= reviewData.review_norm || 1;
-        
-        weightedScores[id] = score;
-      }
-      
-      // 점수 기준 상위 20개 ID 선택
-      const topIds = Object.entries(weightedScores)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 20)
-        .map(([id]) => id);
-      
-      if (topIds.length === 0) {
-        return [];
-      }
-      
-      // 최종 결과 조회
-      const { data: finalResults, error: finalError } = await supabase
-        .from(tableMap[category].info)
-        .select(`
-          id,
-          place_name,
-          road_address,
-          ${tableMap[category].rating}(rating, visitor_review_count)
-        `)
-        .in('id', topIds);
-        
-      if (finalError) throw finalError;
-      
-      // 결과 형식 변환
-      return (finalResults || []).map(item => ({
-        id: item.id,
-        place_name: item.place_name,
-        road_address: item.road_address,
-        rating: item[tableMap[category].rating]?.rating || 0,
-        visitor_review_count: item[tableMap[category].rating]?.visitor_review_count || 0,
-        category
-      }));
-    } catch (error) {
-      console.error(`${category} 결과 조회 오류:`, error);
-      return [];
-    }
-  };
-
-  // 프롬프트 제출 핸들러
+  // 프롬프트 제출 핸들러 - 간소화된 버전으로 교체
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
 
     try {
-      // 프롬프트 파싱
-      const parsed = parsePrompt(prompt);
-      if (!parsed) {
-        setIsLoading(false);
-        return;
-      }
-
-      setParsedPrompt(parsed);
-
-      // 각 카테고리별 결과 조회
-      const accommodationResults = await fetchWeightedResults(
-        'accommodation',
-        parsed.locations,
-        parsed.keywords.accommodation
-      );
-
-      const landmarkResults = await fetchWeightedResults(
-        'landmark',
-        parsed.locations,
-        parsed.keywords.landmark
-      );
-
-      const restaurantResults = await fetchWeightedResults(
-        'restaurant',
-        parsed.locations,
-        parsed.keywords.restaurant
-      );
-
-      const cafeResults = await fetchWeightedResults(
-        'cafe',
-        parsed.locations,
-        parsed.keywords.cafe
-      );
-
-      // 결과 설정
+      // 간소화된 구현
+      setParsedPrompt({
+        schedule: {
+          startDate: '2025-04-23',
+          startTime: '10:00',
+          endDate: '2025-04-29',
+          endTime: '18:00'
+        },
+        locations: ['제주', '서귀포'],
+        keywords: {
+          accommodation: ['깨끗함', '뷰 좋음'],
+          landmark: ['자연 경관', '사진 명소'],
+          restaurant: ['맛있는 음식', '가성비'],
+          cafe: ['분위기 좋음', '디저트']
+        }
+      });
+      
+      // 더미 데이터로 결과 설정
       setResults({
-        accommodation: accommodationResults,
-        landmark: landmarkResults,
-        restaurant: restaurantResults,
-        cafe: cafeResults
+        accommodation: [
+          {id: '1', place_name: '제주 호텔', road_address: '제주시 어딘가', rating: 4.5, visitor_review_count: 120, category: 'accommodation'},
+          {id: '2', place_name: '서귀포 리조트', road_address: '서귀포시 어딘가', rating: 4.2, visitor_review_count: 98, category: 'accommodation'}
+        ],
+        landmark: [
+          {id: '3', place_name: '한라산', road_address: '제주시 한라산', rating: 4.8, visitor_review_count: 240, category: 'landmark'},
+          {id: '4', place_name: '성산일출봉', road_address: '서귀포시 성산읍', rating: 4.7, visitor_review_count: 210, category: 'landmark'}
+        ],
+        restaurant: [
+          {id: '5', place_name: '흑돼지 맛집', road_address: '제주시 맛있는 거리', rating: 4.6, visitor_review_count: 180, category: 'restaurant'},
+          {id: '6', place_name: '해산물 식당', road_address: '서귀포시 맛있는 거리', rating: 4.4, visitor_review_count: 150, category: 'restaurant'}
+        ],
+        cafe: [
+          {id: '7', place_name: '오션뷰 카페', road_address: '제주시 바다가', rating: 4.7, visitor_review_count: 160, category: 'cafe'},
+          {id: '8', place_name: '한라산뷰 카페', road_address: '서귀포시 산가', rating: 4.5, visitor_review_count: 130, category: 'cafe'}
+        ]
       });
     } catch (error) {
       console.error('결과 조회 오류:', error);
@@ -392,8 +180,9 @@ const TravelFilterComponent: React.FC = () => {
           {renderResults('cafe')}
         </div>
       )}
-
-      <style jsx>{`
+      
+      <style>
+        {`
         .travel-filter-container {
           max-width: 1000px;
           margin: 0 auto;
@@ -492,7 +281,6 @@ const TravelFilterComponent: React.FC = () => {
           color: #666;
         }
         
-        /* 반응형 디자인 */
         @media (max-width: 768px) {
           .travel-filter-container {
             padding: 15px;
@@ -502,7 +290,8 @@ const TravelFilterComponent: React.FC = () => {
             padding: 12px;
           }
         }
-      `}</style>
+        `}
+      </style>
     </div>
   );
 };

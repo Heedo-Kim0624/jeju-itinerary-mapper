@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import LeftPanel from '@/components/leftpanel/LeftPanel';
 import RightPanel from '@/components/rightpanel/RightPanel';
@@ -24,7 +25,7 @@ const Index: React.FC = () => {
   return (
     <div className="flex h-screen overflow-hidden bg-jeju-light-gray relative">
       {/* 왼쪽 패널 */}
-      <LeftPanel onToggleRegionPanel={() => setShowRegionPanel(prev => !prev)} />
+      <LeftPanel />
 
       {/* 오른쪽 지도 패널 */}
       <RightPanel

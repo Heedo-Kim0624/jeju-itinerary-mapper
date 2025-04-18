@@ -37,7 +37,7 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
     if (itinerary && itinerary.length > 0 && selectedDay !== null) {
       const selectedItinerary = itinerary.find(day => day.day === selectedDay);
       if (selectedItinerary) {
-        addMarkers(selectedItinerary.places, true);
+        addMarkers(selectedItinerary.places, { isItinerary: true });
         calculateRoutes(selectedItinerary.places);
       } else {
         console.warn(`No itinerary found for day ${selectedDay}`);

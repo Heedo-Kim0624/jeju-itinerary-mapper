@@ -185,10 +185,17 @@ export const useMapCore = () => {
     polylines.current.push(polyline);
   }, [isMapInitialized, clearPolylines]);
 
-  const addMarkers = useCallback((placesToMark: Place[], isItinerary: boolean = false) => {
+  // 수정된 addMarkers 함수 - opts 인터페이스 사용
+  const addMarkers = useCallback((
+    placesToMark: Place[], 
+    opts?: { highlight?: boolean; isItinerary?: boolean }
+  ) => {
     if (!map.current || !isMapInitialized || !window.naver) return;
     
     clearMarkersAndUiElements();
+    
+    const isItinerary = opts?.isItinerary || false;
+    const highlight = opts?.highlight || false;
     
     console.log(`Adding ${placesToMark.length} markers, isItinerary:`, isItinerary);
     
@@ -204,7 +211,9 @@ export const useMapCore = () => {
         const position = new window.naver.maps.LatLng(place.y, place.x);
         bounds.extend(position);
         
-        const markerColor = getCategoryColor(place.category);
+        const markerColor = highlight 
+          ? '#FF0000' // 하이라이트된 마커는 빨간색
+          : getCategoryColor(place.category);
         
         const marker = new window.naver.maps.Marker({
           position: position,
@@ -250,6 +259,35 @@ export const useMapCore = () => {
     }
   }, [isMapInitialized, clearMarkersAndUiElements, createInfoWindowContent]);
 
+  const panTo = useCallback((locationOrCoords: string | {lat: number, lng: number}) => {
+    if (!map.current || !isMapInitialized) return;
+    
+    try {
+      let coords;
+      
+      if (typeof locationOrCoords === 'string') {
+        // For location names, we use a center point based on name
+        // This is a simple mapping - in real app, you would use geocoding
+        const locationMap: Record<string, {lat: number, lng: number}> = {
+          '서귀포': {lat: 33.2542, lng: 126.5581},
+          '제주': {lat: 33.4996, lng: 126.5312},
+          '애월': {lat: 33.4630, lng: 126.3319},
+          '조천': {lat: 33.5382, lng: 126.6435},
+          // Add other Jeju locations as needed
+        };
+        
+        coords = locationMap[locationOrCoords] || JEJU_CENTER;
+      } else {
+        coords = locationOrCoords;
+      }
+      
+      map.current.setCenter(new window.naver.maps.LatLng(coords.lat, coords.lng));
+      map.current.setZoom(12); // Zoom in for location view
+    } catch (error) {
+      console.error("Error panning map to location:", error);
+    }
+  }, [isMapInitialized]);
+
   const toggleGeoJsonVisibility = useCallback(() => {
     setShowGeoJson(!showGeoJson);
   }, [showGeoJson]);
@@ -264,6 +302,9 @@ export const useMapCore = () => {
     calculateRoutes,
     clearMarkersAndUiElements,
     showGeoJson,
-    toggleGeoJsonVisibility
+    toggleGeoJsonVisibility,
+    panTo
   };
 };
+
+export default useMapCore;

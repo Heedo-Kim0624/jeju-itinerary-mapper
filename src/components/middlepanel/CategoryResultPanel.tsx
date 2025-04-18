@@ -1,7 +1,9 @@
+
 // middlepanel/CategoryResultPanel.tsx (이 행 삭제 금지)
 import React, { useState, useEffect } from 'react';
 import { fetchWeightedResults, PlaceResult } from '@/lib/travelFilter';
 import { useMapContext } from '../rightpanel/MapContext';
+import { Place } from '@/types/supabase';
 
 interface CategoryResultPanelProps {
   category: '숙소' | '관광지' | '음식점' | '카페';
@@ -17,6 +19,22 @@ const categoryKeyMap = {
   음식점: 'restaurant',
   카페: 'cafe',
 } as const;
+
+// PlaceResult를 Place로 변환하는 함수
+const convertToPlace = (placeResult: PlaceResult): Place => {
+  return {
+    id: placeResult.id,
+    name: placeResult.place_name,
+    address: placeResult.road_address,
+    category: placeResult.category,
+    x: placeResult.x,
+    y: placeResult.y,
+    naverLink: '',
+    instaLink: '',
+    rating: placeResult.rating,
+    reviewCount: placeResult.visitor_review_count
+  };
+};
 
 const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
   category,
@@ -53,10 +71,15 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
         setOthers(oth);
 
         // 3) 지도 초기화 및 마커 추가
-        clearMarkersAndUiElements();                    // ← 기존 clearMarkers() 대신
-        panTo(locations[0]);                            // ← 지역명 또는 좌표로 줌인
-        addMarkers(rec, { highlight: true });           // ← 추천 핀
-        addMarkers(oth, { highlight: false });          // ← 일반 핀
+        clearMarkersAndUiElements();
+        
+        if (locations.length > 0) {
+          panTo(locations[0]);
+        }
+        
+        // Place 타입으로 변환하여 전달
+        addMarkers(rec.map(convertToPlace), { highlight: true });
+        addMarkers(oth.map(convertToPlace), { highlight: false });
       } catch (e) {
         console.error(e);
         setError((e as Error).message || '알 수 없는 오류');
