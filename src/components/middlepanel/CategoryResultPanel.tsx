@@ -1,4 +1,4 @@
-// middlepanel/CategoryResultPanel.tsx (이 행 삭제 금지)
+
 import React, { useState, useEffect } from 'react';
 import { fetchWeightedResults, PlaceResult } from '@/lib/travelFilter';
 import { useMapContext } from '../rightpanel/MapContext';
@@ -92,34 +92,47 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
   return (
     <div
       className="
-        fixed top-0 left-[300px] 
-        w-[calc(100%-300px)] h-full 
-        bg-white/90 z-50 
-        p-4 overflow-auto
+        fixed inset-0 
+        bg-black/50 
+        z-50 
+        flex items-center justify-center
       "
     >
-      <header className="flex items-center justify-between mb-4">
-        <h3 className="text-xl font-semibold">{category} 추천 목록</h3>
-        <button onClick={onClose} className="text-blue-600 hover:underline">
-          닫기
-        </button>
-      </header>
+      <div className="
+        w-[calc(100%-300px)] 
+        max-w-3xl
+        h-[80vh]
+        bg-white 
+        rounded-lg 
+        shadow-xl
+        overflow-auto
+        relative
+      ">
+        <header className="sticky top-0 bg-white p-4 border-b flex items-center justify-between">
+          <h3 className="text-xl font-semibold">{category} 추천 목록</h3>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+            닫기
+          </button>
+        </header>
 
-      {loading && <p>로딩 중...</p>}
-      {error   && <p className="text-red-500">오류: {error}</p>}
+        <div className="p-4">
+          {loading && <p>로딩 중...</p>}
+          {error && <p className="text-red-500">오류: {error}</p>}
 
-      {!loading && !error && (
-        <PlaceList
-          places={allPlaces}
-          loading={loading}
-          onSelectPlace={setSelectedPlace}
-          selectedPlace={selectedPlace}
-          page={page}
-          onPageChange={setPage}
-          totalPages={totalPages}
-          orderedIds={recommend.map(r => r.id)}
-        />
-      )}
+          {!loading && !error && (
+            <PlaceList
+              places={allPlaces}
+              loading={loading}
+              onSelectPlace={setSelectedPlace}
+              selectedPlace={selectedPlace}
+              page={page}
+              onPageChange={setPage}
+              totalPages={totalPages}
+              orderedIds={recommend.map(r => r.id)}
+            />
+          )}
+        </div>
+      </div>
     </div>
   );
 };
