@@ -38,13 +38,13 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
   keywords,
   onClose,
 }) => {
-  const [loading, setLoading]     = useState(false);
-  const [error, setError]         = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [recommend, setRecommend] = useState<PlaceResult[]>([]);
-  const [others, setOthers]       = useState<PlaceResult[]>([]);
-  const { panTo, addMarkers, clearMarkersAndUiElements } = useMapContext();
-  const [page, setPage] = useState(1);
+  const [others, setOthers] = useState<PlaceResult[]>([]);
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
+  const [page, setPage] = useState(1);
+  const { panTo, addMarkers, clearMarkersAndUiElements } = useMapContext();
 
   useEffect(() => {
     const load = async () => {
@@ -52,7 +52,7 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
       setError(null);
       try {
         const results = await fetchWeightedResults(
-          categoryKeyMap[category],
+          category,
           locations,
           keywords
         );
@@ -63,9 +63,12 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
 
         clearMarkersAndUiElements();
         if (locations.length) panTo(locations[0]);
-
-        addMarkers(results.slice(0, TOP_N).map(convertToPlace), { highlight: true });
-        addMarkers(results.slice(TOP_N).map(convertToPlace), { highlight: false });
+        
+        const recommendedPlaces = results.slice(0, TOP_N).map(convertToPlace);
+        const otherPlaces = results.slice(TOP_N).map(convertToPlace);
+        
+        addMarkers(recommendedPlaces, { highlight: true });
+        addMarkers(otherPlaces, { highlight: false });
       } catch (e) {
         console.error(e);
         setError((e as Error).message || '알 수 없는 오류');
@@ -100,8 +103,8 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
             <PlaceList
               places={allPlaces}
               loading={loading}
-              onSelectPlace={setSelectedPlace}
               selectedPlace={selectedPlace}
+              onSelectPlace={setSelectedPlace}
               page={page}
               onPageChange={setPage}
               totalPages={totalPages}
@@ -118,6 +121,13 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
           </button>
         </div>
       </div>
+
+      {selectedPlace && (
+        <PlaceDetailsPopup
+          place={selectedPlace}
+          onClose={() => setSelectedPlace(null)}
+        />
+      )}
     </div>
   );
 };
