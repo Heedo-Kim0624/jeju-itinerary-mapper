@@ -1,4 +1,4 @@
-
+// src/components/leftpanel/CategoryResultHandler.tsx
 import React from 'react';
 import CategoryResultPanel from '../middlepanel/CategoryResultPanel';
 

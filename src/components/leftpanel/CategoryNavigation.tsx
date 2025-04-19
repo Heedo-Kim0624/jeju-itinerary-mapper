@@ -19,7 +19,6 @@ const CategoryNavigation: React.FC<CategoryNavigationProps> = ({
   return (
     <div className="mt-6 space-y-2">
       {categoryOrder.map((category, index) => {
-        const isCurrent = index === currentCategoryIndex;
         const isActive = index === currentCategoryIndex;
         return (
           <button
