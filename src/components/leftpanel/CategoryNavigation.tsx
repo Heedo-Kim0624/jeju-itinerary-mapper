@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 interface CategoryNavigationProps {
@@ -24,6 +25,13 @@ const CategoryNavigation: React.FC<CategoryNavigationProps> = ({
     return false;
   };
 
+  const handleCategoryButtonClick = (category: string, index: number) => {
+    // 활성화된 버튼만 클릭 가능하도록
+    if (isButtonEnabled(index)) {
+      onCategoryClick(category);
+    }
+  };
+
   return (
     <div className="mt-6 space-y-2">
       {categoryOrder.map((category, index) => {
@@ -33,7 +41,7 @@ const CategoryNavigation: React.FC<CategoryNavigationProps> = ({
         return (
           <button
             key={category}
-            onClick={() => isEnabled && onCategoryClick(category)}
+            onClick={() => handleCategoryButtonClick(category, index)}
             className={`
               w-full py-2 rounded border
               ${isActive 
