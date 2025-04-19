@@ -114,7 +114,7 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
             onClick={onClose}
             className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
           >
-            확인
+            다음 단계로
           </button>
         </div>
       </div>

@@ -1,24 +1,24 @@
+
 import { useState } from 'react';
 
 export const useCategorySelection = () => {
-  // --- 카테고리 순서 선택(4개까지) ---
   const [categoryOrder, setCategoryOrder] = useState<string[]>([]);
   const [categorySelectionConfirmed, setCategorySelectionConfirmed] = useState(false);
-
-  // ★ 단계 인덱스: 0부터 categoryOrder.length-1
-  const [stepIndex, setStepIndex] = useState(0);                                 
-
-  // ★ 현재 열려있는 카테고리 패널
+  const [stepIndex, setStepIndex] = useState(0);
+  
+  // 현재 열려있는 카테고리 패널
   const [activeMiddlePanelCategory, setActiveMiddlePanelCategory] = useState<string | null>(null);
-
-  // --- 카테고리별 선택된 키워드 저장 ---
+  
+  // 키워드 선택이 완료된 카테고리 추적
+  const [confirmedCategories, setConfirmedCategories] = useState<string[]>([]);
+  
+  // 키워드 저장 상태
   const [selectedKeywordsByCategory, setSelectedKeywordsByCategory] = useState<Record<string, string[]>>({});
   const [keywordPriorityByCategory, setKeywordPriorityByCategory] = useState<Record<string, string[]>>({});
 
-  // 카테고리 순서 클릭 (중복 제거/추가) - 카테고리 중요도 선택 단계에서만 사용
   const handleCategoryClick = (category: string) => {
     if (!categorySelectionConfirmed) {
-      // 카테고리 우선순위 선택 단계에서는 기존 로직 유지
+      // 카테고리 우선순위 선택 단계
       const idx = categoryOrder.indexOf(category);
       if (idx !== -1) {
         const newOrder = [...categoryOrder];
@@ -28,15 +28,11 @@ export const useCategorySelection = () => {
         setCategoryOrder([...categoryOrder, category]);
       }
     } else {
-      // 카테고리 선택이 확정된 후에는 패널 토글만 수행
-      // 현재 열린 패널이 클릭된 카테고리와 같다면 닫고, 다르다면 해당 카테고리 패널을 엽니다
-      setActiveMiddlePanelCategory(prev => 
-        prev === category ? null : category
-      );
+      // 키워드 선택 단계에서는 패널 토글만 수행
+      setActiveMiddlePanelCategory(prev => prev === category ? null : category);
     }
   };
 
-  // 토글 키워드 (체크/언체크)
   const toggleKeyword = (category: string, keyword: string) => {
     setSelectedKeywordsByCategory((prev) => {
       const curr = prev[category] || [];
@@ -47,19 +43,31 @@ export const useCategorySelection = () => {
     });
   };
 
-  // ★ 뒤로가기: 현재 단계의 키워드 제거 + stepIndex 감소
-  const handlePanelBack = () => {
-    // 이전 카테고리로 자동 이동하지 않고 단순히 현재 패널만 닫습니다
+  const handlePanelBack = (category: string) => {
+    // 패널을 닫고 해당 카테고리의 선택된 키워드를 초기화
+    setActiveMiddlePanelCategory(null);
+    setSelectedKeywordsByCategory(prev => ({
+      ...prev,
+      [category]: []
+    }));
+  };
+
+  const handleConfirmCategory = (category: string, finalKeywords: string[]) => {
+    // 키워드를 저장하고 카테고리를 완료 상태로 표시
+    setSelectedKeywordsByCategory(prev => ({
+      ...prev,
+      [category]: finalKeywords
+    }));
+    setConfirmedCategories(prev => [...prev, category]);
     setActiveMiddlePanelCategory(null);
   };
 
-  // ★ 확인: 키워드 저장 + stepIndex 증가
-  const handleConfirmCategory = (category: string, finalKeywords: string[]) => {
-    setSelectedKeywordsByCategory((prev) => ({
-      ...prev,
-      [category]: finalKeywords,
-    }));
-    // 자동으로 다음 패널을 열지 않고 현재 패널만 닫습니다
+  const handleRecommendationConfirm = () => {
+    // 현재 카테고리의 추천 패널이 닫힐 때 다음 카테고리 활성화
+    const currentIdx = categoryOrder.findIndex(cat => cat === activeMiddlePanelCategory);
+    if (currentIdx >= 0 && currentIdx < categoryOrder.length - 1) {
+      setStepIndex(currentIdx + 1);
+    }
     setActiveMiddlePanelCategory(null);
   };
 
@@ -67,19 +75,15 @@ export const useCategorySelection = () => {
     categoryOrder,
     categorySelectionConfirmed,
     setCategorySelectionConfirmed,
-
-    // 단계 인덱스 & 현재 활성 카테고리
-    stepIndex,                                
-    activeMiddlePanelCategory,                
-
-    // 키워드 저장 상태
+    stepIndex,
+    activeMiddlePanelCategory,
+    confirmedCategories,
     selectedKeywordsByCategory,
     keywordPriorityByCategory,
-
-    // 행위들
     handleCategoryClick,
     toggleKeyword,
-    handlePanelBack,                          
-    handleConfirmCategory,                    
+    handlePanelBack,
+    handleConfirmCategory,
+    handleRecommendationConfirm
   };
 };
