@@ -94,11 +94,12 @@ const LeftPanel: React.FC = () => {
     }
   };
 
+  // Fix: Pass the category parameter to handlePanelBack function
   const handlePanelBackByCategory = {
-    accomodation: () => handlePanelBack(),
-    landmark: () => handlePanelBack(),
-    restaurant: () => handlePanelBack(),
-    cafe: () => handlePanelBack()
+    accomodation: () => handlePanelBack('숙소'),
+    landmark: () => handlePanelBack('관광지'),
+    restaurant: () => handlePanelBack('음식점'),
+    cafe: () => handlePanelBack('카페')
   };
 
   const handleResultClose = () => {

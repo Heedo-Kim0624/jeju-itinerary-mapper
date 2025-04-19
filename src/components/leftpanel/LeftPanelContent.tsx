@@ -22,6 +22,7 @@ interface LeftPanelContentProps {
   categoryStepIndex: number;
   categorySelectionConfirmed: boolean;
   activeMiddlePanelCategory: string | null;
+  confirmedCategories: string[];  // Added this prop
   selectedKeywordsByCategory: Record<string, string[]>;
   toggleKeyword: (category: string, keyword: string) => void;
   directInputValues: {
@@ -48,6 +49,7 @@ interface LeftPanelContentProps {
     restaurant: () => void;
     cafe: () => void;
   };
+  isCategoryButtonEnabled: (category: string) => boolean;  // Added this prop
 }
 
 const LeftPanelContent: React.FC<LeftPanelContentProps> = ({
@@ -62,12 +64,14 @@ const LeftPanelContent: React.FC<LeftPanelContentProps> = ({
   categoryStepIndex,
   categorySelectionConfirmed,
   activeMiddlePanelCategory,
+  confirmedCategories,  // Added this prop
   selectedKeywordsByCategory,
   toggleKeyword,
   directInputValues,
   onDirectInputChange,
   onConfirmCategory,
   handlePanelBack,
+  isCategoryButtonEnabled,  // Added this prop
 }) => {
   return (
     <div className="flex-1 overflow-y-auto p-4 pb-24 space-y-6">
@@ -90,6 +94,9 @@ const LeftPanelContent: React.FC<LeftPanelContentProps> = ({
         currentCategoryIndex={categoryStepIndex}
         onCategoryClick={onCategoryClick}
         categorySelectionConfirmed={categorySelectionConfirmed}
+        confirmedCategories={confirmedCategories}  // Added this prop
+        isCategoryButtonEnabled={isCategoryButtonEnabled}  // Added this prop
+        activeMiddlePanelCategory={activeMiddlePanelCategory}  // Added this prop
       />
 
       <CategoryPanels
