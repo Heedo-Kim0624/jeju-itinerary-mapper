@@ -1,10 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { fetchWeightedResults, PlaceResult } from '@/lib/travelFilter';
 import { useMapContext } from '../rightpanel/MapContext';
 import { Place } from '@/types/supabase';
 import PlaceList from './PlaceList';
 import PlaceDetailsPopup from './PlaceDetailsPopup';
+import { useToast } from "@/hooks/use-toast";
 
 interface CategoryResultPanelProps {
   category: '숙소' | '관광지' | '음식점' | '카페';
@@ -39,6 +39,7 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
   keywords,
   onClose,
 }) => {
+  const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [recommend, setRecommend] = useState<PlaceResult[]>([]);
@@ -46,6 +47,24 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const [page, setPage] = useState(1);
   const { panTo, addMarkers, clearMarkersAndUiElements } = useMapContext();
+
+  // Show toast when keywords are processed
+  useEffect(() => {
+    const categoryDisplay = {
+      '숙소': '숙소 🏨',
+      '관광지': '관광지 🏛️',
+      '음식점': '음식점 🍽️',
+      '카페': '카페 ☕'
+    };
+
+    if (keywords.length > 0) {
+      toast({
+        title: `${categoryDisplay[category]} 키워드`,
+        description: `선택된 키워드: ${keywords.join(', ')}`,
+        duration: 5000,
+      });
+    }
+  }, [category, keywords, toast]);
 
   useEffect(() => {
     const load = async () => {
