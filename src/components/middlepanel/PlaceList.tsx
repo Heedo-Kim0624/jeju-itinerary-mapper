@@ -1,3 +1,4 @@
+// middlepanel/PlaceList.tsx (이 행 삭제 금지)
 import React, { useEffect, useRef, useState } from 'react';
 import { ExternalLink, MapPin, Star, MessageCircle, Clock, Instagram, RefreshCw, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
