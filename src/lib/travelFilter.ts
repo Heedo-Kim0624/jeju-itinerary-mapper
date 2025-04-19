@@ -76,7 +76,7 @@ export async function fetchWeightedResults(
     // 실제 프로덕션에서는 아래 주석 처리된 코드를 사용하세요.
     
     // For demo purposes, return mock data with unique IDs and better coordinates
-    return Array.from({ length: 20 }, (_, index) => ({
+    const results = Array.from({ length: 20 }, (_, index) => ({
       id: `${category}-${index+1}`,
       place_name: `${category === 'accommodation' ? '숙소' : 
                category === 'landmark' ? '관광지' : 
@@ -88,8 +88,11 @@ export async function fetchWeightedResults(
       // 제주도 주변 좌표 범위 (실제 지도에 적절히 분산되도록)
       x: 126.5 + (Math.random() * 0.3 - 0.15), // 제주 중심 경도 약 126.5
       y: 33.4 + (Math.random() * 0.3 - 0.15),  // 제주 중심 위도 약 33.4
-    })).sort((a, b) => {
+    }));
+
+    return results.sort((a, b) => {
       // 상위 4개는 높은 평점 순으로, 그 이후는 약간 무작위성 있게 정렬
+      const index = results.indexOf(a);
       if (index < 4) return b.rating - a.rating;
       return b.rating - a.rating + (Math.random() * 0.5 - 0.25);
     });
