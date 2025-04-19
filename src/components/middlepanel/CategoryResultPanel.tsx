@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { fetchWeightedResults, PlaceResult } from '@/lib/travelFilter';
 import { useMapContext } from '../rightpanel/MapContext';
@@ -13,10 +14,10 @@ interface CategoryResultPanelProps {
 }
 
 const categoryKeyMap = {
-  숙소: 'accommodation',
-  관광지: 'landmark',
-  음식점: 'restaurant',
-  카페: 'cafe',
+  '숙소': 'accommodation',
+  '관광지': 'landmark',
+  '음식점': 'restaurant',
+  '카페': 'cafe',
 } as const;
 
 const convertToPlace = (pr: PlaceResult): Place => ({
@@ -24,8 +25,8 @@ const convertToPlace = (pr: PlaceResult): Place => ({
   name: pr.place_name,
   address: pr.road_address,
   category: pr.category,
-  x: (pr as any).x ?? 0,
-  y: (pr as any).y ?? 0,
+  x: pr.x ?? 0,
+  y: pr.y ?? 0,
   naverLink: '',
   instaLink: '',
   rating: pr.rating,
@@ -52,7 +53,7 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
       setError(null);
       try {
         const results = await fetchWeightedResults(
-          category,
+          categoryKeyMap[category],
           locations,
           keywords
         );
