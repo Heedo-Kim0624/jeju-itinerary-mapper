@@ -92,7 +92,7 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
   }, [category, locations.join(','), keywords.join(',')]);
 
   return (
-    <div className="absolute inset-0 bg-white/90 z-50 p-4 overflow-auto">
+    <div className="fixed top-0 left-[300px] w-[calc(100%-300px)] h-full bg-white/90 z-50 p-4 overflow-auto">
       <header className="flex items-center justify-between mb-4">
         <h3 className="text-xl font-semibold">{category} 추천 목록</h3>
         <button onClick={onClose} className="text-blue-600 hover:underline">
