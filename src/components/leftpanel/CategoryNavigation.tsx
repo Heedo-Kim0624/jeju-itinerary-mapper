@@ -17,12 +17,16 @@ const CategoryNavigation: React.FC<CategoryNavigationProps> = ({
   if (!categorySelectionConfirmed) return null;
   
   const isButtonEnabled = (index: number) => {
-    // 현재 카테고리가 3번째 이상이면 이전 카테고리들도 활성화
-    if (currentCategoryIndex >= 2) {
-      return index <= currentCategoryIndex + 1;
+    // 현재 카테고리 이전의 모든 카테고리는 활성화
+    if (index <= currentCategoryIndex) {
+      return true;
     }
-    // 그 외의 경우 현재와 다음 카테고리만 활성화
-    return index === currentCategoryIndex || index === currentCategoryIndex + 1;
+    // 다음 카테고리만 활성화
+    if (index === currentCategoryIndex + 1) {
+      return true;
+    }
+    // 그 외의 모든 카테고리는 비활성화
+    return false;
   };
 
   return (
@@ -55,3 +59,4 @@ const CategoryNavigation: React.FC<CategoryNavigationProps> = ({
 };
 
 export default CategoryNavigation;
+
