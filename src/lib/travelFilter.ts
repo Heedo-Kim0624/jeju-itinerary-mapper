@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 // PlaceResult 타입 정의
@@ -76,12 +77,12 @@ export async function fetchWeightedResults(
     // 실제 프로덕션에서는 아래 주석 처리된 코드를 사용하세요.
     
     // For demo purposes, return mock data with unique IDs and better coordinates
-    const results = Array.from({ length: 20 }, (_, index) => ({
-      id: `${category}-${index+1}`,
+    const results = Array.from({ length: 20 }, (_, idx) => ({
+      id: `${category}-${idx+1}`,
       place_name: `${category === 'accommodation' ? '숙소' : 
                category === 'landmark' ? '관광지' : 
-               category === 'restaurant' ? '음식점' : '카페'} ${index+1}`,
-      road_address: `${mappedLocations[0] || '제주'} ${index+1}번지`,
+               category === 'restaurant' ? '음식점' : '카페'} ${idx+1}`,
+      road_address: `${mappedLocations[0] || '제주'} ${idx+1}번지`,
       rating: Math.round((4 + Math.random()) * 10) / 10, // 4.0 ~ 5.0 범위의 평점
       visitor_review_count: Math.floor(Math.random() * 500) + 50, // 50 ~ 549 범위의 리뷰 수
       category,
@@ -92,8 +93,8 @@ export async function fetchWeightedResults(
 
     return results.sort((a, b) => {
       // 상위 4개는 높은 평점 순으로, 그 이후는 약간 무작위성 있게 정렬
-      const index = results.indexOf(a);
-      if (index < 4) return b.rating - a.rating;
+      const idx = results.indexOf(a);
+      if (idx < 4) return b.rating - a.rating;
       return b.rating - a.rating + (Math.random() * 0.5 - 0.25);
     });
     
