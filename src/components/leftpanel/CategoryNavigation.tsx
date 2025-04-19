@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 interface CategoryNavigationProps {
@@ -17,15 +16,11 @@ const CategoryNavigation: React.FC<CategoryNavigationProps> = ({
   if (!categorySelectionConfirmed) return null;
   
   const isButtonEnabled = (index: number) => {
-    // 현재 카테고리 이전의 모든 카테고리는 활성화
+    // 현재 카테고리와 그 이전의 모든 카테고리는 활성화
     if (index <= currentCategoryIndex) {
       return true;
     }
-    // 다음 카테고리만 활성화
-    if (index === currentCategoryIndex + 1) {
-      return true;
-    }
-    // 그 외의 모든 카테고리는 비활성화
+    // 나머지 모든 카테고리는 비활성화
     return false;
   };
 
@@ -59,4 +54,3 @@ const CategoryNavigation: React.FC<CategoryNavigationProps> = ({
 };
 
 export default CategoryNavigation;
-
