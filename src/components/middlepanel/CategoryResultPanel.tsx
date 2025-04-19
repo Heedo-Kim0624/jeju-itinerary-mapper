@@ -81,7 +81,7 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
 
   return (
     <div className="fixed top-0 left-[300px] w-[300px] h-full bg-white border-l border-r border-gray-200 z-40 shadow-md">
-      <div className="h-full overflow-auto">
+      <div className="h-full flex flex-col">
         <header className="sticky top-0 bg-white p-4 border-b flex items-center justify-between">
           <h3 className="text-lg font-semibold">{category} 추천 목록</h3>
           <button 
@@ -92,7 +92,7 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
           </button>
         </header>
 
-        <div className="p-4">
+        <div className="flex-1 overflow-auto p-4">
           {loading && <p>로딩 중...</p>}
           {error && <p className="text-red-500">오류: {error}</p>}
 
@@ -105,9 +105,17 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
               page={page}
               onPageChange={setPage}
               totalPages={totalPages}
-              orderedIds={recommend.map(r => r.id)}
             />
           )}
+        </div>
+
+        <div className="sticky bottom-0 p-4 bg-white border-t">
+          <button
+            onClick={onClose}
+            className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
+          >
+            확인
+          </button>
         </div>
       </div>
     </div>
