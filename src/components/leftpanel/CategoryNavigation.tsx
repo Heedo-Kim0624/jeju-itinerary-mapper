@@ -1,54 +1,45 @@
 
 import React from 'react';
+import { Button } from '@/components/ui/button';
 
 interface CategoryNavigationProps {
   categoryOrder: string[];
   currentCategoryIndex: number;
   onCategoryClick: (category: string) => void;
   categorySelectionConfirmed: boolean;
+  confirmedCategories: string[];
+  isCategoryButtonEnabled: (category: string) => boolean;
+  activeMiddlePanelCategory: string | null;
 }
 
 const CategoryNavigation: React.FC<CategoryNavigationProps> = ({
   categoryOrder,
   currentCategoryIndex,
   onCategoryClick,
-  categorySelectionConfirmed
+  categorySelectionConfirmed,
+  confirmedCategories,
+  isCategoryButtonEnabled,
+  activeMiddlePanelCategory
 }) => {
   if (!categorySelectionConfirmed) return null;
-  
-  const isButtonEnabled = (index: number) => {
-    // 현재 카테고리와 그 이전의 모든 카테고리는 활성화
-    if (index <= currentCategoryIndex) {
-      return true;
-    }
-    // 나머지 모든 카테고리는 비활성화
-    return false;
-  };
-
-  const handleCategoryButtonClick = (category: string, index: number) => {
-    // 활성화된 버튼만 클릭 가능하도록
-    if (isButtonEnabled(index)) {
-      onCategoryClick(category);
-    }
-  };
 
   return (
     <div className="mt-6 space-y-2">
       {categoryOrder.map((category, index) => {
-        const isActive = index === currentCategoryIndex;
-        const isEnabled = isButtonEnabled(index);
+        const isEnabled = isCategoryButtonEnabled(category);
+        const isActive = category === activeMiddlePanelCategory;
+        const isConfirmed = confirmedCategories.includes(category);
         
         return (
           <button
             key={category}
-            onClick={() => handleCategoryButtonClick(category, index)}
+            onClick={() => isEnabled && onCategoryClick(category)}
             className={`
               w-full py-2 rounded border
-              ${isActive 
-                ? 'bg-white text-black' 
-                : isEnabled 
-                  ? 'bg-gray-100 text-gray-800 hover:bg-gray-200' 
-                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              ${isActive ? 'bg-blue-500 text-white' : 
+                isConfirmed ? 'bg-green-100 text-green-800' :
+                isEnabled ? 'bg-gray-100 text-gray-800 hover:bg-gray-200' : 
+                'bg-gray-100 text-gray-400 cursor-not-allowed'
               }
             `}
             disabled={!isEnabled}

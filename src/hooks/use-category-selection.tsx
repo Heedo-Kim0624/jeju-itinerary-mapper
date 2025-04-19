@@ -5,14 +5,8 @@ export const useCategorySelection = () => {
   const [categoryOrder, setCategoryOrder] = useState<string[]>([]);
   const [categorySelectionConfirmed, setCategorySelectionConfirmed] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
-  
-  // 현재 열려있는 카테고리 패널
   const [activeMiddlePanelCategory, setActiveMiddlePanelCategory] = useState<string | null>(null);
-  
-  // 키워드 선택이 완료된 카테고리 추적
   const [confirmedCategories, setConfirmedCategories] = useState<string[]>([]);
-  
-  // 키워드 저장 상태
   const [selectedKeywordsByCategory, setSelectedKeywordsByCategory] = useState<Record<string, string[]>>({});
   const [keywordPriorityByCategory, setKeywordPriorityByCategory] = useState<Record<string, string[]>>({});
 
@@ -27,24 +21,22 @@ export const useCategorySelection = () => {
       } else if (categoryOrder.length < 4) {
         setCategoryOrder([...categoryOrder, category]);
       }
-    } else {
-      // 키워드 선택 단계에서는 패널 토글만 수행
-      setActiveMiddlePanelCategory(prev => prev === category ? null : category);
     }
   };
 
-  const toggleKeyword = (category: string, keyword: string) => {
-    setSelectedKeywordsByCategory((prev) => {
-      const curr = prev[category] || [];
-      const updated = curr.includes(keyword)
-        ? curr.filter((k) => k !== keyword)
-        : [...curr, keyword];
-      return { ...prev, [category]: updated };
-    });
+  const handleCategoryButtonClick = (category: string) => {
+    if (categorySelectionConfirmed) {
+      const categoryIndex = categoryOrder.indexOf(category);
+      const lastConfirmedIndex = categoryOrder.findIndex(cat => !confirmedCategories.includes(cat)) - 1;
+      
+      // 현재 카테고리가 활성화된 상태이거나 이전 카테고리가 모두 완료된 경우에만 토글 가능
+      if (categoryIndex === 0 || categoryIndex <= lastConfirmedIndex + 1) {
+        setActiveMiddlePanelCategory(prev => prev === category ? null : category);
+      }
+    }
   };
 
   const handlePanelBack = (category: string) => {
-    // 패널을 닫고 해당 카테고리의 선택된 키워드를 초기화
     setActiveMiddlePanelCategory(null);
     setSelectedKeywordsByCategory(prev => ({
       ...prev,
@@ -53,22 +45,28 @@ export const useCategorySelection = () => {
   };
 
   const handleConfirmCategory = (category: string, finalKeywords: string[]) => {
-    // 키워드를 저장하고 카테고리를 완료 상태로 표시
     setSelectedKeywordsByCategory(prev => ({
       ...prev,
       [category]: finalKeywords
     }));
     setConfirmedCategories(prev => [...prev, category]);
     setActiveMiddlePanelCategory(null);
+    
+    // 다음 카테고리의 stepIndex 설정
+    const currentIndex = categoryOrder.indexOf(category);
+    if (currentIndex < categoryOrder.length - 1) {
+      setStepIndex(currentIndex + 1);
+    }
   };
 
-  const handleRecommendationConfirm = () => {
-    // 현재 카테고리의 추천 패널이 닫힐 때 다음 카테고리 활성화
-    const currentIdx = categoryOrder.findIndex(cat => cat === activeMiddlePanelCategory);
-    if (currentIdx >= 0 && currentIdx < categoryOrder.length - 1) {
-      setStepIndex(currentIdx + 1);
-    }
-    setActiveMiddlePanelCategory(null);
+  const isCategoryButtonEnabled = (category: string) => {
+    if (!categorySelectionConfirmed) return true;
+    
+    const categoryIndex = categoryOrder.indexOf(category);
+    if (categoryIndex === 0) return true;
+    
+    const previousCategory = categoryOrder[categoryIndex - 1];
+    return confirmedCategories.includes(previousCategory);
   };
 
   return {
@@ -81,9 +79,18 @@ export const useCategorySelection = () => {
     selectedKeywordsByCategory,
     keywordPriorityByCategory,
     handleCategoryClick,
-    toggleKeyword,
+    handleCategoryButtonClick,
+    toggleKeyword: (category: string, keyword: string) => {
+      setSelectedKeywordsByCategory((prev) => {
+        const curr = prev[category] || [];
+        const updated = curr.includes(keyword)
+          ? curr.filter((k) => k !== keyword)
+          : [...curr, keyword];
+        return { ...prev, [category]: updated };
+      });
+    },
     handlePanelBack,
     handleConfirmCategory,
-    handleRecommendationConfirm
+    isCategoryButtonEnabled
   };
 };
