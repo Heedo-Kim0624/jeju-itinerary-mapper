@@ -1,8 +1,23 @@
+
 import { supabase } from '@/lib/supabaseClient';
 import { Place } from '@/types/supabase';
 
 // Define the categories and mapping to table names as constants
 export type TravelCategory = 'accommodation' | 'landmark' | 'restaurant' | 'cafe';
+
+// Define the ParsedPrompt interface that was missing
+export interface ParsedPrompt {
+  category: TravelCategory;
+  locations: string[];
+  rankedKeywords: string[];
+  unrankedKeywords: string[];
+  dateRange?: {
+    startDate: string;
+    startTime: string;
+    endDate: string;
+    endTime: string;
+  };
+}
 
 // Define result type for place search - adding categoryDetail property
 export interface PlaceResult {
