@@ -1,8 +1,9 @@
+
 import React, { useState } from 'react';
 import { supabase } from '../integrations/supabase/client';
 import { PlaceResult, fetchWeightedResults } from '../lib/travelFilter';
 import { useMapContext } from './rightpanel/MapContext';
-import PlaceList from './middlepanel/PlaceList';
+import PlaceList from './middlepanel/PlaceList'; // Changed from named import to default import
 import PlaceDetailsPopup from './middlepanel/PlaceDetailsPopup';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
