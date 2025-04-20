@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { fetchWeightedResults, PlaceResult } from '@/lib/jeju/travelPromptUtils';
+import { fetchWeightedResults, PlaceResult, convertToPlace } from '@/lib/jeju/travelPromptUtils';
 import { useMapContext } from '../rightpanel/MapContext';
 import PlaceList from './PlaceList';
 import PlaceDetailsPopup from './PlaceDetailsPopup';
@@ -13,19 +14,6 @@ const categoryKeyMap = {
   '음식점': 'restaurant',
   '카페': 'cafe',
 } as const;
-
-const convertToPlace = (pr: PlaceResult): Place => ({
-  id: pr.id,
-  name: pr.place_name,
-  address: pr.road_address,
-  category: pr.category,
-  x: pr.x ?? 0,
-  y: pr.y ?? 0,
-  naverLink: '',
-  instaLink: '',
-  rating: pr.rating,
-  reviewCount: pr.visitor_review_count,
-});
 
 const CategoryResultPanel: React.FC<{
   category: '숙소' | '관광지' | '음식점' | '카페';

@@ -136,6 +136,28 @@ export function parsePrompt(prompt: string): ParsedPrompt | null {
 }
 
 /**
+ * Normalize field name to handle case insensitivity
+ * This function helps deal with ID vs id inconsistencies in the database
+ */
+function normalizeField(obj: any, field: string): any {
+  // Check for exact match first
+  if (obj[field] !== undefined) {
+    return obj[field];
+  }
+  
+  // If not found, try case-insensitive match
+  const lowerField = field.toLowerCase();
+  for (const key in obj) {
+    if (key.toLowerCase() === lowerField) {
+      return obj[key];
+    }
+  }
+  
+  // Not found
+  return undefined;
+}
+
+/**
  * Fetch and rank places based on category, location and keywords
  */
 export async function fetchWeightedResults(
@@ -157,7 +179,7 @@ export async function fetchWeightedResults(
     // Step 1: Query the information table with location filter if provided
     let query = supabase
       .from(infoTable as any)
-      .select('ID, Place_Name, Road_Address, location, Longitude, Latitude');
+      .select('*'); // Select all fields to handle ID/id differences
     
     if (locations.length > 0) {
       query = query.in('location', locations);
@@ -175,13 +197,14 @@ export async function fetchWeightedResults(
       return [];
     }
 
-    // Step 2: Fetch ratings for these places
-    const placeIds = places.map(p => p.ID);
+    // Extract IDs, handling both ID and id field names
+    const placeIds = places.map(p => normalizeField(p, 'ID') || normalizeField(p, 'id'));
     
+    // Step 2: Fetch ratings for these places
     const { data: ratings, error: ratingsError } = await supabase
       .from(ratingTable as any)
-      .select('ID, Rating, visitor_review_count')
-      .in('ID', placeIds);
+      .select('*')
+      .in(places[0] && normalizeField(places[0], 'ID') !== undefined ? 'ID' : 'id', placeIds);
     
     if (ratingsError) {
       console.error('Ratings fetch error:', ratingsError);
@@ -190,24 +213,44 @@ export async function fetchWeightedResults(
 
     // Step 3: Combine places with their ratings, apply keywords weighting in a simplified way
     const placesWithRatings = places.map(place => {
-      const rating = ratings?.find(r => r.ID === place.ID);
+      const placeId = normalizeField(place, 'ID') || normalizeField(place, 'id');
+      
+      // Find matching rating by ID/id
+      const rating = ratings?.find(r => {
+        const ratingId = normalizeField(r, 'ID') || normalizeField(r, 'id');
+        return ratingId === placeId;
+      });
+      
+      // Extract place name with case insensitivity
+      const placeName = normalizeField(place, 'Place_Name') || 
+                       normalizeField(place, 'place_name') || 
+                       normalizeField(place, 'Place_name');
+      
+      // Extract road address with case insensitivity
+      const roadAddress = normalizeField(place, 'Road_Address') || 
+                         normalizeField(place, 'road_address') || 
+                         normalizeField(place, 'Road_address');
+      
+      // Extract coordinates with case insensitivity
+      const longitude = normalizeField(place, 'Longitude') || normalizeField(place, 'longitude') || 0;
+      const latitude = normalizeField(place, 'Latitude') || normalizeField(place, 'latitude') || 0;
+      
+      // Extract rating values with case insensitivity
+      const ratingValue = rating ? normalizeField(rating, 'Rating') || normalizeField(rating, 'rating') || 0 : 0;
+      const reviewCount = rating ? normalizeField(rating, 'visitor_review_count') || 0 : 0;
       
       // Simple weighting by rating and review count
-      // Actual keyword weighting would be more complex
-      let weight = 0;
-      if (rating) {
-        weight = (rating.Rating || 0) * Math.log(1 + (rating.visitor_review_count || 0));
-      }
+      let weight = ratingValue * Math.log(1 + reviewCount);
       
       return {
-        id: place.ID.toString(),
-        place_name: place.Place_Name,
-        road_address: place.Road_Address,
+        id: placeId.toString(),
+        place_name: placeName,
+        road_address: roadAddress,
         category: category,
-        x: place.Longitude ?? 0,
-        y: place.Latitude ?? 0,
-        rating: rating?.Rating ?? 0,
-        visitor_review_count: rating?.visitor_review_count ?? 0,
+        x: longitude,
+        y: latitude,
+        rating: ratingValue,
+        visitor_review_count: reviewCount,
         weight
       };
     });
