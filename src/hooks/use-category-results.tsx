@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Place } from '@/types/supabase';
@@ -34,11 +33,7 @@ export const useCategoryResults = (
     };
 
     if (keywords.length > 0) {
-      toast({
-        title: `${categoryDisplay[category]} 키워드`,
-        description: `선택된 키워드: ${keywords.join(', ')}`,
-        duration: 5000,
-      });
+      toast(`${categoryDisplay[category]} 키워드: ${keywords.join(', ')}`);
     }
   }, [category, keywords]);
 
