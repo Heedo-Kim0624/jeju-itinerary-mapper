@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { fetchWeightedResults, parsePrompt, PlaceResult } from '@/lib/travelFilter';
 import { useMapContext } from './rightpanel/MapContext';
-import { PlaceList } from './middlepanel/PlaceList';
+import PlaceList from './middlepanel/PlaceList';  // Changed import
 import PlaceDetailsPopup from './middlepanel/PlaceDetailsPopup';
 import { Place } from '@/types/supabase';
 import { useToast } from "@/hooks/use-toast";
