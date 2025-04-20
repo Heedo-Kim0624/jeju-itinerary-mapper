@@ -1,34 +1,20 @@
-
 import { supabase } from '@/lib/supabaseClient';
 import { Place } from '@/types/supabase';
 
 // Define the categories and mapping to table names as constants
 export type TravelCategory = 'accommodation' | 'landmark' | 'restaurant' | 'cafe';
 
-// Define result type for place search
+// Define result type for place search - adding categoryDetail property
 export interface PlaceResult {
   id: string;
   place_name: string;
   road_address: string;
   category: string;
+  categoryDetail?: string;  // Added this property
   x: number;
   y: number;
   rating?: number;
   visitor_review_count?: number;
-}
-
-// Define the structure for parsed prompt data
-export interface ParsedPrompt {
-  category: TravelCategory;
-  locations: string[];
-  rankedKeywords: string[];
-  unrankedKeywords: string[];
-  dateRange?: {
-    startDate: string;
-    startTime: string;
-    endDate: string;
-    endTime: string;
-  };
 }
 
 // Define category to DB table mapping as type-safe lookup objects
@@ -59,6 +45,7 @@ export function convertToPlace(pr: PlaceResult): Place {
     name: pr.place_name,
     address: pr.road_address,
     category: pr.category,
+    categoryDetail: pr.categoryDetail,
     x: pr.x,
     y: pr.y,
     naverLink: '',
@@ -211,7 +198,23 @@ export async function fetchWeightedResults(
       return [];
     }
 
-    // Step 3: Combine places with their ratings, apply keywords weighting in a simplified way
+    // Step 3: Fetch category details for the places
+    const categoryTable = category === 'accommodation' ? 'accomodation_categories' : 
+                          category === 'landmark' ? 'landmark_categories' : 
+                          category === 'restaurant' ? 'restaurant_categories' :
+                          'cafe_categories';
+
+    const { data: categories, error: categoriesError } = await supabase
+      .from(categoryTable as any)
+      .select('*')
+      .in(places[0] && normalizeField(places[0], 'ID') !== undefined ? 'ID' : 'id', placeIds);
+
+    if (categoriesError) {
+      console.error('Categories fetch error:', categoriesError);
+      // Continue without categories
+    }
+
+    // Step 4: Combine places with their ratings, apply keywords weighting in a simplified way
     const placesWithRatings = places.map(place => {
       const placeId = normalizeField(place, 'ID') || normalizeField(place, 'id');
       
@@ -221,6 +224,12 @@ export async function fetchWeightedResults(
         return ratingId === placeId;
       });
       
+      // Find matching category by ID/id
+      const categoryInfo = categories?.find(c => {
+        const categoryId = normalizeField(c, 'ID') || normalizeField(c, 'id');
+        return categoryId === placeId;
+      });
+
       // Extract place name with case insensitivity
       const placeName = normalizeField(place, 'Place_Name') || 
                        normalizeField(place, 'place_name') || 
@@ -238,6 +247,11 @@ export async function fetchWeightedResults(
       // Extract rating values with case insensitivity
       const ratingValue = rating ? normalizeField(rating, 'Rating') || normalizeField(rating, 'rating') || 0 : 0;
       const reviewCount = rating ? normalizeField(rating, 'visitor_review_count') || 0 : 0;
+
+      // Extract category details
+      const categoryDetail = categoryInfo ? 
+        normalizeField(categoryInfo, 'Categories_Details') || 
+        normalizeField(categoryInfo, 'categories_details') : '';
       
       // Simple weighting by rating and review count
       let weight = ratingValue * Math.log(1 + reviewCount);
@@ -247,6 +261,7 @@ export async function fetchWeightedResults(
         place_name: placeName,
         road_address: roadAddress,
         category: category,
+        categoryDetail: categoryDetail,
         x: longitude,
         y: latitude,
         rating: ratingValue,

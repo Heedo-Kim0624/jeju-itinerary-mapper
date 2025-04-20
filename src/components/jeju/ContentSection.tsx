@@ -53,6 +53,13 @@ const ContentSection: React.FC<ContentSectionProps> = ({
     // 여기서 필요한 상태를 업데이트할 수 있습니다
   };
 
+  // Add a simple handler for viewing place details
+  const handleViewDetails = (place: Place) => {
+    console.log("View details for place:", place);
+    // In a real implementation, this would show a details popup
+    // but we're just adding it to satisfy the type requirements
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-sm p-4 flex-1 flex flex-col animate-fade-in" style={{ animationDelay: '100ms' }}>
       {/* 일정 생성 전 화면 */}
@@ -78,6 +85,7 @@ const ContentSection: React.FC<ContentSectionProps> = ({
               page={currentPage}
               onPageChange={onPageChange}
               totalPages={totalPages}
+              onViewDetails={handleViewDetails}
             />
           ) : (
             <TravelPromptSearch onPlacesFound={handlePlacesFound} />

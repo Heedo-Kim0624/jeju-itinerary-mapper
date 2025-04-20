@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useMapContext } from '@/components/rightpanel/MapContext';
 import { Button } from '@/components/ui/button';
@@ -117,6 +118,10 @@ const TravelPromptSearch: React.FC<TravelPromptSearchProps> = ({ onPlacesFound }
     // Sort logic would be implemented here
   };
 
+  const handleViewDetails = (place: Place) => {
+    setSelectedPlace(place);
+  };
+
   return (
     <div className="p-6 max-w-4xl mx-auto flex flex-col h-full">
       <form onSubmit={handleSearch} className="mb-4">
@@ -149,6 +154,7 @@ const TravelPromptSearch: React.FC<TravelPromptSearchProps> = ({ onPlacesFound }
             page={currentPage}
             onPageChange={setCurrentPage}
             totalPages={totalPages}
+            onViewDetails={handleViewDetails}
           />
         )}
       </div>
