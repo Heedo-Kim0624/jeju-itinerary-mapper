@@ -25,7 +25,6 @@ export async function mapKeywordToColumn(
   category: 'accommodation' | 'landmark' | 'restaurant' | 'cafe'
 ): Promise<string | null> {
   try {
-    // similarity_matching 테이블 조회
     const { data, error } = await supabase
       .from('similarity_matching')
       .select('field_name')
@@ -45,113 +44,120 @@ export async function mapKeywordToColumn(
 export async function fetchWeightedResults(
   category: 'accommodation' | 'landmark' | 'restaurant' | 'cafe',
   locations: string[],
-  keywords: string[]
+  rankedKeywords: string[],
+  unrankedKeywords: string[] = []
 ): Promise<PlaceResult[]> {
   try {
-    console.log(`Fetching weighted results for ${category}`, { locations, keywords });
+    console.log('Fetching weighted results:', { category, locations, rankedKeywords, unrankedKeywords });
     
-    // 실제 구현 시작    
     // 1. 지역 매핑 처리
     const mappedLocations = locations.map(loc => locationMapping[loc] || loc);
-    console.log("Mapped locations:", mappedLocations);
     
-    // 2. 키워드를 DB 컬럼으로 매핑
-    const keywordColumnPromises = keywords.map((kw, index) => 
-      mapKeywordToColumn(kw, category).then(column => ({
-        column, 
-        weight: index === 0 ? 0.4 : index === 1 ? 0.3 : 0.2 // 가중치 부여
-      }))
-    );
-    
-    const keywordColumns = await Promise.all(keywordColumnPromises);
-    const validKeywordColumns = keywordColumns.filter(k => k.column !== null) as {column: string, weight: number}[];
-    
-    console.log("Valid keyword columns with weights:", validKeywordColumns);
-    
+    // 2. 키워드 매핑 및 가중치 할당
+    const rankedWeights = [0.4, 0.3, 0.2];
+    const remainingWeight = 1 - rankedWeights.slice(0, rankedKeywords.length).reduce((a, b) => a + b, 0);
+    const unrankedWeight = unrankedKeywords.length > 0 ? remainingWeight / unrankedKeywords.length : 0;
+
+    // Combine ranked and unranked keywords with their weights
+    const keywordPromises = [
+      ...rankedKeywords.map((kw, i) => 
+        mapKeywordToColumn(kw, category).then(column => ({
+          column,
+          weight: rankedWeights[i] || 0
+        }))
+      ),
+      ...unrankedKeywords.map(kw =>
+        mapKeywordToColumn(kw, category).then(column => ({
+          column,
+          weight: unrankedWeight
+        }))
+      )
+    ];
+
+    const keywordColumns = await Promise.all(keywordPromises);
+    const validKeywordColumns = keywordColumns.filter(k => k.column !== null) as { column: string; weight: number }[];
+
     if (validKeywordColumns.length === 0) {
       console.warn("No valid keywords found for mapping");
       return [];
     }
-    
-    // 개발 단계에서는 간소화된 모의 데이터를 반환합니다.
-    // 실제 프로덕션에서는 아래 주석 처리된 코드를 사용하세요.
-    
-    // For demo purposes, return mock data with unique IDs and better coordinates
+
+    // 개발용 모의 데이터 반환 (실제 구현 시 제거)
     const results = Array.from({ length: 20 }, (_, idx) => ({
       id: `${category}-${idx+1}`,
       place_name: `${category === 'accommodation' ? '숙소' : 
-               category === 'landmark' ? '관광지' : 
-               category === 'restaurant' ? '음식점' : '카페'} ${idx+1}`,
+                   category === 'landmark' ? '관광지' : 
+                   category === 'restaurant' ? '음식점' : '카페'} ${idx+1}`,
       road_address: `${mappedLocations[0] || '제주'} ${idx+1}번지`,
-      rating: Math.round((4 + Math.random()) * 10) / 10, // 4.0 ~ 5.0 범위의 평점
-      visitor_review_count: Math.floor(Math.random() * 500) + 50, // 50 ~ 549 범위의 리뷰 수
+      rating: Math.round((4 + Math.random()) * 10) / 10,
+      visitor_review_count: Math.floor(Math.random() * 500) + 50,
       category,
-      // 제주도 주변 좌표 범위 (실제 지도에 적절히 분산되도록)
-      x: 126.5 + (Math.random() * 0.3 - 0.15), // 제주 중심 경도 약 126.5
-      y: 33.4 + (Math.random() * 0.3 - 0.15),  // 제주 중심 위도 약 33.4
+      x: 126.5 + (Math.random() * 0.3 - 0.15),
+      y: 33.4 + (Math.random() * 0.3 - 0.15),
     }));
 
     return results.sort((a, b) => {
-      // 상위 4개는 높은 평점 순으로, 그 이후는 약간 무작위성 있게 정렬
       const idx = results.indexOf(a);
       if (idx < 4) return b.rating - a.rating;
       return b.rating - a.rating + (Math.random() * 0.5 - 0.25);
     });
-    
-    /* 실제 구현 코드 (프로덕션용)
-    // 3. 리뷰 테이블과 정보 테이블 이름 결정
-    const reviewTable = `${category}_review`;
-    const infoTable = `${category}_information`;
-    const ratingTable = `${category}_rating`;
-    
-    // 4. 가중치 기반 점수 계산 및 상위 20개 ID 추출
-    const scoreQuery = supabase.rpc('calculate_weighted_score', {
-      category_param: category,
-      locations_param: mappedLocations,
-      keyword_columns: validKeywordColumns.map(k => k.column),
-      keyword_weights: validKeywordColumns.map(k => k.weight)
-    });
-    
-    const { data: topIds, error: scoreError } = await scoreQuery;
-    
-    if (scoreError) {
-      console.error("Score calculation error:", scoreError);
-      throw scoreError;
-    }
-    
-    // 5. 상위 ID들에 대한 상세 정보 조회
-    const { data: placeDetails, error: detailsError } = await supabase
-      .from(`${infoTable}`)
-      .select(`
-        id,
-        place_name,
-        road_address,
-        longitude as x,
-        latitude as y,
-        ${ratingTable}!inner(rating, visitor_review_count)
-      `)
-      .in('id', topIds.map(item => item.id))
-      .order('id', { ascending: false });
-    
-    if (detailsError) {
-      console.error("Details fetch error:", detailsError);
-      throw detailsError;
-    }
-    
-    // 6. 결과 포맷팅
-    return placeDetails.map(place => ({
-      id: place.id,
-      place_name: place.place_name || '이름 없음',
-      road_address: place.road_address || '주소 없음',
-      rating: place[ratingTable]?.rating || 0,
-      visitor_review_count: place[ratingTable]?.visitor_review_count || 0,
-      category: category,
-      x: place.x || 0,
-      y: place.y || 0
-    }));
-    */
   } catch (error) {
-    console.error(`결과 조회 오류 (${category}):`, error);
+    console.error('Weighted results fetch error:', error);
     return [];
+  }
+}
+
+// 프롬프트 파싱
+interface ParsedPrompt {
+  schedule: {
+    startDate: string;
+    startTime: string;
+    endDate: string;
+    endTime: string;
+  };
+  locations: string[];
+  category: 'accommodation' | 'landmark' | 'restaurant' | 'cafe';
+  rankedKeywords: string[];
+  unrankedKeywords: string[];
+}
+
+export function parsePrompt(prompt: string): ParsedPrompt | null {
+  try {
+    const result: ParsedPrompt = {
+      schedule: { startDate: '', startTime: '', endDate: '', endTime: '' },
+      locations: [],
+      category: 'accommodation',
+      rankedKeywords: [],
+      unrankedKeywords: []
+    };
+
+    // Parse schedule [MM.dd,HH:mm,MM.dd,HH:mm]
+    const scheduleMatch = prompt.match(/일정\[([\d.,: ]+)\]/);
+    if (scheduleMatch) {
+      const [startDate, startTime, endDate, endTime] = scheduleMatch[1].split(',');
+      result.schedule = { startDate, startTime, endDate, endTime };
+    }
+
+    // Parse locations [loc1,loc2,...]
+    const locationMatch = prompt.match(/지역\[([^\]]+)\]/);
+    if (locationMatch) {
+      result.locations = locationMatch[1].split(',').map(loc => loc.trim());
+    }
+
+    // Parse category and keywords
+    const categoryMatch = prompt.match(/(숙소|관광지|음식점|카페)\[{([^}]+)},([^\]]*)\]/);
+    if (categoryMatch) {
+      result.category = categoryMatch[1] === '숙소' ? 'accommodation' :
+                       categoryMatch[1] === '관광지' ? 'landmark' :
+                       categoryMatch[1] === '음식점' ? 'restaurant' : 'cafe';
+      
+      result.rankedKeywords = categoryMatch[2].split(',').map(k => k.trim());
+      result.unrankedKeywords = categoryMatch[3].split(',').map(k => k.trim()).filter(k => k);
+    }
+
+    return result;
+  } catch (error) {
+    console.error('프롬프트 파싱 오류:', error);
+    return null;
   }
 }
