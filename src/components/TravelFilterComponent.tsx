@@ -1,149 +1,152 @@
-
 import React, { useState } from 'react';
-import { fetchWeightedResults, parsePrompt, PlaceResult } from '@/lib/travelFilter';
+import { supabase } from '../integrations/supabase/client';
+import { PlaceResult, fetchWeightedResults } from '../lib/travelFilter';
 import { useMapContext } from './rightpanel/MapContext';
-import PlaceList from './middlepanel/PlaceList';  // Changed import
+import PlaceList from './middlepanel/PlaceList';
 import PlaceDetailsPopup from './middlepanel/PlaceDetailsPopup';
-import { Place } from '@/types/supabase';
-import { useToast } from "@/hooks/use-toast";
+import { Button } from './ui/button';
+import { Textarea } from './ui/textarea';
+import { useToast } from './ui/use-toast';
+
+// 프롬프트 파싱 결과 타입 정의
+interface ParsedPrompt {
+  schedule: {
+    startDate: string;
+    startTime: string;
+    endDate: string;
+    endTime: string;
+  };
+  locations: string[];
+  category: 'accommodation' | 'landmark' | 'restaurant' | 'cafe';
+  rankedKeywords: string[];    // 1,2,3순위
+  unrankedKeywords: string[];  // 순위 없는 키워드
+}
 
 const TravelFilterComponent: React.FC = () => {
-  const { toast } = useToast();
   const [prompt, setPrompt] = useState('');
+  const [parsed, setParsed] = useState<ParsedPrompt | null>(null);
+  const [results, setResults] = useState<PlaceResult[]>([]);
   const [loading, setLoading] = useState(false);
-  const [places, setPlaces] = useState<PlaceResult[]>([]);
-  const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const { addMarkers, panTo } = useMapContext();
+  const [selected, setSelected] = useState<PlaceResult | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
+  const mapCtx = useMapContext();
+  const { toast } = useToast();
 
+  // ==== 프롬프트 파싱 ====
+  const parsePrompt = (input: string): ParsedPrompt | null => {
     try {
-      const parsed = parsePrompt(prompt);
-      if (!parsed) {
-        throw new Error('프롬프트 형식이 올바르지 않습니다.');
-      }
+      const sched = input.match(/일정\[([\d\.]+),([\d:]+),([\d\.]+),([\d:]+)\]/);
+      if (!sched) throw new Error('일정 형식 오류');
+      const locs = input.match(/지역\[(.*?)\]/);
+      if (!locs) throw new Error('지역 형식 오류');
+      const locations = locs[1].split(',').map(s => s.trim());
 
-      const results = await fetchWeightedResults(
-        parsed.category,
-        parsed.locations,
-        parsed.rankedKeywords,
-        parsed.unrankedKeywords
-      );
+      const catMap: Record<string, ParsedPrompt['category']> = {
+        숙소: 'accommodation',
+        관광지: 'landmark',
+        음식점: 'restaurant',
+        카페: 'cafe'
+      };
+      let category: ParsedPrompt['category'] | null = null;
+      let ranked: string[] = [];
+      let unranked: string[] = [];
 
-      setPlaces(results);
-      
-      if (results.length > 0) {
-        // Add markers to map - highlight top 4
-        const recommendedPlaces = results.slice(0, 4).map(r => ({
-          ...r,
-          category: parsed.category,
-          name: r.place_name,
-          address: r.road_address,
-          naverLink: '',
-          instaLink: ''
-        }));
-        
-        const otherPlaces = results.slice(4).map(r => ({
-          ...r,
-          category: parsed.category,
-          name: r.place_name,
-          address: r.road_address,
-          naverLink: '',
-          instaLink: ''
-        }));
-
-        addMarkers(recommendedPlaces, { highlight: true });
-        addMarkers(otherPlaces, { highlight: false });
-
-        // Pan to first location
-        if (parsed.locations.length > 0) {
-          panTo(parsed.locations[0]);
+      // 단일 카테고리 키워드 추출
+      for (const [kor, eng] of Object.entries(catMap)) {
+        // 예: 숙소[{a,b,c},d,e]
+        const re = new RegExp(`${kor}\\[\\{([^\\}]+)\\}(?:,([^\\]]+))?\\]`);
+        const m = input.match(re);
+        if (m) {
+          category = eng;
+          ranked = m[1].split(',').map(s => s.trim());
+          if (m[2]) unranked = m[2].split(',').map(s => s.trim());
+          break;
         }
-
-        toast({
-          title: "검색 완료",
-          description: `${results.length}개의 장소를 찾았습니다.`,
-        });
       }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : '검색 중 오류가 발생했습니다.';
-      setError(message);
-      toast({
-        variant: "destructive",
-        title: "오류",
-        description: message,
-      });
-    } finally {
-      setLoading(false);
+      if (!category) throw new Error('카테고리 형식 오류');
+
+      return {
+        schedule: {
+          startDate: sched[1], startTime: sched[2],
+          endDate: sched[3], endTime: sched[4]
+        },
+        locations,
+        category,
+        rankedKeywords: ranked,
+        unrankedKeywords: unranked
+      };
+    } catch (e) {
+      setError((e as Error).message);
+      return null;
     }
   };
 
-  const handlePlaceSelect = (place: Place) => {
-    setSelectedPlace(place);
+  // ==== 제출 핸들러 ====
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    setSelected(null);
+    mapCtx.clearMarkersAndUiElements();
+
+    const p = parsePrompt(prompt);
+    if (!p) { setLoading(false); return; }
+    setParsed(p);
+
+    // 토스트로 키워드 알림
+    toast({
+      title: `${p.category} 키워드`,
+      description: `순위: ${p.rankedKeywords.join(', ')}\n추가: ${p.unrankedKeywords.join(', ')}`,
+    });
+
+    // 가중치 계산 + 장소 조회
+    const allKeywords = [...p.rankedKeywords, ...p.unrankedKeywords];
+    const places = await fetchWeightedResults(p.category, p.locations, allKeywords);
+    setResults(places);
+
+    // 지도 마커
+    if (places.length && mapCtx) {
+      const rec = places.slice(0, 4), oth = places.slice(4);
+      mapCtx.addMarkers(rec, true);
+      mapCtx.addMarkers(oth, false);
+      mapCtx.panTo(places[0].x, places[0].y);
+    }
+
+    setLoading(false);
   };
 
   return (
-    <div className="travel-filter-container p-4">
-      <form onSubmit={handleSubmit} className="mb-4">
-        <div className="form-group">
-          <label htmlFor="prompt" className="block text-sm font-medium mb-2">
-            검색 프롬프트:
-          </label>
-          <textarea
-            id="prompt"
-            value={prompt}
-            onChange={e => setPrompt(e.target.value)}
-            placeholder="일정[04.23,10:00,04.29,18:00], 지역[조천,애월], 숙소[{good_bedding,냉난방,good_breakfast},quiet_and_relax]"
-            className="w-full p-2 border rounded-md"
-            rows={5}
-            required
-          />
-        </div>
-        <button
-          type="submit"
-          disabled={loading}
-          className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-400"
-        >
-          {loading ? '검색 중...' : '검색하기'}
-        </button>
+    <div className="p-6 max-w-4xl mx-auto">
+      <form onSubmit={onSubmit} className="mb-4">
+        <Textarea
+          value={prompt}
+          onChange={e => setPrompt(e.target.value)}
+          placeholder="일정[…], 지역[…], 숙소[{good_bedding,냉난방,good_breakfast},quiet_and_relax]"
+          rows={4}
+          required
+        />
+        <Button type="submit" disabled={loading}>
+          {loading ? '검색 중…' : '검색하기'}
+        </Button>
       </form>
 
-      {error && (
-        <div className="text-red-500 mb-4">{error}</div>
+      {error && <div className="text-red-600 mb-4">{error}</div>}
+
+      {parsed && (
+        <div className="mb-4 p-3 bg-gray-100 border-l-4 border-blue-500">
+          <p>일정: {parsed.schedule.startDate} {parsed.schedule.startTime} ~ {parsed.schedule.endDate} {parsed.schedule.endTime}</p>
+          <p>지역: {parsed.locations.join(', ')}</p>
+          <p>카테고리: {parsed.category}</p>
+        </div>
       )}
 
-      {places.length > 0 && (
-        <PlaceList
-          places={places.map(p => ({
-            id: p.id,
-            name: p.place_name,
-            address: p.road_address,
-            category: p.category,
-            rating: p.rating,
-            reviewCount: p.visitor_review_count,
-            x: p.x,
-            y: p.y,
-            naverLink: '',
-            instaLink: ''
-          }))}
-          loading={loading}
-          selectedPlace={selectedPlace}
-          onSelectPlace={handlePlaceSelect}
-          page={1}
-          onPageChange={() => {}}
-          totalPages={1}
-        />
+      {results.length > 0 && (
+        <PlaceList places={results} onPlaceClick={setSelected} />
       )}
 
-      {selectedPlace && (
-        <PlaceDetailsPopup
-          place={selectedPlace}
-          onClose={() => setSelectedPlace(null)}
-        />
+      {selected && (
+        <PlaceDetailsPopup place={selected} onClose={() => setSelected(null)} />
       )}
     </div>
   );

@@ -16,3 +16,4 @@ supabase
   .then(({ data, error }) => {
     console.log('[Supabase Test] information table sample:', { data, error });
   });
+>>>>>>> 4742b8f6e584315a4bd440fffc85b3b8dd9caed4
