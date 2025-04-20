@@ -68,7 +68,9 @@ const BaseKeywordPanel: React.FC<KeywordPanelProps> = ({
     const groupFinalKeyword = `${categoryName}[${allKeywords.join(',')}]`;
     setRanking([]);
     onDirectInputChange('');
-    onConfirm([groupFinalKeyword]);
+    
+    // Issue #5 fix - Clear selected keywords when confirming
+    onConfirm([groupFinalKeyword], true);
   };
 
   // 닫기 버튼 클릭 시 패널만 닫도록 수정

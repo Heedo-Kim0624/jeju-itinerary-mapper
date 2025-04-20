@@ -50,13 +50,19 @@ export async function fetchPlaceData(
       return { places: [], ratings: [], categories: [] };
     }
 
-    const placeIds = places.map(p => normalizeField(p, 'ID') || normalizeField(p, 'id'));
+    // Fix issue #1: Make sure we correctly extract IDs for all category types
+    const placeIds = places.map(p => {
+      const id = normalizeField(p, 'ID') || normalizeField(p, 'id');
+      return id;
+    }).filter(id => id !== undefined);
     
     // Step 2: Fetch ratings
+    const idField = places[0] && normalizeField(places[0], 'ID') !== undefined ? 'ID' : 'id';
+    
     const { data: ratings, error: ratingsError } = await supabase
       .from(ratingTable)
       .select('*')
-      .in(places[0] && normalizeField(places[0], 'ID') !== undefined ? 'ID' : 'id', placeIds);
+      .in(idField, placeIds);
     
     if (ratingsError) {
       console.error('Ratings fetch error:', ratingsError);
@@ -72,7 +78,7 @@ export async function fetchPlaceData(
     const { data: categories, error: categoriesError } = await supabase
       .from(categoryTable)
       .select('*')
-      .in(places[0] && normalizeField(places[0], 'ID') !== undefined ? 'ID' : 'id', placeIds);
+      .in(idField, placeIds);
 
     if (categoriesError) {
       console.error('Categories fetch error:', categoriesError);

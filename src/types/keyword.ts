@@ -9,7 +9,7 @@ export interface KeywordPanelProps {
   onToggleKeyword: (keyword: string) => void;
   directInputValue: string;
   onDirectInputChange: (value: string) => void;
-  onConfirm: (finalKeywords: string[]) => void;
+  onConfirm: (finalKeywords: string[], clearSelection?: boolean) => void;
   onClose: () => void;
   categoryName: string;
   defaultKeywords: KeywordOption[];

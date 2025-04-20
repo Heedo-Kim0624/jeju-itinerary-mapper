@@ -72,10 +72,17 @@ export async function fetchWeightedResults(
                          normalizeField(place, 'road_address') || 
                          normalizeField(place, 'Road_address');
       
-      const longitude = normalizeField(place, 'Longitude') || normalizeField(place, 'longitude') || 0;
-      const latitude = normalizeField(place, 'Latitude') || normalizeField(place, 'latitude') || 0;
+      // Fix issue #3: Ensure the x and y coordinates are properly extracted
+      const longitude = parseFloat(normalizeField(place, 'Longitude') || normalizeField(place, 'longitude') || "0");
+      const latitude = parseFloat(normalizeField(place, 'Latitude') || normalizeField(place, 'latitude') || "0");
       
-      const ratingValue = rating ? normalizeField(rating, 'Rating') || normalizeField(rating, 'rating') || 0 : 0;
+      // Parse rating value - convert string ratings to numbers for landmarks
+      let ratingValue = 0;
+      if (rating) {
+        const ratingField = normalizeField(rating, 'Rating') || normalizeField(rating, 'rating');
+        ratingValue = typeof ratingField === 'string' ? parseFloat(ratingField) : (ratingField || 0);
+      }
+      
       const reviewCount = rating ? normalizeField(rating, 'visitor_review_count') || 0 : 0;
 
       const categoryDetail = categoryInfo ? 

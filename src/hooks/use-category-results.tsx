@@ -1,7 +1,8 @@
+
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Place } from '@/types/supabase';
-import { fetchWeightedResults, PlaceResult, convertToPlace } from '@/lib/jeju/travelPromptUtils';
+import { fetchWeightedResults, PlaceResult, convertToPlace } from '@/lib/jeju/placeUtils';
 import { useMapContext } from '../components/rightpanel/MapContext';
 
 type CategoryType = '숙소' | '관광지' | '음식점' | '카페';
@@ -43,11 +44,17 @@ export const useCategoryResults = (
       setError(null);
       
       try {
+        // Ensure we're using the correct category key mapping
+        const categoryKey = categoryKeyMap[category];
+        console.log(`Fetching results for category: ${category} (${categoryKey})`);
+        
         const results = await fetchWeightedResults(
-          categoryKeyMap[category],
+          categoryKey,
           locations,
           keywords
         );
+        
+        console.log(`Fetched ${results.length} results for ${category}`);
 
         const MAX_RECOMMENDATIONS = 4;
         setRecommendedPlaces(results.slice(0, MAX_RECOMMENDATIONS));
@@ -67,7 +74,10 @@ export const useCategoryResults = (
         setLoading(false);
       }
     };
-    load();
+    
+    if (locations.length > 0) {
+      load();
+    }
   }, [category, locations.join(','), keywords.join(',')]);
 
   return {

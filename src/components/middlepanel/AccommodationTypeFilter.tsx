@@ -1,7 +1,8 @@
 
 import React from 'react';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Toggle, ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 type AccommodationType = 'all' | 'hotel' | 'pension';
 type HotelStarRating = '3star' | '4star' | '5star';
@@ -20,76 +21,49 @@ const AccommodationTypeFilter: React.FC<AccommodationTypeFilterProps> = ({
   onStarRatingChange
 }) => {
   return (
-    <div className="mb-4 space-y-3">
+    <div className="mb-5 space-y-4">
       <div>
-        <h3 className="text-sm font-medium mb-2">숙소 유형</h3>
-        <div className="flex gap-2">
-          <Button
-            variant={selectedType === 'all' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => onTypeChange('all')}
-          >
-            전체
-          </Button>
-          <Button
-            variant={selectedType === 'hotel' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => onTypeChange('hotel')}
-          >
+        <h4 className="text-sm font-medium mb-2">숙소 유형</h4>
+        <ToggleGroup type="single" value={selectedType} onValueChange={(value) => value && onTypeChange(value as AccommodationType)}>
+          <ToggleGroupItem value="all" className="text-sm">
+            모두
+          </ToggleGroupItem>
+          <ToggleGroupItem value="hotel" className="text-sm">
             호텔
-          </Button>
-          <Button
-            variant={selectedType === 'pension' ? 'default' : 'outline'} 
-            size="sm"
-            onClick={() => onTypeChange('pension')}
-          >
+          </ToggleGroupItem>
+          <ToggleGroupItem value="pension" className="text-sm">
             펜션
-          </Button>
-        </div>
+          </ToggleGroupItem>
+        </ToggleGroup>
       </div>
-      
+
       {selectedType === 'hotel' && (
         <div>
-          <h3 className="text-sm font-medium mb-2">호텔 등급</h3>
-          <div className="space-y-2">
+          <h4 className="text-sm font-medium mb-2">호텔 등급</h4>
+          <div className="flex flex-col space-y-2">
             <div className="flex items-center space-x-2">
-              <Checkbox
+              <Switch 
                 id="3star"
                 checked={selectedStarRatings.includes('3star')}
                 onCheckedChange={() => onStarRatingChange('3star')}
               />
-              <label 
-                htmlFor="3star" 
-                className="text-sm cursor-pointer"
-              >
-                3성급 이하
-              </label>
+              <Label htmlFor="3star">3성급 이하</Label>
             </div>
             <div className="flex items-center space-x-2">
-              <Checkbox
+              <Switch 
                 id="4star"
                 checked={selectedStarRatings.includes('4star')}
                 onCheckedChange={() => onStarRatingChange('4star')}
               />
-              <label 
-                htmlFor="4star" 
-                className="text-sm cursor-pointer"
-              >
-                4성급
-              </label>
+              <Label htmlFor="4star">4성급</Label>
             </div>
             <div className="flex items-center space-x-2">
-              <Checkbox
+              <Switch 
                 id="5star"
                 checked={selectedStarRatings.includes('5star')}
                 onCheckedChange={() => onStarRatingChange('5star')}
               />
-              <label 
-                htmlFor="5star" 
-                className="text-sm cursor-pointer"
-              >
-                5성급
-              </label>
+              <Label htmlFor="5star">5성급</Label>
             </div>
           </div>
         </div>

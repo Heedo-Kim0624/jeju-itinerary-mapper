@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useCategorySelection } from '@/hooks/use-category-selection';
 import { useRegionSelection } from '@/hooks/use-region-selection';
 import { useTripDetails } from '@/hooks/use-trip-details';
@@ -10,9 +10,21 @@ import RegionSlidePanel from '../middlepanel/RegionSlidePanel';
 import CategoryResultHandler from './CategoryResultHandler';
 import PlaceCart from './PlaceCart';
 import { Place } from '@/types/supabase';
+import { toast } from 'sonner';
 
 const LeftPanel: React.FC = () => {
   const [selectedPlaces, setSelectedPlaces] = useState<Place[]>([]);
+  const [selectedPlacesByCategory, setSelectedPlacesByCategory] = useState<{
+    '숙소': Place[],
+    '관광지': Place[],
+    '음식점': Place[],
+    '카페': Place[],
+  }>({
+    '숙소': [],
+    '관광지': [],
+    '음식점': [],
+    '카페': [],
+  });
   
   const {
     categoryOrder,
@@ -61,6 +73,13 @@ const LeftPanel: React.FC = () => {
     setShowCategoryResult,
   } = usePanelVisibility();
 
+  // Check if all categories have places selected for the "경로 생성" button (issue #4)
+  const allCategoriesSelected = 
+    selectedPlacesByCategory['숙소'].length > 0 && 
+    selectedPlacesByCategory['관광지'].length > 0 && 
+    selectedPlacesByCategory['음식점'].length > 0 && 
+    selectedPlacesByCategory['카페'].length > 0;
+
   // Direct input values mapping
   const directInputValues = {
     accomodation: accomodationDirectInput,
@@ -84,13 +103,43 @@ const LeftPanel: React.FC = () => {
         }
         return [...prevPlaces, place];
       });
+      
+      if (showCategoryResult) {
+        // Track selected places by category (issue #4)
+        setSelectedPlacesByCategory(prev => ({
+          ...prev,
+          [showCategoryResult]: [...prev[showCategoryResult as keyof typeof prev], place]
+        }));
+      }
     } else {
       setSelectedPlaces(prevPlaces => prevPlaces.filter(p => p.id !== place.id));
+      
+      if (showCategoryResult) {
+        setSelectedPlacesByCategory(prev => ({
+          ...prev,
+          [showCategoryResult]: prev[showCategoryResult as keyof typeof prev].filter(p => p.id !== place.id)
+        }));
+      }
     }
   };
 
   const handleRemovePlace = (placeId: string) => {
+    const placeToRemove = selectedPlaces.find(p => p.id === placeId);
+    
     setSelectedPlaces(prevPlaces => prevPlaces.filter(p => p.id !== placeId));
+    
+    if (placeToRemove) {
+      // Also remove from category-specific selections
+      Object.keys(selectedPlacesByCategory).forEach(category => {
+        const categoryKey = category as keyof typeof selectedPlacesByCategory;
+        if (selectedPlacesByCategory[categoryKey].some(p => p.id === placeId)) {
+          setSelectedPlacesByCategory(prev => ({
+            ...prev,
+            [categoryKey]: prev[categoryKey].filter(p => p.id !== placeId)
+          }));
+        }
+      });
+    }
   };
   
   const handleViewOnMap = (place: Place) => {
@@ -99,26 +148,39 @@ const LeftPanel: React.FC = () => {
     panTo({ lat: place.y, lng: place.x });
   };
 
+  const handleCreateItinerary = () => {
+    toast.success("경로 생성 기능이 구현될 예정입니다.");
+    setShowItinerary(true);
+  };
+
   const handleConfirmByCategory = {
-    accomodation: (finalKeywords: string[]) => {
-      handleConfirmCategory('숙소', finalKeywords);
+    accomodation: (finalKeywords: string[], clearSelection: boolean = false) => {
+      handleConfirmCategory('숙소', finalKeywords, clearSelection);
       setShowCategoryResult('숙소');
-      panTo(selectedRegions[0]);
+      if (selectedRegions.length > 0) {
+        panTo(selectedRegions[0]);
+      }
     },
-    landmark: (finalKeywords: string[]) => {
-      handleConfirmCategory('관광지', finalKeywords);
+    landmark: (finalKeywords: string[], clearSelection: boolean = false) => {
+      handleConfirmCategory('관광지', finalKeywords, clearSelection);
       setShowCategoryResult('관광지');
-      panTo(selectedRegions[0]);
+      if (selectedRegions.length > 0) {
+        panTo(selectedRegions[0]);
+      }
     },
-    restaurant: (finalKeywords: string[]) => {
-      handleConfirmCategory('음식점', finalKeywords);
+    restaurant: (finalKeywords: string[], clearSelection: boolean = false) => {
+      handleConfirmCategory('음식점', finalKeywords, clearSelection);
       setShowCategoryResult('음식점');
-      panTo(selectedRegions[0]);
+      if (selectedRegions.length > 0) {
+        panTo(selectedRegions[0]);
+      }
     },
-    cafe: (finalKeywords: string[]) => {
-      handleConfirmCategory('카페', finalKeywords);
+    cafe: (finalKeywords: string[], clearSelection: boolean = false) => {
+      handleConfirmCategory('카페', finalKeywords, clearSelection);
       setShowCategoryResult('카페');
-      panTo(selectedRegions[0]);
+      if (selectedRegions.length > 0) {
+        panTo(selectedRegions[0]);
+      }
     }
   };
 
@@ -172,6 +234,18 @@ const LeftPanel: React.FC = () => {
               onRemovePlace={handleRemovePlace}
               onViewOnMap={handleViewOnMap}
             />
+
+            {/* Issue #4: 경로 생성 버튼 - Add the "경로 생성" button when all four categories have places */}
+            {allCategoriesSelected && (
+              <div className="mt-4">
+                <button
+                  onClick={handleCreateItinerary}
+                  className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 transition-colors flex items-center justify-center"
+                >
+                  <span className="mr-1">경로 생성</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
