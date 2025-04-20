@@ -1,7 +1,20 @@
 
 import { Place } from '@/types/supabase';
-import { PlaceResult, TravelCategory } from '@/types/travel';
+import { TravelCategory } from '@/types/travel';
 import { fetchPlaceData } from '@/services/placeService';
+
+// Export PlaceResult type to make it available for imports
+export interface PlaceResult {
+  id: string;
+  place_name: string;
+  road_address: string;
+  category: string;
+  categoryDetail?: string;
+  x: number;
+  y: number;
+  rating?: number;
+  visitor_review_count?: number;
+}
 
 /**
  * Converts a PlaceResult to the Place format used by the application
