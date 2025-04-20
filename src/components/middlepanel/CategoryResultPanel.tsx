@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { fetchWeightedResults, PlaceResult } from '@/lib/travelFilter';
+import { fetchWeightedResults, PlaceResult } from '@/lib/jeju/travelPromptUtils';
 import { useMapContext } from '../rightpanel/MapContext';
 import { Place } from '@/types/supabase';
 import PlaceList from './PlaceList';

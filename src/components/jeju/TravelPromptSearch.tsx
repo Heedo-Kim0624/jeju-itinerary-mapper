@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useMapContext } from '@/components/rightpanel/MapContext';
 import { Button } from '@/components/ui/button';
@@ -11,7 +10,6 @@ import {
   parsePrompt, 
   fetchWeightedResults, 
   convertToPlace,
-  PlaceResult 
 } from '@/lib/jeju/travelPromptUtils';
 
 interface TravelPromptSearchProps {
@@ -24,6 +22,7 @@ const TravelPromptSearch: React.FC<TravelPromptSearchProps> = ({ onPlacesFound }
   const [places, setPlaces] = useState<Place[]>([]);
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [sortOption, setSortOption] = useState("recommendation");
   const { toast } = useToast();
   const mapCtx = useMapContext();
   
@@ -39,6 +38,11 @@ const TravelPromptSearch: React.FC<TravelPromptSearchProps> = ({ onPlacesFound }
       // 1. Parse the prompt
       const parsed = parsePrompt(prompt);
       if (!parsed) {
+        toast({
+          title: "입력 형식 오류",
+          description: "올바른 형식으로 입력해주세요.",
+          variant: "destructive",
+        });
         setLoading(false);
         return;
       }
@@ -106,6 +110,11 @@ const TravelPromptSearch: React.FC<TravelPromptSearchProps> = ({ onPlacesFound }
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSortChange = (value: string) => {
+    setSortOption(value);
+    // Sort logic would be implemented here
   };
 
   return (

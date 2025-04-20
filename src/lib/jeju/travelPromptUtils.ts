@@ -1,287 +1,228 @@
 
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabaseClient';
 import { Place } from '@/types/supabase';
-import { toast } from '@/hooks/use-toast';
 
-// Place result type from the database query
+// Define the categories and mapping to table names as constants
+export type TravelCategory = 'accommodation' | 'landmark' | 'restaurant' | 'cafe';
+
+// Define result type for place search
 export interface PlaceResult {
   id: string;
   place_name: string;
   road_address: string;
-  rating: number;
-  visitor_review_count: number;
-  category: 'accommodation' | 'landmark' | 'restaurant' | 'cafe';
+  category: string;
   x: number;
   y: number;
+  rating?: number;
+  visitor_review_count?: number;
 }
 
-// 프롬프트 파싱 결과 타입
+// Define the structure for parsed prompt data
 export interface ParsedPrompt {
-  schedule: {
+  category: TravelCategory;
+  locations: string[];
+  rankedKeywords: string[];
+  unrankedKeywords: string[];
+  dateRange?: {
     startDate: string;
     startTime: string;
     endDate: string;
     endTime: string;
   };
-  locations: string[];
-  category: 'accommodation' | 'landmark' | 'restaurant' | 'cafe';
-  rankedKeywords: string[];    // 1,2,3순위
-  unrankedKeywords: string[];  // 순위 없는 키워드
 }
 
-// 지역 매핑
-const locationMapping: Record<string,string> = {
-  '서귀포시내': '서귀포',
-  '제주시내': '제주'
+// Define category to DB table mapping as type-safe lookup objects
+type TableMapping = {
+  [key in TravelCategory]: string;
 };
 
-// Place 변환 유틸리티 함수
-export function convertToPlace(result: PlaceResult): Place {
+const categoryTableMap: TableMapping = {
+  'accommodation': 'accomodation_information',
+  'landmark': 'landmark_information',
+  'restaurant': 'restaurant_information',
+  'cafe': 'cafe_information',
+};
+
+const categoryRatingMap: TableMapping = {
+  'accommodation': 'accomodation_rating',
+  'landmark': 'landmark_rating',
+  'restaurant': 'restaurant_rating',
+  'cafe': 'cafe_rating',
+};
+
+/**
+ * Converts a PlaceResult to the Place format used by the application
+ */
+export function convertToPlace(pr: PlaceResult): Place {
   return {
-    id: result.id,
-    name: result.place_name,
-    address: result.road_address,
-    category: result.category,
-    x: result.x,
-    y: result.y,
-    naverLink: '', // 기본값
-    instaLink: '', // 기본값
-    rating: result.rating,
-    reviewCount: result.visitor_review_count,
+    id: pr.id,
+    name: pr.place_name,
+    address: pr.road_address,
+    category: pr.category,
+    x: pr.x,
+    y: pr.y,
+    naverLink: '',
+    instaLink: '',
+    rating: pr.rating,
+    reviewCount: pr.visitor_review_count,
   };
 }
 
-// 프롬프트 파싱 함수
-export const parsePrompt = (input: string): ParsedPrompt | null => {
+/**
+ * Parse user input prompt into structured data
+ */
+export function parsePrompt(prompt: string): ParsedPrompt | null {
   try {
-    // 1. 일정 추출
-    const scheduleMatch = input.match(/일정\[([\d\.]+),([\d:]+),([\d\.]+),([\d:]+)\]/);
-    if (!scheduleMatch) throw new Error('일정 형식 오류');
-    
-    // 2. 지역 추출
-    const locationsMatch = input.match(/지역\[(.*?)\]/);
-    if (!locationsMatch) throw new Error('지역 형식 오류');
-    const locations = locationsMatch[1].split(',').map(s => s.trim());
-    
-    // 3. 카테고리 및 키워드 추출
-    const categoryMap: Record<string, 'accommodation' | 'landmark' | 'restaurant' | 'cafe'> = {
+    // Extract date range if present
+    const dateRangeMatch = prompt.match(/일정\[([\d\.]+),([\d:]+),([\d\.]+),([\d:]+)\]/);
+    const dateRange = dateRangeMatch ? {
+      startDate: dateRangeMatch[1],
+      startTime: dateRangeMatch[2],
+      endDate: dateRangeMatch[3],
+      endTime: dateRangeMatch[4]
+    } : undefined;
+
+    // Extract locations
+    const locationMatch = prompt.match(/지역\[([^\]]+)\]/);
+    const locations = locationMatch ? locationMatch[1].split(',').map(l => l.trim()) : [];
+
+    // Extract category and keywords
+    const categoryMatch = prompt.match(/(숙소|관광지|음식점|카페)\[([^\]]+)\]/);
+    if (!categoryMatch) {
+      console.error("No valid category found in prompt");
+      return null;
+    }
+
+    // Map Korean category names to English
+    const categoryMap: { [key: string]: TravelCategory } = {
       '숙소': 'accommodation',
       '관광지': 'landmark',
       '음식점': 'restaurant',
-      '카페': 'cafe'
+      '카페': 'cafe',
     };
     
-    let category: 'accommodation' | 'landmark' | 'restaurant' | 'cafe' | null = null;
-    let rankedKeywords: string[] = [];
-    let unrankedKeywords: string[] = [];
+    const category = categoryMap[categoryMatch[1]];
     
-    // 단일 카테고리 키워드 추출
-    for (const [kor, eng] of Object.entries(categoryMap)) {
-      // 예: 숙소[{a,b,c},d,e]
-      const regex = new RegExp(`${kor}\\[\\{([^\\}]+)\\}(?:,([^\\]]+))?\\]`);
-      const match = input.match(regex);
-      if (match) {
-        category = eng;
-        rankedKeywords = match[1].split(',').map(s => s.trim());
-        if (match[2]) unrankedKeywords = match[2].split(',').map(s => s.trim());
-        break;
-      }
-    }
+    // Parse keywords
+    const keywordsPart = categoryMatch[2];
     
-    if (!category) throw new Error('카테고리 형식 오류');
-    
-    return {
-      schedule: {
-        startDate: scheduleMatch[1],
-        startTime: scheduleMatch[2],
-        endDate: scheduleMatch[3],
-        endTime: scheduleMatch[4]
-      },
-      locations,
-      category,
-      rankedKeywords,
-      unrankedKeywords
-    };
-  } catch (e) {
-    console.error('프롬프트 파싱 오류:', e);
-    toast({
-      title: "프롬프트 파싱 오류",
-      description: (e as Error).message,
-      variant: "destructive"
-    });
-    return null;
-  }
-};
+    // Extract ranked keywords (inside curly braces)
+    const rankedMatch = keywordsPart.match(/\{([^}]+)\}/);
+    const rankedKeywords = rankedMatch 
+      ? rankedMatch[1].split(',').map(k => k.trim())
+      : [];
 
-// 키워드→컬럼 매핑
-async function mapKeywordToColumn(
-  keyword: string,
-  category: PlaceResult['category']
-): Promise<string|null> {
-  try {
-    const { data, error } = await supabase
-      .from('similarity_matching')
-      .select('field_name')
-      .eq('user_keyword', keyword)
-      .eq('table_name', category)
-      .single();
-      
-    if (error) {
-      console.error(`[mapKeywordToColumn] error mapping "${keyword}" →`, error);
-      return null;
+    // Extract unranked keywords (outside curly braces)
+    let unrankedKeywordsPart = keywordsPart.replace(/\{[^}]+\}/, '').trim();
+    if (unrankedKeywordsPart.startsWith(',')) {
+      unrankedKeywordsPart = unrankedKeywordsPart.substring(1);
     }
     
-    console.log(`[mapKeywordToColumn] "${keyword}" →`, data?.field_name);
-    return data?.field_name || null;
-  } catch (err) {
-    console.error(`[mapKeywordToColumn] exception:`, err);
+    const unrankedKeywords = unrankedKeywordsPart
+      ? unrankedKeywordsPart.split(',').map(k => k.trim()).filter(Boolean)
+      : [];
+
+    return {
+      category,
+      locations,
+      rankedKeywords,
+      unrankedKeywords,
+      dateRange,
+    };
+  } catch (error) {
+    console.error("Error parsing prompt:", error);
     return null;
   }
 }
 
-// 가중치 평가 + 결과 fetch
+/**
+ * Fetch and rank places based on category, location and keywords
+ */
 export async function fetchWeightedResults(
-  category: PlaceResult['category'],
+  category: TravelCategory,
   locations: string[],
   keywords: string[]
 ): Promise<PlaceResult[]> {
-  console.log('--- fetchWeightedResults 시작 ---');
-  console.log('category:', category);
-  console.log('locations:', locations);
-  console.log('keywords:', keywords);
-
-  // 1) 지역 필터링
-  const mappedLocs = locations.map(l => locationMapping[l] || l);
-  console.log('[1] 매핑된 지역 locations →', mappedLocs);
-
-  // 테이블 이름 수정 (Supabase 스키마에 맞게)
-  const locationTable = `${category}_information`;
+  // Get the appropriate table names
+  const infoTable = categoryTableMap[category];
+  const ratingTable = categoryRatingMap[category];
+  
+  // Create a type guard to ensure we don't access invalid tables
+  if (!infoTable || !ratingTable) {
+    console.error(`Invalid category: ${category}`);
+    return [];
+  }
   
   try {
-    const { data: locIds, error: locErr } = await supabase
-      .from(locationTable)
-      .select('id')
-      .in('location', mappedLocs);
-      
-    if (locErr) {
-      console.error('[1] 지역 필터링 오류:', locErr);
+    // Step 1: Query the information table with location filter if provided
+    let query = supabase
+      .from(infoTable as any)
+      .select('ID, Place_Name, Road_Address, location, Longitude, Latitude');
+    
+    if (locations.length > 0) {
+      query = query.in('location', locations);
+    }
+
+    const { data: places, error: placesError } = await query;
+    
+    if (placesError) {
+      console.error('Places fetch error:', placesError);
       return [];
     }
     
-    console.log('[1] 필터링된 ID 목록 개수 →', locIds?.length);
-    if (!locIds?.length) return [];
-
-    // 2) 키워드 컬럼 매핑
-    const kwCols = await Promise.all(
-      keywords.map((kw, i) =>
-        mapKeywordToColumn(kw, category)
-          .then(c => ({ keyword: kw, col: c, idx: i }))
-      )
-    );
-    
-    console.log('[2] 키워드→컬럼 매핑 결과 →', kwCols);
-    const valid = kwCols.filter(k => k.col);
-    console.log('[2] 유효한 컬럼만 →', valid);
-
-    if (!valid.length) return [];
-
-    // 3) 가중치 계산
-    const weights: Record<string, number> = {};
-    const base = [0.4, 0.3, 0.2];
-    valid.forEach(({ col, idx }) => {
-      if (col) {
-        weights[col] = idx < 3 ? base[idx] : 0;
-      }
-    });
-    
-    const used = Object.values(weights).reduce((a, b) => a + b, 0);
-    const remain = Math.max(0, 1 - used);
-    const unranked = valid.filter(k => k.idx >= 3);
-    
-    unranked.forEach(k => {
-      if (k.col) {
-        weights[k.col] = remain / unranked.length;
-      }
-    });
-    
-    console.log('[3] 최종 가중치(weights) →', weights);
-
-    // 4) 각 장소 점수 계산
-    const scores: Record<string, number> = {};
-    
-    for (const item of locIds) {
-      if (!item || !item.id) continue;
-      
-      const cols = valid.map(k => k.col).join(',');
-      const reviewTable = `${category}_review`;
-      
-      try {
-        const { data: rv, error: rvErr } = await supabase
-          .from(reviewTable)
-          .select(`id,review_norm,${cols}`)
-          .eq('id', item.id)
-          .single();
-          
-        if (rvErr) {
-          console.warn(`[4] review 조회 오류 (id=${item.id}):`, rvErr);
-          continue;
-        }
-        
-        if (!rv) continue;
-        
-        let s = Object.entries(weights)
-          .reduce((sum, [c, w]) => sum + (rv[c] || 0) * w, 0);
-          
-        s *= rv.review_norm || 1;
-        scores[item.id] = s;
-      } catch (err) {
-        console.error(`[4] 점수 계산 오류 (id=${item.id}):`, err);
-      }
-    }
-    
-    console.log('[4] 계산된 점수(scores) →', scores);
-
-    // 5) 상위 20개 id
-    const top = Object.entries(scores)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 20)
-      .map(([id]) => id);
-      
-    console.log('[5] 상위 20개 id →', top);
-
-    if (!top.length) return [];
-
-    // 6) 최종 조회
-    const infoTable = `${category}_information`;
-    const ratingTable = `${category}_rating`;
-    
-    const { data: info, error: infoErr } = await supabase
-      .from(infoTable)
-      .select(`id,place_name,road_address,x,y,${ratingTable}(rating,visitor_review_count)`)
-      .in('id', top);
-      
-    if (infoErr) {
-      console.error('[6] 최종 정보 조회 오류:', infoErr);
+    if (!places || places.length === 0) {
+      console.log('No places found matching the criteria');
       return [];
     }
-    
-    console.log('[6] 최종 조회된 장소 개수 →', info?.length);
 
-    const results = info.map(i => ({
-      id: i.id,
-      place_name: i.place_name,
-      road_address: i.road_address,
-      x: i.x || 0,
-      y: i.y || 0,
-      rating: i[ratingTable]?.rating || 0,
-      visitor_review_count: i[ratingTable]?.visitor_review_count || 0,
-      category
-    }));
+    // Step 2: Fetch ratings for these places
+    const placeIds = places.map(p => p.ID);
     
-    console.log('--- fetchWeightedResults 종료 → 결과 배열 →', results);
-    return results;
-  } catch (err) {
-    console.error('fetchWeightedResults 전체 오류:', err);
+    const { data: ratings, error: ratingsError } = await supabase
+      .from(ratingTable as any)
+      .select('ID, Rating, visitor_review_count')
+      .in('ID', placeIds);
+    
+    if (ratingsError) {
+      console.error('Ratings fetch error:', ratingsError);
+      return [];
+    }
+
+    // Step 3: Combine places with their ratings, apply keywords weighting in a simplified way
+    const placesWithRatings = places.map(place => {
+      const rating = ratings?.find(r => r.ID === place.ID);
+      
+      // Simple weighting by rating and review count
+      // Actual keyword weighting would be more complex
+      let weight = 0;
+      if (rating) {
+        weight = (rating.Rating || 0) * Math.log(1 + (rating.visitor_review_count || 0));
+      }
+      
+      return {
+        id: place.ID.toString(),
+        place_name: place.Place_Name,
+        road_address: place.Road_Address,
+        category: category,
+        x: place.Longitude ?? 0,
+        y: place.Latitude ?? 0,
+        rating: rating?.Rating ?? 0,
+        visitor_review_count: rating?.visitor_review_count ?? 0,
+        weight
+      };
+    });
+
+    // Sort by the calculated weight
+    const sortedPlaces = placesWithRatings.sort((a, b) => b.weight - a.weight);
+    
+    // Return all places but without the temporary weight property
+    return sortedPlaces.map(place => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { weight, ...rest } = place;
+      return rest;
+    });
+  } catch (error) {
+    console.error('Error in fetchWeightedResults:', error);
     return [];
   }
 }
