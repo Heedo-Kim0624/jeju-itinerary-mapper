@@ -1,13 +1,13 @@
-// CategoryPrioritySelector.tsx
+
 import React from 'react';
 
 const CATEGORIES = ["숙소", "관광지", "음식점", "카페"];
 
 interface Props {
   selectedOrder: string[];
-  onSelect: (category: string) => void; // 선택하기
-  onBack: () => void; // ✅ 대문자 B
-  onConfirm: () => void; // ✅ 대문자 C
+  onSelect: (category: string) => void;
+  onBack: () => void;
+  onConfirm: () => void;
 }
 
 const CategoryPrioritySelector: React.FC<Props> = ({ selectedOrder, onSelect, onBack, onConfirm }) => {
@@ -18,7 +18,6 @@ const CategoryPrioritySelector: React.FC<Props> = ({ selectedOrder, onSelect, on
 
   return (
     <div className="space-y-2 mt-4">
-      {/* ✅ 상단 뒤로가기 버튼 */}
       <div className="flex justify-start mb-2">
         <button
           onClick={onBack}
@@ -28,28 +27,34 @@ const CategoryPrioritySelector: React.FC<Props> = ({ selectedOrder, onSelect, on
         </button>
       </div>
 
-      {/* ✅ 카테고리 리스트 */}
+      {/* Display instructions */}
+      <p className="text-sm text-gray-600 mb-4">
+        카테고리를 클릭하여 중요도 순서를 선택해주세요. (1순위부터 4순위까지)
+      </p>
+
+      {/* Category list */}
       {CATEGORIES.map((category) => {
         const order = getOrderNumber(category);
-        const isSelected = order !== null;
 
         return (
           <button
             key={category}
             onClick={() => onSelect(category)}
             className={`w-full flex justify-between items-center px-4 py-2 rounded-lg border ${
-              isSelected ? 'bg-blue-100 border-blue-400' : 'bg-gray-100'
+              order !== null 
+              ? 'bg-blue-100 border-blue-400' 
+              : 'bg-white border-gray-300 hover:bg-gray-50'
             }`}
           >
             <span className="text-sm text-gray-800">{category}</span>
-            {isSelected && (
-              <span className="text-sm font-bold text-blue-700">{order}</span>
+            {order !== null && (
+              <span className="text-sm font-bold text-blue-700">{order}순위</span>
             )}
           </button>
         );
       })}
 
-      {/* ✅ 확인 버튼 */}
+      {/* Confirm button */}
       {selectedOrder.length === 4 && (
         <div className="flex justify-end mt-4">
           <button

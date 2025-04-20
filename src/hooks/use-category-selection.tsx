@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 
 const categoryMap = {
@@ -9,8 +8,8 @@ const categoryMap = {
 };
 
 export const useCategorySelection = () => {
-  // 카테고리 순서 선택 및 카테고리 선택 완료 여부
-  const [categoryOrder, setCategoryOrder] = useState<string[]>(['숙소', '관광지', '음식점', '카페']);
+  // Initialize with an empty array instead of pre-filled order
+  const [categoryOrder, setCategoryOrder] = useState<string[]>([]);
   const [categorySelectionConfirmed, setCategorySelectionConfirmed] = useState<boolean>(false);
 
   // 중앙 패널에 표시할 카테고리
@@ -34,15 +33,17 @@ export const useCategorySelection = () => {
   const [stepIndex, setStepIndex] = useState<number>(0);
 
   const handleCategoryClick = (categoryName: string) => {
-    const orderCopy = [...categoryOrder];
-    const idx = orderCopy.indexOf(categoryName);
-    if (idx > 0) {
-      // 항목을 제자리에서 제거
-      orderCopy.splice(idx, 1);
-      // 해당 항목을 배열의 시작점에 삽입
-      orderCopy.unshift(categoryName);
-    }
-    setCategoryOrder(orderCopy);
+    setCategoryOrder(prev => {
+      // If category is already selected, remove it
+      if (prev.includes(categoryName)) {
+        return prev.filter(cat => cat !== categoryName);
+      }
+      // Add category to the end of the array if not all categories are selected
+      if (prev.length < 4) {
+        return [...prev, categoryName];
+      }
+      return prev;
+    });
   };
 
   const handleCategoryButtonClick = (categoryName: string) => {
