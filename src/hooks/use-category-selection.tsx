@@ -1,66 +1,39 @@
-import { useState } from 'react';
 
-const categoryMap = {
-  '숙소': 'accomodation',
-  '관광지': 'landmark',
-  '음식점': 'restaurant',
-  '카페': 'cafe',
-};
+import { useCategoryOrder } from './use-category-order';
+import { useCategoryPanel } from './use-category-panel';
+import { useCategoryKeywords } from './use-category-keywords';
+import type { CategoryName } from '@/utils/categoryUtils';
 
 export const useCategorySelection = () => {
-  // Initialize with an empty array instead of pre-filled order
-  const [categoryOrder, setCategoryOrder] = useState<string[]>([]);
-  const [categorySelectionConfirmed, setCategorySelectionConfirmed] = useState<boolean>(false);
+  const {
+    categoryOrder,
+    categorySelectionConfirmed,
+    setCategorySelectionConfirmed,
+    stepIndex,
+    setStepIndex,
+    handleCategoryClick,
+  } = useCategoryOrder();
 
-  // 중앙 패널에 표시할 카테고리
-  const [activeMiddlePanelCategory, setActiveMiddlePanelCategory] = useState<string | null>(null);
+  const {
+    activeMiddlePanelCategory,
+    confirmedCategories,
+    setConfirmedCategories,
+    handleCategoryButtonClick,
+    handlePanelBack,
+  } = useCategoryPanel();
 
-  // 키워드 선택 내용
-  const [selectedKeywordsByCategory, setSelectedKeywordsByCategory] = useState<{
-    '숙소': string[],
-    '관광지': string[],
-    '음식점': string[],
-    '카페': string[],
-  }>({
-    '숙소': [],
-    '관광지': [],
-    '음식점': [],
-    '카페': [],
-  });
-
-  // 키워드 선택 확인 여부
-  const [confirmedCategories, setConfirmedCategories] = useState<string[]>([]);
-  const [stepIndex, setStepIndex] = useState<number>(0);
-
-  const handleCategoryClick = (categoryName: string) => {
-    setCategoryOrder(prev => {
-      // If category is already selected, remove it
-      if (prev.includes(categoryName)) {
-        return prev.filter(cat => cat !== categoryName);
-      }
-      // Add category to the end of the array if not all categories are selected
-      if (prev.length < 4) {
-        return [...prev, categoryName];
-      }
-      return prev;
-    });
-  };
-
-  const handleCategoryButtonClick = (categoryName: string) => {
-    setActiveMiddlePanelCategory(categoryName);
-  };
-
-  const handlePanelBack = (categoryName: string) => {
-    setActiveMiddlePanelCategory(null);
-  };
+  const {
+    selectedKeywordsByCategory,
+    setSelectedKeywordsByCategory,
+    toggleKeyword,
+  } = useCategoryKeywords();
 
   const handleConfirmCategory = (
-    categoryName: string, 
+    categoryName: CategoryName, 
     finalKeywords: string[],
     clearSelection: boolean = false
   ) => {
     if (clearSelection) {
-      // Issue #5 fix - Clear the selection for this category when requested
       setSelectedKeywordsByCategory(prev => ({
         ...prev,
         [categoryName]: []
@@ -70,37 +43,16 @@ export const useCategorySelection = () => {
     if (!confirmedCategories.includes(categoryName)) {
       setConfirmedCategories([...confirmedCategories, categoryName]);
       
-      // 다음 카테고리로 자동 진행
       const currentIndex = categoryOrder.indexOf(categoryName);
       if (currentIndex + 1 < categoryOrder.length) {
         setStepIndex(currentIndex + 1);
       }
     }
     
-    setActiveMiddlePanelCategory(null);
+    handlePanelBack();
   };
 
-  const toggleKeyword = (category: string, keyword: string) => {
-    setSelectedKeywordsByCategory(prev => {
-      const keywordsForCategory = prev[category as keyof typeof prev] || [];
-      
-      if (keywordsForCategory.includes(keyword)) {
-        return {
-          ...prev,
-          [category]: keywordsForCategory.filter(kw => kw !== keyword)
-        };
-      } else {
-        return {
-          ...prev,
-          [category]: [...keywordsForCategory, keyword]
-        };
-      }
-    });
-  };
-
-  // 카테고리 버튼 활성화 여부 체크
-  const isCategoryButtonEnabled = (category: string) => {
-    // 이미 확인된 카테고리이거나 stepIndex와 일치하는 경우에만 활성화
+  const isCategoryButtonEnabled = (category: CategoryName) => {
     return confirmedCategories.includes(category) || categoryOrder[stepIndex] === category;
   };
 
