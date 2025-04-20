@@ -1,0 +1,154 @@
+
+import React, { useState } from 'react';
+import { useMapContext } from '@/components/rightpanel/MapContext';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/components/ui/use-toast';
+import PlaceList from '@/components/middlepanel/PlaceList';
+import PlaceDetailsPopup from '@/components/middlepanel/PlaceDetailsPopup';
+import { Place } from '@/types/supabase';
+import { 
+  parsePrompt, 
+  fetchWeightedResults, 
+  convertToPlace,
+  PlaceResult 
+} from '@/lib/jeju/travelPromptUtils';
+
+interface TravelPromptSearchProps {
+  onPlacesFound?: (places: Place[], category: string) => void;
+}
+
+const TravelPromptSearch: React.FC<TravelPromptSearchProps> = ({ onPlacesFound }) => {
+  const [prompt, setPrompt] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [places, setPlaces] = useState<Place[]>([]);
+  const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const { toast } = useToast();
+  const mapCtx = useMapContext();
+  
+  const totalPages = Math.ceil(places.length / 10); // 10 items per page
+  
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setSelectedPlace(null);
+    mapCtx.clearMarkersAndUiElements();
+    
+    try {
+      // 1. Parse the prompt
+      const parsed = parsePrompt(prompt);
+      if (!parsed) {
+        setLoading(false);
+        return;
+      }
+      
+      // 2. Show toast with keywords
+      const allKeywords = [...parsed.rankedKeywords, ...parsed.unrankedKeywords];
+      toast({
+        title: `${parsed.category} 키워드`,
+        description: `${parsed.rankedKeywords.length > 0 ? 
+          `순위: ${parsed.rankedKeywords.join(', ')}` : ''}
+          ${parsed.unrankedKeywords.length > 0 ? 
+          `추가: ${parsed.unrankedKeywords.join(', ')}` : ''}`,
+      });
+      
+      // 3. Fetch places
+      const placeResults = await fetchWeightedResults(
+        parsed.category, 
+        parsed.locations, 
+        allKeywords
+      );
+      
+      // 4. Convert to Place type
+      const convertedPlaces = placeResults.map(convertToPlace);
+      setPlaces(convertedPlaces);
+      setCurrentPage(1);
+      
+      // 5. Add markers to map
+      if (convertedPlaces.length && mapCtx) {
+        const recommended = convertedPlaces.slice(0, 4);
+        const others = convertedPlaces.slice(4);
+        mapCtx.addMarkers(recommended, { highlight: true });
+        mapCtx.addMarkers(others, { highlight: false });
+        
+        if (convertedPlaces[0]) {
+          mapCtx.panTo({ lat: convertedPlaces[0].y, lng: convertedPlaces[0].x });
+        } else if (parsed.locations.length > 0) {
+          mapCtx.panTo(parsed.locations[0]);
+        }
+      }
+      
+      // 6. Call callback if provided
+      if (onPlacesFound && convertedPlaces.length > 0) {
+        onPlacesFound(convertedPlaces, parsed.category);
+      }
+      
+      if (placeResults.length === 0) {
+        toast({
+          title: "검색 결과 없음",
+          description: "검색 조건에 맞는 장소를 찾을 수 없습니다.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "검색 완료",
+          description: `${placeResults.length}개의 장소를 찾았습니다.`,
+        });
+      }
+    } catch (error) {
+      console.error('Search error:', error);
+      toast({
+        title: "검색 오류",
+        description: "검색 중 오류가 발생했습니다.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="p-6 max-w-4xl mx-auto flex flex-col h-full">
+      <form onSubmit={handleSearch} className="mb-4">
+        <div className="mb-2">
+          <h2 className="text-lg font-medium mb-2">여행 프롬프트 검색</h2>
+          <p className="text-sm text-muted-foreground mb-2">
+            형식: 일정[MM.DD,HH:mm,MM.DD,HH:mm], 지역[지역1,지역2], 카테고리[{"{"}키워드1,키워드2{"}"}, 키워드3]
+          </p>
+          <Textarea
+            value={prompt}
+            onChange={e => setPrompt(e.target.value)}
+            placeholder="예: 일정[04.23,10:00,04.29,18:00], 지역[조천,애월], 숙소[{good_bedding,냉난방,good_breakfast}, quiet_and_relax]"
+            rows={4}
+            required
+            className="mb-2"
+          />
+          <Button type="submit" disabled={loading} className="w-full">
+            {loading ? '검색 중...' : '장소 검색'}
+          </Button>
+        </div>
+      </form>
+      
+      <div className="flex-grow overflow-hidden flex flex-col">
+        {places.length > 0 && (
+          <PlaceList
+            places={places}
+            loading={loading}
+            onSelectPlace={setSelectedPlace}
+            selectedPlace={selectedPlace}
+            page={currentPage}
+            onPageChange={setCurrentPage}
+            totalPages={totalPages}
+          />
+        )}
+      </div>
+      
+      {selectedPlace && (
+        <PlaceDetailsPopup place={selectedPlace} onClose={() => setSelectedPlace(null)} />
+      )}
+    </div>
+  );
+};
+
+export default TravelPromptSearch;

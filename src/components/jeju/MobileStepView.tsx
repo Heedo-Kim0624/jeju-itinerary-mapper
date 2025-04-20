@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import DatePicker from '@/components/leftpanel/DatePicker';
-import PlaceList from '@/components/middlepanel/PlaceList';  // Changed from leftpanel to middlepanel
+import PlaceList from '@/components/middlepanel/PlaceList';
 import ItineraryView from '@/components/leftpanel/ItineraryView';
 import DaySelector from '@/components/leftpanel/DaySelector';
 import type { Place, ItineraryDay } from '@/types/supabase';

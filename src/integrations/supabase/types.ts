@@ -13,22 +13,22 @@ export type Database = {
         Row: {
           Categories: string | null
           Categories_Details: string | null
-          id: number
+          ID: number
         }
         Insert: {
           Categories?: string | null
           Categories_Details?: string | null
-          id: number
+          ID: number
         }
         Update: {
           Categories?: string | null
           Categories_Details?: string | null
-          id?: number
+          ID?: number
         }
         Relationships: [
           {
-            foreignKeyName: "accomodation_categories_id_fkey"
-            columns: ["id"]
+            foreignKeyName: "accomodation_categories_ID_fkey"
+            columns: ["ID"]
             isOneToOne: true
             referencedRelation: "accomodation_information"
             referencedColumns: ["ID"]
@@ -100,29 +100,29 @@ export type Database = {
       accomodation_rating: {
         Row: {
           blog_review_count: number | null
-          id: number
+          ID: number
           Rating: number | null
           visitor_norm: number | null
           visitor_review_count: number | null
         }
         Insert: {
           blog_review_count?: number | null
-          id: number
+          ID: number
           Rating?: number | null
           visitor_norm?: number | null
           visitor_review_count?: number | null
         }
         Update: {
           blog_review_count?: number | null
-          id?: number
+          ID?: number
           Rating?: number | null
           visitor_norm?: number | null
           visitor_review_count?: number | null
         }
         Relationships: [
           {
-            foreignKeyName: "accomodation_rating_id_fkey"
-            columns: ["id"]
+            foreignKeyName: "accomodation_rating_ID_fkey"
+            columns: ["ID"]
             isOneToOne: true
             referencedRelation: "accomodation_information"
             referencedColumns: ["ID"]
@@ -143,7 +143,7 @@ export type Database = {
           good_value_for_money: number | null
           good_view: number | null
           hot_water: number | null
-          id: number
+          ID: number
           kind_service: number | null
           location: string | null
           many_activities: number | null
@@ -172,7 +172,7 @@ export type Database = {
           good_value_for_money?: number | null
           good_view?: number | null
           hot_water?: number | null
-          id: number
+          ID: number
           kind_service?: number | null
           location?: string | null
           many_activities?: number | null
@@ -201,7 +201,7 @@ export type Database = {
           good_value_for_money?: number | null
           good_view?: number | null
           hot_water?: number | null
-          id?: number
+          ID?: number
           kind_service?: number | null
           location?: string | null
           many_activities?: number | null
@@ -219,8 +219,8 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "accomodation_review_id_fkey"
-            columns: ["id"]
+            foreignKeyName: "accomodation_review_ID_fkey"
+            columns: ["ID"]
             isOneToOne: true
             referencedRelation: "accomodation_information"
             referencedColumns: ["ID"]

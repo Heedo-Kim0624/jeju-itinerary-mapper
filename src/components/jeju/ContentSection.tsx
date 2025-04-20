@@ -1,12 +1,12 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import PlaceList from '@/components/middlepanel/PlaceList';  // Changed from leftpanel to middlepanel
+import PlaceList from '@/components/middlepanel/PlaceList';
 import ItineraryView from '@/components/leftpanel/ItineraryView';
 import type { Place, ItineraryDay } from '@/types/supabase';
+import TravelPromptSearch from '@/components/jeju/TravelPromptSearch';
 
-
-// ✅ ContentSection 컴포넌트의 Props 정의
+// ContentSection 컴포넌트의 Props 정의
 interface ContentSectionProps {
   showItinerary: boolean; // 일정 화면 보여줄지 여부
   filteredPlaces: Place[]; // 필터링된 장소 목록
@@ -48,14 +48,19 @@ const ContentSection: React.FC<ContentSectionProps> = ({
   setItinerary,
   setSelectedItineraryDay
 }) => {
+  const handlePlacesFound = (places: Place[]) => {
+    console.log("Places found:", places);
+    // 여기서 필요한 상태를 업데이트할 수 있습니다
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-sm p-4 flex-1 flex flex-col animate-fade-in" style={{ animationDelay: '100ms' }}>
-      {/* ✅ 일정 생성 전 화면 */}
+      {/* 일정 생성 전 화면 */}
       {!showItinerary ? (
         <>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-medium">장소 목록</h2>
-            {/* ✅ 일정 생성 버튼 */}
+            {/* 일정 생성 버튼 */}
             {!loading && isPlaceListReady && !showItinerary && (
               <Button onClick={onCreateItinerary} disabled={!isPlaceListReady}>
                 일정 생성
@@ -63,7 +68,7 @@ const ContentSection: React.FC<ContentSectionProps> = ({
             )}
           </div>
 
-          {/* ✅ 장소 목록 or 안내 메시지 */}
+          {/* 장소 목록 or 프롬프트 검색 */}
           {isCategorySelectionComplete ? (
             <PlaceList
               places={filteredPlaces}
@@ -75,14 +80,12 @@ const ContentSection: React.FC<ContentSectionProps> = ({
               totalPages={totalPages}
             />
           ) : (
-            <div className="w-full flex flex-col items-center justify-center h-[40vh] text-muted-foreground">
-              <p>카테고리를 선택해주세요</p>
-            </div>
+            <TravelPromptSearch onPlacesFound={handlePlacesFound} />
           )}
         </>
       ) : (
         <>
-          {/* ✅ 일정 보기 화면 */}
+          {/* 일정 보기 화면 */}
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-medium">일정</h2>
             <Button 
@@ -96,7 +99,7 @@ const ContentSection: React.FC<ContentSectionProps> = ({
               장소 목록으로 돌아가기
             </Button>
           </div>
-          {/* ✅ 일정 목록 렌더링 */}
+          {/* 일정 목록 렌더링 */}
           {itinerary && dateRange.startDate && (
             <ItineraryView
               itinerary={itinerary}
