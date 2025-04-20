@@ -1,18 +1,11 @@
-
 import React, { useState, useEffect } from 'react';
 import { fetchWeightedResults, PlaceResult } from '@/lib/jeju/travelPromptUtils';
 import { useMapContext } from '../rightpanel/MapContext';
-import { Place } from '@/types/supabase';
 import PlaceList from './PlaceList';
 import PlaceDetailsPopup from './PlaceDetailsPopup';
 import { useToast } from "@/hooks/use-toast";
-
-interface CategoryResultPanelProps {
-  category: '숙소' | '관광지' | '음식점' | '카페';
-  locations: string[];
-  keywords: string[];
-  onClose: () => void;
-}
+import { Place } from '@/types/supabase';
+import PlaceCard from './PlaceCard';
 
 const categoryKeyMap = {
   '숙소': 'accommodation',
@@ -34,22 +27,21 @@ const convertToPlace = (pr: PlaceResult): Place => ({
   reviewCount: pr.visitor_review_count,
 });
 
-const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
-  category,
-  locations,
-  keywords,
-  onClose,
-}) => {
+const CategoryResultPanel: React.FC<{
+  category: '숙소' | '관광지' | '음식점' | '카페';
+  locations: string[];
+  keywords: string[];
+  onClose: () => void;
+}> = ({ category, locations, keywords, onClose }) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [recommend, setRecommend] = useState<PlaceResult[]>([]);
-  const [others, setOthers] = useState<PlaceResult[]>([]);
+  const [recommendedPlaces, setRecommendedPlaces] = useState<PlaceResult[]>([]);
+  const [nearbyPlaces, setNearbyPlaces] = useState<PlaceResult[]>([]);
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const [page, setPage] = useState(1);
   const { panTo, addMarkers, clearMarkersAndUiElements } = useMapContext();
 
-  // Show toast when keywords are processed
   useEffect(() => {
     const categoryDisplay = {
       '숙소': '숙소 🏨',
@@ -71,6 +63,7 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
     const load = async () => {
       setLoading(true);
       setError(null);
+      
       try {
         const results = await fetchWeightedResults(
           categoryKeyMap[category],
@@ -78,18 +71,22 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
           keywords
         );
 
-        const TOP_N = 4;
-        setRecommend(results.slice(0, TOP_N));
-        setOthers(results.slice(TOP_N));
+        // Split results into recommended (top 4) and nearby places
+        const MAX_RECOMMENDATIONS = 4;
+        setRecommendedPlaces(results.slice(0, MAX_RECOMMENDATIONS));
+        setNearbyPlaces(results.slice(MAX_RECOMMENDATIONS));
 
+        // Update map markers
         clearMarkersAndUiElements();
         if (locations.length) panTo(locations[0]);
+
+        // Add markers with different styles for recommended vs nearby places
+        const recommendedMarkers = results.slice(0, MAX_RECOMMENDATIONS).map(convertToPlace);
+        const nearbyMarkers = results.slice(MAX_RECOMMENDATIONS).map(convertToPlace);
         
-        const recommendedPlaces = results.slice(0, TOP_N).map(convertToPlace);
-        const otherPlaces = results.slice(TOP_N).map(convertToPlace);
-        
-        addMarkers(recommendedPlaces, { highlight: true });
-        addMarkers(otherPlaces, { highlight: false });
+        addMarkers(recommendedMarkers, { highlight: true });
+        addMarkers(nearbyMarkers, { highlight: false });
+
       } catch (e) {
         console.error(e);
         setError((e as Error).message || '알 수 없는 오류');
@@ -100,7 +97,7 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
     load();
   }, [category, locations.join(','), keywords.join(',')]);
 
-  const allPlaces = [...recommend, ...others].map(convertToPlace);
+  const allPlaces = [...recommendedPlaces, ...nearbyPlaces].map(convertToPlace);
   const totalPages = Math.ceil(allPlaces.length / 10);
 
   return (
@@ -108,10 +105,7 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
       <div className="h-full flex flex-col">
         <header className="sticky top-0 bg-white p-4 border-b flex items-center justify-between">
           <h3 className="text-lg font-semibold">{category} 추천 목록</h3>
-          <button 
-            onClick={onClose} 
-            className="text-gray-500 hover:text-gray-700"
-          >
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
             닫기
           </button>
         </header>
@@ -120,16 +114,39 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
           {loading && <p>로딩 중...</p>}
           {error && <p className="text-red-500">오류: {error}</p>}
 
-          {!loading && !error && (
-            <PlaceList
-              places={allPlaces}
-              loading={loading}
-              selectedPlace={selectedPlace}
-              onSelectPlace={setSelectedPlace}
-              page={page}
-              onPageChange={setPage}
-              totalPages={totalPages}
-            />
+          {!loading && !error && recommendedPlaces.length > 0 && (
+            <div className="mb-6">
+              <h4 className="text-md font-medium mb-3">✨ 추천 장소</h4>
+              <div className="space-y-2">
+                {recommendedPlaces.map(place => (
+                  <PlaceCard
+                    key={place.id}
+                    place={convertToPlace(place)}
+                    isSelected={selectedPlace?.id === place.id}
+                    onSelect={(_place, checked) => {
+                      if (checked) setSelectedPlace(convertToPlace(place));
+                      else setSelectedPlace(null);
+                    }}
+                    onClick={() => setSelectedPlace(convertToPlace(place))}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {!loading && !error && nearbyPlaces.length > 0 && (
+            <div>
+              <h4 className="text-md font-medium mb-3">📍 주변 장소</h4>
+              <PlaceList
+                places={nearbyPlaces.map(convertToPlace)}
+                loading={loading}
+                selectedPlace={selectedPlace}
+                onSelectPlace={setSelectedPlace}
+                page={page}
+                onPageChange={setPage}
+                totalPages={Math.ceil(nearbyPlaces.length / 10)}
+              />
+            </div>
           )}
         </div>
 

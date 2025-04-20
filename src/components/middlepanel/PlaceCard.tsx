@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Star, MessageCircle, MapPin, Clock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
