@@ -1,12 +1,14 @@
+
 import React, { useState } from 'react';
 import { supabase } from '../integrations/supabase/client';
-import { PlaceResult, fetchWeightedResults } from '../lib/travelFilter';
+import { PlaceResult, fetchWeightedResults, convertToPlace } from '../lib/travelFilter';
 import { useMapContext } from './rightpanel/MapContext';
 import PlaceList from './middlepanel/PlaceList';
 import PlaceDetailsPopup from './middlepanel/PlaceDetailsPopup';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { useToast } from './ui/use-toast';
+import { Place } from '../types/supabase';
 
 // 프롬프트 파싱 결과 타입 정의
 interface ParsedPrompt {
@@ -28,7 +30,7 @@ const TravelFilterComponent: React.FC = () => {
   const [results, setResults] = useState<PlaceResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selected, setSelected] = useState<PlaceResult | null>(null);
+  const [selected, setSelected] = useState<Place | null>(null);
 
   const mapCtx = useMapContext();
   const { toast } = useToast();
@@ -102,18 +104,27 @@ const TravelFilterComponent: React.FC = () => {
 
     // 가중치 계산 + 장소 조회
     const allKeywords = [...p.rankedKeywords, ...p.unrankedKeywords];
-    const places = await fetchWeightedResults(p.category, p.locations, allKeywords);
-    setResults(places);
+    const placeResults = await fetchWeightedResults(p.category, p.locations, allKeywords);
+    setResults(placeResults);
+
+    // PlaceResult 배열을 Place 배열로 변환
+    const places = placeResults.map(convertToPlace);
 
     // 지도 마커
     if (places.length && mapCtx) {
-      const rec = places.slice(0, 4), oth = places.slice(4);
-      mapCtx.addMarkers(rec, true);
-      mapCtx.addMarkers(oth, false);
-      mapCtx.panTo(places[0].x, places[0].y);
+      const rec = places.slice(0, 4); 
+      const oth = places.slice(4);
+      mapCtx.addMarkers(rec, { highlight: true });
+      mapCtx.addMarkers(oth, { highlight: false });
+      mapCtx.panTo({ lat: places[0].y, lng: places[0].x });
     }
 
     setLoading(false);
+  };
+
+  // PlaceResult를 Place로 변환하는 함수
+  const handlePlaceClick = (place: PlaceResult) => {
+    setSelected(convertToPlace(place));
   };
 
   return (
@@ -142,7 +153,15 @@ const TravelFilterComponent: React.FC = () => {
       )}
 
       {results.length > 0 && (
-        <PlaceList places={results} onPlaceClick={setSelected} />
+        <PlaceList 
+          places={results.map(convertToPlace)} 
+          loading={loading}
+          onSelectPlace={place => setSelected(place)}
+          selectedPlace={selected}
+          page={1}
+          onPageChange={() => {}}
+          totalPages={1}
+        />
       )}
 
       {selected && (

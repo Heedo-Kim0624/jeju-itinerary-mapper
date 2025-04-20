@@ -1,4 +1,6 @@
+
 import { supabase } from '../integrations/supabase/client';
+import { Place } from '../types/supabase';
 
 // PlaceResult 타입
 export interface PlaceResult {
@@ -10,6 +12,22 @@ export interface PlaceResult {
   category: 'accommodation' | 'landmark' | 'restaurant' | 'cafe';
   x: number;
   y: number;
+}
+
+// Place 변환 유틸리티 함수
+export function convertToPlace(result: PlaceResult): Place {
+  return {
+    id: result.id,
+    name: result.place_name,
+    address: result.road_address,
+    category: result.category,
+    x: result.x,
+    y: result.y,
+    naverLink: '', // 기본값
+    instaLink: '', // 기본값
+    rating: result.rating,
+    reviewCount: result.visitor_review_count,
+  };
 }
 
 // 지역 매핑
@@ -52,10 +70,13 @@ export async function fetchWeightedResults(
   const mappedLocs = locations.map(l => locationMapping[l]||l);
   console.log('[1] 매핑된 지역 locations →', mappedLocs);
 
+  // 테이블 이름 수정 (Supabase 스키마에 맞게)
+  const locationTable = `${category}_information`;
   const { data: locIds, error: locErr } = await supabase
-    .from('information')
+    .from(locationTable)
     .select('id')
     .in('location', mappedLocs);
+    
   if (locErr) {
     console.error('[1] 지역 필터링 오류:', locErr);
     return [];
@@ -93,22 +114,27 @@ export async function fetchWeightedResults(
 
   // 4) 각 장소 점수 계산
   const scores: Record<string,number> = {};
-  for (const { id } of locIds) {
+  for (const item of locIds) {
+    if (!item || !item.id) continue;
+    
     const cols = valid.map(k=>k.col).join(',');
+    const reviewTable = `${category}_review`;
     const { data: rv, error: rvErr } = await supabase
-      .from(category + '_review')
+      .from(reviewTable)
       .select(`id,review_norm,${cols}`)
-      .eq('id', id)
+      .eq('id', item.id)
       .single();
+      
     if (rvErr) {
-      console.warn(`[4] review 조회 오류 (id=${id}):`, rvErr);
+      console.warn(`[4] review 조회 오류 (id=${item.id}):`, rvErr);
       continue;
     }
     if (!rv) continue;
+    
     let s = Object.entries(weights)
       .reduce((sum,[c,w])=> sum + (rv[c]||0) * w, 0);
     s *= rv.review_norm || 1;
-    scores[id] = s;
+    scores[item.id] = s;
   }
   console.log('[4] 계산된 점수(scores) →', scores);
 
@@ -122,10 +148,12 @@ export async function fetchWeightedResults(
   if (!top.length) return [];
 
   // 6) 최종 조회
+  const infoTable = `${category}_information`;
   const { data: info, error: infoErr } = await supabase
-    .from('information')
+    .from(infoTable)
     .select(`id,place_name,road_address,x,y,${category}_rating(rating,visitor_review_count)`)
     .in('id', top);
+    
   if (infoErr) {
     console.error('[6] 최종 정보 조회 오류:', infoErr);
     return [];
@@ -138,8 +166,8 @@ export async function fetchWeightedResults(
     road_address: i.road_address,
     x: i.x || 0,
     y: i.y || 0,
-    rating: i[`${category}_rating`].rating || 0,
-    visitor_review_count: i[`${category}_rating`].visitor_review_count || 0,
+    rating: i[`${category}_rating`]?.rating || 0,
+    visitor_review_count: i[`${category}_rating`]?.visitor_review_count || 0,
     category
   }));
   console.log('--- fetchWeightedResults 종료 → 결과 배열 →', results);

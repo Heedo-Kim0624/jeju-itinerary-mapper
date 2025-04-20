@@ -1,6 +1,7 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import PlaceList from '@/components/leftpanel/PlaceList';
+import PlaceList from '@/components/middlepanel/PlaceList';  // Changed from leftpanel to middlepanel
 import ItineraryView from '@/components/leftpanel/ItineraryView';
 import type { Place, ItineraryDay } from '@/types/supabase';
 
