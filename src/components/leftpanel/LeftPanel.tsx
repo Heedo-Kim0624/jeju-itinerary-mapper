@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useCategorySelection } from '@/hooks/use-category-selection';
 import { useRegionSelection } from '@/hooks/use-region-selection';
 import { useTripDetails } from '@/hooks/use-trip-details';
@@ -8,8 +8,12 @@ import { usePanelVisibility } from '@/hooks/use-panel-visibility';
 import LeftPanelContent from './LeftPanelContent';
 import RegionSlidePanel from '../middlepanel/RegionSlidePanel';
 import CategoryResultHandler from './CategoryResultHandler';
+import PlaceCart from './PlaceCart';
+import { Place } from '@/types/supabase';
 
 const LeftPanel: React.FC = () => {
+  const [selectedPlaces, setSelectedPlaces] = useState<Place[]>([]);
+  
   const {
     categoryOrder,
     categorySelectionConfirmed,
@@ -48,7 +52,8 @@ const LeftPanel: React.FC = () => {
     setCafeDirectInput,
   } = useTripDetails();
 
-  const { panTo } = useMapContext();
+  const { panTo, addMarkers, clearMarkersAndUiElements } = useMapContext();
+  
   const {
     showItinerary,
     setShowItinerary,
@@ -69,6 +74,29 @@ const LeftPanel: React.FC = () => {
     landmark: setLandmarkDirectInput,
     restaurant: setRestaurantDirectInput,
     cafe: setCafeDirectInput
+  };
+
+  const handleSelectPlace = (place: Place, checked: boolean) => {
+    if (checked) {
+      setSelectedPlaces(prevPlaces => {
+        if (prevPlaces.some(p => p.id === place.id)) {
+          return prevPlaces;
+        }
+        return [...prevPlaces, place];
+      });
+    } else {
+      setSelectedPlaces(prevPlaces => prevPlaces.filter(p => p.id !== place.id));
+    }
+  };
+
+  const handleRemovePlace = (placeId: string) => {
+    setSelectedPlaces(prevPlaces => prevPlaces.filter(p => p.id !== placeId));
+  };
+  
+  const handleViewOnMap = (place: Place) => {
+    clearMarkersAndUiElements();
+    addMarkers([place], { highlight: true });
+    panTo({ lat: place.y, lng: place.x });
   };
 
   const handleConfirmByCategory = {
@@ -94,7 +122,6 @@ const LeftPanel: React.FC = () => {
     }
   };
 
-  // Fix: Pass the category parameter to handlePanelBack function
   const handlePanelBackByCategory = {
     accomodation: () => handlePanelBack('숙소'),
     landmark: () => handlePanelBack('관광지'),
@@ -137,6 +164,15 @@ const LeftPanel: React.FC = () => {
             handlePanelBack={handlePanelBackByCategory}
             isCategoryButtonEnabled={isCategoryButtonEnabled}
           />
+          
+          {/* 장소 카트 추가 */}
+          <div className="px-4 mb-4">
+            <PlaceCart 
+              selectedPlaces={selectedPlaces} 
+              onRemovePlace={handleRemovePlace}
+              onViewOnMap={handleViewOnMap}
+            />
+          </div>
         </div>
       )}
 
@@ -168,6 +204,8 @@ const LeftPanel: React.FC = () => {
         selectedRegions={selectedRegions}
         selectedKeywordsByCategory={selectedKeywordsByCategory}
         onClose={handleResultClose}
+        onSelectPlace={handleSelectPlace}
+        selectedPlaces={selectedPlaces}
       />
     </div>
   );

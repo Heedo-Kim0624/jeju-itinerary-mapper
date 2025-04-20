@@ -17,6 +17,8 @@ interface PlaceListProps {
   onPageChange: (page: number) => void;
   totalPages: number;
   orderedIds?: string[];
+  selectedPlaces?: Place[];
+  onViewDetails: (place: Place) => void;
 }
 
 const PlaceList: React.FC<PlaceListProps> = ({
@@ -28,9 +30,10 @@ const PlaceList: React.FC<PlaceListProps> = ({
   onPageChange,
   totalPages,
   orderedIds = [],
+  selectedPlaces = [],
+  onViewDetails,
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [selectedPlaces, setSelectedPlaces] = useState<Record<string, boolean>>({});
   const [sortOption, setSortOption] = useState<'recommendation' | 'rating' | 'reviews'>('recommendation');
 
   useEffect(() => {
@@ -38,15 +41,6 @@ const PlaceList: React.FC<PlaceListProps> = ({
       scrollRef.current.scrollTop = 0;
     }
   }, [page]);
-
-  useEffect(() => {
-    if (selectedPlace) {
-      setSelectedPlaces(prev => ({
-        ...prev,
-        [selectedPlace.id]: !prev[selectedPlace.id]
-      }));
-    }
-  }, [selectedPlace]);
 
   const sortedPlaces = React.useMemo(() => {
     let result = [...places];
@@ -64,10 +58,6 @@ const PlaceList: React.FC<PlaceListProps> = ({
   }, [places, orderedIds, sortOption]);
 
   const handleCheckboxChange = (place: Place, checked: boolean) => {
-    setSelectedPlaces(prev => ({
-      ...prev,
-      [place.id]: checked
-    }));
     if (checked) onSelectPlace(place);
   };
 
@@ -105,9 +95,10 @@ const PlaceList: React.FC<PlaceListProps> = ({
             <PlaceCard
               key={place.id}
               place={place}
-              isSelected={!!selectedPlaces[place.id]}
+              isSelected={selectedPlaces?.some(p => p.id === place.id) || false}
               onSelect={handleCheckboxChange}
               onClick={() => onSelectPlace(place)}
+              onViewDetails={() => onViewDetails(place)}
             />
           ))}
         </div>
