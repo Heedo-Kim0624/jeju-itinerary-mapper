@@ -10,7 +10,9 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 supabase
-  .from('information' as any)   // ← any 캐스트
+  .from('information' as any)
   .select('id')
   .limit(1)
-  .then(...)
+  .then(({ data, error }) => {
+    console.log('[Supabase Test] information table sample:', { data, error });
+  });
