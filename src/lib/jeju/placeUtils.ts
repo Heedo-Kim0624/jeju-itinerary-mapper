@@ -59,7 +59,7 @@ export async function fetchWeightedResults(
   keywords: string[]
 ): Promise<PlaceResult[]> {
   try {
-    const { places, ratings, categories } = await fetchPlaceData(category, locations);
+    const { places, ratings, categories, links } = await fetchPlaceData(category, locations);
     
     if (!places || places.length === 0) {
       return [];
@@ -77,6 +77,12 @@ export async function fetchWeightedResults(
       const categoryInfo = categories?.find(c => {
         const categoryId = normalizeField(c, 'ID') || normalizeField(c, 'id');
         return categoryId === placeId;
+      });
+
+      // Find link information
+      const linkInfo = links?.find(l => {
+        const linkId = normalizeField(l, 'ID') || normalizeField(l, 'id');
+        return linkId === placeId;
       });
 
       const placeName = normalizeField(place, 'Place_Name') || 
@@ -103,6 +109,10 @@ export async function fetchWeightedResults(
       const categoryDetail = categoryInfo ? 
         normalizeField(categoryInfo, 'Categories_Details') || 
         normalizeField(categoryInfo, 'categories_details') : '';
+
+      // Extract link information
+      const naverLink = linkInfo ? normalizeField(linkInfo, 'link') || '' : '';
+      const instaLink = linkInfo ? normalizeField(linkInfo, 'instagram') || '' : '';
       
       let weight = ratingValue * Math.log(1 + reviewCount);
       
@@ -116,8 +126,8 @@ export async function fetchWeightedResults(
         y: latitude,
         rating: ratingValue,
         visitor_review_count: reviewCount,
-        naverLink: '',  // Adding empty naverLink
-        instaLink: '',  // Adding empty instaLink
+        naverLink: naverLink,
+        instaLink: instaLink,
         weight
       };
     });

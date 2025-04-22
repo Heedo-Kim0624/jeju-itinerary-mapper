@@ -3,10 +3,10 @@ import React, { useState, useEffect } from 'react';
 import { Place } from '@/types/supabase';
 import { useMapContext } from '../rightpanel/MapContext';
 import { convertToPlace } from '@/lib/jeju/travelPromptUtils';
-import PlaceList from './PlaceList';
 import PlaceDetailsPopup from './PlaceDetailsPopup';
 import RecommendedPlaces from './RecommendedPlaces';
 import { useCategoryResults } from '@/hooks/use-category-results';
+import PlaceListingView from '../places/PlaceListingView';
 
 const CategoryResultPanel: React.FC<{
   category: '숙소' | '관광지' | '음식점' | '카페';
@@ -17,7 +17,6 @@ const CategoryResultPanel: React.FC<{
   selectedPlaces: Place[];
 }> = ({ category, locations, keywords, onClose, onSelectPlace, selectedPlaces }) => {
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
-  const [page, setPage] = useState(1);
   const { panTo, addMarkers, clearMarkersAndUiElements } = useMapContext();
   
   const { loading, error, recommendedPlaces, nearbyPlaces } = useCategoryResults(category, locations, keywords);
@@ -46,17 +45,6 @@ const CategoryResultPanel: React.FC<{
     }
   }, [recommendedPlaces]);
 
-  const handleSelectPlace = (place: Place, checked: boolean) => {
-    onSelectPlace(place, checked);
-    if (checked) {
-      clearMarkersAndUiElements();
-      addMarkers([place], { highlight: true });
-      if (place.x && place.y) {
-        panTo({ lat: place.y, lng: place.x });
-      }
-    }
-  };
-
   const handleViewDetails = (place: Place) => {
     setSelectedPlace(place);
     // Also pan to the place when viewing details
@@ -66,6 +54,37 @@ const CategoryResultPanel: React.FC<{
       panTo({ lat: place.y, lng: place.x });
     }
   };
+
+  const handleSelectPlace = (place: Place, checked: boolean) => {
+    onSelectPlace(place, checked);
+  };
+
+  // Convert PlaceResults to Place objects for the recommended and nearby places
+  const recommendedPlacesConverted = recommendedPlaces.map(place => ({
+    id: place.id,
+    name: place.place_name,
+    category: category,
+    address: place.road_address,
+    x: place.x,
+    y: place.y,
+    rating: place.rating || 0,
+    reviewCount: place.visitor_review_count || 0,
+    naverLink: place.naverLink ?? "",
+    instaLink: place.instaLink ?? ""
+  }));
+
+  const nearbyPlacesConverted = nearbyPlaces.map(place => ({
+    id: place.id,
+    name: place.place_name,
+    category: category,
+    address: place.road_address,
+    x: place.x,
+    y: place.y,
+    rating: place.rating || 0,
+    reviewCount: place.visitor_review_count || 0,
+    naverLink: place.naverLink ?? "",
+    instaLink: place.instaLink ?? ""
+  }));
 
   return (
     <div className="fixed top-0 left-[300px] w-[300px] h-full bg-white border-l border-r border-gray-200 z-40 shadow-md">
@@ -77,43 +96,37 @@ const CategoryResultPanel: React.FC<{
           </button>
         </header>
 
-        <div className="flex-1 overflow-auto p-4">
-          {loading && <p>로딩 중...</p>}
-          {error && <p className="text-red-500">오류: {error}</p>}
-
-          <RecommendedPlaces 
-            places={recommendedPlaces}
-            selectedPlaces={selectedPlaces}
-            onSelectPlace={handleSelectPlace}
-            onViewDetails={handleViewDetails}
-          />
-
-          {!loading && !error && nearbyPlaces.length > 0 && (
-            <div>
-              <h4 className="text-md font-medium mb-3">📍 주변 장소</h4>
-              <PlaceList
-                places={nearbyPlaces.map(place => ({
-                  id: place.id,
-                  name: place.place_name,
-                  category: category,
-                  address: place.road_address,
-                  x: place.x,
-                  y: place.y,
-                  rating: place.rating || 0,
-                  reviewCount: place.visitor_review_count || 0,
-                  naverLink: place.naverLink ?? "",
-                  instaLink: place.instaLink ?? ""
-                }))}
-                loading={loading}
-                selectedPlace={selectedPlace}
-                onSelectPlace={(place) => handleSelectPlace(place, true)}
-                page={page}
-                onPageChange={setPage}
-                totalPages={Math.ceil(nearbyPlaces.length / 10)}
-                selectedPlaces={selectedPlaces}
-                onViewDetails={handleViewDetails}
-              />
+        <div className="flex-1 overflow-auto">
+          {error && (
+            <div className="p-4">
+              <div className="bg-red-50 text-red-600 p-3 rounded">
+                오류: {error}
+              </div>
             </div>
+          )}
+
+          {!error && (
+            <>
+              <PlaceListingView
+                places={recommendedPlacesConverted}
+                title="🌟 추천 장소"
+                isLoading={loading}
+                selectedPlaces={selectedPlaces}
+                onSelectPlace={handleSelectPlace}
+                onViewOnMap={handleViewDetails}
+              />
+              
+              {nearbyPlacesConverted.length > 0 && (
+                <PlaceListingView
+                  places={nearbyPlacesConverted}
+                  title="📍 주변 장소"
+                  isLoading={loading}
+                  selectedPlaces={selectedPlaces}
+                  onSelectPlace={handleSelectPlace}
+                  onViewOnMap={handleViewDetails}
+                />
+              )}
+            </>
           )}
         </div>
 

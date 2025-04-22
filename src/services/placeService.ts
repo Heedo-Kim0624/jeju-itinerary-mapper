@@ -25,7 +25,7 @@ export async function fetchPlaceData(
   
   if (!infoTable || !ratingTable) {
     console.error(`Invalid category: ${category}`);
-    return { places: [], ratings: [], categories: [] };
+    return { places: [], ratings: [], categories: [], links: [] };
   }
   
   try {
@@ -42,12 +42,12 @@ export async function fetchPlaceData(
     
     if (placesError) {
       console.error('Places fetch error:', placesError);
-      return { places: [], ratings: [], categories: [] };
+      return { places: [], ratings: [], categories: [], links: [] };
     }
     
     if (!places || places.length === 0) {
       console.log('No places found matching the criteria');
-      return { places: [], ratings: [], categories: [] };
+      return { places: [], ratings: [], categories: [], links: [] };
     }
 
     // Fix issue #1: Make sure we correctly extract IDs for all category types
@@ -66,7 +66,7 @@ export async function fetchPlaceData(
     
     if (ratingsError) {
       console.error('Ratings fetch error:', ratingsError);
-      return { places, ratings: [], categories: [] };
+      return { places, ratings: [], categories: [], links: [] };
     }
 
     // Step 3: Fetch category details
@@ -82,12 +82,28 @@ export async function fetchPlaceData(
 
     if (categoriesError) {
       console.error('Categories fetch error:', categoriesError);
-      return { places, ratings, categories: [] };
+      return { places, ratings, categories: [], links: [] };
     }
 
-    return { places, ratings, categories };
+    // Step 4: Fetch link information
+    const linkTable = category === 'accommodation' ? 'accomodation_link' : 
+                      category === 'landmark' ? 'landmark_link' : 
+                      category === 'restaurant' ? 'restaurant_link' :
+                      'cafe_link';
+
+    const { data: links, error: linksError } = await supabase
+      .from(linkTable)
+      .select('*')
+      .in(idField, placeIds);
+
+    if (linksError) {
+      console.error('Links fetch error:', linksError);
+      return { places, ratings, categories, links: [] };
+    }
+
+    return { places, ratings, categories, links };
   } catch (error) {
     console.error('Error in fetchPlaceData:', error);
-    return { places: [], ratings: [], categories: [] };
+    return { places: [], ratings: [], categories: [], links: [] };
   }
 }
