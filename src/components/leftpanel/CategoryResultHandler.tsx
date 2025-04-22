@@ -8,7 +8,7 @@ interface CategoryResultHandlerProps {
   selectedRegions: string[];
   selectedKeywordsByCategory: Record<string, string[]>;
   onClose: () => void;
-  onSelectPlace: (place: Place, checked: boolean) => void;
+  onSelectPlace: (place: Place, checked: boolean, category: string | null) => void;
   selectedPlaces: Place[];
 }
 
@@ -31,7 +31,7 @@ const CategoryResultHandler: React.FC<CategoryResultHandlerProps> = ({
       locations={selectedRegions}
       keywords={keywords}
       onClose={onClose}
-      onSelectPlace={onSelectPlace}
+      onSelectPlace={(place, checked) => onSelectPlace(place, checked, category)}
       selectedPlaces={selectedPlaces}
     />
   );

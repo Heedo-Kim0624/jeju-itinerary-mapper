@@ -20,7 +20,7 @@ export const useSelectedPlaces = () => {
 
   const { panTo, addMarkers, clearMarkersAndUiElements } = useMapContext();
 
-  const handleSelectPlace = (place: Place, checked: boolean, category: string | null) => {
+  const handleSelectPlace = (place: Place, checked: boolean, category: string | null = null) => {
     if (checked) {
       setSelectedPlaces(prevPlaces => {
         if (prevPlaces.some(p => p.id === place.id)) {

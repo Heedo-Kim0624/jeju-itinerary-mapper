@@ -5,6 +5,7 @@ import { useRegionSelection } from '@/hooks/use-region-selection';
 import { useTripDetails } from '@/hooks/use-trip-details';
 import { usePanelVisibility } from '@/hooks/use-panel-visibility';
 import { useSelectedPlaces } from '@/hooks/use-selected-places';
+import { useMapContext } from '@/components/rightpanel/MapContext';
 import LeftPanelContent from './LeftPanelContent';
 import RegionSlidePanel from '../middlepanel/RegionSlidePanel';
 import CategoryResultHandler from './CategoryResultHandler';
@@ -63,6 +64,8 @@ const LeftPanel: React.FC = () => {
     showCategoryResult,
     setShowCategoryResult,
   } = usePanelVisibility();
+
+  const { panTo } = useMapContext();
 
   const directInputValues = {
     accomodation: accomodationDirectInput,

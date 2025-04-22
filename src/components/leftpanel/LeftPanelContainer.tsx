@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { toast } from 'sonner';
 import { Place } from '@/types/supabase';
 import PlaceCart from './PlaceCart';
 import ItineraryButton from './ItineraryButton';

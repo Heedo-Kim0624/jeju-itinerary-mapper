@@ -79,7 +79,7 @@ export const useMapCore = () => {
   const calculateRoutes = useCallback((placesToRoute: Place[]) => {
     if (!map.current || !isMapInitialized || !window.naver || placesToRoute.length < 2) return;
     
-    clearPolylines();
+    polylines.current = clearPolylines(polylines.current);
     
     const path = placesToRoute.map(place => new window.naver.maps.LatLng(place.y, place.x));
     
@@ -92,7 +92,7 @@ export const useMapCore = () => {
     });
     
     polylines.current.push(polyline);
-  }, [isMapInitialized, clearPolylines]);
+  }, [isMapInitialized]);
 
   const addMarkers = useCallback((
     placesToMark: Place[], 
