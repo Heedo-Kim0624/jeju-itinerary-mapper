@@ -29,7 +29,7 @@ const CategoryPrioritySelector: React.FC<Props> = ({ selectedOrder, onSelect, on
 
       {/* Display instructions */}
       <p className="text-sm text-gray-600 mb-4">
-        카테고리를 클릭하여 중요도 순서를 선택해주세요. (1순위부터 4순위까지)
+        카테고리를 클릭하여 중요도 순서를 선택해주세요.
       </p>
 
       {/* Category list */}
