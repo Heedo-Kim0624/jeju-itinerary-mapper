@@ -3,7 +3,8 @@ import React, { useState } from 'react';
 import BaseKeywordPanel from './common/BaseKeywordPanel';
 import { KeywordOption } from '@/types/keyword';
 import { Button } from '@/components/ui/button';
-import { Hotel, Star } from 'lucide-react';
+import { Hotel } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 type AccommodationType = 'hotel' | 'pension' | null;
 type HotelStarRating = '3star' | '4star' | '5star';
@@ -51,7 +52,7 @@ const AccomodationPanel: React.FC<{
       if (prev.includes(rating)) {
         return prev.filter(r => r !== rating);
       }
-      return [...prev, rating];
+      return [...prev, rating].sort();
     });
   };
 
@@ -64,56 +65,45 @@ const AccomodationPanel: React.FC<{
 
   return (
     <div className="space-y-6 p-4">
-      <div>
-        <h3 className="text-lg font-semibold mb-4">숙소 유형 선택</h3>
-        <div className="flex gap-4 mb-6">
-          <Button
-            variant={selectedAccommodationType === 'hotel' ? 'default' : 'outline'}
-            onClick={() => handleAccommodationTypeSelect('hotel')}
-            className="flex-1"
-          >
-            <Hotel className="mr-2 h-4 w-4" />
-            호텔
-          </Button>
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold">숙소 유형 선택</h3>
+        <div className="grid grid-cols-2 gap-4">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant={selectedAccommodationType === 'hotel' ? 'default' : 'outline'}
+                onClick={() => handleAccommodationTypeSelect('hotel')}
+                className="w-full"
+              >
+                <Hotel className="mr-2 h-4 w-4" />
+                호텔
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-48">
+              <div className="space-y-2">
+                <h4 className="font-medium text-sm mb-2">호텔 등급 선택</h4>
+                {['3star', '4star', '5star'].map((rating) => (
+                  <Button
+                    key={rating}
+                    variant={selectedStarRatings.includes(rating as HotelStarRating) ? 'default' : 'outline'}
+                    onClick={() => handleStarRatingToggle(rating as HotelStarRating)}
+                    className="w-full justify-start text-sm"
+                  >
+                    {rating === '3star' ? '3성급 이하' : `${rating[0]}성급`} 호텔
+                  </Button>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
           <Button
             variant={selectedAccommodationType === 'pension' ? 'default' : 'outline'}
             onClick={() => handleAccommodationTypeSelect('pension')}
-            className="flex-1"
+            className="w-full"
           >
-            <Star className="mr-2 h-4 w-4" />
             펜션
           </Button>
         </div>
       </div>
-
-      {selectedAccommodationType === 'hotel' && (
-        <div className="space-y-4">
-          <h4 className="font-medium">호텔 등급 선택</h4>
-          <div className="flex flex-col gap-2">
-            <Button
-              variant={selectedStarRatings.includes('3star') ? 'default' : 'outline'}
-              onClick={() => handleStarRatingToggle('3star')}
-              className="justify-start"
-            >
-              3성급 이하 호텔
-            </Button>
-            <Button
-              variant={selectedStarRatings.includes('4star') ? 'default' : 'outline'}
-              onClick={() => handleStarRatingToggle('4star')}
-              className="justify-start"
-            >
-              4성급 호텔
-            </Button>
-            <Button
-              variant={selectedStarRatings.includes('5star') ? 'default' : 'outline'}
-              onClick={() => handleStarRatingToggle('5star')}
-              className="justify-start"
-            >
-              5성급 호텔
-            </Button>
-          </div>
-        </div>
-      )}
 
       <BaseKeywordPanel
         selectedKeywords={selectedKeywords}
