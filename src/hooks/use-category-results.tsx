@@ -70,7 +70,9 @@ export const useCategoryResults = (
         const processedResults = results.map(place => ({
           ...place,
           rating: parseRating(place.rating),
-          visitor_review_count: place.visitor_review_count || 0
+          visitor_review_count: place.visitor_review_count || 0,
+          naverLink: place.naverLink ?? "",
+          instaLink: place.instaLink ?? ""
         }));
 
         const MAX_RECOMMENDATIONS = 4;
@@ -89,7 +91,9 @@ export const useCategoryResults = (
           x: place.x,
           y: place.y,
           rating: place.rating,
-          visitor_review_count: place.visitor_review_count
+          visitor_review_count: place.visitor_review_count,
+          naverLink: place.naverLink ?? "",
+          instaLink: place.instaLink ?? ""
         }));
         
         addMarkers(recommendedMarkers, { highlight: true });

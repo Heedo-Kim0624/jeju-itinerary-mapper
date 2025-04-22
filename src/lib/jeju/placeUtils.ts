@@ -14,6 +14,8 @@ export interface PlaceResult {
   y: number;
   rating?: number;
   visitor_review_count?: number;
+  naverLink?: string;
+  instaLink?: string;
 }
 
 /**
@@ -28,8 +30,8 @@ export function convertToPlace(pr: PlaceResult): Place {
     categoryDetail: pr.categoryDetail,
     x: pr.x,
     y: pr.y,
-    naverLink: '',
-    instaLink: '',
+    naverLink: pr.naverLink || '',
+    instaLink: pr.instaLink || '',
     rating: pr.rating,
     reviewCount: pr.visitor_review_count,
   };
@@ -114,6 +116,8 @@ export async function fetchWeightedResults(
         y: latitude,
         rating: ratingValue,
         visitor_review_count: reviewCount,
+        naverLink: '',  // Adding empty naverLink
+        instaLink: '',  // Adding empty instaLink
         weight
       };
     });

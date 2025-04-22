@@ -39,8 +39,8 @@ const CategoryResultPanel: React.FC<{
           y: place.y,
           rating: place.rating || 0,
           visitor_review_count: place.visitor_review_count || 0,
-          naverLink: item.naverLink ?? "",
-          instaLink: item.instaLink ?? ""
+          naverLink: place.naverLink ?? "",
+          instaLink: place.instaLink ?? ""
         })), { highlight: true });
       }
     }
@@ -100,7 +100,9 @@ const CategoryResultPanel: React.FC<{
                   x: place.x,
                   y: place.y,
                   rating: place.rating || 0,
-                  visitor_review_count: place.visitor_review_count || 0
+                  reviewCount: place.visitor_review_count || 0,
+                  naverLink: place.naverLink ?? "",
+                  instaLink: place.instaLink ?? ""
                 }))}
                 loading={loading}
                 selectedPlace={selectedPlace}
