@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useCategorySelection } from '@/hooks/use-category-selection';
 import { useRegionSelection } from '@/hooks/use-region-selection';
@@ -73,14 +72,12 @@ const LeftPanel: React.FC = () => {
     setShowCategoryResult,
   } = usePanelVisibility();
 
-  // Check if all categories have places selected for the "경로 생성" button (issue #4)
   const allCategoriesSelected = 
     selectedPlacesByCategory['숙소'].length > 0 && 
     selectedPlacesByCategory['관광지'].length > 0 && 
     selectedPlacesByCategory['음식점'].length > 0 && 
     selectedPlacesByCategory['카페'].length > 0;
 
-  // Direct input values mapping
   const directInputValues = {
     accomodation: accomodationDirectInput,
     landmark: landmarkDirectInput,
@@ -105,7 +102,6 @@ const LeftPanel: React.FC = () => {
       });
       
       if (showCategoryResult) {
-        // Track selected places by category (issue #4)
         setSelectedPlacesByCategory(prev => ({
           ...prev,
           [showCategoryResult]: [...prev[showCategoryResult as keyof typeof prev], place]
@@ -129,7 +125,6 @@ const LeftPanel: React.FC = () => {
     setSelectedPlaces(prevPlaces => prevPlaces.filter(p => p.id !== placeId));
     
     if (placeToRemove) {
-      // Also remove from category-specific selections
       Object.keys(selectedPlacesByCategory).forEach(category => {
         const categoryKey = category as keyof typeof selectedPlacesByCategory;
         if (selectedPlacesByCategory[categoryKey].some(p => p.id === placeId)) {
@@ -185,17 +180,16 @@ const LeftPanel: React.FC = () => {
   };
 
   const handlePanelBackByCategory = {
-    accomodation: () => handlePanelBack('숙소'),
-    landmark: () => handlePanelBack('관광지'),
-    restaurant: () => handlePanelBack('음식점'),
-    cafe: () => handlePanelBack('카페')
+    accomodation: () => handlePanelBack(),
+    landmark: () => handlePanelBack(),
+    restaurant: () => handlePanelBack(),
+    cafe: () => handlePanelBack()
   };
 
   const handleResultClose = () => {
     setShowCategoryResult(null);
     const next = categoryStepIndex + 1;
     if (next < categoryOrder.length) {
-      // activeMiddlePanelCategory는 hook 내부에서 관리되므로 직접 설정 불필요
     } else {
       // 모든 카테고리 완료
     }
@@ -227,7 +221,6 @@ const LeftPanel: React.FC = () => {
             isCategoryButtonEnabled={isCategoryButtonEnabled}
           />
           
-          {/* 장소 카트 추가 */}
           <div className="px-4 mb-4">
             <PlaceCart 
               selectedPlaces={selectedPlaces} 
@@ -235,7 +228,6 @@ const LeftPanel: React.FC = () => {
               onViewOnMap={handleViewOnMap}
             />
 
-            {/* Issue #4: 경로 생성 버튼 - Add the "경로 생성" button when all four categories have places */}
             {allCategoriesSelected && (
               <div className="mt-4">
                 <button
