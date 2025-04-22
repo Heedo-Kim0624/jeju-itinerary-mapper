@@ -39,7 +39,7 @@ const Map: React.FC<MapProps> = ({
   } = mapCore;
 
   return (
-    <div ref={mapContainer} className="w-full h-full relative">
+    <div ref={mapContainer} className="w-full h-full relative flex-grow">
       <MapProvider value={{
         map,
         isMapInitialized,

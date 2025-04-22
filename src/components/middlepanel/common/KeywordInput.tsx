@@ -30,7 +30,7 @@ const KeywordInput: React.FC<KeywordInputProps> = ({ value, onChange, onAdd }) =
           type="button"
           onClick={onAdd}
           disabled={value.trim() === ''}
-          className={`px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors ${
+          className={`px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors text-xs ${
             value.trim() === '' ? 'opacity-50 cursor-not-allowed' : ''
           }`}
         >

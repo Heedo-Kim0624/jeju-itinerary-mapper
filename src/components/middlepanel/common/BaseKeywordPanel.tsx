@@ -6,7 +6,7 @@ import KeywordSelector from './KeywordSelector';
 import KeywordInput from './KeywordInput';
 import KeywordRanking from './KeywordRanking';
 
-const BaseKeywordPanel: React.FC<KeywordPanelProps> = ({
+const BaseKeywordPanel: React.FC<KeywordPanelProps & { accommodationTypeUI?: React.ReactNode }> = ({
   selectedKeywords,
   onToggleKeyword,
   directInputValue,
@@ -15,6 +15,7 @@ const BaseKeywordPanel: React.FC<KeywordPanelProps> = ({
   onClose,
   categoryName,
   defaultKeywords,
+  accommodationTypeUI,
 }) => {
   const [ranking, setRanking] = useState<string[]>([]);
   
@@ -90,6 +91,9 @@ const BaseKeywordPanel: React.FC<KeywordPanelProps> = ({
           닫기
         </button>
       </div>
+
+      {/* 숙소 유형 선택 UI - 숙소 카테고리일 때만 표시 */}
+      {accommodationTypeUI}
 
       <KeywordSelector
         keywords={defaultKeywords}

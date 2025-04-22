@@ -18,7 +18,7 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
   selectedDay,
   selectedPlaces = [],
 }) => {
-  const { isMapInitialized, calculateRoutes, addMarkers, clearMarkersAndUiElements } = useMapContext();
+  const { isMapInitialized, calculateRoutes, addMarkers, clearMarkersAndUiElements, panTo } = useMapContext();
 
   useEffect(() => {
     if (!isMapInitialized) {
@@ -37,9 +37,14 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
     clearMarkersAndUiElements();
 
     if (selectedPlace) {
-      // Issue #3: When a place is selected, make sure it's highlighted on the map
+      // When a place is selected, make sure it's highlighted on the map
       console.log("Rendering selected place:", selectedPlace);
       addMarkers([selectedPlace], { highlight: true });
+      
+      // Ensure map pans to the selected place
+      if (selectedPlace.x && selectedPlace.y) {
+        panTo({ lat: selectedPlace.y, lng: selectedPlace.x });
+      }
       return;
     }
 

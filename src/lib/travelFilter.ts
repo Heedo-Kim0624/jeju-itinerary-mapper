@@ -27,6 +27,16 @@ const categoryRatingMap = {
   'cafe': 'cafe_rating'
 };
 
+// Helper function to parse rating value properly
+const parseRatingValue = (rating: any): number => {
+  if (typeof rating === 'number') return rating;
+  if (typeof rating === 'string') {
+    const parsed = parseFloat(rating);
+    return isNaN(parsed) ? 0 : parsed;
+  }
+  return 0;
+};
+
 export async function fetchWeightedResults(
   category: 'accommodation' | 'landmark' | 'restaurant' | 'cafe', 
   locations: string[], 
@@ -49,28 +59,40 @@ export async function fetchWeightedResults(
     return [];
   }
 
+  // Determine the ID field name based on the first entry
+  const idFieldName = places[0] && 'ID' in places[0] ? 'ID' : 'id';
+
   // Fetch ratings
   const { data: ratings, error: ratingsError } = await supabase
     .from(categoryRatingMap[category])
-    .select('ID, Rating, visitor_review_count')
-    .in('ID', places.map(p => p.ID));
+    .select('*')
+    .in(idFieldName, places.map(p => p[idFieldName]));
 
   if (ratingsError) {
     console.error('Ratings fetch error:', ratingsError);
-    return [];
-  }
-
-  // Merge places with ratings
-  const placesWithRatings = places.map(place => {
-    const rating = ratings.find(r => r.ID === place.ID);
-    return {
-      id: place.ID.toString(),
+    return places.map(place => ({
+      id: place[idFieldName].toString(),
       place_name: place.Place_Name,
       road_address: place.Road_Address,
       category: category,
       x: place.Longitude ?? 0,
       y: place.Latitude ?? 0,
-      rating: rating?.Rating ?? 0,
+      rating: 0,
+      visitor_review_count: 0
+    }));
+  }
+
+  // Merge places with ratings
+  const placesWithRatings = places.map(place => {
+    const rating = ratings.find(r => r[idFieldName] === place[idFieldName]);
+    return {
+      id: place[idFieldName].toString(),
+      place_name: place.Place_Name,
+      road_address: place.Road_Address,
+      category: category,
+      x: place.Longitude ?? 0,
+      y: place.Latitude ?? 0,
+      rating: parseRatingValue(rating?.Rating),
       visitor_review_count: rating?.visitor_review_count ?? 0
     };
   });

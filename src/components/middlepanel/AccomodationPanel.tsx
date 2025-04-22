@@ -64,58 +64,57 @@ const AccomodationPanel: React.FC<{
   };
 
   return (
-    <div className="space-y-6 p-4">
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold">숙소 유형 선택</h3>
-        <div className="grid grid-cols-2 gap-4">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant={selectedAccommodationType === 'hotel' ? 'default' : 'outline'}
-                onClick={() => handleAccommodationTypeSelect('hotel')}
-                className="w-full"
-              >
-                <Hotel className="mr-2 h-4 w-4" />
-                호텔
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-48">
-              <div className="space-y-2">
-                <h4 className="font-medium text-sm mb-2">호텔 등급 선택</h4>
-                {['3star', '4star', '5star'].map((rating) => (
-                  <Button
-                    key={rating}
-                    variant={selectedStarRatings.includes(rating as HotelStarRating) ? 'default' : 'outline'}
-                    onClick={() => handleStarRatingToggle(rating as HotelStarRating)}
-                    className="w-full justify-start text-sm"
-                  >
-                    {rating === '3star' ? '3성급 이하' : `${rating[0]}성급`} 호텔
-                  </Button>
-                ))}
-              </div>
-            </PopoverContent>
-          </Popover>
-          <Button
-            variant={selectedAccommodationType === 'pension' ? 'default' : 'outline'}
-            onClick={() => handleAccommodationTypeSelect('pension')}
-            className="w-full"
-          >
-            펜션
-          </Button>
+    <BaseKeywordPanel
+      selectedKeywords={selectedKeywords}
+      onToggleKeyword={onToggleKeyword}
+      directInputValue={directInputValue}
+      onDirectInputChange={onDirectInputChange}
+      onConfirm={handleConfirm}
+      onClose={onClose}
+      categoryName="숙소"
+      defaultKeywords={defaultKeywords}
+      accommodationTypeUI={
+        <div className="space-y-4 mb-6">
+          <h3 className="text-lg font-semibold">숙소 유형 선택</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={selectedAccommodationType === 'hotel' ? 'default' : 'outline'}
+                  onClick={() => handleAccommodationTypeSelect('hotel')}
+                  className="w-full"
+                >
+                  <Hotel className="mr-2 h-4 w-4" />
+                  호텔
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-48">
+                <div className="space-y-2">
+                  <h4 className="font-medium text-sm mb-2">호텔 등급 선택</h4>
+                  {['3star', '4star', '5star'].map((rating) => (
+                    <Button
+                      key={rating}
+                      variant={selectedStarRatings.includes(rating as HotelStarRating) ? 'default' : 'outline'}
+                      onClick={() => handleStarRatingToggle(rating as HotelStarRating)}
+                      className="w-full justify-start text-sm"
+                    >
+                      {rating === '3star' ? '3성급 이하' : `${rating[0]}성급`} 호텔
+                    </Button>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+            <Button
+              variant={selectedAccommodationType === 'pension' ? 'default' : 'outline'}
+              onClick={() => handleAccommodationTypeSelect('pension')}
+              className="w-full"
+            >
+              펜션
+            </Button>
+          </div>
         </div>
-      </div>
-
-      <BaseKeywordPanel
-        selectedKeywords={selectedKeywords}
-        onToggleKeyword={onToggleKeyword}
-        directInputValue={directInputValue}
-        onDirectInputChange={onDirectInputChange}
-        onConfirm={handleConfirm}
-        onClose={onClose}
-        categoryName="숙소"
-        defaultKeywords={defaultKeywords}
-      />
-    </div>
+      }
+    />
   );
 };
 

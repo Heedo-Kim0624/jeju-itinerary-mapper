@@ -23,24 +23,46 @@ const CategoryResultPanel: React.FC<{
   const { loading, error, recommendedPlaces, nearbyPlaces } = useCategoryResults(category, locations, keywords);
 
   useEffect(() => {
-    if (category === '숙소') {
-      clearMarkersAndUiElements();
-      if (locations.length) panTo(locations[0]);
-      addMarkers(recommendedPlaces.map(convertToPlace), { highlight: true });
+    clearMarkersAndUiElements();
+    
+    if (locations.length > 0) {
+      panTo(locations[0]);
+      
+      if (recommendedPlaces.length > 0) {
+        // Make sure we're adding markers with all the necessary data
+        addMarkers(recommendedPlaces.map(place => ({
+          id: place.id,
+          name: place.place_name,
+          category: category,
+          address: place.road_address,
+          x: place.x,
+          y: place.y,
+          rating: place.rating || 0,
+          visitor_review_count: place.visitor_review_count || 0
+        })), { highlight: true });
+      }
     }
-  }, []);
+  }, [recommendedPlaces]);
 
   const handleSelectPlace = (place: Place, checked: boolean) => {
     onSelectPlace(place, checked);
     if (checked) {
       clearMarkersAndUiElements();
       addMarkers([place], { highlight: true });
-      panTo({ lat: place.y, lng: place.x });
+      if (place.x && place.y) {
+        panTo({ lat: place.y, lng: place.x });
+      }
     }
   };
 
   const handleViewDetails = (place: Place) => {
     setSelectedPlace(place);
+    // Also pan to the place when viewing details
+    if (place.x && place.y) {
+      clearMarkersAndUiElements();
+      addMarkers([place], { highlight: true });
+      panTo({ lat: place.y, lng: place.x });
+    }
   };
 
   return (
@@ -68,7 +90,16 @@ const CategoryResultPanel: React.FC<{
             <div>
               <h4 className="text-md font-medium mb-3">📍 주변 장소</h4>
               <PlaceList
-                places={nearbyPlaces.map(convertToPlace)}
+                places={nearbyPlaces.map(place => ({
+                  id: place.id,
+                  name: place.place_name,
+                  category: category,
+                  address: place.road_address,
+                  x: place.x,
+                  y: place.y,
+                  rating: place.rating || 0,
+                  visitor_review_count: place.visitor_review_count || 0
+                }))}
                 loading={loading}
                 selectedPlace={selectedPlace}
                 onSelectPlace={(place) => handleSelectPlace(place, true)}

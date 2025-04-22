@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Place } from '@/types/supabase';
-import { fetchWeightedResults, PlaceResult, convertToPlace } from '@/lib/jeju/placeUtils';
+import { fetchWeightedResults, PlaceResult } from '@/lib/jeju/placeUtils';
 import { useMapContext } from '../components/rightpanel/MapContext';
 
 type CategoryType = '숙소' | '관광지' | '음식점' | '카페';
@@ -13,6 +13,16 @@ const categoryKeyMap = {
   '음식점': 'restaurant',
   '카페': 'cafe',
 } as const;
+
+// Helper function to convert ratings from text to number if needed
+const parseRating = (rating: any): number => {
+  if (typeof rating === 'number') return rating;
+  if (typeof rating === 'string') {
+    const parsed = parseFloat(rating);
+    return isNaN(parsed) ? 0 : parsed;
+  }
+  return 0;
+};
 
 export const useCategoryResults = (
   category: CategoryType,
@@ -49,22 +59,39 @@ export const useCategoryResults = (
         console.log(`Fetching results for category: ${category} (${categoryKey})`);
         
         const results = await fetchWeightedResults(
-          categoryKey,
+          categoryKey as any,
           locations,
           keywords
         );
         
         console.log(`Fetched ${results.length} results for ${category}`);
 
+        // Process results to ensure rating and review count are numbers
+        const processedResults = results.map(place => ({
+          ...place,
+          rating: parseRating(place.rating),
+          visitor_review_count: place.visitor_review_count || 0
+        }));
+
         const MAX_RECOMMENDATIONS = 4;
-        setRecommendedPlaces(results.slice(0, MAX_RECOMMENDATIONS));
-        setNearbyPlaces(results.slice(MAX_RECOMMENDATIONS));
+        setRecommendedPlaces(processedResults.slice(0, MAX_RECOMMENDATIONS));
+        setNearbyPlaces(processedResults.slice(MAX_RECOMMENDATIONS));
 
         clearMarkersAndUiElements();
         
         if (locations.length) panTo(locations[0]);
 
-        const recommendedMarkers = results.slice(0, MAX_RECOMMENDATIONS).map(convertToPlace);
+        const recommendedMarkers = processedResults.slice(0, MAX_RECOMMENDATIONS).map(place => ({
+          id: place.id,
+          name: place.place_name,
+          category: category,
+          address: place.road_address,
+          x: place.x,
+          y: place.y,
+          rating: place.rating,
+          visitor_review_count: place.visitor_review_count
+        }));
+        
         addMarkers(recommendedMarkers, { highlight: true });
 
       } catch (e) {
