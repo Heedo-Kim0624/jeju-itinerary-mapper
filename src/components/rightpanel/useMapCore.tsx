@@ -1,12 +1,10 @@
-
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { toast } from "sonner";
 import { loadNaverMaps } from "@/utils/loadNaverMaps";
 import { getCategoryColor } from '@/utils/categoryColors';
 import { Place } from '@/types/supabase';
-
-// Jeju Island center coordinates
-const JEJU_CENTER = { lat: 33.3617, lng: 126.5292 };
+import { initializeNaverMap, JEJU_CENTER } from '@/utils/map/mapInitializer';
+import { clearMarkers, clearInfoWindows, clearPolylines } from '@/utils/map/mapCleanup';
+import { useMapResize } from '@/hooks/useMapResize';
 
 export const useMapCore = () => {
   const mapContainer = useRef<HTMLDivElement>(null);
@@ -23,14 +21,10 @@ export const useMapCore = () => {
   useEffect(() => {
     const initNaverMaps = async () => {
       try {
-        console.log("Loading Naver Maps...");
         await loadNaverMaps();
         setIsNaverLoaded(true);
-        console.log("Naver Maps loaded successfully");
       } catch (error) {
-        console.error("Failed to load Naver Maps:", error);
         setIsMapError(true);
-        toast.error("지도 로드에 실패했습니다");
       }
     };
     
@@ -38,7 +32,6 @@ export const useMapCore = () => {
     
     return () => {
       if (map.current) {
-        console.log("Cleaning up map instance");
         clearMarkersAndUiElements();
       }
     };
@@ -46,13 +39,16 @@ export const useMapCore = () => {
 
   useEffect(() => {
     if (isNaverLoaded) {
-      initializeMap();
+      const newMap = initializeNaverMap(mapContainer.current);
+      if (newMap) {
+        map.current = newMap;
+        setIsMapInitialized(true);
+      }
     }
   }, [isNaverLoaded]);
 
   useEffect(() => {
     if (isMapError && loadAttempts < 3) {
-      console.log("Map error detected, retrying...");
       const timer = setTimeout(() => {
         setIsMapError(false);
         setLoadAttempts(prev => prev + 1);
@@ -63,99 +59,12 @@ export const useMapCore = () => {
     }
   }, [isMapError, loadAttempts]);
 
-  useEffect(() => {
-    const handleResize = () => {
-      if (map.current && mapContainer.current && window.naver) {
-        console.log("Window resized, triggering map resize");
-        window.naver.maps.Event.trigger(map.current, 'resize');
-      }
-    };
-    
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  const initializeMap = useCallback(() => {
-    if (!mapContainer.current || !window.naver || !window.naver.maps) {
-      console.error("Cannot initialize map - container or naver maps not available");
-      console.log("Map container size:", mapContainer.current?.offsetWidth, mapContainer.current?.offsetHeight);
-      return;
-    }
-
-    try {
-      const mapOptions = {
-        center: new window.naver.maps.LatLng(JEJU_CENTER.lat, JEJU_CENTER.lng),
-        zoom: 10,
-        minZoom: 9,
-        maxZoom: 18,
-        zoomControl: true,
-        zoomControlOptions: {
-          position: window.naver.maps.Position.TOP_RIGHT
-        }
-      };
-
-      map.current = new window.naver.maps.Map(mapContainer.current, mapOptions);
-      setIsMapInitialized(true);
-
-      window.naver.maps.Event.once(map.current, 'init', () => {
-        console.log("Naver Map initialized");
-      });
-    } catch (error) {
-      console.error("Error initializing map:", error);
-      setIsMapError(true);
-      toast.error("지도 초기화에 실패했습니다.");
-    }
-  }, []);
+  useMapResize(map.current);
 
   const clearMarkersAndUiElements = useCallback(() => {
-    clearMarkers();
-    clearInfoWindows();
-    clearPolylines();
-  }, []);
-
-  const clearMarkers = useCallback(() => {
-    if (markers.current && markers.current.length > 0) {
-      markers.current.forEach(marker => {
-        if (marker && typeof marker.setMap === 'function') {
-          try {
-            marker.setMap(null);
-          } catch (error) {
-            console.error("Error clearing marker:", error);
-          }
-        }
-      });
-    }
-    markers.current = [];
-  }, []);
-
-  const clearInfoWindows = useCallback(() => {
-    if (infoWindows.current && infoWindows.current.length > 0) {
-      infoWindows.current.forEach(infoWindow => {
-        if (infoWindow && typeof infoWindow.close === 'function') {
-          try {
-            infoWindow.close();
-          } catch (error) {
-            console.error("Error closing infoWindow:", error);
-          }
-        }
-      });
-    }
-    infoWindows.current = [];
-  }, []);
-
-  const clearPolylines = useCallback(() => {
-    if (polylines.current && polylines.current.length > 0) {
-      polylines.current.forEach(polyline => {
-        if (polyline && typeof polyline.setMap === 'function') {
-          try {
-            polyline.setMap(null);
-          } catch (error) {
-            console.error("Error clearing polyline:", error);
-          }
-        }
-      });
-    }
-    polylines.current = [];
+    markers.current = clearMarkers(markers.current);
+    infoWindows.current = clearInfoWindows(infoWindows.current);
+    polylines.current = clearPolylines(polylines.current);
   }, []);
 
   const createInfoWindowContent = useCallback((place: Place) => {
@@ -185,7 +94,6 @@ export const useMapCore = () => {
     polylines.current.push(polyline);
   }, [isMapInitialized, clearPolylines]);
 
-  // 수정된 addMarkers 함수 - opts 인터페이스 사용
   const addMarkers = useCallback((
     placesToMark: Place[], 
     opts?: { highlight?: boolean; isItinerary?: boolean }
@@ -266,14 +174,11 @@ export const useMapCore = () => {
       let coords;
       
       if (typeof locationOrCoords === 'string') {
-        // For location names, we use a center point based on name
-        // This is a simple mapping - in real app, you would use geocoding
         const locationMap: Record<string, {lat: number, lng: number}> = {
           '서귀포': {lat: 33.2542, lng: 126.5581},
           '제주': {lat: 33.4996, lng: 126.5312},
           '애월': {lat: 33.4630, lng: 126.3319},
           '조천': {lat: 33.5382, lng: 126.6435},
-          // Add other Jeju locations as needed
         };
         
         coords = locationMap[locationOrCoords] || JEJU_CENTER;
@@ -282,7 +187,7 @@ export const useMapCore = () => {
       }
       
       map.current.setCenter(new window.naver.maps.LatLng(coords.lat, coords.lng));
-      map.current.setZoom(12); // Zoom in for location view
+      map.current.setZoom(12);
     } catch (error) {
       console.error("Error panning map to location:", error);
     }
