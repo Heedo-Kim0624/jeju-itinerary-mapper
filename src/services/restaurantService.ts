@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Place } from "@/types/supabase";
 
@@ -45,17 +46,22 @@ export const fetchRestaurants = async (): Promise<Place[]> => {
       if (restaurantRatings) {
         const ratingInfo = restaurantRatings.find((r: any) => r.ID === info.ID);
         if (ratingInfo) {
-          rating = ratingInfo.rating; // Using rating with lowercase r
+          rating = ratingInfo.rating; // Using lowercase rating
           reviewCount = ratingInfo.visitor_review_count;
         }
       }
+
+      // Handle potential differences in category field naming
+      const categoryDetail = category ? 
+        (category.categories_details !== undefined ? 
+          category.categories_details : category.Categories_Details) : "";
 
       return {
         id: `restaurant-${info.ID}`,
         name: info.Place_Name || "",
         address: info.Lot_Address || info.Road_Address || "",
         category: "restaurant",
-        categoryDetail: category?.categories_details || "",
+        categoryDetail,
         x: info.Longitude || 0,
         y: info.Latitude || 0,
         naverLink: link?.link || "",
@@ -109,7 +115,7 @@ export const fetchCafes = async (): Promise<Place[]> => {
     // Combine the data
     const cafes = cafeInfo?.map((info: any) => {
       const link = cafeLinks?.find((link: any) => link.id === info.id);
-      // Access the categories correctly
+      // Access the categories correctly, handling potential field name differences
       const category = cafeCategories?.find((cat: any) => cat.id === info.id);
       
       // Safely access ratings if available
@@ -118,17 +124,22 @@ export const fetchCafes = async (): Promise<Place[]> => {
       if (cafeRatings) {
         const ratingInfo = cafeRatings.find((r: any) => r.id === info.id);
         if (ratingInfo) {
-          rating = ratingInfo.rating; // Using rating with lowercase r
+          rating = ratingInfo.rating; // Using lowercase rating
           reviewCount = ratingInfo.visitor_review_count;
         }
       }
+
+      // Handle potential differences in category field naming
+      const categoryDetail = category ? 
+        (category.categories_details !== undefined ? 
+          category.categories_details : category.Categories_Details) : "";
 
       return {
         id: `cafe-${info.id}`,
         name: info.Place_Name || "",
         address: info.Lot_Address || info.Road_Address || "",
         category: "cafe",
-        categoryDetail: category?.categories_details || "",
+        categoryDetail,
         x: info.Longitude || 0,
         y: info.Latitude || 0,
         naverLink: link?.link || "",
@@ -191,17 +202,22 @@ export const fetchAccommodations = async (): Promise<Place[]> => {
       if (accomRatings) {
         const ratingInfo = accomRatings.find((r: any) => r.id === info.ID);
         if (ratingInfo) {
-          rating = ratingInfo.rating; // Using rating with lowercase r
+          rating = ratingInfo.rating; // Using lowercase rating
           reviewCount = ratingInfo.visitor_review_count;
         }
       }
+
+      // Handle potential differences in category field naming
+      const categoryDetail = category ? 
+        (category.categories_details !== undefined ? 
+          category.categories_details : category.Categories_Details) : "";
 
       return {
         id: `accommodation-${info.ID}`,
         name: info.Place_name || "",
         address: info.Lot_Address || info.Road_address || "",
         category: "accommodation",
-        categoryDetail: category?.categories_details || "",
+        categoryDetail,
         x: info.Longitude || 0,
         y: info.Latitude || 0,
         naverLink: link?.link || "",
@@ -264,17 +280,24 @@ export const fetchLandmarks = async (): Promise<Place[]> => {
       if (landmarkRatings) {
         const ratingInfo = landmarkRatings.find((r: any) => r.id === info.id);
         if (ratingInfo) {
-          rating = ratingInfo.rating; // Using rating with lowercase r
+          rating = ratingInfo.rating; // Using lowercase rating
           reviewCount = ratingInfo.visitor_review_count;
         }
       }
+
+      // Handle potential differences in category field naming - handle both possible naming conventions
+      const categoryDetail = category ? 
+        (category.categories_details !== undefined ? 
+          category.categories_details : 
+          (category.Categories_Details !== undefined ? 
+            category.Categories_Details : "")) : "";
 
       return {
         id: `landmark-${info.id}`,
         name: info.Place_Name || "",
         address: info.Lot_Address || info.Road_Address || "",
         category: "attraction",
-        categoryDetail: category?.categories_details || "",
+        categoryDetail,
         x: info.Longitude || 0,
         y: info.Latitude || 0,
         naverLink: link?.link || "",

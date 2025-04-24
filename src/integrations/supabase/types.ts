@@ -805,18 +805,18 @@ export type Database = {
       }
       landmark_categories: {
         Row: {
-          Categories: string | null
-          Categories_Details: string | null
+          categories: string | null
+          categories_details: string | null
           id: number
         }
         Insert: {
-          Categories?: string | null
-          Categories_Details?: string | null
+          categories?: string | null
+          categories_details?: string | null
           id: number
         }
         Update: {
-          Categories?: string | null
-          Categories_Details?: string | null
+          categories?: string | null
+          categories_details?: string | null
           id?: number
         }
         Relationships: [
