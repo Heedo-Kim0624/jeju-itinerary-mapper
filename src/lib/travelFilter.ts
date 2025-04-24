@@ -68,6 +68,7 @@ export async function fetchWeightedResults(
   keywords: string[]
 ): Promise<PlaceResult[]> {
   console.log(`Fetching ${category} data for locations: ${locations.join(', ')}`);
+  console.log(`With keywords: ${keywords.join(', ')}`);
   
   // Basic query for information table
   let query = supabase
@@ -93,7 +94,7 @@ export async function fetchWeightedResults(
   }
 
   // Determine the ID field name based on the category and first entry
-  const idField = getFieldValue(places[0], 'ID') !== undefined ? 'ID' : 'id';
+  const idField = determineIdFieldName(places[0]);
   console.log(`Using ID field: ${idField} for ${category}`);
 
   // Extract all place IDs
@@ -102,33 +103,49 @@ export async function fetchWeightedResults(
   // Fetch ratings
   const { data: ratings, error: ratingsError } = await supabase
     .from(categoryRatingMap[category])
-    .select('*')
-    .in(idField, placeIds);
+    .select('*');
 
   if (ratingsError) {
     console.error(`${category} ratings fetch error:`, ratingsError);
     console.log('Continuing without ratings data');
+  } else {
+    console.log(`Successfully fetched ${ratings?.length || 0} ratings entries`);
   }
 
   // Fetch links
   const { data: links, error: linksError } = await supabase
     .from(categoryLinkMap[category])
-    .select('*')
-    .in(idField, placeIds);
+    .select('*');
 
   if (linksError) {
     console.error(`${category} links fetch error:`, linksError);
     console.log('Continuing without link data');
+  } else {
+    console.log(`Successfully fetched ${links?.length || 0} link entries`);
   }
 
   // Merge places with ratings and links
   const placesWithData = places.map(place => {
     const placeId = getFieldValue(place, idField);
     
-    // Find rating for this place
-    const rating = ratings?.find(r => getFieldValue(r, idField) === placeId);
-    // Find link for this place
-    const link = links?.find(l => getFieldValue(l, idField) === placeId);
+    // Find rating for this place by matching ID regardless of case
+    const rating = ratings?.find(r => {
+      const ratingId = getFieldValue(r, idField) || getFieldValue(r, idField.toLowerCase()) || getFieldValue(r, 'id') || getFieldValue(r, 'ID');
+      return String(ratingId) === String(placeId);
+    });
+
+    // Find link for this place by matching ID regardless of case
+    const link = links?.find(l => {
+      const linkId = getFieldValue(l, idField) || getFieldValue(l, idField.toLowerCase()) || getFieldValue(l, 'id') || getFieldValue(l, 'ID');
+      return String(linkId) === String(placeId);
+    });
+    
+    // Debug log
+    if (rating) {
+      console.log(`Place ID ${placeId} has rating:`, rating);
+    } else {
+      console.log(`No rating found for place ID ${placeId}`);
+    }
     
     // Extract road address and lot address, handling different field naming cases
     const roadAddress = getFieldValue(place, 'Road_Address') || getFieldValue(place, 'road_address') || '';
@@ -143,30 +160,41 @@ export async function fetchWeightedResults(
     const latitude = getFieldValue(place, 'Latitude') || getFieldValue(place, 'latitude') || 0;
 
     // Extract rating and visitor_review_count, handling different field naming cases
-    const ratingValue = rating ? 
-      (getFieldValue(rating, 'Rating') || getFieldValue(rating, 'rating')) : undefined;
+    let ratingValue = undefined;
+    let visitorReviewCount = undefined;
     
-    const visitorReviewCount = rating ? 
-      (getFieldValue(rating, 'visitor_review_count') || 0) : undefined;
+    if (rating) {
+      ratingValue = getFieldValue(rating, 'Rating') || getFieldValue(rating, 'rating');
+      visitorReviewCount = getFieldValue(rating, 'visitor_review_count') || getFieldValue(rating, 'Visitor_Review_Count');
+      
+      // Debug log rating value
+      console.log(`Extracted rating value: ${ratingValue}, review count: ${visitorReviewCount}`);
+    }
 
     // Extract links, handling different field naming cases
-    const naverLink = link ? 
-      (getFieldValue(link, 'link') || '') : '';
+    let naverLink = '';
+    let instaLink = '';
     
-    const instaLink = link ? 
-      (getFieldValue(link, 'instagram') || '') : '';
+    if (link) {
+      naverLink = getFieldValue(link, 'link') || '';
+      instaLink = getFieldValue(link, 'instagram') || '';
+    }
+
+    // Calculate basic weight (will be refined further)
+    const weight = 0.5; // Default weight
 
     return {
       id: placeId.toString(),
       place_name: placeName,
       road_address: address,
       category: category,
-      x: longitude,
-      y: latitude,
+      x: parseFloat(String(longitude)),
+      y: parseFloat(String(latitude)),
       rating: parseRatingValue(ratingValue),
-      visitor_review_count: visitorReviewCount,
+      visitor_review_count: visitorReviewCount ? parseInt(String(visitorReviewCount)) : undefined,
       naverLink: naverLink,
-      instaLink: instaLink
+      instaLink: instaLink,
+      weight: weight // Basic weight for now
     };
   });
 
@@ -175,3 +203,12 @@ export async function fetchWeightedResults(
   return placesWithData;
 }
 
+// Helper function to determine ID field name
+function determineIdFieldName(sampleObject: any): string {
+  if (sampleObject['ID'] !== undefined) return 'ID';
+  if (sampleObject['id'] !== undefined) return 'id';
+  if (sampleObject['Id'] !== undefined) return 'Id';
+  
+  // Default to 'id' if nothing else found
+  return 'id';
+}

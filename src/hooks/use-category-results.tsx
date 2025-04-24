@@ -57,6 +57,8 @@ export const useCategoryResults = (
         // Ensure we're using the correct category key mapping
         const categoryKey = categoryKeyMap[category];
         console.log(`Fetching results for category: ${category} (${categoryKey})`);
+        console.log(`Using locations: ${locations.join(', ')}`);
+        console.log(`Using keywords: ${keywords.join(', ')}`);
         
         const results = await fetchWeightedResults(
           categoryKey as any,
@@ -65,16 +67,23 @@ export const useCategoryResults = (
         );
         
         console.log(`Fetched ${results.length} results for ${category}`);
-        console.log('첫 번째 결과의 가중치:', results[0]?.weight);
+        
+        // Log sorting by weight for debugging
+        if (results.length > 0) {
+          console.log("Top 5 results sorted by weight:");
+          results.slice(0, 5).forEach((place, idx) => {
+            console.log(`${idx+1}. ${place.place_name} - Weight: ${place.weight?.toFixed(3)}, Rating: ${place.rating}, Reviews: ${place.visitor_review_count}`);
+          });
+        }
 
         // Process results to ensure rating and review count are numbers
         const processedResults = results.map(place => ({
           ...place,
           rating: parseRating(place.rating),
-          visitor_review_count: place.visitor_review_count || 0,
+          visitor_review_count: Number(place.visitor_review_count) || 0,
           naverLink: place.naverLink ?? "",
           instaLink: place.instaLink ?? "",
-          weight: place.weight // 명시적으로 가중치 포함
+          weight: place.weight || 0 // 명시적으로 가중치 포함 (기본값 0)
         }));
 
         const MAX_RECOMMENDATIONS = 4;
@@ -83,7 +92,9 @@ export const useCategoryResults = (
 
         clearMarkersAndUiElements();
         
-        if (locations.length) panTo(locations[0]);
+        if (locations.length > 0) {
+          panTo(locations[0]);
+        }
 
         const recommendedMarkers = processedResults.slice(0, MAX_RECOMMENDATIONS).map(place => ({
           id: place.id,
@@ -92,8 +103,8 @@ export const useCategoryResults = (
           address: place.road_address,
           x: place.x,
           y: place.y,
-          rating: place.rating,
-          reviewCount: place.visitor_review_count,
+          rating: place.rating || 0,
+          reviewCount: place.visitor_review_count || 0,
           naverLink: place.naverLink ?? "",
           instaLink: place.instaLink ?? "",
           weight: place.weight // 지도 마커에도 가중치 포함
@@ -102,8 +113,8 @@ export const useCategoryResults = (
         addMarkers(recommendedMarkers, { highlight: true });
 
       } catch (e) {
-        console.error(e);
-        setError((e as Error).message || '알 수 없는 오류');
+        console.error('Error in useCategoryResults:', e);
+        setError((e as Error).message || '데이터를 불러오는 중 오류가 발생했습니다');
       } finally {
         setLoading(false);
       }

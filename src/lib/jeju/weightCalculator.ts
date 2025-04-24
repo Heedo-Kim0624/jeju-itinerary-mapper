@@ -38,6 +38,12 @@ export function calculateWeights(
     });
   }
 
+  // 가중치 계산 로그
+  console.log('가중치 계산 결과:');
+  weights.forEach(w => {
+    console.log(`- ${w.keyword}: ${w.weight.toFixed(3)} (${(w.weight * 100).toFixed(1)}%)`);
+  });
+
   return weights;
 }
 
@@ -50,6 +56,8 @@ export function calculatePlaceScore(
   let foundKeywords = 0;
   let matchedKeywords: { keyword: string; value: number }[] = [];
 
+  console.log(`장소 가중치 계산 시작 (리뷰 정규화: ${reviewNorm})`);
+
   // 각 키워드에 대한 점수 계산
   keywordWeights.forEach(({ keyword, weight }) => {
     // 키워드에 대한 점수 조회
@@ -58,6 +66,9 @@ export function calculatePlaceScore(
     if (keywordValue > 0) {
       foundKeywords++;
       matchedKeywords.push({ keyword, value: keywordValue });
+      console.log(`  - 키워드 '${keyword}' 값: ${keywordValue}, 가중치: ${weight.toFixed(3)}, 곱: ${(keywordValue * weight).toFixed(3)}`);
+    } else {
+      console.log(`  - 키워드 '${keyword}' 값: 없음 (0)`);
     }
     
     // 가중치와 키워드 점수를 곱하여 합산
@@ -66,6 +77,7 @@ export function calculatePlaceScore(
 
   // 키워드를 하나도 못찾았다면 가중치를 0으로 설정
   if (foundKeywords === 0 && keywordWeights.length > 0) {
+    console.log(`  - 일치하는 키워드가 없습니다. 점수 0 반환`);
     return 0;
   }
 
@@ -74,7 +86,7 @@ export function calculatePlaceScore(
 
   // 계산 결과 로깅
   console.log('가중치 계산 결과:', {
-    place_name: place.place_name || '이름 없음',
+    place_name: place.place_name || place.Place_Name || '이름 없음',
     matched_keywords: matchedKeywords,
     total_score: totalScore,
     review_norm: reviewNorm,

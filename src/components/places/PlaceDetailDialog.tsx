@@ -1,8 +1,8 @@
 
 import React from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { MapPin, Star, ExternalLink, X, Clock, Info } from 'lucide-react';
+import { MapPin, Star, ExternalLink, Clock, Info } from 'lucide-react';
 import { Place } from '@/types/supabase';
 
 interface PlaceDetailDialogProps {
@@ -19,12 +19,7 @@ const PlaceDetailDialog: React.FC<PlaceDetailDialogProps> = ({ place, onClose })
     <Dialog open={!!place} onOpenChange={() => onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <div className="flex justify-between items-start">
-            <DialogTitle className="text-lg">{place.name}</DialogTitle>
-            <DialogClose className="w-6 h-6 rounded-full flex items-center justify-center hover:bg-gray-100">
-              <X className="h-4 w-4" />
-            </DialogClose>
-          </div>
+          <DialogTitle className="text-lg">{place.name}</DialogTitle>
         </DialogHeader>
         
         <div className="space-y-4 py-2">

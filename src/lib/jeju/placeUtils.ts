@@ -61,6 +61,11 @@ export async function fetchWeightedResults(
     
     console.log(`서버에서 데이터 조회 결과: 장소=${places?.length || 0}, 평점=${ratings?.length || 0}, 리뷰=${reviews?.length || 0}`);
     
+    // Log sample ratings data for debugging
+    if (ratings && ratings.length > 0) {
+      console.log('평점 데이터 샘플:', ratings[0]);
+    }
+    
     if (!places || places.length === 0) {
       return [];
     }
@@ -84,10 +89,29 @@ export async function fetchWeightedResults(
     const placesWithScores = places.map(place => {
       const placeId = normalizeField(place, 'ID') || normalizeField(place, 'id');
       
+      // 해당 장소에 대한 평점 데이터 찾기 - ID 필드 대소문자 구분 없이 찾기
+      const rating = ratings?.find(r => {
+        const ratingId = normalizeField(r, 'ID') || normalizeField(r, 'id');
+        return String(ratingId) === String(placeId);
+      });
+      
+      if (rating) {
+        console.log(`장소 ${placeId}의 평점 데이터:`, {
+          rating: normalizeField(rating, 'rating'),
+          review_count: normalizeField(rating, 'visitor_review_count')
+        });
+      }
+      
       // 해당 장소에 대한 리뷰 데이터 찾기
       const review = reviews?.find(r => {
         const reviewId = normalizeField(r, 'ID') || normalizeField(r, 'id');
-        return reviewId === placeId;
+        return String(reviewId) === String(placeId);
+      });
+      
+      // 해당 장소에 대한 링크 데이터 찾기
+      const link = links?.find(l => {
+        const linkId = normalizeField(l, 'ID') || normalizeField(l, 'id');
+        return String(linkId) === String(placeId);
       });
       
       // 디버깅 로그
@@ -96,11 +120,6 @@ export async function fetchWeightedResults(
       } else {
         console.log(`장소 ${placeId}에 리뷰 데이터 없음`);
       }
-
-      const rating = ratings?.find(r => {
-        const ratingId = normalizeField(r, 'ID') || normalizeField(r, 'id');
-        return ratingId === placeId;
-      });
 
       // 점수 계산
       const reviewNorm = review?.visitor_norm || 1;
@@ -112,7 +131,8 @@ export async function fetchWeightedResults(
         ...place,
         score,
         rating,
-        review
+        review,
+        link
       };
     });
 
@@ -122,15 +142,19 @@ export async function fetchWeightedResults(
       .slice(0, 20); // 상위 20개만 반환
 
     console.log(`정렬된 장소 개수: ${sortedPlaces.length}`);
+    
+    // 정렬된 결과 로그
+    if (sortedPlaces.length > 0) {
+      console.log("가중치 기준으로 정렬된 상위 5개 장소:");
+      sortedPlaces.slice(0, 5).forEach((place, idx) => {
+        const placeName = normalizeField(place, 'Place_Name') || normalizeField(place, 'place_name');
+        console.log(`${idx+1}. ${placeName} - 점수: ${place.score.toFixed(3)}`);
+      });
+    }
 
     return sortedPlaces.map(place => {
       const placeId = normalizeField(place, 'ID') || normalizeField(place, 'id');
       
-      const link = links?.find(l => {
-        const linkId = normalizeField(l, 'ID') || normalizeField(l, 'id');
-        return linkId === placeId;
-      });
-
       const placeName = normalizeField(place, 'Place_Name') || 
                        normalizeField(place, 'place_name');
       
@@ -140,28 +164,48 @@ export async function fetchWeightedResults(
       const longitude = parseFloat(normalizeField(place, 'Longitude') || normalizeField(place, 'longitude') || "0");
       const latitude = parseFloat(normalizeField(place, 'Latitude') || normalizeField(place, 'latitude') || "0");
 
-      const rating = place.rating ? {
-        rating: parseFloat(normalizeField(place.rating, 'rating') || "0"),
-        visitorReviewCount: parseInt(normalizeField(place.rating, 'visitor_review_count') || "0")
-      } : null;
+      // Handle rating data with better error checking
+      let ratingValue = 0;
+      let reviewCount = 0;
+      
+      if (place.rating) {
+        ratingValue = parseFloat(normalizeField(place.rating, 'rating') || "0");
+        reviewCount = parseInt(normalizeField(place.rating, 'visitor_review_count') || "0");
+        
+        console.log(`장소 ${placeId} 평점 정보:`, {
+          rating: ratingValue,
+          reviews: reviewCount
+        });
+      }
+
+      // Handle link data
+      let naverLink = "";
+      let instaLink = "";
+      
+      if (place.link) {
+        naverLink = normalizeField(place.link, 'link') || "";
+        instaLink = normalizeField(place.link, 'instagram') || "";
+      }
 
       // 최종 장소 객체 생성
       const result: PlaceResult = {
         id: placeId.toString(),
         place_name: placeName,
-        road_address: roadAddress,
+        road_address: roadAddress || "",
         category,
         x: longitude,
         y: latitude,
-        rating: rating?.rating || 0,
-        visitor_review_count: rating?.visitorReviewCount || 0,
-        naverLink: link?.link || "",
-        instaLink: link?.instagram || "",
+        rating: ratingValue,
+        visitor_review_count: reviewCount,
+        naverLink,
+        instaLink,
         weight: place.score // 가중치 점수 추가
       };
 
       console.log(`장소 ${placeId} 최종 결과:`, {
         name: result.place_name,
+        rating: result.rating,
+        reviews: result.visitor_review_count,
         weight: result.weight
       });
 
