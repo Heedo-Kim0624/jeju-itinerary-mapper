@@ -68,6 +68,13 @@ export const useCategoryResults = (
         
         console.log(`Fetched ${results.length} results for ${category}`);
         
+        if (results.length === 0) {
+          console.log(`No results found for ${category} in ${locations.join(', ')}`);
+          setError(`${category} 검색 결과가 없습니다. 다른 지역이나 키워드로 시도해보세요.`);
+          setLoading(false);
+          return;
+        }
+        
         // Log sorting by weight for debugging
         if (results.length > 0) {
           console.log("Top 5 results sorted by weight:");
@@ -80,15 +87,26 @@ export const useCategoryResults = (
         const processedResults = results.map(place => ({
           ...place,
           rating: parseRating(place.rating),
-          visitor_review_count: Number(place.visitor_review_count) || 0,
+          visitor_review_count: place.visitor_review_count ? Number(place.visitor_review_count) : 0,
           naverLink: place.naverLink ?? "",
           instaLink: place.instaLink ?? "",
           weight: place.weight || 0 // 명시적으로 가중치 포함 (기본값 0)
         }));
 
         const MAX_RECOMMENDATIONS = 4;
-        setRecommendedPlaces(processedResults.slice(0, MAX_RECOMMENDATIONS));
-        setNearbyPlaces(processedResults.slice(MAX_RECOMMENDATIONS));
+        
+        // Ensure we have valid places
+        if (processedResults.filter(p => p.place_name && p.x && p.y).length === 0) {
+          console.log(`No valid places found for ${category}`);
+          setError(`유효한 ${category} 결과가 없습니다. 데이터베이스 연결을 확인해주세요.`);
+          setLoading(false);
+          return;
+        }
+
+        const validResults = processedResults.filter(p => p.place_name && p.x && p.y);
+        setRecommendedPlaces(validResults.slice(0, MAX_RECOMMENDATIONS));
+        setNearbyPlaces(validResults.slice(MAX_RECOMMENDATIONS));
+        console.log(`Set ${validResults.slice(0, MAX_RECOMMENDATIONS).length} recommended places and ${validResults.slice(MAX_RECOMMENDATIONS).length} nearby places`);
 
         clearMarkersAndUiElements();
         
@@ -96,7 +114,7 @@ export const useCategoryResults = (
           panTo(locations[0]);
         }
 
-        const recommendedMarkers = processedResults.slice(0, MAX_RECOMMENDATIONS).map(place => ({
+        const recommendedMarkers = validResults.slice(0, MAX_RECOMMENDATIONS).map(place => ({
           id: place.id,
           name: place.place_name,
           category: category,
@@ -122,6 +140,8 @@ export const useCategoryResults = (
     
     if (locations.length > 0) {
       load();
+    } else {
+      setError('선택된 지역이 없습니다. 지역을 선택해주세요.');
     }
   }, [category, locations.join(','), keywords.join(',')]);
 

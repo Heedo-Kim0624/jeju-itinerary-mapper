@@ -42,17 +42,39 @@ const PlaceList: React.FC<PlaceListProps> = ({
     }
   }, [page]);
 
+  // 데이터 검증 로그
+  useEffect(() => {
+    if (places.length > 0) {
+      console.log('PlaceList - 첫 번째 장소 데이터:', {
+        id: places[0].id,
+        name: places[0].name,
+        rating: places[0].rating,
+        reviewCount: places[0].reviewCount,
+        weight: places[0].weight
+      });
+    }
+  }, [places]);
+
   const sortedPlaces = React.useMemo(() => {
     let result = [...places];
+    
+    // 데이터 없는 항목은 맨 아래로
+    result = result.filter(place => place && place.name);
+    
     if (sortOption === 'recommendation' && orderedIds.length > 0) {
       const placeMap = Object.fromEntries(result.map(p => [p.id, p]));
-      return orderedIds.filter(id => placeMap[id]).map(id => placeMap[id]);
+      return orderedIds
+        .filter(id => placeMap[id])
+        .map(id => placeMap[id])
+        .filter(Boolean);
     }
     if (sortOption === 'rating') {
-      return result.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
+      return result
+        .sort((a, b) => ((b.rating ?? 0) - (a.rating ?? 0)) || ((b.weight ?? 0) - (a.weight ?? 0)));
     }
     if (sortOption === 'reviews') {
-      return result.sort((a, b) => (b.reviewCount ?? 0) - (a.reviewCount ?? 0));
+      return result
+        .sort((a, b) => ((b.reviewCount ?? 0) - (a.reviewCount ?? 0)) || ((b.weight ?? 0) - (a.weight ?? 0)));
     }
     return result;
   }, [places, orderedIds, sortOption]);
@@ -69,6 +91,7 @@ const PlaceList: React.FC<PlaceListProps> = ({
       <div className="flex flex-col items-center justify-center p-8 h-full">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-jeju-green mb-4"></div>
         <p className="text-sm text-muted-foreground">장소 정보를 불러오는 중...</p>
+        <p className="text-xs text-muted-foreground mt-2">잠시만 기다려주세요...</p>
       </div>
     );
   }

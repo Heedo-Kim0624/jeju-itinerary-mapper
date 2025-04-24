@@ -56,7 +56,9 @@ export function calculatePlaceScore(
   let foundKeywords = 0;
   let matchedKeywords: { keyword: string; value: number }[] = [];
 
+  // 디버깅을 위해 입력 값 출력
   console.log(`장소 가중치 계산 시작 (리뷰 정규화: ${reviewNorm})`);
+  console.log('장소 객체 속성:', Object.keys(place));
 
   // 각 키워드에 대한 점수 계산
   keywordWeights.forEach(({ keyword, weight }) => {

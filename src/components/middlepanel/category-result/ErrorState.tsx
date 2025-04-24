@@ -14,6 +14,7 @@ const ErrorState = ({ error }: ErrorStateProps) => {
         <div>
           <p className="font-medium">오류가 발생했습니다</p>
           <p className="text-sm">{error}</p>
+          <p className="text-xs mt-1">데이터베이스 연결 또는 필드 매핑에 문제가 있을 수 있습니다</p>
         </div>
       </div>
     </div>
