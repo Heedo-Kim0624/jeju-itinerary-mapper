@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
 import PlaceList from '@/components/middlepanel/PlaceList';
-import PlaceDetailsPopup from '@/components/middlepanel/PlaceDetailsPopup';
+import PlaceDetailDialog from '@/components/places/PlaceDetailDialog';
 import { Place } from '@/types/supabase';
 import { 
   parsePrompt, 
@@ -160,7 +160,7 @@ const TravelPromptSearch: React.FC<TravelPromptSearchProps> = ({ onPlacesFound }
       </div>
       
       {selectedPlace && (
-        <PlaceDetailsPopup place={selectedPlace} onClose={() => setSelectedPlace(null)} />
+        <PlaceDetailDialog place={selectedPlace} onClose={() => setSelectedPlace(null)} />
       )}
     </div>
   );

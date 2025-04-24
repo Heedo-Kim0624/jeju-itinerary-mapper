@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Place } from '@/types/supabase';
 import { useMapContext } from '../rightpanel/MapContext';
-import PlaceDetailsPopup from './PlaceDetailsPopup';
+import PlaceDetailDialog from '../places/PlaceDetailDialog';
 import { useCategoryResults } from '@/hooks/use-category-results';
 import PlaceListingView from '../places/PlaceListingView';
 
@@ -135,7 +135,7 @@ const CategoryResultPanel: React.FC<{
       </div>
 
       {selectedPlace && (
-        <PlaceDetailsPopup
+        <PlaceDetailDialog
           place={selectedPlace}
           onClose={() => setSelectedPlace(null)}
         />

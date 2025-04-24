@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { ArrowLeft, ArrowRight, ChevronDown, ChevronUp, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -10,7 +11,7 @@ import DaySelector from '@/components/leftpanel/DaySelector';
 import type { Place, ItineraryDay } from '@/types/supabase';
 import Map from '@/components/rightpanel/Map';
 import { categoryColors, getCategoryName } from '@/utils/categoryColors';
-import PlaceDetailsPopup from '@/components/middlepanel/PlaceDetailsPopup';
+import PlaceDetailDialog from '@/components/places/PlaceDetailDialog';
 
 interface MobileStepViewProps {
   mobileStep: number;
@@ -279,7 +280,7 @@ const MobileStepView: React.FC<MobileStepViewProps> = ({
       </div>
 
       {viewingPlace && (
-        <PlaceDetailsPopup
+        <PlaceDetailDialog
           place={viewingPlace}
           onClose={() => setViewingPlace(null)}
         />
