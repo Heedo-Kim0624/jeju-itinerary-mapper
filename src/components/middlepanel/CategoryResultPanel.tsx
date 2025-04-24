@@ -2,9 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Place } from '@/types/supabase';
 import { useMapContext } from '../rightpanel/MapContext';
-import { convertToPlace } from '@/lib/jeju/travelPromptUtils';
 import PlaceDetailsPopup from './PlaceDetailsPopup';
-import RecommendedPlaces from './RecommendedPlaces';
 import { useCategoryResults } from '@/hooks/use-category-results';
 import PlaceListingView from '../places/PlaceListingView';
 
@@ -37,7 +35,7 @@ const CategoryResultPanel: React.FC<{
           x: place.x,
           y: place.y,
           rating: place.rating || 0,
-          visitor_review_count: place.visitor_review_count || 0,
+          reviewCount: place.visitor_review_count || 0,
           naverLink: place.naverLink ?? "",
           instaLink: place.instaLink ?? ""
         })), { highlight: true });
@@ -53,10 +51,6 @@ const CategoryResultPanel: React.FC<{
       addMarkers([place], { highlight: true });
       panTo({ lat: place.y, lng: place.x });
     }
-  };
-
-  const handleSelectPlace = (place: Place, checked: boolean) => {
-    onSelectPlace(place, checked);
   };
 
   // Convert PlaceResults to Place objects for the recommended and nearby places
@@ -112,7 +106,7 @@ const CategoryResultPanel: React.FC<{
                 title="🌟 추천 장소"
                 isLoading={loading}
                 selectedPlaces={selectedPlaces}
-                onSelectPlace={handleSelectPlace}
+                onSelectPlace={onSelectPlace}
                 onViewOnMap={handleViewDetails}
               />
               
@@ -122,7 +116,7 @@ const CategoryResultPanel: React.FC<{
                   title="📍 주변 장소"
                   isLoading={loading}
                   selectedPlaces={selectedPlaces}
-                  onSelectPlace={handleSelectPlace}
+                  onSelectPlace={onSelectPlace}
                   onViewOnMap={handleViewDetails}
                 />
               )}

@@ -11,6 +11,10 @@ interface PlaceDetailDialogProps {
 }
 
 const PlaceDetailDialog: React.FC<PlaceDetailDialogProps> = ({ place, onClose }) => {
+  // Check if rating and reviewCount have valid values
+  const hasRating = place.rating !== undefined && place.rating !== null && place.rating > 0;
+  const hasReviews = place.reviewCount !== undefined && place.reviewCount !== null && place.reviewCount > 0;
+
   const handleNaverMapClick = () => {
     if (place.naverLink) {
       window.open(place.naverLink, '_blank', 'noopener,noreferrer');
@@ -45,13 +49,13 @@ const PlaceDetailDialog: React.FC<PlaceDetailDialogProps> = ({ place, onClose })
         
         <div className="space-y-4 py-2">
           {/* Rating and Reviews */}
-          {place.rating !== undefined && (
+          {hasRating && (
             <div className="flex items-center gap-2">
               <Star className="h-5 w-5 text-yellow-500" />
               <span className="font-medium text-lg">
                 {typeof place.rating === 'number' ? place.rating.toFixed(1) : place.rating}
               </span>
-              {place.reviewCount !== undefined && place.reviewCount > 0 && (
+              {hasReviews && (
                 <span className="text-sm text-gray-500">({place.reviewCount} 리뷰)</span>
               )}
             </div>

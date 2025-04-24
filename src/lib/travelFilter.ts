@@ -11,6 +11,8 @@ export interface PlaceResult {
   y: number;
   rating?: number;
   visitor_review_count?: number;
+  naverLink?: string;
+  instaLink?: string;
 }
 
 const categoryTableMap = {
@@ -27,6 +29,13 @@ const categoryRatingMap = {
   'cafe': 'cafe_rating'
 };
 
+const categoryLinkMap = {
+  'accommodation': 'accomodation_link',
+  'landmark': 'landmark_link',
+  'restaurant': 'restaurant_link',
+  'cafe': 'cafe_link'
+};
+
 // Helper function to parse rating value properly
 const parseRatingValue = (rating: any): number => {
   if (typeof rating === 'number') return rating;
@@ -37,15 +46,33 @@ const parseRatingValue = (rating: any): number => {
   return 0;
 };
 
+// Helper function to normalize field access regardless of case
+const getFieldValue = (obj: any, fieldName: string): any => {
+  // Try exact match first
+  if (obj[fieldName] !== undefined) return obj[fieldName];
+  
+  // Try case-insensitive match
+  const lowerFieldName = fieldName.toLowerCase();
+  for (const key of Object.keys(obj)) {
+    if (key.toLowerCase() === lowerFieldName) {
+      return obj[key];
+    }
+  }
+  
+  return undefined;
+};
+
 export async function fetchWeightedResults(
   category: 'accommodation' | 'landmark' | 'restaurant' | 'cafe', 
   locations: string[], 
   keywords: string[]
 ): Promise<PlaceResult[]> {
+  console.log(`Fetching ${category} data for locations: ${locations.join(', ')}`);
+  
   // Basic query for information table
   let query = supabase
     .from(categoryTableMap[category])
-    .select('ID, Place_Name, Road_Address, location, Longitude, Latitude');
+    .select('*');
 
   // Filter by locations if provided
   if (locations.length > 0) {
@@ -55,47 +82,96 @@ export async function fetchWeightedResults(
   const { data: places, error: placesError } = await query;
 
   if (placesError) {
-    console.error('Places fetch error:', placesError);
+    console.error(`${category} places fetch error:`, placesError);
     return [];
   }
 
-  // Determine the ID field name based on the first entry
-  const idFieldName = places[0] && 'ID' in places[0] ? 'ID' : 'id';
+  console.log(`Found ${places?.length || 0} ${category} places`);
+  
+  if (!places || places.length === 0) {
+    return [];
+  }
 
+  // Determine the ID field name based on the category and first entry
+  const idField = getFieldValue(places[0], 'ID') !== undefined ? 'ID' : 'id';
+  console.log(`Using ID field: ${idField} for ${category}`);
+
+  // Extract all place IDs
+  const placeIds = places.map(p => getFieldValue(p, idField));
+  
   // Fetch ratings
   const { data: ratings, error: ratingsError } = await supabase
     .from(categoryRatingMap[category])
     .select('*')
-    .in(idFieldName, places.map(p => p[idFieldName]));
+    .in(idField, placeIds);
 
   if (ratingsError) {
-    console.error('Ratings fetch error:', ratingsError);
-    return places.map(place => ({
-      id: place[idFieldName].toString(),
-      place_name: place.Place_Name,
-      road_address: place.Road_Address,
-      category: category,
-      x: place.Longitude ?? 0,
-      y: place.Latitude ?? 0,
-      rating: 0,
-      visitor_review_count: 0
-    }));
+    console.error(`${category} ratings fetch error:`, ratingsError);
+    console.log('Continuing without ratings data');
   }
 
-  // Merge places with ratings
-  const placesWithRatings = places.map(place => {
-    const rating = ratings.find(r => r[idFieldName] === place[idFieldName]);
+  // Fetch links
+  const { data: links, error: linksError } = await supabase
+    .from(categoryLinkMap[category])
+    .select('*')
+    .in(idField, placeIds);
+
+  if (linksError) {
+    console.error(`${category} links fetch error:`, linksError);
+    console.log('Continuing without link data');
+  }
+
+  // Merge places with ratings and links
+  const placesWithData = places.map(place => {
+    const placeId = getFieldValue(place, idField);
+    
+    // Find rating for this place
+    const rating = ratings?.find(r => getFieldValue(r, idField) === placeId);
+    // Find link for this place
+    const link = links?.find(l => getFieldValue(l, idField) === placeId);
+    
+    // Extract road address and lot address, handling different field naming cases
+    const roadAddress = getFieldValue(place, 'Road_Address') || getFieldValue(place, 'road_address') || '';
+    const lotAddress = getFieldValue(place, 'Lot_Address') || getFieldValue(place, 'lot_address') || '';
+    const address = roadAddress || lotAddress;
+    
+    // Extract place name, handling different field naming cases
+    const placeName = getFieldValue(place, 'Place_Name') || getFieldValue(place, 'place_name') || '';
+    
+    // Extract longitude and latitude, handling different field naming cases
+    const longitude = getFieldValue(place, 'Longitude') || getFieldValue(place, 'longitude') || 0;
+    const latitude = getFieldValue(place, 'Latitude') || getFieldValue(place, 'latitude') || 0;
+
+    // Extract rating and visitor_review_count, handling different field naming cases
+    const ratingValue = rating ? 
+      (getFieldValue(rating, 'Rating') || getFieldValue(rating, 'rating')) : undefined;
+    
+    const visitorReviewCount = rating ? 
+      (getFieldValue(rating, 'visitor_review_count') || 0) : undefined;
+
+    // Extract links, handling different field naming cases
+    const naverLink = link ? 
+      (getFieldValue(link, 'link') || '') : '';
+    
+    const instaLink = link ? 
+      (getFieldValue(link, 'instagram') || '') : '';
+
     return {
-      id: place[idFieldName].toString(),
-      place_name: place.Place_Name,
-      road_address: place.Road_Address,
+      id: placeId.toString(),
+      place_name: placeName,
+      road_address: address,
       category: category,
-      x: place.Longitude ?? 0,
-      y: place.Latitude ?? 0,
-      rating: parseRatingValue(rating?.Rating),
-      visitor_review_count: rating?.visitor_review_count ?? 0
+      x: longitude,
+      y: latitude,
+      rating: parseRatingValue(ratingValue),
+      visitor_review_count: visitorReviewCount,
+      naverLink: naverLink,
+      instaLink: instaLink
     };
   });
 
-  return placesWithRatings;
+  console.log(`Processed ${placesWithData.length} ${category} places with ratings and links`);
+  
+  return placesWithData;
 }
+

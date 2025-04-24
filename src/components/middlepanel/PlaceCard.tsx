@@ -22,6 +22,10 @@ const PlaceCard: React.FC<PlaceCardProps> = ({
   onClick,
   onViewDetails 
 }) => {
+  // Check if rating and reviewCount have valid values
+  const hasRating = place.rating !== undefined && place.rating !== null && place.rating > 0;
+  const hasReviews = place.reviewCount !== undefined && place.reviewCount !== null && place.reviewCount > 0;
+
   return (
     <Card className="overflow-hidden">
       <CardContent className="p-3">
@@ -40,13 +44,13 @@ const PlaceCard: React.FC<PlaceCardProps> = ({
             </h3>
           </div>
           <div className="flex gap-1">
-            {place.rating && (
+            {hasRating && (
               <div className="flex items-center gap-1 text-xs text-amber-500">
                 <Star className="w-3 h-3" />
-                {place.rating.toFixed(1)}
+                {typeof place.rating === 'number' ? place.rating.toFixed(1) : place.rating}
               </div>
             )}
-            {place.reviewCount && (
+            {hasReviews && (
               <div className="flex items-center gap-1 text-xs text-muted-foreground">
                 <MessageCircle className="w-3 h-3" />
                 {place.reviewCount}

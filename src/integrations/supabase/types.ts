@@ -11,18 +11,18 @@ export type Database = {
     Tables: {
       accomodation_categories: {
         Row: {
-          Categories: string | null
-          Categories_Details: string | null
+          categories: string | null
+          categories_details: string | null
           ID: number
         }
         Insert: {
-          Categories?: string | null
-          Categories_Details?: string | null
+          categories?: string | null
+          categories_details?: string | null
           ID: number
         }
         Update: {
-          Categories?: string | null
-          Categories_Details?: string | null
+          categories?: string | null
+          categories_details?: string | null
           ID?: number
         }
         Relationships: [
@@ -38,36 +38,36 @@ export type Database = {
       accomodation_information: {
         Row: {
           ID: number
-          Latitude: number | null
+          latitude: number | null
           location: string | null
-          Longitude: number | null
-          Lot_Address: string | null
-          NEAR_DIST: number | null
-          NEAR_FID: number | null
-          Place_name: string | null
-          Road_address: string | null
+          longitude: number | null
+          lot_address: string | null
+          near_dist: number | null
+          near_fid: number | null
+          place_name: string | null
+          road_address: string | null
         }
         Insert: {
           ID: number
-          Latitude?: number | null
+          latitude?: number | null
           location?: string | null
-          Longitude?: number | null
-          Lot_Address?: string | null
-          NEAR_DIST?: number | null
-          NEAR_FID?: number | null
-          Place_name?: string | null
-          Road_address?: string | null
+          longitude?: number | null
+          lot_address?: string | null
+          near_dist?: number | null
+          near_fid?: number | null
+          place_name?: string | null
+          road_address?: string | null
         }
         Update: {
           ID?: number
-          Latitude?: number | null
+          latitude?: number | null
           location?: string | null
-          Longitude?: number | null
-          Lot_Address?: string | null
-          NEAR_DIST?: number | null
-          NEAR_FID?: number | null
-          Place_name?: string | null
-          Road_address?: string | null
+          longitude?: number | null
+          lot_address?: string | null
+          near_dist?: number | null
+          near_fid?: number | null
+          place_name?: string | null
+          road_address?: string | null
         }
         Relationships: []
       }
@@ -101,21 +101,21 @@ export type Database = {
         Row: {
           blog_review_count: number | null
           ID: number
-          Rating: number | null
+          rating: number | null
           visitor_norm: number | null
           visitor_review_count: number | null
         }
         Insert: {
           blog_review_count?: number | null
           ID: number
-          Rating?: number | null
+          rating?: number | null
           visitor_norm?: number | null
           visitor_review_count?: number | null
         }
         Update: {
           blog_review_count?: number | null
           ID?: number
-          Rating?: number | null
+          rating?: number | null
           visitor_norm?: number | null
           visitor_review_count?: number | null
         }
@@ -229,22 +229,22 @@ export type Database = {
       }
       cafe_categories: {
         Row: {
-          Categories: string | null
-          Categories_Details: string | null
+          categories: string | null
+          categories_details: string | null
           id: number
-          Place_Name: string | null
+          place_name: string | null
         }
         Insert: {
-          Categories?: string | null
-          Categories_Details?: string | null
+          categories?: string | null
+          categories_details?: string | null
           id: number
-          Place_Name?: string | null
+          place_name?: string | null
         }
         Update: {
-          Categories?: string | null
-          Categories_Details?: string | null
+          categories?: string | null
+          categories_details?: string | null
           id?: number
-          Place_Name?: string | null
+          place_name?: string | null
         }
         Relationships: [
           {
@@ -259,38 +259,38 @@ export type Database = {
       cafe_information: {
         Row: {
           id: number
-          Latitude: number | null
+          latitude: number | null
           location: string | null
-          Longitude: number | null
-          Lot_Address: string | null
-          NEAR_DIST: number | null
-          NEAR_FID: number | null
-          Place_Name: string | null
-          Road_Address: string | null
+          longitude: number | null
+          lot_address: string | null
+          near_dist: number | null
+          near_fid: number | null
+          place_name: string | null
+          road_address: string | null
           stay_time: number | null
         }
         Insert: {
           id: number
-          Latitude?: number | null
+          latitude?: number | null
           location?: string | null
-          Longitude?: number | null
-          Lot_Address?: string | null
-          NEAR_DIST?: number | null
-          NEAR_FID?: number | null
-          Place_Name?: string | null
-          Road_Address?: string | null
+          longitude?: number | null
+          lot_address?: string | null
+          near_dist?: number | null
+          near_fid?: number | null
+          place_name?: string | null
+          road_address?: string | null
           stay_time?: number | null
         }
         Update: {
           id?: number
-          Latitude?: number | null
+          latitude?: number | null
           location?: string | null
-          Longitude?: number | null
-          Lot_Address?: string | null
-          NEAR_DIST?: number | null
-          NEAR_FID?: number | null
-          Place_Name?: string | null
-          Road_Address?: string | null
+          longitude?: number | null
+          lot_address?: string | null
+          near_dist?: number | null
+          near_fid?: number | null
+          place_name?: string | null
+          road_address?: string | null
           stay_time?: number | null
         }
         Relationships: []
@@ -617,15 +617,15 @@ export type Database = {
       cafe_openinghours_note: {
         Row: {
           id: number
-          Note: string | null
+          note: string | null
         }
         Insert: {
           id: number
-          Note?: string | null
+          note?: string | null
         }
         Update: {
           id?: number
-          Note?: string | null
+          note?: string | null
         }
         Relationships: [
           {
@@ -641,21 +641,21 @@ export type Database = {
         Row: {
           blog_review_count: number | null
           id: number
-          Rating: number | null
+          rating: number | null
           visitor_norm: number | null
           visitor_review_count: number | null
         }
         Insert: {
           blog_review_count?: number | null
           id: number
-          Rating?: number | null
+          rating?: number | null
           visitor_norm?: number | null
           visitor_review_count?: number | null
         }
         Update: {
           blog_review_count?: number | null
           id?: number
-          Rating?: number | null
+          rating?: number | null
           visitor_norm?: number | null
           visitor_review_count?: number | null
         }
@@ -832,38 +832,38 @@ export type Database = {
       landmark_information: {
         Row: {
           id: number
-          Latitude: number | null
+          latitude: number | null
           location: string | null
-          Longitude: number | null
-          Lot_Address: string | null
-          NEAR_DIST: number | null
-          NEAR_FID: number | null
-          Place_Name: string | null
-          Road_Address: string | null
+          longitude: number | null
+          lot_address: string | null
+          near_dist: number | null
+          near_fid: number | null
+          place_name: string | null
+          road_address: string | null
           stay_time: number | null
         }
         Insert: {
           id: number
-          Latitude?: number | null
+          latitude?: number | null
           location?: string | null
-          Longitude?: number | null
-          Lot_Address?: string | null
-          NEAR_DIST?: number | null
-          NEAR_FID?: number | null
-          Place_Name?: string | null
-          Road_Address?: string | null
+          longitude?: number | null
+          lot_address?: string | null
+          near_dist?: number | null
+          near_fid?: number | null
+          place_name?: string | null
+          road_address?: string | null
           stay_time?: number | null
         }
         Update: {
           id?: number
-          Latitude?: number | null
+          latitude?: number | null
           location?: string | null
-          Longitude?: number | null
-          Lot_Address?: string | null
-          NEAR_DIST?: number | null
-          NEAR_FID?: number | null
-          Place_Name?: string | null
-          Road_Address?: string | null
+          longitude?: number | null
+          lot_address?: string | null
+          near_dist?: number | null
+          near_fid?: number | null
+          place_name?: string | null
+          road_address?: string | null
           stay_time?: number | null
         }
         Relationships: []
@@ -1190,15 +1190,15 @@ export type Database = {
       landmark_openinghours_note: {
         Row: {
           id: number
-          Notes: string | null
+          notes: string | null
         }
         Insert: {
           id: number
-          Notes?: string | null
+          notes?: string | null
         }
         Update: {
           id?: number
-          Notes?: string | null
+          notes?: string | null
         }
         Relationships: [
           {
@@ -1214,21 +1214,21 @@ export type Database = {
         Row: {
           blog_review_count: number | null
           id: number
-          Rating: string | null
+          rating: string | null
           visitor_norm: number | null
           visitor_review_count: number | null
         }
         Insert: {
           blog_review_count?: number | null
           id: number
-          Rating?: string | null
+          rating?: string | null
           visitor_norm?: number | null
           visitor_review_count?: number | null
         }
         Update: {
           blog_review_count?: number | null
           id?: number
-          Rating?: string | null
+          rating?: string | null
           visitor_norm?: number | null
           visitor_review_count?: number | null
         }
@@ -1378,18 +1378,18 @@ export type Database = {
       }
       restaurant_categories: {
         Row: {
-          Categories: string | null
-          Categories_Details: string | null
+          categories: string | null
+          categories_details: string | null
           ID: number
         }
         Insert: {
-          Categories?: string | null
-          Categories_Details?: string | null
+          categories?: string | null
+          categories_details?: string | null
           ID: number
         }
         Update: {
-          Categories?: string | null
-          Categories_Details?: string | null
+          categories?: string | null
+          categories_details?: string | null
           ID?: number
         }
         Relationships: [
@@ -1405,38 +1405,38 @@ export type Database = {
       restaurant_information: {
         Row: {
           ID: number
-          Latitude: number | null
+          latitude: number | null
           location: string | null
-          Longitude: number | null
-          Lot_Address: string | null
-          NEAR_DIST: number | null
-          NEAR_FID: number | null
-          Place_Name: string | null
-          Road_Address: string | null
+          longitude: number | null
+          lot_address: string | null
+          near_dist: number | null
+          near_fid: number | null
+          place_name: string | null
+          road_address: string | null
           stay_time: number | null
         }
         Insert: {
           ID: number
-          Latitude?: number | null
+          latitude?: number | null
           location?: string | null
-          Longitude?: number | null
-          Lot_Address?: string | null
-          NEAR_DIST?: number | null
-          NEAR_FID?: number | null
-          Place_Name?: string | null
-          Road_Address?: string | null
+          longitude?: number | null
+          lot_address?: string | null
+          near_dist?: number | null
+          near_fid?: number | null
+          place_name?: string | null
+          road_address?: string | null
           stay_time?: number | null
         }
         Update: {
           ID?: number
-          Latitude?: number | null
+          latitude?: number | null
           location?: string | null
-          Longitude?: number | null
-          Lot_Address?: string | null
-          NEAR_DIST?: number | null
-          NEAR_FID?: number | null
-          Place_Name?: string | null
-          Road_Address?: string | null
+          longitude?: number | null
+          lot_address?: string | null
+          near_dist?: number | null
+          near_fid?: number | null
+          place_name?: string | null
+          road_address?: string | null
           stay_time?: number | null
         }
         Relationships: []
@@ -1764,21 +1764,21 @@ export type Database = {
         Row: {
           blog_review_count: number | null
           ID: number
-          Rating: number | null
+          rating: number | null
           visitor_norm: number | null
           visitor_review_count: number | null
         }
         Insert: {
           blog_review_count?: number | null
           ID: number
-          Rating?: number | null
+          rating?: number | null
           visitor_norm?: number | null
           visitor_review_count?: number | null
         }
         Update: {
           blog_review_count?: number | null
           ID?: number
-          Rating?: number | null
+          rating?: number | null
           visitor_norm?: number | null
           visitor_review_count?: number | null
         }

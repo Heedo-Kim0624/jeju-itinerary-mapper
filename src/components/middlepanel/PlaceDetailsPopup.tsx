@@ -1,3 +1,4 @@
+
 // middlepanel/PlaceDetailsPopup.tsx (이 행 삭제 금지)
 import React from 'react';
 import { MapPin, Star, Clock, ExternalLink, X } from 'lucide-react';
@@ -11,6 +12,10 @@ interface PlaceDetailsPopupProps {
 }
 
 const PlaceDetailsPopup: React.FC<PlaceDetailsPopupProps> = ({ place, onClose }) => {
+  // Check if rating and reviewCount have valid values
+  const hasRating = place.rating !== undefined && place.rating !== null && place.rating > 0;
+  const hasReviews = place.reviewCount !== undefined && place.reviewCount !== null && place.reviewCount > 0;
+
   return (
     // ★ 전체 화면을 덮는 반투명 오버레이
     <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/50">
@@ -37,11 +42,13 @@ const PlaceDetailsPopup: React.FC<PlaceDetailsPopupProps> = ({ place, onClose })
             </div>
           )}
 
-          {place.rating != null && (
+          {hasRating && (
             <div className="flex items-center gap-2 mt-1">
               <Star className="h-4 w-4 text-amber-400" />
-              <span className="text-sm font-medium">{place.rating.toFixed(1)}</span>
-              {place.reviewCount != null && (
+              <span className="text-sm font-medium">
+                {typeof place.rating === 'number' ? place.rating.toFixed(1) : place.rating}
+              </span>
+              {hasReviews && (
                 <span className="text-xs text-gray-500">({place.reviewCount} 리뷰)</span>
               )}
             </div>
