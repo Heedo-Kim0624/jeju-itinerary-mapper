@@ -17,28 +17,28 @@ export async function fetchCategoryData(
   try {
     // Fetch place information
     const { data: places, error: infoError } = await supabase
-      .from(infoTable)
+      .from(infoTable as any)
       .select("*");
 
     if (infoError) throw infoError;
 
     // Fetch links
     const { data: links, error: linksError } = await supabase
-      .from(linksTable)
+      .from(linksTable as any)
       .select("*");
 
     if (linksError) throw linksError;
 
     // Fetch categories
     const { data: categories, error: categoriesError } = await supabase
-      .from(categoriesTable)
+      .from(categoriesTable as any)
       .select("*");
 
     if (categoriesError) throw categoriesError;
 
     // Fetch ratings
     const { data: ratings, error: ratingsError } = await supabase
-      .from(ratingsTable)
+      .from(ratingsTable as any)
       .select("*");
 
     if (ratingsError) {
