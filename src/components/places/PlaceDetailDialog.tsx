@@ -2,7 +2,7 @@
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { MapPin, Star, ExternalLink, X } from 'lucide-react';
+import { MapPin, Star, ExternalLink, X, Clock } from 'lucide-react';
 import { Place } from '@/types/supabase';
 
 interface PlaceDetailDialogProps {
@@ -66,6 +66,14 @@ const PlaceDetailDialog: React.FC<PlaceDetailDialogProps> = ({ place, onClose })
             <div className="flex items-start gap-2">
               <MapPin className="h-5 w-5 text-gray-500 mt-0.5" />
               <div className="text-sm text-gray-700">{place.address}</div>
+            </div>
+          )}
+
+          {/* Operating Hours */}
+          {place.operatingHours && (
+            <div className="flex items-start gap-2">
+              <Clock className="h-5 w-5 text-gray-500 mt-0.5" />
+              <div className="text-sm text-gray-700">{place.operatingHours}</div>
             </div>
           )}
           
