@@ -110,7 +110,8 @@ export const fetchCafes = async (): Promise<Place[]> => {
     // Combine the data
     const cafes = cafeInfo?.map((info: any) => {
       const link = cafeLinks?.find((link: any) => link.id === info.id);
-      const category = cafeCategories?.find((cat: any) => cat.id === info.id);
+      // The cafe_categories table has a different structure - it has link and instagram fields
+      const categoryDetail = ""; // Since cafe_categories doesn't have categories/categories_details fields
       
       // Safely access ratings if available
       let rating = null;
