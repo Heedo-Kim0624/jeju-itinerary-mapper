@@ -1,9 +1,8 @@
-
 import { Place } from '@/types/supabase';
 import { TravelCategory } from '@/types/travel';
 import { fetchPlaceData } from '@/services/placeService';
+import { calculateWeights, calculatePlaceScore } from './weightCalculator';
 
-// Export PlaceResult type to make it available for imports
 export interface PlaceResult {
   id: string;
   place_name: string;
@@ -18,9 +17,6 @@ export interface PlaceResult {
   instaLink?: string;
 }
 
-/**
- * Converts a PlaceResult to the Place format used by the application
- */
 export function convertToPlace(pr: PlaceResult): Place {
   return {
     id: pr.id,
@@ -50,92 +46,93 @@ function normalizeField(obj: any, field: string): any {
   return undefined;
 }
 
-/**
- * Fetch and rank places based on category, location and keywords
- */
 export async function fetchWeightedResults(
   category: TravelCategory,
   locations: string[],
   keywords: string[]
 ): Promise<PlaceResult[]> {
   try {
-    const { places, ratings, categories, links } = await fetchPlaceData(category, locations);
+    const { places, ratings, categories, links, reviews } = await fetchPlaceData(category, locations);
     
     if (!places || places.length === 0) {
       return [];
     }
 
-    // Combine and format results
-    const placesWithRatings = places.map(place => {
+    const rankedMatch = keywords.join(',').match(/\{([^}]+)\}/);
+    const rankedKeywords = rankedMatch ? rankedMatch[1].split(',').map(k => k.trim()) : [];
+    const unrankedKeywords = keywords
+      .join(',')
+      .replace(/\{[^}]+\}/, '')
+      .split(',')
+      .map(k => k.trim())
+      .filter(Boolean);
+
+    const keywordWeights = calculateWeights(rankedKeywords, unrankedKeywords);
+
+    const placesWithScores = places.map(place => {
       const placeId = normalizeField(place, 'ID') || normalizeField(place, 'id');
       
+      const review = reviews?.find(r => {
+        const reviewId = normalizeField(r, 'ID') || normalizeField(r, 'id');
+        return reviewId === placeId;
+      });
+
       const rating = ratings?.find(r => {
         const ratingId = normalizeField(r, 'ID') || normalizeField(r, 'id');
         return ratingId === placeId;
       });
-      
-      const categoryInfo = categories?.find(c => {
-        const categoryId = normalizeField(c, 'ID') || normalizeField(c, 'id');
-        return categoryId === placeId;
-      });
 
-      // Find link information
-      const linkInfo = links?.find(l => {
+      const reviewNorm = review?.visitor_norm || 1;
+      const score = calculatePlaceScore(review || {}, keywordWeights, reviewNorm);
+
+      return {
+        ...place,
+        score,
+        rating,
+        review
+      };
+    });
+
+    const sortedPlaces = placesWithScores
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 20);
+
+    return sortedPlaces.map(place => {
+      const placeId = normalizeField(place, 'ID') || normalizeField(place, 'id');
+      
+      const link = links?.find(l => {
         const linkId = normalizeField(l, 'ID') || normalizeField(l, 'id');
         return linkId === placeId;
       });
 
       const placeName = normalizeField(place, 'Place_Name') || 
-                       normalizeField(place, 'place_name') || 
-                       normalizeField(place, 'Place_name');
+                       normalizeField(place, 'place_name');
       
       const roadAddress = normalizeField(place, 'Road_Address') || 
-                         normalizeField(place, 'road_address') || 
-                         normalizeField(place, 'Road_address');
+                         normalizeField(place, 'road_address');
       
-      // Fix issue #3: Ensure the x and y coordinates are properly extracted
       const longitude = parseFloat(normalizeField(place, 'Longitude') || normalizeField(place, 'longitude') || "0");
       const latitude = parseFloat(normalizeField(place, 'Latitude') || normalizeField(place, 'latitude') || "0");
-      
-      // Parse rating value - convert string ratings to numbers for landmarks
-      let ratingValue = 0;
-      if (rating) {
-        const ratingField = normalizeField(rating, 'Rating') || normalizeField(rating, 'rating');
-        ratingValue = typeof ratingField === 'string' ? parseFloat(ratingField) : (ratingField || 0);
-      }
-      
-      const reviewCount = rating ? normalizeField(rating, 'visitor_review_count') || 0 : 0;
 
-      const categoryDetail = categoryInfo ? 
-        normalizeField(categoryInfo, 'Categories_Details') || 
-        normalizeField(categoryInfo, 'categories_details') : '';
+      const rating = place.rating ? {
+        rating: parseFloat(normalizeField(place.rating, 'rating') || "0"),
+        visitorReviewCount: parseInt(normalizeField(place.rating, 'visitor_review_count') || "0")
+      } : null;
 
-      // Extract link information
-      const naverLink = linkInfo ? normalizeField(linkInfo, 'link') || '' : '';
-      const instaLink = linkInfo ? normalizeField(linkInfo, 'instagram') || '' : '';
-      
-      let weight = ratingValue * Math.log(1 + reviewCount);
-      
       return {
         id: placeId.toString(),
         place_name: placeName,
         road_address: roadAddress,
-        category: category,
-        categoryDetail: categoryDetail,
+        category,
         x: longitude,
         y: latitude,
-        rating: ratingValue,
-        visitor_review_count: reviewCount,
-        naverLink: naverLink,
-        instaLink: instaLink,
-        weight
+        rating: rating?.rating || 0,
+        visitor_review_count: rating?.visitorReviewCount || 0,
+        naverLink: link?.link || "",
+        instaLink: link?.instagram || "",
+        weight: place.score
       };
     });
-
-    // Sort and return results without weight property
-    return placesWithRatings
-      .sort((a, b) => b.weight - a.weight)
-      .map(({ weight, ...rest }) => rest);
 
   } catch (error) {
     console.error('Error in fetchWeightedResults:', error);
