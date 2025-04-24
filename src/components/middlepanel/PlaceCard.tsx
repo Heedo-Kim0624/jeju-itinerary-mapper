@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Star, MessageCircle, MapPin, Clock, Info } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -6,11 +7,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Place } from '@/types/supabase';
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
 
 interface PlaceCardProps {
   place: Place;
@@ -41,23 +41,22 @@ const PlaceCard: React.FC<PlaceCardProps> = ({
               onCheckedChange={(checked) => onSelect(place, checked === true)}
               onClick={(e) => e.stopPropagation()}
             />
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <h3 
-                    className="text-sm font-medium truncate cursor-pointer hover:text-blue-600"
-                    onClick={onClick}
-                  >
-                    {place.name}
-                  </h3>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p className="text-sm">
-                    가중치 점수: {hasWeight ? place.weight.toFixed(3) : 'N/A'}
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <HoverCard>
+              <HoverCardTrigger asChild>
+                <h3 
+                  className="text-sm font-medium truncate cursor-pointer hover:text-blue-600"
+                  onClick={onClick}
+                >
+                  {place.name}
+                </h3>
+              </HoverCardTrigger>
+              <HoverCardContent className="w-auto p-2">
+                <div className="text-sm">
+                  <p className="font-medium">가중치 점수: {hasWeight ? place.weight.toFixed(3) : 'N/A'}</p>
+                  {hasWeight && <p className="text-xs text-muted-foreground mt-1">높을수록 키워드 일치도가 높음</p>}
+                </div>
+              </HoverCardContent>
+            </HoverCard>
           </div>
           <div className="flex gap-1">
             {hasRating && (
