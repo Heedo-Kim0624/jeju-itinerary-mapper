@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Place } from "@/types/supabase";
 
@@ -56,7 +55,7 @@ export const fetchRestaurants = async (): Promise<Place[]> => {
         name: info.Place_Name || "",
         address: info.Lot_Address || info.Road_Address || "",
         category: "restaurant",
-        categoryDetail: category?.categories_details || "",
+        categoryDetail: category?.Categories_Details || "",
         x: info.Longitude || 0,
         y: info.Latitude || 0,
         naverLink: link?.link || "",
@@ -110,8 +109,8 @@ export const fetchCafes = async (): Promise<Place[]> => {
     // Combine the data
     const cafes = cafeInfo?.map((info: any) => {
       const link = cafeLinks?.find((link: any) => link.id === info.id);
-      // The cafe_categories table has a different structure - it has link and instagram fields
-      const categoryDetail = ""; // Since cafe_categories doesn't have categories/categories_details fields
+      // Access the categories correctly
+      const category = cafeCategories?.find((cat: any) => cat.id === info.id);
       
       // Safely access ratings if available
       let rating = null;
@@ -202,7 +201,7 @@ export const fetchAccommodations = async (): Promise<Place[]> => {
         name: info.Place_name || "",
         address: info.Lot_Address || info.Road_address || "",
         category: "accommodation",
-        categoryDetail: category?.categories_details || "",
+        categoryDetail: category?.Categories_Details || "",
         x: info.Longitude || 0,
         y: info.Latitude || 0,
         naverLink: link?.link || "",
@@ -275,7 +274,7 @@ export const fetchLandmarks = async (): Promise<Place[]> => {
         name: info.Place_Name || "",
         address: info.Lot_Address || info.Road_Address || "",
         category: "attraction",
-        categoryDetail: category?.categories_details || "",
+        categoryDetail: category ? (category.Categories_Details || category.categories_details || "") : "",
         x: info.Longitude || 0,
         y: info.Latitude || 0,
         naverLink: link?.link || "",
