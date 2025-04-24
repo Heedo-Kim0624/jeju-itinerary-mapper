@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Place } from "@/types/supabase";
 
@@ -46,15 +45,15 @@ export const fetchRestaurants = async (): Promise<Place[]> => {
       if (restaurantRatings) {
         const ratingInfo = restaurantRatings.find((r: any) => r.ID === info.ID);
         if (ratingInfo) {
-          rating = ratingInfo.rating; // Using lowercase rating
+          rating = ratingInfo.rating;
           reviewCount = ratingInfo.visitor_review_count;
         }
       }
 
-      // Handle potential differences in category field naming
+      // Handle category details using lowercase and safer access
       const categoryDetail = category ? 
         (category.categories_details !== undefined ? 
-          category.categories_details : category.Categories_Details) : "";
+          category.categories_details : "") : "";
 
       return {
         id: `restaurant-${info.ID}`,
@@ -124,15 +123,15 @@ export const fetchCafes = async (): Promise<Place[]> => {
       if (cafeRatings) {
         const ratingInfo = cafeRatings.find((r: any) => r.id === info.id);
         if (ratingInfo) {
-          rating = ratingInfo.rating; // Using lowercase rating
+          rating = ratingInfo.rating;
           reviewCount = ratingInfo.visitor_review_count;
         }
       }
 
-      // Handle potential differences in category field naming
+      // Handle category details using lowercase and safer access
       const categoryDetail = category ? 
         (category.categories_details !== undefined ? 
-          category.categories_details : category.Categories_Details) : "";
+          category.categories_details : "") : "";
 
       return {
         id: `cafe-${info.id}`,
@@ -202,15 +201,15 @@ export const fetchAccommodations = async (): Promise<Place[]> => {
       if (accomRatings) {
         const ratingInfo = accomRatings.find((r: any) => r.id === info.ID);
         if (ratingInfo) {
-          rating = ratingInfo.rating; // Using lowercase rating
+          rating = ratingInfo.rating;
           reviewCount = ratingInfo.visitor_review_count;
         }
       }
 
-      // Handle potential differences in category field naming
+      // Handle category details using lowercase and safer access
       const categoryDetail = category ? 
         (category.categories_details !== undefined ? 
-          category.categories_details : category.Categories_Details) : "";
+          category.categories_details : "") : "";
 
       return {
         id: `accommodation-${info.ID}`,
@@ -280,17 +279,15 @@ export const fetchLandmarks = async (): Promise<Place[]> => {
       if (landmarkRatings) {
         const ratingInfo = landmarkRatings.find((r: any) => r.id === info.id);
         if (ratingInfo) {
-          rating = ratingInfo.rating; // Using lowercase rating
+          rating = ratingInfo.rating;
           reviewCount = ratingInfo.visitor_review_count;
         }
       }
 
-      // Handle potential differences in category field naming - handle both possible naming conventions
+      // Handle category details using lowercase and safer access
       const categoryDetail = category ? 
         (category.categories_details !== undefined ? 
-          category.categories_details : 
-          (category.Categories_Details !== undefined ? 
-            category.Categories_Details : "")) : "";
+          category.categories_details : "") : "";
 
       return {
         id: `landmark-${info.id}`,
