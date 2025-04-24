@@ -1,3 +1,4 @@
+
 import { Place } from '@/types/supabase';
 import { TravelCategory } from '@/types/travel';
 import { fetchPlaceData } from '@/services/placeService';
@@ -15,6 +16,7 @@ export interface PlaceResult {
   visitor_review_count?: number;
   naverLink?: string;
   instaLink?: string;
+  weight?: number;
 }
 
 export function convertToPlace(pr: PlaceResult): Place {
