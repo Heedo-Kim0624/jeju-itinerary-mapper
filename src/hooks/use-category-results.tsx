@@ -50,6 +50,11 @@ export const useCategoryResults = (
 
   useEffect(() => {
     const load = async () => {
+      if (locations.length === 0) {
+        setError('선택된 지역이 없습니다. 지역을 선택해주세요.');
+        return;
+      }
+
       setLoading(true);
       setError(null);
       
@@ -59,6 +64,12 @@ export const useCategoryResults = (
         console.log(`Fetching results for category: ${category} (${categoryKey})`);
         console.log(`Using locations: ${locations.join(', ')}`);
         console.log(`Using keywords: ${keywords.join(', ')}`);
+        
+        // Clear any existing toast messages
+        toast.dismiss();
+        toast.info(`${category} 데이터 조회 중...`, {
+          duration: 2000,
+        });
         
         const results = await fetchWeightedResults(
           categoryKey as any,
@@ -71,8 +82,20 @@ export const useCategoryResults = (
         if (results.length === 0) {
           console.log(`No results found for ${category} in ${locations.join(', ')}`);
           setError(`${category} 검색 결과가 없습니다. 다른 지역이나 키워드로 시도해보세요.`);
+          toast.error(`${category}에 대한 검색 결과가 없습니다`);
           setLoading(false);
           return;
+        }
+        
+        // Check for rating data availability
+        const withRatings = results.filter(p => p.rating !== undefined && p.rating > 0).length;
+        console.log(`Places with ratings: ${withRatings}/${results.length}`);
+        
+        if (withRatings === 0) {
+          console.warn("No places have rating data available");
+          toast.warning(`${category}에 대한 평점 데이터를 가져오는 데 문제가 있습니다`, {
+            duration: 3000
+          });
         }
         
         // Log sorting by weight for debugging
@@ -96,17 +119,30 @@ export const useCategoryResults = (
         const MAX_RECOMMENDATIONS = 4;
         
         // Ensure we have valid places
-        if (processedResults.filter(p => p.place_name && p.x && p.y).length === 0) {
+        const validResults = processedResults.filter(p => p.place_name && p.x && p.y);
+        
+        if (validResults.length === 0) {
           console.log(`No valid places found for ${category}`);
           setError(`유효한 ${category} 결과가 없습니다. 데이터베이스 연결을 확인해주세요.`);
+          toast.error(`${category}에 대한 유효한 결과가 없습니다`);
           setLoading(false);
           return;
         }
 
-        const validResults = processedResults.filter(p => p.place_name && p.x && p.y);
-        setRecommendedPlaces(validResults.slice(0, MAX_RECOMMENDATIONS));
-        setNearbyPlaces(validResults.slice(MAX_RECOMMENDATIONS));
-        console.log(`Set ${validResults.slice(0, MAX_RECOMMENDATIONS).length} recommended places and ${validResults.slice(MAX_RECOMMENDATIONS).length} nearby places`);
+        // Sort by weight (recommendation score)
+        const sortedResults = [...validResults].sort((a, b) => (b.weight || 0) - (a.weight || 0));
+        
+        // Set recommended and nearby places
+        setRecommendedPlaces(sortedResults.slice(0, MAX_RECOMMENDATIONS));
+        setNearbyPlaces(sortedResults.slice(MAX_RECOMMENDATIONS));
+        
+        console.log(`Set ${sortedResults.slice(0, MAX_RECOMMENDATIONS).length} recommended places and ${sortedResults.slice(MAX_RECOMMENDATIONS).length} nearby places`);
+
+        if (validResults.length > 0) {
+          toast.success(`${validResults.length}개의 ${category} 장소를 불러왔습니다`, {
+            duration: 3000
+          });
+        }
 
         clearMarkersAndUiElements();
         
@@ -114,7 +150,7 @@ export const useCategoryResults = (
           panTo(locations[0]);
         }
 
-        const recommendedMarkers = validResults.slice(0, MAX_RECOMMENDATIONS).map(place => ({
+        const recommendedMarkers = sortedResults.slice(0, MAX_RECOMMENDATIONS).map(place => ({
           id: place.id,
           name: place.place_name,
           category: category,
@@ -133,16 +169,13 @@ export const useCategoryResults = (
       } catch (e) {
         console.error('Error in useCategoryResults:', e);
         setError((e as Error).message || '데이터를 불러오는 중 오류가 발생했습니다');
+        toast.error(`${category} 데이터 로딩 중 오류 발생`);
       } finally {
         setLoading(false);
       }
     };
     
-    if (locations.length > 0) {
-      load();
-    } else {
-      setError('선택된 지역이 없습니다. 지역을 선택해주세요.');
-    }
+    load();
   }, [category, locations.join(','), keywords.join(',')]);
 
   return {

@@ -62,6 +62,15 @@ const getFieldValue = (obj: any, fieldName: string): any => {
   return undefined;
 };
 
+// 여러 필드 이름 가능성을 검색하는 확장된 필드 조회 함수
+const tryGetField = (obj: any, fieldNames: string[]): any => {
+  for (const name of fieldNames) {
+    const value = getFieldValue(obj, name);
+    if (value !== undefined) return value;
+  }
+  return undefined;
+};
+
 export async function fetchWeightedResults(
   category: 'accommodation' | 'landmark' | 'restaurant' | 'cafe', 
   locations: string[], 
@@ -104,10 +113,33 @@ export async function fetchWeightedResults(
       return id !== undefined ? String(id) : null;
     }).filter(Boolean);
     
-    // Fetch ratings
-    const { data: ratings, error: ratingsError } = await supabase
-      .from(categoryRatingMap[category])
-      .select('*');
+    // Fetch ratings - try both uppercase and lowercase table names
+    let ratings = [];
+    let ratingsError = null;
+    
+    try {
+      const result = await supabase
+        .from(categoryRatingMap[category])
+        .select('*');
+        
+      if (result.error) {
+        console.warn(`Error fetching from ${categoryRatingMap[category]}, trying uppercase...`);
+        const uppercaseResult = await supabase
+          .from(categoryRatingMap[category].toUpperCase())
+          .select('*');
+          
+        if (uppercaseResult.error) {
+          ratingsError = uppercaseResult.error;
+        } else {
+          ratings = uppercaseResult.data || [];
+        }
+      } else {
+        ratings = result.data || [];
+      }
+    } catch (e) {
+      console.error('Rating fetch error:', e);
+      ratingsError = e;
+    }
 
     if (ratingsError) {
       console.error(`${category} ratings fetch error:`, ratingsError);
@@ -116,19 +148,48 @@ export async function fetchWeightedResults(
       console.log(`Successfully fetched ${ratings?.length || 0} ratings entries`);
       if (ratings && ratings.length > 0) {
         console.log('Sample rating entry:', ratings[0]);
+        console.log('Rating fields:', Object.keys(ratings[0]));
       }
     }
 
-    // Fetch links
-    const { data: links, error: linksError } = await supabase
-      .from(categoryLinkMap[category])
-      .select('*');
+    // Fetch links - use multiple possible table names
+    let links = [];
+    let linksError = null;
+    
+    try {
+      const result = await supabase
+        .from(categoryLinkMap[category])
+        .select('*');
+        
+      if (result.error) {
+        console.warn(`Error fetching from ${categoryLinkMap[category]}, trying alternatives...`);
+        const altTable = `${category}_links`;
+        const altResult = await supabase
+          .from(altTable)
+          .select('*');
+          
+        if (altResult.error) {
+          linksError = altResult.error;
+        } else {
+          links = altResult.data || [];
+        }
+      } else {
+        links = result.data || [];
+      }
+    } catch (e) {
+      console.error('Links fetch error:', e);
+      linksError = e;
+    }
 
     if (linksError) {
       console.error(`${category} links fetch error:`, linksError);
       console.log('Continuing without link data');
     } else {
       console.log(`Successfully fetched ${links?.length || 0} link entries`);
+      if (links && links.length > 0) {
+        console.log('Sample link entry:', links[0]);
+        console.log('Link fields:', Object.keys(links[0]));
+      }
     }
 
     // Merge places with ratings and links
@@ -141,62 +202,91 @@ export async function fetchWeightedResults(
       
       // Find rating for this place by matching ID regardless of case
       const rating = ratings?.find(r => {
-        const ratingId = getFieldValue(r, idField) || 
-                         getFieldValue(r, idField.toLowerCase()) || 
-                         getFieldValue(r, 'id') || 
-                         getFieldValue(r, 'ID');
-        return String(ratingId) === String(placeId);
+        // Try multiple ID field variations
+        const ratingIdOptions = [idField, idField.toLowerCase(), idField.toUpperCase(), 'id', 'ID', 'Id'];
+        for (const idOpt of ratingIdOptions) {
+          const ratingId = getFieldValue(r, idOpt);
+          if (ratingId !== undefined && String(ratingId) === String(placeId)) {
+            return true;
+          }
+        }
+        return false;
       });
 
       // Find link for this place by matching ID regardless of case
       const link = links?.find(l => {
-        const linkId = getFieldValue(l, idField) || 
-                       getFieldValue(l, idField.toLowerCase()) || 
-                       getFieldValue(l, 'id') || 
-                       getFieldValue(l, 'ID');
-        return String(linkId) === String(placeId);
+        // Try multiple ID field variations
+        const linkIdOptions = [idField, idField.toLowerCase(), idField.toUpperCase(), 'id', 'ID', 'Id'];
+        for (const idOpt of linkIdOptions) {
+          const linkId = getFieldValue(l, idOpt);
+          if (linkId !== undefined && String(linkId) === String(placeId)) {
+            return true;
+          }
+        }
+        return false;
       });
       
       // Debug log
       if (rating) {
         console.log(`Found rating for place ID ${placeId}:`, {
-          rating: getFieldValue(rating, 'rating'),
-          reviews: getFieldValue(rating, 'visitor_review_count')
+          rating: tryGetField(rating, ['rating', 'Rating', 'RATING']),
+          reviews: tryGetField(rating, ['visitor_review_count', 'Visitor_Review_Count', 'review_count', 'Review_Count'])
         });
       } else {
         console.log(`No rating found for place ID ${placeId}`);
       }
       
       // Extract road address and lot address, handling different field naming cases
-      const roadAddress = getFieldValue(place, 'Road_Address') || getFieldValue(place, 'road_address') || '';
-      const lotAddress = getFieldValue(place, 'Lot_Address') || getFieldValue(place, 'lot_address') || '';
-      const address = roadAddress || lotAddress;
+      const roadAddressFields = ['Road_Address', 'road_address', 'ROAD_ADDRESS', 'roadAddress'];
+      const lotAddressFields = ['Lot_Address', 'lot_address', 'LOT_ADDRESS', 'lotAddress'];
+      
+      const roadAddress = tryGetField(place, roadAddressFields);
+      const lotAddress = tryGetField(place, lotAddressFields);
+      const address = roadAddress || lotAddress || '';
       
       // Extract place name, handling different field naming cases
-      const placeName = getFieldValue(place, 'Place_Name') || getFieldValue(place, 'place_name') || '';
+      const placeNameFields = ['Place_Name', 'place_name', 'PLACE_NAME', 'placeName', 'name', 'Name'];
+      const placeName = tryGetField(place, placeNameFields) || '';
       
       // Extract longitude and latitude, handling different field naming cases
-      const longitude = getFieldValue(place, 'Longitude') || getFieldValue(place, 'longitude') || 0;
-      const latitude = getFieldValue(place, 'Latitude') || getFieldValue(place, 'latitude') || 0;
+      const longitudeFields = ['Longitude', 'longitude', 'LONGITUDE', 'lng', 'x', 'X'];
+      const latitudeFields = ['Latitude', 'latitude', 'LATITUDE', 'lat', 'y', 'Y'];
+      
+      const longitude = parseFloat(String(tryGetField(place, longitudeFields) || 0));
+      const latitude = parseFloat(String(tryGetField(place, latitudeFields) || 0));
 
       // Extract rating and visitor_review_count, handling different field naming cases
       let ratingValue = null;
       let visitorReviewCount = null;
       
       if (rating) {
-        ratingValue = getFieldValue(rating, 'Rating') || getFieldValue(rating, 'rating');
-        visitorReviewCount = getFieldValue(rating, 'visitor_review_count') || 
-                            getFieldValue(rating, 'Visitor_Review_Count') || 
-                            getFieldValue(rating, 'review_count');
+        const ratingFields = ['Rating', 'rating', 'RATING', 'rate', 'Rate'];
+        const reviewCountFields = [
+          'visitor_review_count', 'Visitor_Review_Count', 'VISITOR_REVIEW_COUNT', 
+          'review_count', 'Review_Count', 'REVIEW_COUNT', 
+          'reviews', 'Reviews', 'reviewCount'
+        ];
         
-        // Debug log rating value
-        console.log(`Extracted rating for ${placeId}: ${ratingValue}, reviews: ${visitorReviewCount}`);
+        ratingValue = tryGetField(rating, ratingFields);
+        visitorReviewCount = tryGetField(rating, reviewCountFields);
+        
+        // Direct debug of rating data
+        console.log(`Rating data for ${placeId}:`, { 
+          raw_rating: rating,
+          extracted_rating: ratingValue,
+          extracted_reviews: visitorReviewCount
+        });
       } else {
         // Check if rating fields are in the place object itself (some datasets structure it this way)
-        ratingValue = getFieldValue(place, 'Rating') || getFieldValue(place, 'rating');
-        visitorReviewCount = getFieldValue(place, 'visitor_review_count') || 
-                           getFieldValue(place, 'Visitor_Review_Count') || 
-                           getFieldValue(place, 'review_count');
+        const ratingFields = ['Rating', 'rating', 'RATING', 'rate', 'Rate'];
+        const reviewCountFields = [
+          'visitor_review_count', 'Visitor_Review_Count', 'VISITOR_REVIEW_COUNT', 
+          'review_count', 'Review_Count', 'REVIEW_COUNT',
+          'reviews', 'Reviews', 'reviewCount'
+        ];
+        
+        ratingValue = tryGetField(place, ratingFields);
+        visitorReviewCount = tryGetField(place, reviewCountFields);
       }
 
       // Extract links, handling different field naming cases
@@ -204,20 +294,29 @@ export async function fetchWeightedResults(
       let instaLink = '';
       
       if (link) {
-        naverLink = getFieldValue(link, 'link') || getFieldValue(link, 'naver_link') || '';
-        instaLink = getFieldValue(link, 'instagram') || getFieldValue(link, 'insta_link') || '';
+        const naverLinkFields = ['link', 'Link', 'naver_link', 'Naver_Link', 'naverLink'];
+        const instaLinkFields = ['instagram', 'Instagram', 'insta_link', 'Insta_Link', 'instaLink'];
+        
+        naverLink = tryGetField(link, naverLinkFields) || '';
+        instaLink = tryGetField(link, instaLinkFields) || '';
       }
 
       // Calculate basic weight (will be refined further)
       const weight = 0.5; // Default weight
+
+      // Do not return places without valid coordinates
+      if (!longitude || !latitude) {
+        console.log(`Skipping place ${placeId} - missing coordinates`);
+        return null;
+      }
 
       return {
         id: placeId.toString(),
         place_name: placeName,
         road_address: address,
         category: category,
-        x: parseFloat(String(longitude)) || 0,
-        y: parseFloat(String(latitude)) || 0,
+        x: longitude,
+        y: latitude,
         rating: parseRatingValue(ratingValue),
         visitor_review_count: visitorReviewCount ? parseInt(String(visitorReviewCount)) : undefined,
         naverLink: naverLink,
@@ -227,6 +326,18 @@ export async function fetchWeightedResults(
     }).filter(Boolean); // Filter out null entries
 
     console.log(`Successfully processed ${placesWithData.length} ${category} places`);
+    
+    // Add final logging for verification
+    if (placesWithData.length > 0) {
+      console.log('Sample processed place data:', placesWithData[0]);
+      
+      // Log rating availability statistics
+      const withRating = placesWithData.filter(p => p.rating !== undefined && p.rating > 0).length;
+      const withReviews = placesWithData.filter(p => p.visitor_review_count !== undefined && p.visitor_review_count > 0).length;
+      
+      console.log(`Places with ratings: ${withRating}/${placesWithData.length} (${(withRating/placesWithData.length*100).toFixed(1)}%)`);
+      console.log(`Places with review counts: ${withReviews}/${placesWithData.length} (${(withReviews/placesWithData.length*100).toFixed(1)}%)`);
+    }
     
     return placesWithData as PlaceResult[];
   } catch (error) {

@@ -47,6 +47,28 @@ export function calculateWeights(
   return weights;
 }
 
+/**
+ * Helper function to extract values from objects regardless of field case
+ */
+function getFieldValue(obj: any, fieldNames: string[]): any {
+  // Try exact matches first
+  for (const field of fieldNames) {
+    if (obj[field] !== undefined) return obj[field];
+  }
+  
+  // Try case-insensitive match
+  const lowerFieldNames = fieldNames.map(f => f.toLowerCase());
+  for (const key of Object.keys(obj)) {
+    const lowerKey = key.toLowerCase();
+    const index = lowerFieldNames.findIndex(f => f === lowerKey);
+    if (index >= 0) {
+      return obj[key];
+    }
+  }
+  
+  return 0; // Default value
+}
+
 export function calculatePlaceScore(
   place: any,
   keywordWeights: KeywordWeight[],
@@ -62,8 +84,19 @@ export function calculatePlaceScore(
 
   // 각 키워드에 대한 점수 계산
   keywordWeights.forEach(({ keyword, weight }) => {
-    // 키워드에 대한 점수 조회
-    const keywordValue = findKeywordValue(place, keyword);
+    // 키워드에 대한 점수 조회 (여러 가능한 필드 이름 시도)
+    // 예: "coffee", "Coffee", "coffee_score", "Coffee_Score" 등
+    const possibleFields = [
+      keyword, 
+      keyword.toLowerCase(), 
+      keyword.toUpperCase(),
+      `${keyword}_score`,
+      `${keyword.toLowerCase()}_score`,
+      `${keyword}_rating`,
+      `${keyword.toLowerCase()}_rating`
+    ];
+    
+    const keywordValue = getFieldValue(place, possibleFields);
     
     if (keywordValue > 0) {
       foundKeywords++;
@@ -96,25 +129,4 @@ export function calculatePlaceScore(
   });
 
   return finalScore;
-}
-
-// 대소문자와 언더스코어를 무시하고 객체에서 키를 찾는 헬퍼 함수
-function findKeywordValue(obj: any, keyword: string): number {
-  // 키워드 정규화
-  const normalizedKeyword = keyword.toLowerCase().replace(/_/g, '');
-  
-  // 정확히 일치하는 키가 있는지 확인
-  if (obj[keyword] !== undefined) {
-    return parseFloat(obj[keyword]) || 0;
-  }
-  
-  // 대소문자와 언더스코어 차이를 무시하고 검색
-  for (const key in obj) {
-    if (key.toLowerCase().replace(/_/g, '') === normalizedKeyword) {
-      const value = parseFloat(obj[key]);
-      return value || 0;
-    }
-  }
-  
-  return 0;
 }
