@@ -48,15 +48,25 @@ export function calculatePlaceScore(
   reviewNorm: number
 ): number {
   let totalScore = 0;
+  let foundKeywords = 0;
 
   // 각 키워드에 대한 점수 계산
   keywordWeights.forEach(({ keyword, weight }) => {
     // 키워드에 대한 점수 조회 (대소문자/언더스코어 무관)
     const keywordValue = findKeywordValue(place, keyword);
     
+    if (keywordValue > 0) {
+      foundKeywords++;
+    }
+    
     // 가중치와 키워드 점수를 곱하여 합산
     totalScore += keywordValue * weight;
   });
+
+  // 키워드를 하나도 못찾았다면 가중치를 0으로 설정
+  if (foundKeywords === 0 && keywordWeights.length > 0) {
+    return 0;
+  }
 
   // 최종 점수에 리뷰 정규화 값을 곱함
   return totalScore * reviewNorm;
@@ -64,19 +74,25 @@ export function calculatePlaceScore(
 
 // 대소문자와 언더스코어를 무시하고 객체에서 키를 찾는 헬퍼 함수
 function findKeywordValue(obj: any, keyword: string): number {
+  // 키워드 정규화
+  const normalizedKeyword = keyword.toLowerCase().replace(/_/g, '');
+  
   // 정확히 일치하는 키가 있는지 확인
   if (obj[keyword] !== undefined) {
     return parseFloat(obj[keyword]) || 0;
   }
   
   // 대소문자와 언더스코어 차이를 무시하고 검색
-  const normalizedKeyword = keyword.toLowerCase().replace(/_/g, '');
-  
   for (const key in obj) {
     if (key.toLowerCase().replace(/_/g, '') === normalizedKeyword) {
-      return parseFloat(obj[key]) || 0;
+      const value = parseFloat(obj[key]);
+      // 로그로 실제값을 확인
+      console.log(`키워드 매치: "${keyword}" => "${key}" = ${value || 0}`);
+      return value || 0;
     }
   }
   
+  // 키워드를 찾지 못한 경우 로그
+  console.log(`키워드 매치 실패: "${keyword}"`);
   return 0; // 키워드를 찾지 못한 경우 0 반환
 }

@@ -29,7 +29,7 @@ const PlaceCard: React.FC<PlaceCardProps> = ({
 }) => {
   const hasRating = place.rating !== undefined && place.rating !== null && place.rating > 0;
   const hasReviews = place.reviewCount !== undefined && place.reviewCount !== null && place.reviewCount > 0;
-  const hasWeight = place.weight !== undefined && place.weight !== null;
+  const hasWeight = place.weight !== undefined && place.weight !== null && place.weight > 0;
 
   return (
     <Card className="overflow-hidden">

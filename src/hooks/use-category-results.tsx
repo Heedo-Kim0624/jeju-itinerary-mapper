@@ -65,6 +65,7 @@ export const useCategoryResults = (
         );
         
         console.log(`Fetched ${results.length} results for ${category}`);
+        console.log('첫 번째 결과의 가중치:', results[0]?.weight);
 
         // Process results to ensure rating and review count are numbers
         const processedResults = results.map(place => ({
@@ -72,7 +73,8 @@ export const useCategoryResults = (
           rating: parseRating(place.rating),
           visitor_review_count: place.visitor_review_count || 0,
           naverLink: place.naverLink ?? "",
-          instaLink: place.instaLink ?? ""
+          instaLink: place.instaLink ?? "",
+          weight: place.weight // 명시적으로 가중치 포함
         }));
 
         const MAX_RECOMMENDATIONS = 4;
@@ -91,9 +93,10 @@ export const useCategoryResults = (
           x: place.x,
           y: place.y,
           rating: place.rating,
-          visitor_review_count: place.visitor_review_count,
+          reviewCount: place.visitor_review_count,
           naverLink: place.naverLink ?? "",
-          instaLink: place.instaLink ?? ""
+          instaLink: place.instaLink ?? "",
+          weight: place.weight // 지도 마커에도 가중치 포함
         }));
         
         addMarkers(recommendedMarkers, { highlight: true });

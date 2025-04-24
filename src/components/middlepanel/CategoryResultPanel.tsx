@@ -37,7 +37,8 @@ const CategoryResultPanel: React.FC<{
           rating: place.rating || 0,
           reviewCount: place.visitor_review_count || 0,
           naverLink: place.naverLink ?? "",
-          instaLink: place.instaLink ?? ""
+          instaLink: place.instaLink ?? "",
+          weight: place.weight // 가중치 추가
         })), { highlight: true });
       }
     }
@@ -64,7 +65,8 @@ const CategoryResultPanel: React.FC<{
     rating: place.rating || 0,
     reviewCount: place.visitor_review_count || 0,
     naverLink: place.naverLink ?? "",
-    instaLink: place.instaLink ?? ""
+    instaLink: place.instaLink ?? "",
+    weight: place.weight // 가중치 추가
   }));
 
   const nearbyPlacesConverted = nearbyPlaces.map(place => ({
@@ -77,7 +79,8 @@ const CategoryResultPanel: React.FC<{
     rating: place.rating || 0,
     reviewCount: place.visitor_review_count || 0,
     naverLink: place.naverLink ?? "",
-    instaLink: place.instaLink ?? ""
+    instaLink: place.instaLink ?? "",
+    weight: place.weight // 가중치 추가
   }));
 
   return (
