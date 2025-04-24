@@ -26,7 +26,6 @@ const CategoryResultPanel: React.FC<{
       panTo(locations[0]);
       
       if (recommendedPlaces.length > 0) {
-        // Make sure we're adding markers with all the necessary data
         addMarkers(recommendedPlaces.map(place => ({
           id: place.id,
           name: place.place_name,
@@ -38,7 +37,7 @@ const CategoryResultPanel: React.FC<{
           reviewCount: place.visitor_review_count || 0,
           naverLink: place.naverLink ?? "",
           instaLink: place.instaLink ?? "",
-          weight: place.weight // 가중치 추가
+          weight: place.weight
         })), { highlight: true });
       }
     }
@@ -54,7 +53,7 @@ const CategoryResultPanel: React.FC<{
     }
   };
 
-  // Convert PlaceResults to Place objects for the recommended and nearby places
+  // Convert PlaceResults to Place objects
   const recommendedPlacesConverted = recommendedPlaces.map(place => ({
     id: place.id,
     name: place.place_name,
@@ -66,7 +65,7 @@ const CategoryResultPanel: React.FC<{
     reviewCount: place.visitor_review_count || 0,
     naverLink: place.naverLink ?? "",
     instaLink: place.instaLink ?? "",
-    weight: place.weight // 가중치 추가
+    weight: place.weight
   }));
 
   const nearbyPlacesConverted = nearbyPlaces.map(place => ({
@@ -80,7 +79,7 @@ const CategoryResultPanel: React.FC<{
     reviewCount: place.visitor_review_count || 0,
     naverLink: place.naverLink ?? "",
     instaLink: place.instaLink ?? "",
-    weight: place.weight // 가중치 추가
+    weight: place.weight
   }));
 
   return (

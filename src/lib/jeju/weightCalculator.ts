@@ -41,7 +41,6 @@ export function calculateWeights(
   return weights;
 }
 
-// 정규화된 점수 계산 함수 (키워드 가중치와 리뷰 정규화 값 적용)
 export function calculatePlaceScore(
   place: any,
   keywordWeights: KeywordWeight[],
@@ -49,14 +48,16 @@ export function calculatePlaceScore(
 ): number {
   let totalScore = 0;
   let foundKeywords = 0;
+  let matchedKeywords: { keyword: string; value: number }[] = [];
 
   // 각 키워드에 대한 점수 계산
   keywordWeights.forEach(({ keyword, weight }) => {
-    // 키워드에 대한 점수 조회 (대소문자/언더스코어 무관)
+    // 키워드에 대한 점수 조회
     const keywordValue = findKeywordValue(place, keyword);
     
     if (keywordValue > 0) {
       foundKeywords++;
+      matchedKeywords.push({ keyword, value: keywordValue });
     }
     
     // 가중치와 키워드 점수를 곱하여 합산
@@ -69,7 +70,18 @@ export function calculatePlaceScore(
   }
 
   // 최종 점수에 리뷰 정규화 값을 곱함
-  return totalScore * reviewNorm;
+  const finalScore = totalScore * reviewNorm;
+
+  // 계산 결과 로깅
+  console.log('가중치 계산 결과:', {
+    place_name: place.place_name || '이름 없음',
+    matched_keywords: matchedKeywords,
+    total_score: totalScore,
+    review_norm: reviewNorm,
+    final_score: finalScore
+  });
+
+  return finalScore;
 }
 
 // 대소문자와 언더스코어를 무시하고 객체에서 키를 찾는 헬퍼 함수
@@ -86,13 +98,9 @@ function findKeywordValue(obj: any, keyword: string): number {
   for (const key in obj) {
     if (key.toLowerCase().replace(/_/g, '') === normalizedKeyword) {
       const value = parseFloat(obj[key]);
-      // 로그로 실제값을 확인
-      console.log(`키워드 매치: "${keyword}" => "${key}" = ${value || 0}`);
       return value || 0;
     }
   }
   
-  // 키워드를 찾지 못한 경우 로그
-  console.log(`키워드 매치 실패: "${keyword}"`);
-  return 0; // 키워드를 찾지 못한 경우 0 반환
+  return 0;
 }
