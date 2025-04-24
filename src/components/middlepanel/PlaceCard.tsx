@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Star, MessageCircle, MapPin, Clock, Info } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -6,6 +5,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Place } from '@/types/supabase';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface PlaceCardProps {
   place: Place;
@@ -22,9 +27,9 @@ const PlaceCard: React.FC<PlaceCardProps> = ({
   onClick,
   onViewDetails 
 }) => {
-  // Check if rating and reviewCount have valid values
   const hasRating = place.rating !== undefined && place.rating !== null && place.rating > 0;
   const hasReviews = place.reviewCount !== undefined && place.reviewCount !== null && place.reviewCount > 0;
+  const hasWeight = place.weight !== undefined && place.weight !== null;
 
   return (
     <Card className="overflow-hidden">
@@ -36,12 +41,23 @@ const PlaceCard: React.FC<PlaceCardProps> = ({
               onCheckedChange={(checked) => onSelect(place, checked === true)}
               onClick={(e) => e.stopPropagation()}
             />
-            <h3 
-              className="text-sm font-medium truncate cursor-pointer"
-              onClick={onClick}
-            >
-              {place.name}
-            </h3>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <h3 
+                    className="text-sm font-medium truncate cursor-pointer hover:text-blue-600"
+                    onClick={onClick}
+                  >
+                    {place.name}
+                  </h3>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-sm">
+                    가중치 점수: {hasWeight ? place.weight.toFixed(3) : 'N/A'}
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
           <div className="flex gap-1">
             {hasRating && (

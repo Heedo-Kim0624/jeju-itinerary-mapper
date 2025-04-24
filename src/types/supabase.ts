@@ -3,19 +3,16 @@ export interface Place {
   id: string;
   name: string;
   address: string;
-  category: string;
+  category?: string;
   categoryDetail?: string;
   x: number;
   y: number;
-  naverLink: string;
-  instaLink: string;
   rating?: number;
   reviewCount?: number;
   operatingHours?: string;
-  operationTimeData?: {
-    [key: string]: number;
-  };
-  nodeId?: string;
+  naverLink?: string;
+  instaLink?: string;
+  weight?: number; // Added weight field
 }
 
 export interface ItineraryDay {
