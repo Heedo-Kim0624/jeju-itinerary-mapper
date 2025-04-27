@@ -29,7 +29,7 @@ export async function fetchAccommodations(): Promise<Place[]> {
       // Calculate weight based on review data
       let weight = 0;
       if (reviews) {
-        const reviewInfo = reviews.find((r: any) => r.id === info.ID || r.ID === info.ID);
+        const reviewInfo = reviews.find((r: any) => r.id === info.id || r.id === info.id);
         if (reviewInfo && reviewInfo.visitor_norm) {
           // Basic weight calculation based on normalized visitor count
           weight = reviewInfo.visitor_norm;
