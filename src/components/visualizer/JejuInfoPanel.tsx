@@ -3,7 +3,7 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Place } from '@/types/supabase';
-import { ExternalLink, Map, Instagram, Clock, MapPin, Star } from 'lucide-react';
+import { ExternalLink, Map, Instagram, Clock, MapPin, Star, Info } from 'lucide-react';
 
 interface JejuInfoPanelProps {
   place?: Place | null;
@@ -13,6 +13,8 @@ interface JejuInfoPanelProps {
 
 const JejuInfoPanel: React.FC<JejuInfoPanelProps> = ({ place, onClose, onSelectLocation }) => {
   if (place) {
+    const hasWeight = place.weight !== undefined && place.weight !== null && place.weight > 0;
+    
     return (
       <Card className="shadow-lg animate-fade-in">
         <CardHeader>
@@ -30,6 +32,15 @@ const JejuInfoPanel: React.FC<JejuInfoPanelProps> = ({ place, onClose, onSelectL
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
+          {hasWeight && (
+            <div className="bg-blue-50 p-2 rounded-md text-sm">
+              <div className="flex items-center gap-1">
+                <Info className="h-3.5 w-3.5 text-blue-500" />
+                <span className="font-medium">추천 점수: {(place.weight * 100).toFixed(1)}%</span>
+              </div>
+            </div>
+          )}
+          
           {place.operatingHours && (
             <div className="flex items-center space-x-2 text-sm">
               <Clock className="h-4 w-4 text-gray-500" />

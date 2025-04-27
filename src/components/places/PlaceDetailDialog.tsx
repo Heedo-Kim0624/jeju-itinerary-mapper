@@ -15,6 +15,15 @@ const PlaceDetailDialog: React.FC<PlaceDetailDialogProps> = ({ place, onClose })
   const hasReviews = place.reviewCount !== undefined && place.reviewCount !== null && place.reviewCount > 0;
   const hasWeight = place.weight !== undefined && place.weight !== null && place.weight > 0;
 
+  // Log for debugging
+  console.log("Place detail data:", {
+    name: place.name,
+    category: place.category,
+    weight: place.weight,
+    naverLink: place.naverLink,
+    instaLink: place.instaLink
+  });
+
   return (
     <Dialog open={!!place} onOpenChange={() => onClose()}>
       <DialogContent className="sm:max-w-md" aria-describedby="place-detail-description">
