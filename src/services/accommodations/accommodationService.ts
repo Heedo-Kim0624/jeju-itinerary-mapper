@@ -42,6 +42,7 @@ export async function fetchAccommodations(): Promise<Place[]> {
         rating,
         reviewCount,
         operatingHours: "",
+        weight: 0, // Add default weight
       };
     });
   } catch (error) {

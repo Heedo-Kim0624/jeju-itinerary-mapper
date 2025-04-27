@@ -13,31 +13,31 @@ export type Database = {
         Row: {
           categories: string | null
           categories_details: string | null
-          ID: number
+          id: number
         }
         Insert: {
           categories?: string | null
           categories_details?: string | null
-          ID: number
+          id: number
         }
         Update: {
           categories?: string | null
           categories_details?: string | null
-          ID?: number
+          id?: number
         }
         Relationships: [
           {
-            foreignKeyName: "accomodation_categories_ID_fkey"
-            columns: ["ID"]
+            foreignKeyName: "accomodation_categories_id_fkey"
+            columns: ["id"]
             isOneToOne: true
             referencedRelation: "accomodation_information"
-            referencedColumns: ["ID"]
+            referencedColumns: ["id"]
           },
         ]
       }
       accomodation_information: {
         Row: {
-          ID: number
+          id: number
           latitude: number | null
           location: string | null
           longitude: number | null
@@ -48,7 +48,7 @@ export type Database = {
           road_address: string | null
         }
         Insert: {
-          ID: number
+          id: number
           latitude?: number | null
           location?: string | null
           longitude?: number | null
@@ -59,7 +59,7 @@ export type Database = {
           road_address?: string | null
         }
         Update: {
-          ID?: number
+          id?: number
           latitude?: number | null
           location?: string | null
           longitude?: number | null
@@ -73,59 +73,59 @@ export type Database = {
       }
       accomodation_link: {
         Row: {
-          ID: number
+          id: number
           instagram: string | null
           link: string | null
         }
         Insert: {
-          ID: number
+          id: number
           instagram?: string | null
           link?: string | null
         }
         Update: {
-          ID?: number
+          id?: number
           instagram?: string | null
           link?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "accomodation_link_ID_fkey"
-            columns: ["ID"]
+            foreignKeyName: "accomodation_link_id_fkey"
+            columns: ["id"]
             isOneToOne: true
             referencedRelation: "accomodation_information"
-            referencedColumns: ["ID"]
+            referencedColumns: ["id"]
           },
         ]
       }
       accomodation_rating: {
         Row: {
           blog_review_count: number | null
-          ID: number
+          id: number
           rating: number | null
           visitor_norm: number | null
           visitor_review_count: number | null
         }
         Insert: {
           blog_review_count?: number | null
-          ID: number
+          id: number
           rating?: number | null
           visitor_norm?: number | null
           visitor_review_count?: number | null
         }
         Update: {
           blog_review_count?: number | null
-          ID?: number
+          id?: number
           rating?: number | null
           visitor_norm?: number | null
           visitor_review_count?: number | null
         }
         Relationships: [
           {
-            foreignKeyName: "accomodation_rating_ID_fkey"
-            columns: ["ID"]
+            foreignKeyName: "accomodation_rating_id_fkey"
+            columns: ["id"]
             isOneToOne: true
             referencedRelation: "accomodation_information"
-            referencedColumns: ["ID"]
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -143,7 +143,7 @@ export type Database = {
           good_value_for_money: number | null
           good_view: number | null
           hot_water: number | null
-          ID: number
+          id: number
           kind_service: number | null
           location: string | null
           many_activities: number | null
@@ -172,7 +172,7 @@ export type Database = {
           good_value_for_money?: number | null
           good_view?: number | null
           hot_water?: number | null
-          ID: number
+          id: number
           kind_service?: number | null
           location?: string | null
           many_activities?: number | null
@@ -201,7 +201,7 @@ export type Database = {
           good_value_for_money?: number | null
           good_view?: number | null
           hot_water?: number | null
-          ID?: number
+          id?: number
           kind_service?: number | null
           location?: string | null
           many_activities?: number | null
@@ -219,11 +219,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "accomodation_review_ID_fkey"
-            columns: ["ID"]
+            foreignKeyName: "accomodation_review_id_fkey"
+            columns: ["id"]
             isOneToOne: true
             referencedRelation: "accomodation_information"
-            referencedColumns: ["ID"]
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1380,31 +1380,31 @@ export type Database = {
         Row: {
           categories: string | null
           categories_details: string | null
-          ID: number
+          id: number
         }
         Insert: {
           categories?: string | null
           categories_details?: string | null
-          ID: number
+          id: number
         }
         Update: {
           categories?: string | null
           categories_details?: string | null
-          ID?: number
+          id?: number
         }
         Relationships: [
           {
-            foreignKeyName: "restaurant_categories_ID_fkey"
-            columns: ["ID"]
+            foreignKeyName: "restaurant_categories_id_fkey"
+            columns: ["id"]
             isOneToOne: true
             referencedRelation: "restaurant_information"
-            referencedColumns: ["ID"]
+            referencedColumns: ["id"]
           },
         ]
       }
       restaurant_information: {
         Row: {
-          ID: number
+          id: number
           latitude: number | null
           location: string | null
           longitude: number | null
@@ -1416,7 +1416,7 @@ export type Database = {
           stay_time: number | null
         }
         Insert: {
-          ID: number
+          id: number
           latitude?: number | null
           location?: string | null
           longitude?: number | null
@@ -1428,7 +1428,7 @@ export type Database = {
           stay_time?: number | null
         }
         Update: {
-          ID?: number
+          id?: number
           latitude?: number | null
           location?: string | null
           longitude?: number | null
@@ -1443,27 +1443,27 @@ export type Database = {
       }
       restaurant_link: {
         Row: {
-          ID: number
+          id: number
           instagram: string | null
           link: string | null
         }
         Insert: {
-          ID: number
+          id: number
           instagram?: string | null
           link?: string | null
         }
         Update: {
-          ID?: number
+          id?: number
           instagram?: string | null
           link?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "restaurant_link_ID_fkey"
-            columns: ["ID"]
+            foreignKeyName: "restaurant_link_id_fkey"
+            columns: ["id"]
             isOneToOne: true
             referencedRelation: "restaurant_information"
-            referencedColumns: ["ID"]
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1756,39 +1756,39 @@ export type Database = {
             columns: ["ID"]
             isOneToOne: true
             referencedRelation: "restaurant_information"
-            referencedColumns: ["ID"]
+            referencedColumns: ["id"]
           },
         ]
       }
       restaurant_rating: {
         Row: {
           blog_review_count: number | null
-          ID: number
+          id: number
           rating: number | null
           visitor_norm: number | null
           visitor_review_count: number | null
         }
         Insert: {
           blog_review_count?: number | null
-          ID: number
+          id: number
           rating?: number | null
           visitor_norm?: number | null
           visitor_review_count?: number | null
         }
         Update: {
           blog_review_count?: number | null
-          ID?: number
+          id?: number
           rating?: number | null
           visitor_norm?: number | null
           visitor_review_count?: number | null
         }
         Relationships: [
           {
-            foreignKeyName: "restaurant_rating_ID_fkey"
-            columns: ["ID"]
+            foreignKeyName: "restaurant_rating_id_fkey"
+            columns: ["id"]
             isOneToOne: true
             referencedRelation: "restaurant_information"
-            referencedColumns: ["ID"]
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1820,7 +1820,7 @@ export type Database = {
           Great_side_dishes: number | null
           Healthy_taste: number | null
           High_quality_meat: number | null
-          ID: number
+          id: number
           Large_portions: number | null
           Little_odor: number | null
           location: string | null
@@ -1865,7 +1865,7 @@ export type Database = {
           Great_side_dishes?: number | null
           Healthy_taste?: number | null
           High_quality_meat?: number | null
-          ID: number
+          id: number
           Large_portions?: number | null
           Little_odor?: number | null
           location?: string | null
@@ -1910,7 +1910,7 @@ export type Database = {
           Great_side_dishes?: number | null
           Healthy_taste?: number | null
           High_quality_meat?: number | null
-          ID?: number
+          id?: number
           Large_portions?: number | null
           Little_odor?: number | null
           location?: string | null
@@ -1930,11 +1930,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "restaurant_review_ID_fkey"
-            columns: ["ID"]
+            foreignKeyName: "restaurant_review_id_fkey"
+            columns: ["id"]
             isOneToOne: true
             referencedRelation: "restaurant_information"
-            referencedColumns: ["ID"]
+            referencedColumns: ["id"]
           },
         ]
       }

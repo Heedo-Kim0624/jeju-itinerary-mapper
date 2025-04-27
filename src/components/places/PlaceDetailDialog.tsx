@@ -17,12 +17,12 @@ const PlaceDetailDialog: React.FC<PlaceDetailDialogProps> = ({ place, onClose })
 
   return (
     <Dialog open={!!place} onOpenChange={() => onClose()}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md" aria-describedby="place-detail-description">
         <DialogHeader>
           <DialogTitle className="text-lg">{place.name}</DialogTitle>
         </DialogHeader>
         
-        <div className="space-y-4 py-2">
+        <div className="space-y-4 py-2" id="place-detail-description">
           {/* 가중치 점수 표시 */}
           {hasWeight && (
             <div className="bg-blue-50 p-3 rounded-md">

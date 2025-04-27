@@ -106,14 +106,14 @@ export const useCategoryResults = (
           });
         }
 
-        // Process results to ensure rating and review count are numbers
+        // Process results to ensure rating, review count and weight are numbers
         const processedResults = results.map(place => ({
           ...place,
           rating: parseRating(place.rating),
           visitor_review_count: place.visitor_review_count ? Number(place.visitor_review_count) : 0,
           naverLink: place.naverLink ?? "",
           instaLink: place.instaLink ?? "",
-          weight: place.weight || 0 // 명시적으로 가중치 포함 (기본값 0)
+          weight: place.weight || 0 // Ensure weight is provided with a default of 0
         }));
 
         const MAX_RECOMMENDATIONS = 4;

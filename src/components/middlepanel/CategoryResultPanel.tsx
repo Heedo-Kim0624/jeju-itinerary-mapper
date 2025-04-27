@@ -55,6 +55,7 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
   }, [recommendedPlaces]);
 
   const handleViewDetails = (place: Place) => {
+    // Ensure weight is included when showing place details
     setSelectedPlace(place);
     if (place.x && place.y) {
       clearMarkersAndUiElements();
