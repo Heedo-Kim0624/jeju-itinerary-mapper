@@ -129,10 +129,10 @@ export async function fetchWeightedResults(
     const scoredPlaces = places.map(place => {
       // ID로 관련 데이터 찾기
       const placeId = normalizeField(place, ['id']);
-      const rating = ratings.find(r => normalizeField(r, ['id']) === placeId);
-      const category = categories.find(c => normalizeField(c, ['id']) === placeId);
-      const link = links.find(l => normalizeField(l, ['id']) === placeId);
-      const review = reviews.find(r => normalizeField(r, ['id']) === placeId);
+      const rating = ratings.find(r => Number(normalizeField(r, ['id'])) === placeId);
+      const category = categories.find(c => Number(normalizeField(c, ['id'])) === placeId);
+      const link = links.find(l => Number(normalizeField(l, ['id'])) === placeId);
+      const review = reviews.find(r => Number(normalizeField(r, ['id'])) === placeId);
       
       // 리뷰 정규화 값 (리뷰 수 / 최대 리뷰 수)
       const reviewNorm = review ? 
