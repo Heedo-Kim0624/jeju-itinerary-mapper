@@ -1,6 +1,7 @@
 
 import React, { createContext, useContext } from 'react';
 import { Place } from '@/types/supabase';
+import useMapCore from './useMapCore';
 
 interface MapContextType {
   map: any;
@@ -26,6 +27,15 @@ const defaultContext: MapContextType = {
 
 const MapContext = createContext<MapContextType>(defaultContext);
 
-export const MapProvider = MapContext.Provider;
-
 export const useMapContext = () => useContext(MapContext);
+
+// Create a provider component that uses the useMapCore hook
+export const MapProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
+  const mapCore = useMapCore();
+  
+  return (
+    <MapContext.Provider value={mapCore}>
+      {children}
+    </MapContext.Provider>
+  );
+};

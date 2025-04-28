@@ -8,22 +8,15 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
-
-// ★ MapContext 및 useMapCore 추가 - 수정된 임포트 구문
 import { MapProvider } from "@/components/rightpanel/MapContext";
-import { useMapCore } from "@/components/rightpanel/useMapCore";
 
 const queryClient = new QueryClient();
 
 const App = () => {
-  // ★ 맵 코어 훅 호출
-  const mapCore = useMapCore();
-
   return (
-    // ★ MapProvider 로 전체 앱 감싸기
-    <MapProvider value={mapCore}>
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <MapProvider>
           <Toaster />
           <Sonner />
           <BrowserRouter>
@@ -33,9 +26,9 @@ const App = () => {
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
-        </TooltipProvider>
-      </QueryClientProvider>
-    </MapProvider>
+        </MapProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
   );
 };
 
