@@ -58,7 +58,15 @@ export function calculatePlaceScore(
 }
 
 export function convertToPlaceResult(place: any, ratings: any[], categories: any[], links: any[], reviews: any[]): PlaceResult {
-  const normalized = normalizePlaceFields(place);
+  // Use the imported normalizePlaceFields function from placeNormalizer
+  const normalized = {
+    id: normalizeField(place, ['id', 'ID']),
+    placeName: normalizeField(place, ['place_name', 'Place_Name']),
+    roadAddress: normalizeField(place, ['road_address', 'Road_Address']),
+    lotAddress: normalizeField(place, ['lot_address', 'Lot_Address']),
+    longitude: parseFloat(String(normalizeField(place, ['longitude', 'Longitude']) || 0)),
+    latitude: parseFloat(String(normalizeField(place, ['latitude', 'Latitude']) || 0))
+  };
   
   const rating = ratings.find(r => r.id === normalized.id);
   const category = categories.find(c => c.id === normalized.id);
@@ -93,7 +101,7 @@ export function convertToPlaceResult(place: any, ratings: any[], categories: any
     y: normalized.latitude,
     rating: ratingValue,
     visitor_review_count: reviewCount,
-    weight: reviewNorm,
+    visitor_norm: reviewNorm,
     naverLink,
     instaLink,
     categoryDetail

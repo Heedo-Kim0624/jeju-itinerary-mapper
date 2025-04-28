@@ -1,4 +1,3 @@
-
 import { ParsedPrompt, TravelCategory } from '@/types/travel';
 
 export function parsePrompt(prompt: string): ParsedPrompt | null {
@@ -64,3 +63,22 @@ export function parsePrompt(prompt: string): ParsedPrompt | null {
     return null;
   }
 }
+
+export const fetchWeightedResults = async (
+  category: string,
+  locations: any[],
+  keywords: string[]
+) => {
+  // Implement the fetchWeightedResults function or re-export it from another file
+  // This is a placeholder implementation
+  console.log(`Fetching weighted results for category ${category} with keywords:`, keywords);
+  
+  try {
+    // This is where you would implement the actual data fetching logic
+    // For now just returning an empty array
+    return [];
+  } catch (error) {
+    console.error("Error fetching weighted results:", error);
+    return [];
+  }
+};

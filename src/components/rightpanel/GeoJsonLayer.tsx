@@ -10,6 +10,8 @@ const GeoJsonLayer: React.FC<GeoJsonLayerProps> = ({ map, visible }) => {
   const linkFeatures = useRef<any[]>([]);
   const nodeFeatures = useRef<any[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const MAX_RETRIES = 5;
 
   useEffect(() => {
     if (!map) return;
@@ -18,8 +20,14 @@ const GeoJsonLayer: React.FC<GeoJsonLayerProps> = ({ map, visible }) => {
       try {
         // 먼저 naver maps API가 로드되었는지 확인
         if (!window.naver || !window.naver.maps || !window.naver.maps.GeoJSON) {
-          console.log('🔄 네이버 지도 API가 아직 로드되지 않았습니다. 다시 시도합니다.');
-          setTimeout(loadGeoJson, 1000); // 1초 후 다시 시도
+          if (retryCount < MAX_RETRIES) {
+            console.log(`🔄 네이버 지도 API가 아직 로드되지 않았습니다. 다시 시도합니다. (${retryCount + 1}/${MAX_RETRIES})`);
+            setRetryCount(prev => prev + 1);
+            setTimeout(loadGeoJson, 1000); // 1초 후 다시 시도
+          } else {
+            console.log('❌ 네이버 지도 API 로드 최대 재시도 횟수 초과');
+            return;
+          }
           return;
         }
 
@@ -51,7 +59,12 @@ const GeoJsonLayer: React.FC<GeoJsonLayerProps> = ({ map, visible }) => {
         }
       } catch (err) {
         console.error('❌ GeoJSON 파일 로드 오류:', err);
-        setTimeout(loadGeoJson, 3000); // 오류 발생 시 3초 후 다시 시도
+        if (retryCount < MAX_RETRIES) {
+          setRetryCount(prev => prev + 1);
+          setTimeout(loadGeoJson, 3000); // 오류 발생 시 3초 후 다시 시도
+        } else {
+          console.log('❌ GeoJSON 로드 최대 재시도 횟수 초과');
+        }
       }
     };
 
