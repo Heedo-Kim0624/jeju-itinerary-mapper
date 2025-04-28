@@ -24,4 +24,7 @@ export interface PlaceResult {
   y: number;
   rating?: number;
   visitor_review_count?: number;
+  visitor_norm?: number;
+  naverLink?: string;
+  instaLink?: string;
 }

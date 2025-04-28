@@ -31,21 +31,40 @@ export const useCategoryResults = (category: string, keywords: string[] = []) =>
 
         // Use the placeService to fetch data
         const result = await fetchPlaceData(travelCategory, selectedRegions);
-        const fetchedPlaces = result.places?.map(place => ({
-          id: place.ID || place.id || '',
-          name: place.Place_Name || place.place_name || '',
-          address: place.Road_Address || place.road_address || '',
-          category: category,
-          categoryDetail: '',
-          x: parseFloat(place.Longitude || place.longitude || '0'),
-          y: parseFloat(place.Latitude || place.latitude || '0'),
-          rating: parseFloat(place.rating || '0'),
-          reviewCount: parseInt(place.visitor_review_count || '0', 10),
-          naverLink: '',
-          instaLink: '',
-          weight: 0,
-          operatingHours: ''
-        })) || [];
+        
+        if (!result.places || result.places.length === 0) {
+          setPlaces([]);
+          setFilteredPlaces([]);
+          setLoading(false);
+          return;
+        }
+        
+        const fetchedPlaces = result.places?.map(place => {
+          const id = place.id || '';
+          const name = place.place_name || '';
+          const roadAddress = place.road_address || '';
+          const lotAddress = place.lot_address || '';
+          const longitude = parseFloat(String(place.longitude || '0'));
+          const latitude = parseFloat(String(place.latitude || '0'));
+          const rating = parseFloat(String(place.rating || '0'));
+          const reviewCount = parseInt(String(place.visitor_review_count || '0'), 10);
+          
+          return {
+            id: String(id),
+            name,
+            address: roadAddress || lotAddress || "",
+            category,
+            categoryDetail: '',
+            x: longitude,
+            y: latitude,
+            rating,
+            reviewCount,
+            naverLink: '',
+            instaLink: '',
+            weight: 0,
+            operatingHours: ''
+          };
+        }) || [];
         
         if (!isMounted) return;
         

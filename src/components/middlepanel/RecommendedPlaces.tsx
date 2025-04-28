@@ -2,7 +2,8 @@
 import React from 'react';
 import { Place } from '@/types/supabase';
 import PlaceCard from './PlaceCard';
-import { PlaceResult, convertToPlace } from '@/lib/jeju/travelPromptUtils';
+import { PlaceResult } from '@/types/travel';
+import { convertToPlace } from '@/lib/jeju/travelPromptUtils';
 
 interface RecommendedPlacesProps {
   places: PlaceResult[];
@@ -24,15 +25,15 @@ const RecommendedPlaces: React.FC<RecommendedPlacesProps> = ({
       <h4 className="text-md font-medium mb-3">✨ 추천 장소</h4>
       <div className="space-y-2">
         {places.map(place => {
-          const convertedPlace = convertToPlace(place);
+          const placeObj = convertToPlace(place);
           return (
             <PlaceCard
               key={place.id}
-              place={convertedPlace}
+              place={placeObj}
               isSelected={selectedPlaces.some(p => p.id === place.id)}
               onSelect={onSelectPlace}
-              onClick={() => onSelectPlace(convertedPlace, true)}
-              onViewDetails={() => onViewDetails(convertedPlace)}
+              onClick={() => onSelectPlace(placeObj, true)}
+              onViewDetails={() => onViewDetails(placeObj)}
             />
           );
         })}

@@ -81,9 +81,9 @@ export function convertToPlaceResult(place: any, ratings: any[], categories: any
     reviewCount = parseInt(String(normalizeField(rating, ['visitor_review_count']) || '0'));
   }
   
-  let reviewNorm = 1;
+  let visitorNorm = 1;
   if (review?.visitor_norm !== undefined) {
-    reviewNorm = parseFloat(String(review.visitor_norm || '1'));
+    visitorNorm = parseFloat(String(review.visitor_norm || '1'));
   }
 
   const categoryDetail = category ? 
@@ -101,7 +101,7 @@ export function convertToPlaceResult(place: any, ratings: any[], categories: any
     y: normalized.latitude,
     rating: ratingValue,
     visitor_review_count: reviewCount,
-    visitor_norm: reviewNorm,
+    visitor_norm: visitorNorm,
     naverLink,
     instaLink,
     categoryDetail
