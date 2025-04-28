@@ -5,6 +5,8 @@ import { useCategoryOrder } from './use-category-order';
 import { useRegionSelection } from './use-region-selection';
 import { Place } from '@/types/supabase';
 import { fetchPlaceData } from '@/services/placeService';
+import { TravelCategory } from '@/types/travel';
+import { categoryMap, CategoryName } from '@/utils/categoryUtils';
 
 export const useCategoryResults = (category: string, keywords: string[] = []) => {
   const [places, setPlaces] = useState<Place[]>([]);
@@ -23,8 +25,12 @@ export const useCategoryResults = (category: string, keywords: string[] = []) =>
         setLoading(true);
         setError(null);
 
+        // Convert Korean category name to English for API
+        const categoryKey = category as CategoryName;
+        const travelCategory = categoryMap[categoryKey] as TravelCategory;
+
         // Use the placeService to fetch data
-        const result = await fetchPlaceData(category, selectedRegions);
+        const result = await fetchPlaceData(travelCategory, selectedRegions);
         const fetchedPlaces = result.places?.map(place => ({
           id: place.ID || place.id || '',
           name: place.Place_Name || place.place_name || '',
