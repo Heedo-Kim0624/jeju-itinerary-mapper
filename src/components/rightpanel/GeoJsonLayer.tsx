@@ -1,5 +1,5 @@
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 interface GeoJsonLayerProps {
   map: any;
@@ -9,12 +9,20 @@ interface GeoJsonLayerProps {
 const GeoJsonLayer: React.FC<GeoJsonLayerProps> = ({ map, visible }) => {
   const linkFeatures = useRef<any[]>([]);
   const nodeFeatures = useRef<any[]>([]);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    if (!map || !window.naver || !window.naver.maps) return;
+    if (!map) return;
 
     const loadGeoJson = async () => {
       try {
+        // 먼저 naver maps API가 로드되었는지 확인
+        if (!window.naver || !window.naver.maps || !window.naver.maps.GeoJSON) {
+          console.log('🔄 네이버 지도 API가 아직 로드되지 않았습니다. 다시 시도합니다.');
+          setTimeout(loadGeoJson, 1000); // 1초 후 다시 시도
+          return;
+        }
+
         const [linkRes, nodeRes] = await Promise.all([
           fetch('/data/LINK_JSON.geojson'),
           fetch('/data/NODE_JSON.geojson')
@@ -36,11 +44,14 @@ const GeoJsonLayer: React.FC<GeoJsonLayerProps> = ({ map, visible }) => {
           nodeCount: nodeFeatures.current.length
         });
 
+        setIsLoaded(true);
+        
         if (visible) {
           showGeoJsonOnMap();
         }
       } catch (err) {
         console.error('❌ GeoJSON 파일 로드 오류:', err);
+        setTimeout(loadGeoJson, 3000); // 오류 발생 시 3초 후 다시 시도
       }
     };
 
@@ -52,20 +63,23 @@ const GeoJsonLayer: React.FC<GeoJsonLayerProps> = ({ map, visible }) => {
   }, [map]);
 
   useEffect(() => {
+    if (!isLoaded) return;
+    
     if (visible) {
       showGeoJsonOnMap();
     } else {
       hideGeoJsonFromMap();
     }
-  }, [visible]);
+  }, [visible, isLoaded]);
 
   const showGeoJsonOnMap = () => {
-    if (!map) return;
+    if (!map || !linkFeatures.current.length) return;
     linkFeatures.current.forEach(f => f.setMap(map));
     nodeFeatures.current.forEach(f => f.setMap(map));
   };
   
   const hideGeoJsonFromMap = () => {
+    if (!linkFeatures.current.length) return;
     linkFeatures.current.forEach(f => f.setMap(null));
     nodeFeatures.current.forEach(f => f.setMap(null));
   };

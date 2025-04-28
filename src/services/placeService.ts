@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabaseClient';
 import { TravelCategory } from '@/types/travel';
 import { categoryTableMap, categoryRatingMap } from '@/lib/jeju/dbMapping';
+import { calculateWeights } from '@/lib/jeju/weightCalculator';
 
 export async function fetchPlaceData(
   category: TravelCategory,
@@ -131,25 +132,16 @@ export function processPlaceData(
     console.log(`Rating data for ${placeName}: rating=${ratingValue}, reviews=${reviewCount}`);
   }
   
-  // 가중치 계산
-  let weight = 0;
-  if (review) {
-    // visitor_norm 값이 있으면 이를 기반으로 가중치 계산
-    if (review.visitor_norm !== undefined) {
-      weight = parseFloat(String(review.visitor_norm));
-      console.log(`Using visitor_norm for weight calculation: ${weight}`);
-    }
-    
-    // 가중치가 없으면 리뷰 수와 평점을 기반으로 간단한 가중치 계산
-    if (!weight && ratingValue && reviewCount) {
-      weight = (ratingValue / 5) * 0.5 + (Math.min(reviewCount, 100) / 100) * 0.5;
-      console.log(`Calculated weight from rating and reviews: ${weight}`);
-    }
-  } else if (ratingValue && reviewCount) {
-    // 리뷰 데이터가 없어도 평점과 리뷰 수가 있으면 가중치 계산
-    weight = (ratingValue / 5) * 0.5 + (Math.min(reviewCount, 100) / 100) * 0.5;
-    console.log(`Calculated weight without review data: ${weight}`);
+  // visitor_norm 값 추출 (가중치 계산에 사용)
+  let reviewNorm = 1;
+  if (review && review.visitor_norm !== undefined) {
+    reviewNorm = parseFloat(String(review.visitor_norm || '1'));
+    console.log(`Review norm for ${placeName}: ${reviewNorm}`);
   }
+  
+  // 가중치는 별도로 계산하지 않고 visitor_norm 값만 설정
+  // 키워드 기반 가중치는 weightCalculator.ts에서 처리
+  let weight = reviewNorm;
   
   // 카테고리 세부 정보 추출
   const categoryDetail = category ? 
