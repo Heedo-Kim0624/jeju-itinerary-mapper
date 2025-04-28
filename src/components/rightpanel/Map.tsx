@@ -1,7 +1,6 @@
 
 import React, { useState } from 'react';
-import useMapCore from './useMapCore';
-import { MapProvider } from './MapContext';
+import { useMapContext } from './MapContext';
 import MapMarkers from './MapMarkers';
 import MapLoadingOverlay from './MapLoadingOverlay';
 import GeoJsonLayer from './GeoJsonLayer';
@@ -23,41 +22,25 @@ const Map: React.FC<MapProps> = ({
   selectedDay,
   selectedPlaces = [] 
 }) => {
-  const mapCore = useMapCore();
   const {
     mapContainer,
     map,
     isMapInitialized,
     isNaverLoaded,
     isMapError,
-    addMarkers,
-    calculateRoutes,
-    clearMarkersAndUiElements,
     showGeoJson,
-    toggleGeoJsonVisibility,
-    panTo
-  } = mapCore;
+    toggleGeoJsonVisibility
+  } = useMapContext();
 
   return (
     <div ref={mapContainer} className="w-full h-full relative flex-grow">
-      <MapProvider value={{
-        map,
-        isMapInitialized,
-        isNaverLoaded,
-        isMapError,
-        addMarkers,
-        calculateRoutes,
-        clearMarkersAndUiElements,
-        panTo
-      }}>
-        <MapMarkers
-          places={places}
-          selectedPlace={selectedPlace}
-          itinerary={itinerary}
-          selectedDay={selectedDay}
-          selectedPlaces={selectedPlaces}
-        />
-      </MapProvider>
+      <MapMarkers
+        places={places}
+        selectedPlace={selectedPlace}
+        itinerary={itinerary}
+        selectedDay={selectedDay}
+        selectedPlaces={selectedPlaces}
+      />
       
       {isMapInitialized && (
         <GeoJsonLayer map={map} visible={showGeoJson} />
