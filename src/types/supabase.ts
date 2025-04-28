@@ -12,8 +12,9 @@ export interface Place {
   operatingHours?: string;
   naverLink?: string;
   instaLink?: string;
-  weight?: number; // Added weight field
-  used?: boolean; // Added used field to track if a place is already used in an itinerary
+  weight?: number;
+  isSelected?: boolean;
+  isRecommended?: boolean;
 }
 
 export interface ItineraryDay {
@@ -143,7 +144,18 @@ export interface LandmarkCategory {
   Categories_Details?: string;
 }
 
-// Place interface for normalized data - updated to make operatingHours optional
+// 일정 생성을 위한 페이로드 타입 추가
+export interface SchedulePayload {
+  selected_places: SelectedPlace[];
+  candidate_places: SelectedPlace[];
+  start_datetime: string;
+  end_datetime: string;
+}
+
+export interface SelectedPlace {
+  id: string;
+  name: string;
+}
 
 // Naver Maps 타입 정의
 declare global {

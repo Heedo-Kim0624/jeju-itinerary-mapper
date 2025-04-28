@@ -1,6 +1,5 @@
-
 import { useState } from 'react';
-import { Place } from '@/types/supabase';
+import { Place, SelectedPlace, SchedulePayload } from '@/types/supabase';
 import { useMapContext } from '@/components/rightpanel/MapContext';
 import { toast } from 'sonner';
 
@@ -77,12 +76,37 @@ export const useSelectedPlaces = () => {
     selectedPlacesByCategory['음식점'].length > 0 && 
     selectedPlacesByCategory['카페'].length > 0;
 
+  const prepareSchedulePayload = (
+    places: Place[], 
+    dateTime: { start_datetime: string; end_datetime: string } | null
+  ): SchedulePayload | null => {
+    if (!dateTime) {
+      toast.error('여행 날짜와 시간을 선택해주세요');
+      return null;
+    }
+
+    const selected: SelectedPlace[] = places
+      .filter(p => p.isSelected)
+      .map(p => ({ id: p.id, name: p.name }));
+
+    const candidates: SelectedPlace[] = places
+      .filter(p => p.isRecommended && !p.isSelected)
+      .map(p => ({ id: p.id, name: p.name }));
+
+    return {
+      selected_places: selected,
+      candidate_places: candidates,
+      ...dateTime
+    };
+  };
+
   return {
     selectedPlaces,
     selectedPlacesByCategory,
     handleSelectPlace,
     handleRemovePlace,
     handleViewOnMap,
-    allCategoriesSelected
+    allCategoriesSelected,
+    prepareSchedulePayload
   };
 };
