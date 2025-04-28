@@ -15,7 +15,7 @@ const PlaceDetailDialog: React.FC<PlaceDetailDialogProps> = ({ place, onClose })
   const hasReviews = place.reviewCount !== undefined && place.reviewCount !== null && place.reviewCount > 0;
   const hasWeight = place.weight !== undefined && place.weight !== null && place.weight > 0;
 
-  // Log for debugging
+  // 디버깅용 로깅
   console.log("Place detail data:", {
     name: place.name,
     category: place.category,
@@ -81,7 +81,10 @@ const PlaceDetailDialog: React.FC<PlaceDetailDialogProps> = ({ place, onClose })
                 variant="outline"
                 size="sm"
                 className="flex items-center gap-1"
-                onClick={() => window.open(place.naverLink, '_blank')}
+                onClick={(e) => {
+                  e.stopPropagation(); // 이벤트 전파 방지
+                  window.open(place.naverLink, '_blank');
+                }}
               >
                 <ExternalLink className="h-4 w-4" />
                 네이버 지도
@@ -93,7 +96,10 @@ const PlaceDetailDialog: React.FC<PlaceDetailDialogProps> = ({ place, onClose })
                 variant="outline"
                 size="sm"
                 className="flex items-center gap-1"
-                onClick={() => window.open(place.instaLink, '_blank')}
+                onClick={(e) => {
+                  e.stopPropagation(); // 이벤트 전파 방지
+                  window.open(place.instaLink, '_blank');
+                }}
               >
                 <ExternalLink className="h-4 w-4" />
                 인스타그램

@@ -37,11 +37,11 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
     clearMarkersAndUiElements();
 
     if (selectedPlace) {
-      // When a place is selected, make sure it's highlighted on the map
+      // 장소가 선택되었을 때, 해당 장소를 지도에 하이라이트
       console.log("Rendering selected place:", selectedPlace);
       addMarkers([selectedPlace], { highlight: true });
       
-      // Ensure map pans to the selected place
+      // 선택된 장소로 지도 이동
       if (selectedPlace.x && selectedPlace.y) {
         panTo({ lat: selectedPlace.y, lng: selectedPlace.x });
       }
@@ -55,18 +55,18 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
         calculateRoutes(selectedItinerary.places);
       } else {
         console.warn(`No itinerary found for day ${selectedDay}`);
-        addMarkers(places);
+        addMarkers(places, { useRecommendedStyle: true });
       }
     } else if (selectedPlaces && selectedPlaces.length > 0) {
-      // If we have explicitly selected places, show them
-      addMarkers(selectedPlaces, { highlight: true });
+      // 명시적으로 선택된 장소들을 표시
+      addMarkers(selectedPlaces, { useRecommendedStyle: true });
     } else {
-      // Default case: show all places
-      addMarkers(places);
+      // 기본 상태: 모든 장소 표시
+      addMarkers(places, { useRecommendedStyle: true });
     }
   };
 
-  return null; // This component doesn't render anything, it just adds markers to the map
+  return null; // 이 컴포넌트는 아무것도 렌더링하지 않고, 지도에 마커만 추가함
 };
 
 export default MapMarkers;

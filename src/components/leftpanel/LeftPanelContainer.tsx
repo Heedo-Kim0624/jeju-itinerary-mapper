@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { toast } from 'sonner';
 import { Place } from '@/types/supabase';
@@ -56,13 +57,22 @@ const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
         id: parseInt(place.id.replace(/[^0-9]/g, '')),
         name: place.name
       })),
-      candidate_places: [], // You'll need to implement this based on your requirements
+      candidate_places: [], // 필요에 따라 구현
       start_datetime: `${dates.startDate.toISOString().split('T')[0]}T${dates.startTime}:00`,
       end_datetime: `${dates.endDate.toISOString().split('T')[0]}T${dates.endTime}:00`
     };
 
     generateSchedule(payload);
     onSetShowItinerary(true);
+    
+    // 로그 메시지 추가
+    console.log("일정 생성 요청 완료:", {
+      선택된_장소: selectedPlaces.length,
+      시작_날짜: dates.startDate,
+      종료_날짜: dates.endDate
+    });
+    
+    toast.success("일정 생성 요청을 완료했습니다.");
   };
 
   const handleCloseItinerary = () => {
@@ -72,7 +82,7 @@ const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
 
   if (showItinerary) {
     return (
-      <div className="absolute inset-0 z-10 bg-white">
+      <div className="fixed top-0 left-0 w-[300px] h-full bg-white border-r border-gray-200 z-40 shadow-md">
         <ScheduleViewer
           schedule={schedule}
           selectedDay={selectedDay}

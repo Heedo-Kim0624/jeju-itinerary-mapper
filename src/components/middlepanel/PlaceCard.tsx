@@ -1,114 +1,87 @@
 
 import React from 'react';
-import { Star, MessageCircle, MapPin, Clock, Info } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Button } from '@/components/ui/button';
 import { Place } from '@/types/supabase';
-import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from "@/components/ui/hover-card";
+import { cn } from '@/lib/utils';
+import { MapPin, Star } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface PlaceCardProps {
   place: Place;
   isSelected: boolean;
   onSelect: (place: Place, checked: boolean) => void;
-  onClick: () => void;
-  onViewDetails: () => void;
+  onClick?: () => void;
+  onViewDetails: (place: Place) => void;
 }
 
-const PlaceCard: React.FC<PlaceCardProps> = ({ 
-  place, 
-  isSelected, 
+const PlaceCard: React.FC<PlaceCardProps> = ({
+  place,
+  isSelected,
   onSelect,
   onClick,
-  onViewDetails 
+  onViewDetails,
 }) => {
-  const hasRating = place.rating !== undefined && place.rating !== null && place.rating > 0;
-  const hasReviews = place.reviewCount !== undefined && place.reviewCount !== null && place.reviewCount > 0;
-  const hasWeight = place.weight !== undefined && place.weight !== null && place.weight > 0;
+  const handleCheckboxChange = (checked: boolean) => {
+    onSelect(place, checked);
+  };
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    // 이벤트 핸들링을 위한 클릭 처리
+    e.stopPropagation(); // 이벤트 전파 방지
+    
+    if (onClick) {
+      onClick();
+    }
+  };
+
+  const handleViewDetailsClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // 이벤트 전파 방지
+    onViewDetails(place);
+  };
 
   return (
-    <Card className="overflow-hidden">
-      <CardContent className="p-3">
-        <div className="flex justify-between">
-          <div className="flex items-center gap-2">
-            <Checkbox
-              checked={isSelected}
-              onCheckedChange={(checked) => onSelect(place, checked === true)}
-              onClick={(e) => e.stopPropagation()}
-            />
-            <HoverCard>
-              <HoverCardTrigger asChild>
-                <h3 
-                  className="text-sm font-medium truncate cursor-pointer hover:text-blue-600"
-                  onClick={onClick}
-                >
-                  {place.name}
-                </h3>
-              </HoverCardTrigger>
-              <HoverCardContent className="w-auto p-2">
-                <div className="text-sm">
-                  <p className="font-medium">가중치 점수: {hasWeight ? place.weight.toFixed(3) : 'N/A'}</p>
-                  {hasWeight && <p className="text-xs text-muted-foreground mt-1">높을수록 키워드 일치도가 높음</p>}
-                </div>
-              </HoverCardContent>
-            </HoverCard>
-          </div>
-          <div className="flex gap-1">
-            {hasRating && (
-              <div className="flex items-center gap-1 text-xs text-amber-500">
-                <Star className="w-3 h-3" />
-                {typeof place.rating === 'number' ? place.rating.toFixed(1) : place.rating}
-              </div>
-            )}
-            {hasReviews && (
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                <MessageCircle className="w-3 h-3" />
-                {place.reviewCount}
-              </div>
-            )}
-          </div>
-        </div>
-        <div className="text-xs text-muted-foreground mt-2">
-          {place.address && (
-            <div className="flex items-center gap-1">
-              <MapPin className="w-3 h-3" />
-              <span className="truncate">{place.address}</span>
-            </div>
-          )}
-          {place.operatingHours && (
-            <div className="flex items-center gap-1 mt-1">
-              <Clock className="w-3 h-3" />
-              {place.operatingHours}
-            </div>
-          )}
+    <div 
+      className={cn(
+        "bg-white p-3 rounded-md border cursor-pointer hover:shadow-md transition-shadow",
+        isSelected ? "border-primary" : "border-gray-200"
+      )}
+      onClick={handleCardClick}
+    >
+      <div className="flex items-center gap-3">
+        <Checkbox 
+          checked={isSelected}
+          onCheckedChange={handleCheckboxChange}
+          onClick={(e) => e.stopPropagation()}
+        />
+        
+        <div className="flex-1">
+          <h4 className="font-medium text-sm">{place.name}</h4>
           
-          <div className="flex justify-between items-center mt-2">
-            {place.categoryDetail && (
-              <Badge variant="outline" className="text-[10px] h-4 px-1">
-                {place.categoryDetail}
-              </Badge>
-            )}
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="h-6 px-2 text-xs ml-auto"
-              onClick={(e) => {
-                e.stopPropagation();
-                onViewDetails();
-              }}
-            >
-              <Info className="w-3 h-3 mr-1" />
-              상세정보
-            </Button>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+            <MapPin className="h-3 w-3" />
+            <span className="truncate">{place.address}</span>
           </div>
+          
+          {place.rating ? (
+            <div className="flex items-center gap-1 text-xs mt-1">
+              <Star className="h-3 w-3 text-amber-500" />
+              <span>{place.rating.toFixed(1)}</span>
+              {place.reviewCount && (
+                <span className="text-muted-foreground">
+                  ({place.reviewCount})
+                </span>
+              )}
+            </div>
+          ) : null}
         </div>
-      </CardContent>
-    </Card>
+        
+        <button
+          onClick={handleViewDetailsClick}
+          className="text-xs text-blue-600 hover:underline"
+        >
+          자세히
+        </button>
+      </div>
+    </div>
   );
 };
 

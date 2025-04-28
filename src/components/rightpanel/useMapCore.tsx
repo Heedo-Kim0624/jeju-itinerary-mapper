@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { loadNaverMaps } from "@/utils/loadNaverMaps";
 import { getCategoryColor } from '@/utils/categoryColors';
@@ -96,7 +97,7 @@ export const useMapCore = () => {
 
   const addMarkers = useCallback((
     placesToMark: Place[], 
-    opts?: { highlight?: boolean; isItinerary?: boolean }
+    opts?: { highlight?: boolean; isItinerary?: boolean; useRecommendedStyle?: boolean }
   ) => {
     if (!map.current || !isMapInitialized || !window.naver) return;
     
@@ -104,6 +105,7 @@ export const useMapCore = () => {
     
     const isItinerary = opts?.isItinerary || false;
     const highlight = opts?.highlight || false;
+    const useRecommendedStyle = opts?.useRecommendedStyle || false;
     
     console.log(`Adding ${placesToMark.length} markers, isItinerary:`, isItinerary);
     
@@ -119,20 +121,55 @@ export const useMapCore = () => {
         const position = new window.naver.maps.LatLng(place.y, place.x);
         bounds.extend(position);
         
-        const markerColor = highlight 
-          ? '#FF0000' // 하이라이트된 마커는 빨간색
-          : getCategoryColor(place.category);
+        // 마커 스타일 결정
+        let markerColor = '#1F1F1F'; // 기본 색상
         
+        if (highlight) {
+          markerColor = '#FF0000'; // 하이라이트된 마커는 빨간색
+        } else if (useRecommendedStyle) {
+          // 추천 장소면 빨간색, 아니면 파란색
+          markerColor = place.weight && place.weight > 0 ? '#FF0000' : '#1E88E5';
+        } else {
+          markerColor = getCategoryColor(place.category);
+        }
+        
+        // 마커 모양 설정
+        let markerIconContent;
+        
+        if (useRecommendedStyle) {
+          // 핀 형태의 마커 사용
+          markerIconContent = `
+            <div style="position: relative;">
+              <svg height="36" width="30" viewBox="0 0 24 36">
+                <path d="M12 0C5.383 0 0 5.383 0 12c0 6.617 12 24 12 24s12-17.383 12-24C24 5.383 18.617 0 12 0z" 
+                      fill="${markerColor}" />
+                <circle cx="12" cy="12" r="6" fill="#FFFFFF" />
+              </svg>
+              ${isItinerary ? `<div style="position: absolute; top: 6px; left: 0; width: 100%; text-align: center; color: #000; font-size: 12px; font-weight: bold;">${index + 1}</div>` : ''}
+            </div>
+          `;
+        } else {
+          // 기존 원형 마커
+          markerIconContent = `
+            <div style="width: 24px; height: 24px; background-color: ${markerColor}; 
+                    border-radius: 50%; display: flex; justify-content: center; align-items: center;
+                    color: white; font-size: 12px; border: 2px solid white;">${isItinerary ? (index + 1) : ''}</div>
+          `;
+        }
+        
+        // 마커 생성
         const marker = new window.naver.maps.Marker({
           position: position,
           map: map.current,
           title: place.name,
           icon: {
-            content: `<div style="width: 24px; height: 24px; background-color: ${markerColor}; 
-                     border-radius: 50%; display: flex; justify-content: center; align-items: center;
-                     color: white; font-size: 12px; border: 2px solid white;">${isItinerary ? (index + 1) : ''}</div>`,
-            size: new window.naver.maps.Size(24, 24),
-            anchor: new window.naver.maps.Point(12, 12)
+            content: markerIconContent,
+            size: useRecommendedStyle 
+              ? new window.naver.maps.Size(30, 36)
+              : new window.naver.maps.Size(24, 24),
+            anchor: useRecommendedStyle 
+              ? new window.naver.maps.Point(15, 36)
+              : new window.naver.maps.Point(12, 12)
           },
           zIndex: isItinerary ? 2 : 1
         });
@@ -161,6 +198,12 @@ export const useMapCore = () => {
           bottom: 50,
           left: 50
         });
+        
+        // 확대 수준 제한 (줌 레벨 조정)
+        const zoom = map.current.getZoom();
+        if (zoom > 13) { // 줌 레벨이 너무 크면(가까이 보이면) 줌 아웃
+          map.current.setZoom(12); // 적절한 줌 레벨로 조정
+        }
       }
     } catch (error) {
       console.error("Error adding markers:", error);
@@ -187,7 +230,7 @@ export const useMapCore = () => {
       }
       
       map.current.setCenter(new window.naver.maps.LatLng(coords.lat, coords.lng));
-      map.current.setZoom(12);
+      map.current.setZoom(11); // 줌 레벨 조정 (낮은 값 = 더 멀리 보임)
     } catch (error) {
       console.error("Error panning map to location:", error);
     }

@@ -19,7 +19,9 @@ export const initializeNaverMap = (mapContainer: HTMLDivElement | null) => {
       zoomControl: true,
       zoomControlOptions: {
         position: window.naver.maps.Position.TOP_RIGHT
-      }
+      },
+      // 기본 확대 레벨 조정 (낮을수록 더 넓은 영역을 보여줌)
+      defaultLevel: 7
     };
 
     const map = new window.naver.maps.Map(mapContainer, mapOptions);
