@@ -5,16 +5,23 @@ import { TravelCategory } from "@/types/travel";
 
 export async function fetchLandmarks(): Promise<Place[]> {
   try {
+    console.log("Fetching landmark data...");
+    
     // 관광지 데이터 조회
     const { places, ratings, categories, links, reviews } = await fetchPlaceData(
       "landmark" as TravelCategory,
       []  // 위치 필터 없이 모든 관광지 조회
     );
 
-    console.log(`Processing ${places.length} landmarks`);
+    console.log(`Processing ${places.length} landmarks with:`, {
+      ratings: ratings.length, 
+      categories: categories.length, 
+      links: links.length, 
+      reviews: reviews.length
+    });
 
     // 각 관광지에 대해 데이터 처리
-    return places.map((info: any) => {
+    const results = places.map((info: any) => {
       // 관련 데이터 처리
       const processedData = processPlaceData(info, ratings, categories, links, reviews);
       
@@ -44,6 +51,18 @@ export async function fetchLandmarks(): Promise<Place[]> {
         weight: processedData.weight,
       };
     });
+    
+    // 처리 결과 로깅
+    if (results.length > 0) {
+      console.log("Sample processed landmark:", {
+        name: results[0].name,
+        rating: results[0].rating,
+        reviewCount: results[0].reviewCount,
+        weight: results[0].weight
+      });
+    }
+    
+    return results;
   } catch (error) {
     console.error("Error fetching landmarks:", error);
     return [];

@@ -10,10 +10,61 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 // import { supabase } from "@/integrations/supabase/client";
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
-supabase
-  .from('information' as any)
-  .select('id')
-  .limit(1)
-  .then(({ data, error }) => {
-    console.log('[Supabase Test] information table sample:', { data, error });
-  });
+console.log("Supabase client initialized, testing connections to tables...");
+
+// 테이블 연결 테스트 함수
+const testTableConnection = async (tableName: string) => {
+  try {
+    const { data, error } = await supabase
+      .from(tableName as any)
+      .select('id')
+      .limit(1);
+      
+    console.log(`[Supabase Test] ${tableName} connection:`, { 
+      success: !error,
+      data: data ? `${data.length} rows found` : null,
+      error: error ? error.message : null
+    });
+    
+    return !error;
+  } catch (e) {
+    console.error(`[Supabase Test] Error testing ${tableName}:`, e);
+    return false;
+  }
+};
+
+// 주요 테이블 연결 테스트
+Promise.all([
+  // 정보 테이블
+  testTableConnection('accommodation_information'),
+  testTableConnection('landmark_information'),
+  testTableConnection('restaurant_information'),
+  testTableConnection('cafe_information'),
+  
+  // 평점 테이블
+  testTableConnection('accommodation_rating'),
+  testTableConnection('landmark_rating'),
+  testTableConnection('restaurant_rating'),
+  testTableConnection('cafe_rating'),
+  
+  // 링크 테이블
+  testTableConnection('accommodation_link'),
+  testTableConnection('landmark_link'),
+  testTableConnection('restaurant_link'),
+  testTableConnection('cafe_link'),
+  
+  // 카테고리 테이블
+  testTableConnection('accommodation_categories'),
+  testTableConnection('landmark_categories'),
+  testTableConnection('restaurant_categories'),
+  testTableConnection('cafe_categories'),
+  
+  // 리뷰 테이블
+  testTableConnection('accommodation_review'),
+  testTableConnection('landmark_review'),
+  testTableConnection('restaurant_review'),
+  testTableConnection('cafe_review')
+]).then(results => {
+  const successCount = results.filter(Boolean).length;
+  console.log(`[Supabase Test] Connection test complete: ${successCount}/${results.length} tables connected successfully`);
+});

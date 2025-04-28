@@ -35,6 +35,8 @@ export async function fetchPlaceData(
   // 테이블 참조 정보 가져오기
   const infoTable = categoryTableMap[category];
   const ratingTable = categoryRatingMap[category];
+  const linkTable = `${category}_link`;
+  const categoryTable = `${category}_categories`;
   const reviewTable = `${category}_review`;
   
   if (!infoTable || !ratingTable) {
@@ -42,7 +44,13 @@ export async function fetchPlaceData(
     return { places: [], ratings: [], categories: [], links: [], reviews: [] };
   }
   
-  console.log(`Fetching data for category: ${category}, table: ${infoTable}`);
+  console.log(`Fetching data for category: ${category}, tables:`, { 
+    infoTable, 
+    ratingTable,
+    linkTable,
+    categoryTable,
+    reviewTable
+  });
   
   try {
     // 장소 정보 조회 (위치 필터 적용)
@@ -55,16 +63,17 @@ export async function fetchPlaceData(
     const { data: places, error: placesError } = await query;
     
     if (placesError) {
-      console.error('Places fetch error:', placesError);
+      console.error(`Places fetch error for table ${infoTable}:`, placesError);
       return { places: [], ratings: [], categories: [], links: [], reviews: [] };
     }
     
     if (!places || places.length === 0) {
-      console.log('No places found matching the criteria');
+      console.log(`No places found in table ${infoTable} matching the criteria`);
       return { places: [], ratings: [], categories: [], links: [], reviews: [] };
     }
 
     console.log(`Found ${places.length} places in ${infoTable}`);
+    console.log('Sample place data:', places[0]);
     
     // ID 목록 추출 (대소문자 구분 없이)
     const placeIds = places.map(p => {
@@ -73,42 +82,41 @@ export async function fetchPlaceData(
     }).filter(id => id !== undefined);
     
     console.log(`Extracted ${placeIds.length} valid IDs`);
+    if (placeIds.length > 0) {
+      console.log('Sample IDs:', placeIds.slice(0, 3));
+    }
     
-    // 추가 데이터 병렬 조회
-    const [ratingsResult, categoriesResult, linksResult, reviewsResult] = await Promise.all([
-      // 평점
-      supabase.from(ratingTable).select('*'),
-      // 카테고리
-      supabase.from(`${category}_categories`).select('*'),
-      // 링크
-      supabase.from(`${category}_link`).select('*'),
-      // 리뷰
-      supabase.from(reviewTable).select('*')
+    // 추가 데이터 병렬 조회 - 에러 핸들링 추가
+    const fetchTable = async (tableName: string) => {
+      try {
+        console.log(`Fetching data from ${tableName}...`);
+        const { data, error } = await supabase.from(tableName).select('*');
+        
+        if (error) {
+          console.error(`Error fetching from ${tableName}:`, error);
+          return [];
+        }
+        
+        console.log(`Successfully fetched ${data?.length || 0} rows from ${tableName}`);
+        if (data && data.length > 0) {
+          console.log(`Sample data from ${tableName}:`, data[0]);
+        }
+        
+        return data || [];
+      } catch (err) {
+        console.error(`Exception when fetching ${tableName}:`, err);
+        return [];
+      }
+    };
+    
+    const [ratings, categories, links, reviews] = await Promise.all([
+      fetchTable(ratingTable),
+      fetchTable(categoryTable),
+      fetchTable(linkTable),
+      fetchTable(reviewTable)
     ]);
     
-    // 데이터 조회 결과 로깅
-    console.log(`Ratings data: ${ratingsResult.data?.length || 0} items`);
-    console.log(`Categories data: ${categoriesResult.data?.length || 0} items`);
-    console.log(`Links data: ${linksResult.data?.length || 0} items`);
-    console.log(`Reviews data: ${reviewsResult.data?.length || 0} items`);
-    
-    // 평점 데이터 샘플 로깅 (디버깅용)
-    if (ratingsResult.data && ratingsResult.data.length > 0) {
-      console.log('Sample rating data:', ratingsResult.data[0]);
-    }
-    
-    // 리뷰 데이터 샘플 로깅 (디버깅용)
-    if (reviewsResult.data && reviewsResult.data.length > 0) {
-      console.log('Sample review data:', reviewsResult.data[0]);
-    }
-
-    return {
-      places,
-      ratings: ratingsResult.data || [],
-      categories: categoriesResult.data || [],
-      links: linksResult.data || [],
-      reviews: reviewsResult.data || []
-    };
+    return { places, ratings, categories, links, reviews };
   } catch (error) {
     console.error('Error in fetchPlaceData:', error);
     return { places: [], ratings: [], categories: [], links: [], reviews: [] };
@@ -124,6 +132,9 @@ export function processPlaceData(
   reviews: any[]
 ): any {
   const placeId = normalizeField(place, 'ID') || normalizeField(place, 'id');
+  const placeName = normalizeField(place, 'place_name') || normalizeField(place, 'Place_Name') || '';
+  
+  console.log(`Processing place: ${placeName} (ID: ${placeId})`);
   
   // 평점 데이터 찾기
   const rating = ratings.find(r => {
@@ -149,6 +160,13 @@ export function processPlaceData(
     return String(linkId) === String(placeId);
   });
   
+  console.log(`Data lookup results for ${placeName}:`, {
+    ratingFound: !!rating,
+    reviewFound: !!review,
+    categoryFound: !!category,
+    linkFound: !!link
+  });
+  
   // 평점과 리뷰 수 추출
   const ratingValue = rating ? 
     parseFloat(String(normalizeField(rating, 'rating') || '0')) : 0;
@@ -169,23 +187,33 @@ export function processPlaceData(
     if (!weight && ratingValue && reviewCount) {
       weight = (ratingValue / 5) * 0.5 + (Math.min(reviewCount, 100) / 100) * 0.5;
     }
+  } else if (ratingValue && reviewCount) {
+    // 리뷰 데이터가 없어도 평점과 리뷰 수가 있으면 가중치 계산
+    weight = (ratingValue / 5) * 0.5 + (Math.min(reviewCount, 100) / 100) * 0.5;
   }
   
+  const categoryDetail = category ? 
+    (normalizeField(category, 'categories_details') || 
+     normalizeField(category, 'Categories_Details') || '') : '';
+     
+  const naverLink = link ? (normalizeField(link, 'link') || '') : '';
+  const instaLink = link ? (normalizeField(link, 'instagram') || '') : '';
+  
   // 결과 로깅
-  console.log(`Processed place: ${normalizeField(place, 'place_name') || normalizeField(place, 'Place_Name')}`, {
+  console.log(`Processed place: ${placeName}`, {
     rating: ratingValue,
     reviews: reviewCount,
-    weight
+    weight,
+    categoryDetail: categoryDetail || '(없음)',
+    hasLinks: !!(naverLink || instaLink)
   });
   
   return {
     rating: ratingValue || 0,
     reviewCount: reviewCount || 0,
-    categoryDetail: category ? 
-      (normalizeField(category, 'categories_details') || 
-       normalizeField(category, 'Categories_Details') || '') : '',
-    naverLink: link ? (normalizeField(link, 'link') || '') : '',
-    instaLink: link ? (normalizeField(link, 'instagram') || '') : '',
+    categoryDetail,
+    naverLink,
+    instaLink,
     weight: weight || 0
   };
 }
