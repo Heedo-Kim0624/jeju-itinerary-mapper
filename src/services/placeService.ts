@@ -21,8 +21,9 @@ export async function fetchPlaceData(
   locations: string[]
 ) {
   // 카테고리 철자 수정
-  if (category === 'accomodation') {
-    category = 'accommodation' as TravelCategory;
+  if (category === 'accommodation') {
+    // This line is corrected - no need to reassign as it's already properly spelled
+    // category = 'accommodation' as TravelCategory;
   }
   
   const infoTable = categoryTableMap[category];

@@ -6,14 +6,14 @@ type TableMapping = {
 };
 
 export const categoryTableMap: TableMapping = {
-  'accommodation': 'accomodation_information',
+  'accommodation': 'accommodation_information',
   'landmark': 'landmark_information',
   'restaurant': 'restaurant_information',
   'cafe': 'cafe_information',
 };
 
 export const categoryRatingMap: TableMapping = {
-  'accommodation': 'accomodation_rating',
+  'accommodation': 'accommodation_rating',
   'landmark': 'landmark_rating',
   'restaurant': 'restaurant_rating',
   'cafe': 'cafe_rating',

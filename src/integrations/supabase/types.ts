@@ -9,7 +9,7 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      accomodation_categories: {
+      accommodation_categories: {
         Row: {
           categories: string | null
           categories_details: string | null
@@ -30,12 +30,12 @@ export type Database = {
             foreignKeyName: "accomodation_categories_id_fkey"
             columns: ["id"]
             isOneToOne: true
-            referencedRelation: "accomodation_information"
+            referencedRelation: "accommodation_information"
             referencedColumns: ["id"]
           },
         ]
       }
-      accomodation_information: {
+      accommodation_information: {
         Row: {
           id: number
           latitude: number | null
@@ -71,7 +71,7 @@ export type Database = {
         }
         Relationships: []
       }
-      accomodation_link: {
+      accommodation_link: {
         Row: {
           id: number
           instagram: string | null
@@ -92,12 +92,12 @@ export type Database = {
             foreignKeyName: "accomodation_link_id_fkey"
             columns: ["id"]
             isOneToOne: true
-            referencedRelation: "accomodation_information"
+            referencedRelation: "accommodation_information"
             referencedColumns: ["id"]
           },
         ]
       }
-      accomodation_rating: {
+      accommodation_rating: {
         Row: {
           blog_review_count: number | null
           id: number
@@ -124,12 +124,12 @@ export type Database = {
             foreignKeyName: "accomodation_rating_id_fkey"
             columns: ["id"]
             isOneToOne: true
-            referencedRelation: "accomodation_information"
+            referencedRelation: "accommodation_information"
             referencedColumns: ["id"]
           },
         ]
       }
-      accomodation_review: {
+      accommodation_review: {
         Row: {
           cleanliness: number | null
           convenient_public_transport: number | null
@@ -222,7 +222,7 @@ export type Database = {
             foreignKeyName: "accomodation_review_id_fkey"
             columns: ["id"]
             isOneToOne: true
-            referencedRelation: "accomodation_information"
+            referencedRelation: "accommodation_information"
             referencedColumns: ["id"]
           },
         ]

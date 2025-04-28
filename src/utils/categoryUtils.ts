@@ -1,6 +1,6 @@
 
 export const categoryMap = {
-  '숙소': 'accomodation',
+  '숙소': 'accommodation',
   '관광지': 'landmark',
   '음식점': 'restaurant',
   '카페': 'cafe',
