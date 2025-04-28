@@ -41,6 +41,7 @@ const PlaceDetailDialog: React.FC<PlaceDetailDialogProps> = ({ place, onClose })
 
   // 디버깅용 로깅
   console.log("Place detail data:", {
+    id: place.id,
     name: place.name,
     category: place.category,
     rating: place.rating,

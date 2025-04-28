@@ -3,35 +3,6 @@ import { supabase } from '@/lib/supabaseClient';
 import { TravelCategory } from '@/types/travel';
 import { categoryTableMap, categoryRatingMap } from '@/lib/jeju/dbMapping';
 
-// 필드 값을 대소문자 구분 없이 가져오는 유틸리티 함수
-function normalizeField(obj: any, field: string): any {
-  if (!obj) return undefined;
-  
-  if (obj[field] !== undefined) return obj[field];
-  
-  const lowerField = field.toLowerCase();
-  for (const key in obj) {
-    if (key.toLowerCase() === lowerField) {
-      return obj[key];
-    }
-  }
-  
-  return undefined;
-}
-
-// 여러 가능한 필드명을 시도해서 값을 가져오는 확장 유틸리티 함수
-function getFieldValue(obj: any, possibleFields: string[]): any {
-  if (!obj) return undefined;
-  
-  for (const field of possibleFields) {
-    const value = normalizeField(obj, field);
-    if (value !== undefined) {
-      return value;
-    }
-  }
-  return undefined;
-}
-
 export async function fetchPlaceData(
   category: TravelCategory,
   locations: string[]
@@ -79,17 +50,6 @@ export async function fetchPlaceData(
     console.log(`Found ${places.length} places in ${infoTable}`);
     console.log('Sample place data:', places[0]);
     
-    // ID 목록 추출 (대소문자 구분 없이)
-    const placeIds = places.map(p => {
-      const id = normalizeField(p, 'ID') || normalizeField(p, 'id');
-      return id;
-    }).filter(id => id !== undefined);
-    
-    console.log(`Extracted ${placeIds.length} valid IDs`);
-    if (placeIds.length > 0) {
-      console.log('Sample IDs:', placeIds.slice(0, 3));
-    }
-    
     // 추가 데이터 병렬 조회 - 에러 핸들링 추가
     const fetchTable = async (tableName: string) => {
       try {
@@ -135,35 +95,26 @@ export function processPlaceData(
   links: any[], 
   reviews: any[]
 ): any {
-  // ID 필드 찾기
-  const placeId = getFieldValue(place, ['ID', 'id', 'Id', 'place_id']);
-  const placeName = getFieldValue(place, ['place_name', 'Place_Name', 'place_Name', 'name', 'Name']) || '';
+  // 일관되게 "id" 필드만 사용하도록 수정
+  const placeId = place.id;
+  const placeName = place.place_name || place.Place_Name || '';
   
   console.log(`Processing place: ${placeName} (ID: ${placeId})`);
   
-  // 평점 데이터 찾기 - ID 대소문자 구분 없이 찾기
-  const rating = ratings.find(r => {
-    const ratingId = getFieldValue(r, ['ID', 'id', 'Id']);
-    return String(ratingId) === String(placeId);
-  });
+  // ID 필드가 숫자일 경우 문자열로 변환하여 비교
+  const placeIdStr = String(placeId);
+  
+  // 평점 데이터 찾기 - id 필드로만 찾기
+  const rating = ratings.find(r => String(r.id) === placeIdStr);
   
   // 리뷰 데이터 찾기
-  const review = reviews.find(r => {
-    const reviewId = getFieldValue(r, ['ID', 'id', 'Id']);
-    return String(reviewId) === String(placeId);
-  });
+  const review = reviews.find(r => String(r.id) === placeIdStr);
   
   // 카테고리 데이터 찾기
-  const category = categories.find(c => {
-    const categoryId = getFieldValue(c, ['ID', 'id', 'Id']);
-    return String(categoryId) === String(placeId);
-  });
+  const category = categories.find(c => String(c.id) === placeIdStr);
   
   // 링크 데이터 찾기
-  const link = links.find(l => {
-    const linkId = getFieldValue(l, ['ID', 'id', 'Id']);
-    return String(linkId) === String(placeId);
-  });
+  const link = links.find(l => String(l.id) === placeIdStr);
   
   console.log(`Data lookup results for ${placeName} (ID: ${placeId}):`, {
     ratingFound: !!rating,
@@ -177,8 +128,8 @@ export function processPlaceData(
   let reviewCount = 0;
   
   if (rating) {
-    ratingValue = parseFloat(String(getFieldValue(rating, ['rating', 'Rating']) || '0'));
-    reviewCount = parseInt(String(getFieldValue(rating, ['visitor_review_count', 'Visitor_Review_Count', 'review_count']) || '0'));
+    ratingValue = parseFloat(String(rating.rating || '0'));
+    reviewCount = parseInt(String(rating.visitor_review_count || '0'));
     
     console.log(`Rating data for ${placeName}: rating=${ratingValue}, reviews=${reviewCount}`);
   }
@@ -187,9 +138,8 @@ export function processPlaceData(
   let weight = 0;
   if (review) {
     // visitor_norm 값이 있으면 이를 기반으로 가중치 계산
-    const visitorNorm = getFieldValue(review, ['visitor_norm', 'Visitor_Norm']);
-    if (visitorNorm !== undefined) {
-      weight = parseFloat(String(visitorNorm));
+    if (review.visitor_norm !== undefined) {
+      weight = parseFloat(String(review.visitor_norm));
       console.log(`Using visitor_norm for weight calculation: ${weight}`);
     }
     
@@ -204,12 +154,13 @@ export function processPlaceData(
     console.log(`Calculated weight without review data: ${weight}`);
   }
   
+  // 카테고리 세부 정보 추출
   const categoryDetail = category ? 
-    (getFieldValue(category, ['categories_details', 'Categories_Details', 'category_details']) || 
-     getFieldValue(category, ['categories', 'Categories', 'category'])) || '' : '';
-     
-  const naverLink = link ? (getFieldValue(link, ['link', 'Link', 'naver_link']) || '') : '';
-  const instaLink = link ? (getFieldValue(link, ['instagram', 'Instagram', 'insta_link']) || '') : '';
+    (category.categories_details || category.Categories_Details || category.categories || category.Categories || '') : '';
+  
+  // 링크 정보 추출
+  const naverLink = link ? (link.link || '') : '';
+  const instaLink = link ? (link.instagram || '') : '';
   
   // 결과 로깅
   console.log(`Processed place: ${placeName}`, {

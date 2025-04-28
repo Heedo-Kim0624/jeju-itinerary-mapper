@@ -36,7 +36,7 @@ export async function fetchAccommodations(): Promise<Place[]> {
       
       // Place 객체 생성
       return {
-        id: `accommodation-${info.id || info.ID}`,
+        id: info.id,  // 명시적으로 id 필드 사용
         name: placeName,
         address: roadAddress || lotAddress || "",
         category: "accommodation",
