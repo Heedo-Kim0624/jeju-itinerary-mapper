@@ -30,37 +30,18 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const { panTo, addMarkers, clearMarkersAndUiElements } = useMapContext();
   
-  const { loading, error, recommendedPlaces, nearbyPlaces } = useCategoryResults(category, locations, keywords);
+  const { isLoading, error, recommendedPlaces, normalPlaces } = useCategoryResults(category, keywords);
 
   useEffect(() => {
     clearMarkersAndUiElements();
     
     if (locations.length > 0 && recommendedPlaces.length > 0) {
       panTo(locations[0]);
-      
-      // Convert recommendedPlaces to Place objects with required fields
-      const placesForMarkers: Place[] = recommendedPlaces.map(place => ({
-        id: place.id,
-        name: place.place_name,
-        category: category,
-        address: place.road_address,
-        x: place.x,
-        y: place.y,
-        rating: place.rating || 0,
-        reviewCount: place.visitor_review_count || 0,
-        naverLink: place.naverLink ?? "",
-        instaLink: place.instaLink ?? "",
-        weight: place.weight,
-        categoryDetail: "",
-        operatingHours: ""
-      }));
-      
-      addMarkers(placesForMarkers, { highlight: true });
+      addMarkers(recommendedPlaces, { highlight: true });
     }
-  }, [recommendedPlaces]);
+  }, [recommendedPlaces, locations]);
 
   const handleViewDetails = (place: Place) => {
-    // Ensure weight is included when showing place details
     setSelectedPlace(place);
     if (place.x && place.y) {
       clearMarkersAndUiElements();
@@ -69,64 +50,32 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
     }
   };
 
-  const recommendedPlacesConverted: Place[] = recommendedPlaces.map(place => ({
-    id: place.id,
-    name: place.place_name,
-    category: category,
-    address: place.road_address,
-    x: place.x,
-    y: place.y,
-    rating: place.rating || 0,
-    reviewCount: place.visitor_review_count || 0,
-    naverLink: place.naverLink ?? "",
-    instaLink: place.instaLink ?? "",
-    weight: place.weight,
-    categoryDetail: "",
-    operatingHours: ""
-  }));
-
-  const nearbyPlacesConverted: Place[] = nearbyPlaces.map(place => ({
-    id: place.id,
-    name: place.place_name,
-    category: category,
-    address: place.road_address,
-    x: place.x,
-    y: place.y,
-    rating: place.rating || 0,
-    reviewCount: place.visitor_review_count || 0,
-    naverLink: place.naverLink ?? "",
-    instaLink: place.instaLink ?? "",
-    weight: place.weight,
-    categoryDetail: "",
-    operatingHours: ""
-  }));
-
   return (
     <div className="fixed top-0 left-[300px] w-[300px] h-full bg-white border-l border-r border-gray-200 z-40 shadow-md">
       <div className="h-full flex flex-col">
         <ResultHeader category={category} onClose={onClose} />
 
         <div className="flex-1 overflow-auto">
-          {loading && <LoadingState />}
+          {isLoading && <LoadingState />}
           
           {error && <ErrorState error={error} />}
 
-          {!error && !loading && (
+          {!error && !isLoading && (
             <>
               <PlaceListingView
-                places={recommendedPlacesConverted}
+                places={recommendedPlaces}
                 title="🌟 추천 장소"
-                isLoading={loading}
+                isLoading={isLoading}
                 selectedPlaces={selectedPlaces}
                 onSelectPlace={onSelectPlace}
                 onViewOnMap={handleViewDetails}
               />
               
-              {nearbyPlacesConverted.length > 0 && (
+              {normalPlaces.length > 0 && (
                 <PlaceListingView
-                  places={nearbyPlacesConverted}
+                  places={normalPlaces}
                   title="📍 주변 장소"
-                  isLoading={loading}
+                  isLoading={isLoading}
                   selectedPlaces={selectedPlaces}
                   onSelectPlace={onSelectPlace}
                   onViewOnMap={handleViewDetails}

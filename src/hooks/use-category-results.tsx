@@ -1,11 +1,10 @@
 
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { fetchPlaces, sortPlaces, filterPlacesByKeywords } from '@/lib/placeUtils';
 import { useCategoryOrder } from './use-category-order';
-import { calculateSimilarity } from '@/lib/jeju/weightCalculator';
 import { useRegionSelection } from './use-region-selection';
 import { Place } from '@/types/supabase';
+import { fetchPlaceData } from '@/services/placeService';
 
 export const useCategoryResults = (category: string, keywords: string[] = []) => {
   const [places, setPlaces] = useState<Place[]>([]);
@@ -13,7 +12,7 @@ export const useCategoryResults = (category: string, keywords: string[] = []) =>
   const [sortOrder, setSortOrder] = useState<'recommended' | 'rating' | 'reviews'>('recommended');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { getRecommendedWeight } = useCategoryOrder();
+  const { categoryOrder } = useCategoryOrder();
   const { selectedRegions } = useRegionSelection();
 
   useEffect(() => {
@@ -23,18 +22,29 @@ export const useCategoryResults = (category: string, keywords: string[] = []) =>
       try {
         setLoading(true);
         setError(null);
-        
-        const fetchedPlaces = await fetchPlaces(category);
+
+        // Use the placeService to fetch data
+        const result = await fetchPlaceData(category, selectedRegions);
+        const fetchedPlaces = result.places?.map(place => ({
+          id: place.ID || place.id || '',
+          name: place.Place_Name || place.place_name || '',
+          address: place.Road_Address || place.road_address || '',
+          category: category,
+          categoryDetail: '',
+          x: parseFloat(place.Longitude || place.longitude || '0'),
+          y: parseFloat(place.Latitude || place.latitude || '0'),
+          rating: parseFloat(place.rating || '0'),
+          reviewCount: parseInt(place.visitor_review_count || '0', 10),
+          naverLink: '',
+          instaLink: '',
+          weight: 0,
+          operatingHours: ''
+        })) || [];
         
         if (!isMounted) return;
         
-        let processedPlaces = fetchedPlaces.map(place => {
-          const categoryWeight = getRecommendedWeight(category);
-          if (place.weight) {
-            place.weight = place.weight * categoryWeight;
-          }
-          return place;
-        });
+        // Process places
+        let processedPlaces = fetchedPlaces;
         
         // 지역 필터링 적용
         if (selectedRegions.length > 0) {
@@ -49,10 +59,14 @@ export const useCategoryResults = (category: string, keywords: string[] = []) =>
         // 키워드 기반 필터링 및 가중치 계산
         if (keywords.length > 0) {
           processedPlaces = processedPlaces.map(place => {
-            const weightResult = calculateSimilarity(place, keywords);
+            // Simplified weight calculation for now
+            const keywordMatch = keywords.some(
+              keyword => place.name.toLowerCase().includes(keyword.toLowerCase()) || 
+                        place.address.toLowerCase().includes(keyword.toLowerCase())
+            );
             return {
               ...place,
-              weight: weightResult
+              weight: keywordMatch ? 1 : 0
             };
           });
         }
@@ -80,7 +94,23 @@ export const useCategoryResults = (category: string, keywords: string[] = []) =>
     return () => {
       isMounted = false;
     };
-  }, [category, keywords, selectedRegions, getRecommendedWeight]);
+  }, [category, keywords, selectedRegions]);
+  
+  // Helper function to sort places
+  const sortPlaces = (places: Place[], sortType: 'recommended' | 'rating' | 'reviews'): Place[] => {
+    return [...places].sort((a, b) => {
+      switch (sortType) {
+        case 'recommended':
+          return (b.weight || 0) - (a.weight || 0);
+        case 'rating':
+          return (b.rating || 0) - (a.rating || 0);
+        case 'reviews':
+          return (b.reviewCount || 0) - (a.reviewCount || 0);
+        default:
+          return 0;
+      }
+    });
+  };
   
   useEffect(() => {
     // 필터링된 결과 정렬

@@ -55,14 +55,14 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
         calculateRoutes(selectedItinerary.places);
       } else {
         console.warn(`No itinerary found for day ${selectedDay}`);
-        addMarkers(places, { useRecommendedStyle: true });
+        addMarkers(places, { highlight: false });
       }
     } else if (selectedPlaces && selectedPlaces.length > 0) {
       // 명시적으로 선택된 장소들을 표시
-      addMarkers(selectedPlaces, { useRecommendedStyle: true });
+      addMarkers(selectedPlaces, { highlight: true });
     } else {
       // 기본 상태: 모든 장소 표시
-      addMarkers(places, { useRecommendedStyle: true });
+      addMarkers(places, { highlight: false });
     }
   };
 
