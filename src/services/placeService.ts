@@ -1,171 +1,92 @@
 import { supabase } from '@/lib/supabaseClient';
 import { TravelCategory } from '@/types/travel';
 import { categoryTableMap, categoryRatingMap } from '@/lib/jeju/dbMapping';
-import { calculateWeights } from '@/lib/jeju/weightCalculator';
+
+/**
+ * 필드명을 소문자 기준으로 찾아주는 보조 함수
+ */
+function normalizeField(obj: any, field: string): any {
+  if (obj[field] !== undefined) return obj[field];
+
+  const lowerField = field.toLowerCase();
+  for (const key in obj) {
+    if (key.toLowerCase() === lowerField) {
+      return obj[key];
+    }
+  }
+
+  return undefined;
+}
 
 export async function fetchPlaceData(
   category: TravelCategory,
   locations: string[]
 ) {
-  // 테이블 참조 정보 가져오기
-  const infoTable = categoryTableMap[category];
-  const ratingTable = categoryRatingMap[category];
-  const linkTable = `${category}_link`;
-  const categoryTable = `${category}_categories`;
-  const reviewTable = `${category}_review`;
-  
-  if (!infoTable || !ratingTable) {
+  if (!categoryTableMap[category] || !categoryRatingMap[category]) {
     console.error(`Invalid category: ${category}`);
     return { places: [], ratings: [], categories: [], links: [], reviews: [] };
   }
-  
-  console.log(`Fetching data for category: ${category}, tables:`, { 
-    infoTable, 
-    ratingTable,
-    linkTable,
-    categoryTable,
-    reviewTable
-  });
-  
+
+  const infoTable = categoryTableMap[category];
+  const ratingTable = categoryRatingMap[category];
+  const reviewTable = `${category}_review`;
+
   try {
-    // 장소 정보 조회 (위치 필터 적용)
+    // 👉 장소 기본 정보 가져오기
     let query = supabase.from(infoTable).select('*');
-    
     if (locations.length > 0) {
       query = query.in('location', locations);
     }
 
     const { data: places, error: placesError } = await query;
-    
     if (placesError) {
-      console.error(`Places fetch error for table ${infoTable}:`, placesError);
+      console.error('Places fetch error:', placesError);
       return { places: [], ratings: [], categories: [], links: [], reviews: [] };
     }
-    
     if (!places || places.length === 0) {
-      console.log(`No places found in table ${infoTable} matching the criteria`);
+      console.log('No places found matching the criteria');
       return { places: [], ratings: [], categories: [], links: [], reviews: [] };
     }
 
-    console.log(`Found ${places.length} places in ${infoTable}`);
-    console.log('Sample place data:', places[0]);
-    
-    // 추가 데이터 병렬 조회 - 에러 핸들링 추가
-    const fetchTable = async (tableName: string) => {
-      try {
-        console.log(`Fetching data from ${tableName}...`);
-        const { data, error } = await supabase.from(tableName).select('*');
-        
-        if (error) {
-          console.error(`Error fetching from ${tableName}:`, error);
-          return [];
-        }
-        
-        console.log(`Successfully fetched ${data?.length || 0} rows from ${tableName}`);
-        if (data && data.length > 0) {
-          console.log(`Sample data from ${tableName}:`, data[0]);
-        }
-        
-        return data || [];
-      } catch (err) {
-        console.error(`Exception when fetching ${tableName}:`, err);
-        return [];
-      }
-    };
-    
-    const [ratings, categories, links, reviews] = await Promise.all([
-      fetchTable(ratingTable),
-      fetchTable(categoryTable),
-      fetchTable(linkTable),
-      fetchTable(reviewTable)
+    // 👉 여기서 주의: 원본 숫자형 id만 추출
+    const placeIds = places
+      .map(p => normalizeField(p, 'id')) // id 필드를 정확히 찾아서
+      .filter(id => typeof id === 'number' || !isNaN(Number(id)))
+      .map(id => Number(id)); // 숫자로 확실히 변환
+
+    // 👉 추가 데이터 병렬로 가져오기
+    const [ratingsResult, categoriesResult, linksResult, reviewsResult] = await Promise.all([
+      supabase.from(ratingTable).select('*').in('id', placeIds),
+      supabase.from(`${category}_categories`).select('*').in('id', placeIds),
+      supabase.from(`${category}_link`).select('*').in('id', placeIds),
+      supabase.from(reviewTable).select('*').in('id', placeIds),
     ]);
-    
-    return { places, ratings, categories, links, reviews };
+
+    // 👉 결과 정리
+    return {
+      places: places.map((info: any) => ({
+        dbId: normalizeField(info, 'id'), // DB 매칭용 id (숫자)
+        id: `${category}-${normalizeField(info, 'id')}`, // 표시용 id (문자열)
+        name: normalizeField(info, 'place_name') || '',
+        address: normalizeField(info, 'road_address') || normalizeField(info, 'lot_address') || '',
+        category,
+        categoryDetail: '', // 이후 매칭해서 채울 수 있음
+        x: parseFloat(normalizeField(info, 'longitude') || '0'),
+        y: parseFloat(normalizeField(info, 'latitude') || '0'),
+        naverLink: '',
+        instaLink: '',
+        rating: 0,
+        reviewCount: 0,
+        operatingHours: '',
+        weight: 0,
+      })),
+      ratings: ratingsResult.data || [],
+      categories: categoriesResult.data || [],
+      links: linksResult.data || [],
+      reviews: reviewsResult.data || [],
+    };
   } catch (error) {
     console.error('Error in fetchPlaceData:', error);
     return { places: [], ratings: [], categories: [], links: [], reviews: [] };
   }
-}
-
-// 장소 정보와 관련 데이터를 정규화하여 가공하는 함수
-export function processPlaceData(
-  place: any, 
-  ratings: any[], 
-  categories: any[], 
-  links: any[], 
-  reviews: any[]
-): any {
-  // 장소의 ID를 숫자로 확보
-  const placeId = place.id;
-  const placeName = place.place_name || place.Place_Name || '';
-  
-  console.log(`Processing place: ${placeName} (ID: ${placeId})`);
-  
-  // ID를 숫자로 사용하여 정확한 매칭
-  // 평점 데이터 찾기 - id 필드로만 찾기
-  const rating = ratings.find(r => r.id === placeId);
-  
-  // 리뷰 데이터 찾기
-  const review = reviews.find(r => r.id === placeId);
-  
-  // 카테고리 데이터 찾기
-  const category = categories.find(c => c.id === placeId);
-  
-  // 링크 데이터 찾기
-  const link = links.find(l => l.id === placeId);
-  
-  console.log(`Data lookup results for ${placeName} (ID: ${placeId}):`, {
-    ratingFound: !!rating,
-    reviewFound: !!review,
-    categoryFound: !!category,
-    linkFound: !!link
-  });
-  
-  // 평점과 리뷰 수 추출
-  let ratingValue = 0;
-  let reviewCount = 0;
-  
-  if (rating) {
-    ratingValue = parseFloat(String(rating.rating || '0'));
-    reviewCount = parseInt(String(rating.visitor_review_count || '0'));
-    
-    console.log(`Rating data for ${placeName}: rating=${ratingValue}, reviews=${reviewCount}`);
-  }
-  
-  // visitor_norm 값 추출 (가중치 계산에 사용)
-  let reviewNorm = 1;
-  if (review && review.visitor_norm !== undefined) {
-    reviewNorm = parseFloat(String(review.visitor_norm || '1'));
-    console.log(`Review norm for ${placeName}: ${reviewNorm}`);
-  }
-  
-  // 가중치는 별도로 계산하지 않고 visitor_norm 값만 설정
-  // 키워드 기반 가중치는 weightCalculator.ts에서 처리
-  let weight = reviewNorm;
-  
-  // 카테고리 세부 정보 추출
-  const categoryDetail = category ? 
-    (category.categories_details || category.Categories_Details || category.categories || category.Categories || '') : '';
-  
-  // 링크 정보 추출
-  const naverLink = link ? (link.link || '') : '';
-  const instaLink = link ? (link.instagram || '') : '';
-  
-  // 결과 로깅
-  console.log(`Processed place: ${placeName}`, {
-    rating: ratingValue,
-    reviews: reviewCount,
-    weight,
-    categoryDetail: categoryDetail || '(없음)',
-    hasLinks: !!(naverLink || instaLink)
-  });
-  
-  return {
-    rating: ratingValue,
-    reviewCount: reviewCount,
-    categoryDetail,
-    naverLink,
-    instaLink,
-    weight: weight
-  };
 }
