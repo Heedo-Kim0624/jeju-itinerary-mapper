@@ -1,5 +1,6 @@
 import { Place } from '@/types/supabase';
-import { supabase } from '@/lib/supabaseClient';
+//import { supabase } from '@/lib/supabaseClient';
+import { supabaseDirect } from '@/lib/supabaseDirectClient'; // ✅
 import { normalizeField } from '@/lib/jeju/placeNormalizer';
 
 // 카테고리 타입 정의
