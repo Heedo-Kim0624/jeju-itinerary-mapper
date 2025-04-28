@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useCategorySelection } from '@/hooks/use-category-selection';
 import { useRegionSelection } from '@/hooks/use-region-selection';
@@ -124,6 +123,7 @@ const LeftPanel: React.FC = () => {
         onRemovePlace={handleRemovePlace}
         onViewOnMap={handleViewOnMap}
         allCategoriesSelected={allCategoriesSelected}
+        dates={dates}
       >
         <LeftPanelContent
           onDateSelect={setDates}

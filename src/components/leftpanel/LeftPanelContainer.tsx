@@ -5,6 +5,7 @@ import { Place } from '@/types/supabase';
 import PlaceCart from './PlaceCart';
 import ItineraryButton from './ItineraryButton';
 import LeftPanelContent from './LeftPanelContent';
+import { ScheduleGenerator } from './ScheduleGenerator';
 
 interface LeftPanelContainerProps {
   showItinerary: boolean;
@@ -14,6 +15,12 @@ interface LeftPanelContainerProps {
   onViewOnMap: (place: Place) => void;
   allCategoriesSelected: boolean;
   children: React.ReactNode;
+  dates: {
+    startDate: Date;
+    endDate: Date;
+    startTime: string;
+    endTime: string;
+  } | null;
 }
 
 const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
@@ -23,22 +30,29 @@ const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
   onRemovePlace,
   onViewOnMap,
   allCategoriesSelected,
-  children
+  children,
+  dates
 }) => {
   const handleCreateItinerary = () => {
-    toast.success("경로 생성 기능이 구현될 예정입니다.");
+    if (!dates) {
+      toast.error("여행 날짜와 시간을 먼저 선택해주세요.");
+      return;
+    }
+    if (selectedPlaces.length === 0) {
+      toast.error("장소를 먼저 선택해주세요.");
+      return;
+    }
     onSetShowItinerary(true);
   };
 
   if (showItinerary) {
     return (
-      <div className="absolute inset-0 z-10 bg-white p-4 overflow-y-auto">
-        <button
-          onClick={() => onSetShowItinerary(false)}
-          className="text-sm text-blue-600 hover:underline mb-4"
-        >
-          ← 뒤로
-        </button>
+      <div className="absolute inset-0 z-10 bg-white">
+        <ScheduleGenerator
+          selectedPlaces={selectedPlaces}
+          dates={dates}
+          onClose={() => onSetShowItinerary(false)}
+        />
       </div>
     );
   }
