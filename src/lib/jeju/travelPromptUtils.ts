@@ -16,7 +16,9 @@ export { fetchWeightedResults } from './promptParser';
 
 // Add the missing convertToPlace function
 export function convertToPlace(placeResult: any) {
-  return {
+  console.log('🔄 [Convert] Place 객체로 변환 중:', placeResult.place_name || placeResult.id || '이름 없음');
+  
+  const place = {
     id: placeResult.id || '',
     name: placeResult.place_name || '',
     address: placeResult.road_address || '',
@@ -30,4 +32,13 @@ export function convertToPlace(placeResult: any) {
     naverLink: placeResult.naverLink || '',
     instaLink: placeResult.instaLink || ''
   };
+  
+  console.log('✅ [Convert] 변환 완료:', { 
+    id: place.id, 
+    이름: place.name, 
+    주소: place.address.substring(0, 20) + (place.address.length > 20 ? '...' : ''),
+    평점: place.rating
+  });
+  
+  return place;
 }

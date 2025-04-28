@@ -1,141 +1,170 @@
-
-import { ParsedPrompt, TravelCategory, PlaceResult } from '@/types/travel';
-import { calculateWeights } from './weightCalculator';
-import { fetchPlaceData, normalizeField } from '@/services/placeService';
+import { TravelCategory, PlaceResult } from '@/types/travel';
+import { fetchPlaceData } from '@/services/placeService';
 import { calculatePlaceScore } from './placeScoring';
-import { Place } from '@/types/supabase';
+import { convertToPlaceResult } from './placeScoring';
+import { normalizeField } from './placeNormalizer';
+import { KeywordWeight } from './interfaces';
 
-export function parsePrompt(prompt: string): ParsedPrompt | null {
+// 프롬프트 파싱 함수
+export function parsePrompt(prompt: string) {
   try {
-    // Extract date range if present
-    const dateRangeMatch = prompt.match(/일정\[([\d\.]+),([\d:]+),([\d\.]+),([\d:]+)\]/);
-    const dateRange = dateRangeMatch ? {
-      startDate: dateRangeMatch[1],
-      startTime: dateRangeMatch[2],
-      endDate: dateRangeMatch[3],
-      endTime: dateRangeMatch[4]
-    } : undefined;
+    const regex = /일정\[(.*?)\](?:,\s*)?지역\[(.*?)\](?:,\s*)?([숙소|관광지|음식점|카페])\[(.*?)\]/;
+    const match = prompt.match(regex);
 
-    // Extract locations
-    const locationMatch = prompt.match(/지역\[([^\]]+)\]/);
-    const locations = locationMatch ? locationMatch[1].split(',').map(l => l.trim()) : [];
-
-    // Extract category and keywords
-    const categoryMatch = prompt.match(/(숙소|관광지|음식점|카페)\[([^\]]+)\]/);
-    if (!categoryMatch) {
-      console.error("No valid category found in prompt");
+    if (!match) {
+      console.warn("프롬프트 형식이 올바르지 않습니다.");
       return null;
     }
 
-    // Map Korean category names to English
-    const categoryMap: { [key: string]: TravelCategory } = {
-      '숙소': 'accommodation',
-      '관광지': 'landmark',
-      '음식점': 'restaurant',
-      '카페': 'cafe',
-    };
-    
-    const category = categoryMap[categoryMatch[1]];
-    
-    // Parse keywords
-    const keywordsPart = categoryMatch[2];
-    
-    // Extract ranked keywords (inside curly braces)
-    const rankedMatch = keywordsPart.match(/\{([^}]+)\}/);
-    const rankedKeywords = rankedMatch 
-      ? rankedMatch[1].split(',').map(k => k.trim())
-      : [];
+    const [, dateRangeStr, locationsStr, category, keywordsStr] = match;
 
-    // Extract unranked keywords (outside curly braces)
-    let unrankedKeywordsPart = keywordsPart.replace(/\{[^}]+\}/, '').trim();
-    if (unrankedKeywordsPart.startsWith(',')) {
-      unrankedKeywordsPart = unrankedKeywordsPart.substring(1);
+    // 1. 날짜 범위 파싱
+    const dateRangeMatch = dateRangeStr.match(/(\d{2}\.\d{2},\d{2}:\d{2}),(\d{2}\.\d{2},\d{2}:\d{2})/);
+    const dateRange = dateRangeMatch ? {
+      startDate: dateRangeMatch[1].replace(',', ' '),
+      endDate: dateRangeMatch[2].replace(',', ' ')
+    } : undefined;
+
+    // 2. 지역 파싱
+    const locations = locationsStr.split(',').map(s => s.trim());
+
+    // 3. 카테고리 확인 (정규 표현식에 의해 이미 확인됨)
+
+    // 4. 키워드 파싱
+    const keywordsMatch = keywordsStr.match(/\{(.*?)\}(?:,\s*)?(.*)/);
+    let rankedKeywords: string[] = [];
+    let unrankedKeywords: string[] = [];
+
+    if (keywordsMatch) {
+      rankedKeywords = keywordsMatch[1].split(',').map(s => s.trim());
+      unrankedKeywords = keywordsMatch[2]?.split(',').map(s => s.trim()).filter(s => s !== "") || [];
+    } else {
+      unrankedKeywords = keywordsStr.split(',').map(s => s.trim());
     }
-    
-    const unrankedKeywords = unrankedKeywordsPart
-      ? unrankedKeywordsPart.split(',').map(k => k.trim()).filter(Boolean)
-      : [];
 
-    return {
-      category,
-      locations,
-      rankedKeywords,
-      unrankedKeywords,
-      dateRange,
+    const parsedPrompt = {
+      category: category.trim() as TravelCategory,
+      locations: locations,
+      rankedKeywords: rankedKeywords,
+      unrankedKeywords: unrankedKeywords,
+      dateRange: dateRange
     };
+
+    console.log("프롬프트 파싱 결과:", parsedPrompt);
+    return parsedPrompt;
+
   } catch (error) {
-    console.error("Error parsing prompt:", error);
+    console.error("프롬프트 파싱 중 오류 발생:", error);
     return null;
   }
 }
 
+// 가중치 계산 함수
+function calculateWeights(keywords: string[]): KeywordWeight[] {
+  const weights: KeywordWeight[] = [];
+  const rankedKeywords: string[] = [];
+  const unrankedKeywords: string[] = [];
+
+  // 순위 키워드와 비순위 키워드 분리
+  keywords.forEach(keyword => {
+    if (keyword.includes('(')) {
+      rankedKeywords.push(keyword.replace(/[\(\)]/g, '')); // 괄호 제거
+    } else {
+      unrankedKeywords.push(keyword);
+    }
+  });
+
+  const totalRanked = rankedKeywords.length;
+  const totalUnranked = unrankedKeywords.length;
+
+  // 순위 키워드 가중치 계산
+  rankedKeywords.forEach((keyword, index) => {
+    const weight = (totalRanked - index) / totalRanked;
+    weights.push({ keyword, weight });
+  });
+
+  // 비순위 키워드 가중치 계산
+  const unrankedWeight = totalRanked > 0 ? (1 / (totalUnranked + 1)) : 1;
+  unrankedKeywords.forEach(keyword => {
+    weights.push({ keyword, weight: unrankedWeight });
+  });
+
+  return weights;
+}
+
+// 가중치를 적용한 장소 결과 가져오기
 export async function fetchWeightedResults(
-  category: string,
+  category: TravelCategory,
   locations: string[],
   keywords: string[]
 ): Promise<PlaceResult[]> {
+  console.log('📊 [Prompt] 가중치 검색 시작:', { 카테고리: category, 키워드수: keywords.length, 지역수: locations.length });
+  
   try {
-    console.log(`Fetching weighted results for category ${category} with keywords:`, keywords);
+    console.log(`🔍 [Prompt] ${category} 테이블 조회 중...`);
+    // 1. 해당 카테고리의 장소 데이터 가져오기
+    const { places, ratings, categories, links, reviews } = await fetchPlaceData(category, locations);
     
-    // 1. 주어진 카테고리와 위치에 맞는 장소 데이터 조회
-    const travelCategory = category as TravelCategory;
-    const result = await fetchPlaceData(travelCategory, locations);
-    
-    if (!result.places || result.places.length === 0) {
-      console.log('No places found for the given category and locations');
+    if (!places || places.length === 0) {
+      console.log('❌ [Prompt] 장소 데이터가 없습니다');
       return [];
     }
     
-    // 2. 키워드를 순위별 키워드와 일반 키워드로 나누기
-    // (실제로는 순위별 가중치를 계산하는 함수를 활용해야 함)
-    const rankedKeywords = keywords.slice(0, 3); // 예시: 상위 3개를 순위별 키워드로
-    const unrankedKeywords = keywords.slice(3);
+    console.log(`✅ [Prompt] ${places.length}개 장소 데이터 로드 완료`);
     
-    // 3. 키워드에 대한 가중치 계산
-    const keywordWeights = calculateWeights(rankedKeywords, unrankedKeywords);
+    // 2. 키워드 가중치 계산
+    console.log('🧮 [Prompt] 키워드 가중치 계산 중...');
+    const keywordWeights = calculateWeights(keywords);
+    console.log('📈 [Prompt] 계산된 키워드 가중치:', keywordWeights);
     
-    console.log('Calculated keyword weights:', keywordWeights);
+    // 리뷰 정규화 기준값 계산 (최대값 또는 평균값)
+    const reviewValues = reviews.map(r => r.visitor_review_count || 0);
+    const maxReviewCount = Math.max(...reviewValues, 1);  // 0으로 나누기 방지
     
-    // 4. 각 장소에 대한 점수 계산 및 결과 변환
-    const scoredResults = result.places.map(place => {
-      const id = normalizeField(place, 'id');
+    console.log(`📊 [Prompt] 리뷰 정규화 기준값: ${maxReviewCount}`);
+    
+    // 3. 각 장소에 대한 점수 계산 및 결과 변환
+    console.log('🔢 [Prompt] 장소 점수 계산 중...');
+    const scoredPlaces = places.map(place => {
+      // ID로 관련 데이터 찾기
+      const placeId = normalizeField(place, 'id');
+      const rating = ratings.find(r => normalizeField(r, 'id') === placeId);
+      const category = categories.find(c => normalizeField(c, 'id') === placeId);
+      const link = links.find(l => normalizeField(l, 'id') === placeId);
+      const review = reviews.find(r => normalizeField(r, 'id') === placeId);
       
-      // 리뷰 데이터에서 정규화된 방문자 수 가져오기
-      const reviewInfo = result.reviews.find((r: any) => normalizeField(r, 'id') === id);
-      const reviewNorm = reviewInfo ? parseFloat(String(normalizeField(reviewInfo, 'visitor_norm') || '1')) : 1;
+      // 리뷰 정규화 값 (리뷰 수 / 최대 리뷰 수)
+      const reviewNorm = review ? 
+        (review.visitor_norm || ((review.visitor_review_count || 0) / maxReviewCount)) : 0.1;
       
-      // 장소 점수 계산
+      // 키워드 기반 점수 계산
       const score = calculatePlaceScore(place, keywordWeights, reviewNorm);
       
-      // 장소 객체 생성
-      const placeResult: PlaceResult = {
-        id: String(id),
-        place_name: normalizeField(place, 'place_name') || '',
-        road_address: normalizeField(place, 'road_address') || normalizeField(place, 'lot_address') || '',
-        category: travelCategory,
-        x: parseFloat(String(normalizeField(place, 'longitude') || '0')),
-        y: parseFloat(String(normalizeField(place, 'latitude') || '0')),
-        rating: parseFloat(String(normalizeField(place, 'rating') || '0')),
-        visitor_review_count: parseInt(String(normalizeField(place, 'visitor_review_count') || '0')),
-        visitor_norm: score,
-        categoryDetail: '',
-        naverLink: '',
-        instaLink: ''
-      };
+      // 결과 객체 생성 (PlaceResult 형식)
+      const result = convertToPlaceResult(place, ratings, categories, links, reviews);
       
-      return placeResult;
+      // 계산된 점수 추가
+      return { ...result, score };
     });
     
-    // 5. 점수에 따라 결과 정렬
-    const sortedResults = scoredResults
-      .sort((a, b) => (b.visitor_norm || 0) - (a.visitor_norm || 0))
-      .filter(place => place.visitor_norm > 0);
+    // 4. 점수에 따라 정렬
+    const sortedResults = scoredPlaces
+      .filter(p => p.score > 0)  // 점수가 0보다 큰 결과만 포함
+      .sort((a, b) => b.score - a.score);  // 높은 점수 순으로 정렬
     
-    console.log(`Found ${sortedResults.length} weighted results`);
+    console.log(`✅ [Prompt] 점수 계산 완료: ${sortedResults.length}개 관련 장소 찾음`);
+    
+    if (sortedResults.length > 0) {
+      console.log('🥇 [Prompt] 최고 점수 장소:', { 
+        이름: sortedResults[0].place_name,
+        점수: sortedResults[0].score,
+        평점: sortedResults[0].rating
+      });
+    }
     
     return sortedResults;
   } catch (error) {
-    console.error("Error fetching weighted results:", error);
+    console.error('❌ [Prompt] 가중치 검색 오류:', error);
     return [];
   }
 }
