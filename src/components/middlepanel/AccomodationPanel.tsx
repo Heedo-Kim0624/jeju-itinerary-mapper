@@ -116,6 +116,6 @@ const AccomodationPanel: React.FC<{
       }
     />
   );
-};
+}; 
 
 export default AccomodationPanel;
