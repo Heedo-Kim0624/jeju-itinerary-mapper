@@ -63,7 +63,8 @@ export async function fetchPlaceDetails(category: CategoryType, id: number): Pro
     const review = reviewResult.data;
     const link = linkResult.data;
     const categories = categoryResult.data;
-
+    console.log('🧩 [fetchPlaceDetails] linkResult.data:', link);
+    console.log('🧩 [fetchPlaceDetails] normalizeField(link, ["link"]):', normalizeField(link, ['link']));
     console.log(`✅ [fetchPlaceDetails] 데이터 조회 완료:`, {
       정보: info ? '있음' : '없음',
       평점: rating ? '있음' : '없음',
