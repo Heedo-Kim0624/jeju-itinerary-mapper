@@ -1,4 +1,3 @@
-
 import { supabase } from '@/lib/supabaseClient';
 import { TravelCategory } from '@/types/travel';
 import { categoryTableMap, categoryRatingMap } from '@/lib/jeju/dbMapping';
@@ -95,26 +94,24 @@ export function processPlaceData(
   links: any[], 
   reviews: any[]
 ): any {
-  // 일관되게 "id" 필드만 사용하도록 수정
+  // 장소의 ID를 숫자로 확보
   const placeId = place.id;
   const placeName = place.place_name || place.Place_Name || '';
   
   console.log(`Processing place: ${placeName} (ID: ${placeId})`);
   
-  // ID 필드가 숫자일 경우 문자열로 변환하여 비교
-  const placeIdStr = String(placeId);
-  
+  // ID를 숫자로 사용하여 정확한 매칭
   // 평점 데이터 찾기 - id 필드로만 찾기
-  const rating = ratings.find(r => String(r.id) === placeIdStr);
+  const rating = ratings.find(r => r.id === placeId);
   
   // 리뷰 데이터 찾기
-  const review = reviews.find(r => String(r.id) === placeIdStr);
+  const review = reviews.find(r => r.id === placeId);
   
   // 카테고리 데이터 찾기
-  const category = categories.find(c => String(c.id) === placeIdStr);
+  const category = categories.find(c => c.id === placeId);
   
   // 링크 데이터 찾기
-  const link = links.find(l => String(l.id) === placeIdStr);
+  const link = links.find(l => l.id === placeId);
   
   console.log(`Data lookup results for ${placeName} (ID: ${placeId}):`, {
     ratingFound: !!rating,
