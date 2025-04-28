@@ -20,6 +20,11 @@ export async function fetchPlaceData(
   category: TravelCategory,
   locations: string[]
 ) {
+  // 카테고리 철자 수정
+  if (category === 'accomodation') {
+    category = 'accommodation' as TravelCategory;
+  }
+  
   const infoTable = categoryTableMap[category];
   const ratingTable = categoryRatingMap[category];
   const reviewTable = `${category}_review`;

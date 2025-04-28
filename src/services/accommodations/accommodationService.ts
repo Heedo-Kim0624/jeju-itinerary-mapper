@@ -5,11 +5,11 @@ import { fetchCategoryData } from "../utils/supabaseUtils";
 export async function fetchAccommodations(): Promise<Place[]> {
   try {
     const { places, links, categories, ratings, reviews } = await fetchCategoryData(
-      "accomodation_information",
-      "accomodation_link",
-      "accomodation_categories",
-      "accomodation_rating",
-      "accomodation_review"
+      "accommodation_information",  // 오타 수정: accomodation → accommodation
+      "accommodation_link",         // 오타 수정: accomodation → accommodation
+      "accommodation_categories",   // 오타 수정: accomodation → accommodation
+      "accommodation_rating",       // 오타 수정: accomodation → accommodation
+      "accommodation_review"        // 오타 수정: accomodation → accommodation
     );
 
     return places.map((info: any) => {
@@ -55,8 +55,8 @@ export async function fetchAccommodations(): Promise<Place[]> {
         categoryDetail,
         x: info.longitude || 0,
         y: info.latitude || 0,
-        naverLink: link?.link || "",
-        instaLink: link?.instagram || "",
+        naverLink,
+        instaLink,
         rating,
         reviewCount,
         operatingHours: "",

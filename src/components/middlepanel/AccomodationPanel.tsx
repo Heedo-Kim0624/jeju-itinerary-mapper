@@ -22,7 +22,8 @@ const defaultKeywords: KeywordOption[] = [
   { eng: 'easy_parking', kr: '주차하기 편해요' },
 ];
 
-const AccomodationPanel: React.FC<{
+// 컴포넌트 이름을 AccommodationPanel로 수정 (철자 통일)
+const AccommodationPanel: React.FC<{
   selectedKeywords: string[];
   onToggleKeyword: (keyword: string) => void;
   directInputValue: string;
@@ -118,4 +119,4 @@ const AccomodationPanel: React.FC<{
   );
 }; 
 
-export default AccomodationPanel;
+export default AccommodationPanel;
