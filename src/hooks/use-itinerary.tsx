@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Place } from '@/types/supabase';
 
@@ -30,10 +31,10 @@ export const useItinerary = () => {
     
     const placesByCategory: Record<string, PlaceWithUsedFlag[]> = {};
     places.forEach(place => {
-      if (!placesByCategory[place.category]) {
-        placesByCategory[place.category] = [];
+      if (!placesByCategory[place.category || '']) {
+        placesByCategory[place.category || ''] = [];
       }
-      placesByCategory[place.category].push({ ...place, usedInItinerary: false });
+      placesByCategory[place.category || ''].push({ ...place, usedInItinerary: false });
     });
     
     const itinerary: ItineraryDay[] = [];
