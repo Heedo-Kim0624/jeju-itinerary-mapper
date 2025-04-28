@@ -1,12 +1,10 @@
-
 import React from 'react';
 import { toast } from 'sonner';
 import { Place } from '@/types/supabase';
 import PlaceCart from './PlaceCart';
 import ItineraryButton from './ItineraryButton';
-import LeftPanelContent from './LeftPanelContent';
-import { ScheduleGenerator } from './ScheduleGenerator';
-import { useItinerary } from '@/hooks/use-itinerary';
+import { useScheduleGenerator } from '@/hooks/use-schedule-generator';
+import ScheduleViewer from './ScheduleViewer';
 
 interface LeftPanelContainerProps {
   showItinerary: boolean;
@@ -35,11 +33,13 @@ const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
   dates
 }) => {
   const {
-    setItinerary,
-    setSelectedItineraryDay,
-    handleSelectItineraryDay,
-    generateItinerary
-  } = useItinerary();
+    schedule,
+    loading,
+    error,
+    selectedDay,
+    setSelectedDay,
+    generateSchedule
+  } = useScheduleGenerator();
 
   const handleCreateItinerary = () => {
     if (!dates) {
@@ -51,31 +51,32 @@ const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
       return;
     }
 
-    // 일정 생성 및 상태 업데이트
-    if (dates) {
-      generateItinerary(
-        selectedPlaces,
-        dates.startDate,
-        dates.endDate,
-        dates.startTime,
-        dates.endTime
-      );
-    }
-    
+    const payload = {
+      selected_places: selectedPlaces.map(place => ({
+        id: parseInt(place.id.replace(/[^0-9]/g, '')),
+        name: place.name
+      })),
+      candidate_places: [], // You'll need to implement this based on your requirements
+      start_datetime: `${dates.startDate.toISOString().split('T')[0]}T${dates.startTime}:00`,
+      end_datetime: `${dates.endDate.toISOString().split('T')[0]}T${dates.endTime}:00`
+    };
+
+    generateSchedule(payload);
     onSetShowItinerary(true);
   };
 
   const handleCloseItinerary = () => {
     onSetShowItinerary(false);
-    setSelectedItineraryDay(null);
+    setSelectedDay(null);
   };
 
   if (showItinerary) {
     return (
       <div className="absolute inset-0 z-10 bg-white">
-        <ScheduleGenerator
-          selectedPlaces={selectedPlaces}
-          dates={dates}
+        <ScheduleViewer
+          schedule={schedule}
+          selectedDay={selectedDay}
+          onDaySelect={setSelectedDay}
           onClose={handleCloseItinerary}
         />
       </div>
