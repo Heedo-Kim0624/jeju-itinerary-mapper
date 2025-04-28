@@ -4,11 +4,12 @@ import { fetchCategoryData } from "../utils/supabaseUtils";
 
 export async function fetchLandmarks(): Promise<Place[]> {
   try {
-    const { places, links, categories, ratings } = await fetchCategoryData(
+    const { places, links, categories, ratings, reviews } = await fetchCategoryData(
       "landmark_information",
       "landmark_link",
       "landmark_categories",
-      "landmark_rating"
+      "landmark_rating",
+      "landmark_review"
     );
 
     return places.map((info: any) => {
@@ -25,9 +26,26 @@ export async function fetchLandmarks(): Promise<Place[]> {
         }
       }
 
+      // Calculate weight based on review data
+      let weight = 0;
+      if (reviews) {
+        const reviewInfo = reviews.find((r: any) => r.id === info.id || r.id === info.id);
+        if (reviewInfo && reviewInfo.visitor_norm) {
+          // Basic weight calculation based on normalized visitor count
+          weight = reviewInfo.visitor_norm;
+          
+          // Log for debugging
+          console.log(`Landmark ${info.Place_Name || info.place_name} weight: ${weight}`);
+        }
+      }
+
       const categoryDetail = category ? 
         (category.categories_details !== undefined ? 
           category.categories_details : "") : "";
+
+      // Format and normalize links
+      const naverLink = link?.link || "";
+      const instaLink = link?.instagram || "";
 
       return {
         id: `landmark-${info.id}`,
@@ -37,11 +55,12 @@ export async function fetchLandmarks(): Promise<Place[]> {
         categoryDetail,
         x: info.longitude || 0,
         y: info.latitude || 0,
-        naverLink: link?.link || "",
-        instaLink: link?.instagram || "",
+        naverLink,
+        instaLink,
         rating,
         reviewCount,
         operatingHours: "",
+        weight, // Ensure weight is set
       };
     });
   } catch (error) {

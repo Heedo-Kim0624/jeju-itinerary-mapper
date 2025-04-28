@@ -1,140 +1,113 @@
 
-import { useCallback, useRef } from 'react';
+import { useCallback } from 'react';
 import { Place } from '@/types/supabase';
-import { getCategoryColor } from '@/utils/categoryColors';
-import { clearMarkers, clearInfoWindows, clearPolylines } from '@/utils/map/mapCleanup';
+
+type MarkerOptions = {
+  highlight?: boolean;
+  isItinerary?: boolean;
+  useRecommendedStyle?: boolean;
+};
 
 export const useMapMarkers = (map: any) => {
-  const markers = useRef<any[]>([]);
-  const infoWindows = useRef<any[]>([]);
-  const polylines = useRef<any[]>([]);
-
-  const createInfoWindowContent = useCallback((place: Place) => {
-    return `
-      <div style="padding: 5px; text-align: center;">
-        <h6 style="margin:0; font-weight: bold;">${place.name}</h6>
-        <small>${place.category}</small>
-      </div>
-    `;
-  }, []);
-
-  const clearMarkersAndUiElements = useCallback(() => {
-    markers.current = clearMarkers(markers.current);
-    infoWindows.current = clearInfoWindows(infoWindows.current);
-    polylines.current = clearPolylines(polylines.current);
-  }, []);
-
-  const addMarkers = useCallback((
-    placesToMark: Place[],
-    opts?: { highlight?: boolean; isItinerary?: boolean; useRecommendedStyle?: boolean }
-  ) => {
-    if (!map || !window.naver) return;
+  const addMarkers = useCallback((places: Place[], options: MarkerOptions = {}) => {
+    if (!map || !window.naver || !places.length) return () => {};
     
-    clearMarkersAndUiElements();
+    const markers: any[] = [];
+    const infoWindows: any[] = [];
     
-    const isItinerary = opts?.isItinerary || false;
-    const highlight = opts?.highlight || false;
-    const useRecommendedStyle = opts?.useRecommendedStyle || false;
-    
-    try {
-      const bounds = new window.naver.maps.LatLngBounds();
+    places.forEach((place) => {
+      if (!place.y || !place.x) return;
       
-      placesToMark.forEach((place, index) => {
-        if (typeof place.x !== 'number' || typeof place.y !== 'number') {
-          console.warn("Invalid coordinates for place:", place);
-          return;
-        }
-        
-        const position = new window.naver.maps.LatLng(place.y, place.x);
-        bounds.extend(position);
-        
-        let markerColor = '#1F1F1F';
-        
-        if (highlight) {
-          markerColor = '#FF0000';
-        } else if (useRecommendedStyle) {
-          markerColor = place.weight && place.weight > 0 ? '#FF0000' : '#1E88E5';
-        } else {
-          markerColor = getCategoryColor(place.category);
-        }
-        
-        let markerIconContent;
-        
-        if (useRecommendedStyle) {
-          markerIconContent = `
-            <div style="position: relative;">
-              <svg height="36" width="30" viewBox="0 0 24 36">
-                <path d="M12 0C5.383 0 0 5.383 0 12c0 6.617 12 24 12 24s12-17.383 12-24C24 5.383 18.617 0 12 0z" 
-                      fill="${markerColor}" />
-                <circle cx="12" cy="12" r="6" fill="#FFFFFF" />
-              </svg>
-              ${isItinerary ? `<div style="position: absolute; top: 6px; left: 0; width: 100%; text-align: center; color: #000; font-size: 12px; font-weight: bold;">${index + 1}</div>` : ''}
-            </div>
-          `;
-        } else {
-          markerIconContent = `
-            <div style="width: 24px; height: 24px; background-color: ${markerColor}; 
-                    border-radius: 50%; display: flex; justify-content: center; align-items: center;
-                    color: white; font-size: 12px; border: 2px solid white;">${isItinerary ? (index + 1) : ''}</div>
-          `;
-        }
-        
-        const marker = new window.naver.maps.Marker({
-          position: position,
-          map: map,
-          title: place.name,
-          icon: {
-            content: markerIconContent,
-            size: useRecommendedStyle 
-              ? new window.naver.maps.Size(30, 36)
-              : new window.naver.maps.Size(24, 24),
-            anchor: useRecommendedStyle 
-              ? new window.naver.maps.Point(15, 36)
-              : new window.naver.maps.Point(12, 12)
-          },
-          zIndex: isItinerary ? 2 : 1
-        });
-        
-        markers.current.push(marker);
-
-        const infoWindow = new window.naver.maps.InfoWindow({
-          content: createInfoWindowContent(place),
-          disableAnchor: true,
-          borderWidth: 0,
-          backgroundColor: "rgba(255,255,255,0.9)"
-        });
-
-        infoWindows.current.push(infoWindow);
-
-        window.naver.maps.Event.addListener(marker, 'click', () => {
-          infoWindows.current.forEach(iw => iw.close());
-          infoWindow.open(map, marker);
-        });
-      });
+      const position = new window.naver.maps.LatLng(place.y, place.x);
       
-      if (placesToMark.length > 0) {
-        map.fitBounds(bounds, {
-          top: 50,
-          right: 50,
-          bottom: 50,
-          left: 50
-        });
-        
-        const zoom = map.getZoom();
-        if (zoom > 13) {
-          map.setZoom(12);
+      let pinColor = '#FF6B6B'; // Default red
+
+      // Determine pin color based on category and options
+      if (options.highlight) {
+        pinColor = '#3366FF'; // Blue for highlighted
+      } else if (options.isItinerary) {
+        pinColor = '#22c55e'; // Green for itinerary
+      } else if (options.useRecommendedStyle) {
+        pinColor = '#FF9500'; // Orange for recommended
+      } else {
+        // Default colors by category
+        switch (place.category) {
+          case 'restaurant':
+            pinColor = '#FF6B6B'; // Red for restaurants
+            break;
+          case 'cafe':
+            pinColor = '#8B5CF6'; // Purple for cafes
+            break;
+          case 'accommodation':
+            pinColor = '#EC4899'; // Pink for accommodations
+            break;
+          case 'attraction':
+            pinColor = '#10B981'; // Emerald for attractions
+            break;
         }
       }
-    } catch (error) {
-      console.error("Error adding markers:", error);
-    }
-  }, [map, clearMarkersAndUiElements, createInfoWindowContent]);
-
-  return {
-    addMarkers,
-    clearMarkersAndUiElements,
-    markers,
-    infoWindows,
-    polylines
-  };
+      
+      const marker = new window.naver.maps.Marker({
+        position,
+        map,
+        icon: {
+          content: `
+            <div style="cursor:pointer;width:22px;height:22px;line-height:22px;
+                      text-align:center;font-size:12px;font-weight:bold;
+                      background-color:${pinColor};color:white;
+                      border-radius:50%;border:2px solid white;
+                      box-shadow:0 2px 6px rgba(0,0,0,0.3);">
+              ${place.isSelected ? '✓' : ''}
+            </div>
+          `,
+          anchor: new window.naver.maps.Point(11, 11)
+        },
+        zIndex: options.highlight ? 100 : 10,
+        title: place.name
+      });
+      
+      // Create and configure info window
+      const infoWindow = new window.naver.maps.InfoWindow({
+        content: `
+          <div style="padding:10px;max-width:200px;font-size:12px;">
+            <b>${place.name}</b>
+            <p style="margin:4px 0;font-size:11px;">${place.address}</p>
+            ${place.rating ? `<p style="margin:2px 0;font-size:11px;">⭐ ${place.rating.toFixed(1)}${place.reviewCount ? ` (${place.reviewCount})` : ''}</p>` : ''}
+          </div>
+        `,
+        borderColor: pinColor,
+        borderWidth: 2,
+        disableAnchor: true,
+        pixelOffset: new window.naver.maps.Point(0, -10)
+      });
+      
+      // Add event listeners to the marker
+      window.naver.maps.Event.addListener(marker, 'click', () => {
+        if (infoWindow.getMap()) {
+          infoWindow.close();
+        } else {
+          infoWindow.open(map, marker);
+        }
+      });
+      
+      markers.push(marker);
+      infoWindows.push(infoWindow);
+    });
+    
+    // Return a cleanup function
+    return () => {
+      markers.forEach(marker => marker.setMap(null));
+      infoWindows.forEach(iw => iw.close());
+    };
+  }, [map]);
+  
+  const clearMarkersAndUiElements = useCallback(() => {
+    if (!map) return;
+    return () => {
+      // This function intentionally left empty
+      // The actual cleanup happens when returned function from addMarkers is called
+    };
+  }, [map]);
+  
+  return { addMarkers, clearMarkersAndUiElements };
 };

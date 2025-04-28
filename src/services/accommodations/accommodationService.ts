@@ -12,138 +12,59 @@ export async function fetchAccommodations(): Promise<Place[]> {
       "accomodation_review"
     );
 
-    console.log("원본 숙소 데이터:", places.length);
-    console.log("원본 링크 데이터:", links?.length);
-    console.log("원본 리뷰 데이터:", reviews?.length);
-
-    // ID 필드명 확인을 위한 로깅
-    if (places.length > 0) {
-      console.log("샘플 숙소 데이터 필드:", Object.keys(places[0]));
-    }
-    if (links && links.length > 0) {
-      console.log("샘플 링크 데이터 필드:", Object.keys(links[0]));
-    }
-    if (reviews && reviews.length > 0) {
-      console.log("샘플 리뷰 데이터 필드:", Object.keys(reviews[0]));
-      console.log("샘플 리뷰 데이터 visitor_norm 값:", reviews[0].visitor_norm || reviews[0].Visitor_Norm);
-    }
-
     return places.map((info: any) => {
-      // ID 필드 처리 - 대소문자 구분 없이 찾기
-      const placeId = info.id || info.ID || info.Id;
+      const link = links?.find((link: any) => link.id === info.id);
+      const category = categories?.find((category: any) => category.id === info.id);
       
-      // 링크 데이터 처리 - 디버깅을 위한 로그 추가
-      let linkData = null;
-      if (links && links.length > 0) {
-        linkData = links.find((link: any) => {
-          const linkId = link.id || link.ID || link.Id;
-          return String(linkId) === String(placeId);
-        });
-        
-        if (!linkData && placeId) {
-          console.log(`숙소 ID ${placeId}에 대한 링크 데이터를 찾지 못했습니다.`);
-        } else if (linkData) {
-          console.log(`숙소 ID ${placeId}의 링크 데이터:`, linkData);
-        }
-      }
-      
-      // 카테고리 처리
-      const category = categories?.find((category: any) => {
-        const categoryId = category.id || category.ID || category.Id;
-        return String(categoryId) === String(placeId);
-      });
-      
-      // 평점 및 리뷰 수 처리
       let rating = null;
       let reviewCount = null;
       if (ratings) {
-        const ratingInfo = ratings.find((r: any) => {
-          const ratingId = r.id || r.ID || r.Id;
-          return String(ratingId) === String(placeId);
-        });
+        const ratingInfo = ratings.find((r: any) => r.id === info.id);
         if (ratingInfo) {
           rating = ratingInfo.rating;
           reviewCount = ratingInfo.visitor_review_count;
         }
       }
 
-      // 가중치(추천 점수) 계산
+      // Calculate weight based on review data
       let weight = 0;
       if (reviews) {
-        const reviewInfo = reviews.find((r: any) => {
-          const reviewId = r.id || r.ID || r.Id;
-          return String(reviewId) === String(placeId);
-        });
-        
-        if (reviewInfo) {
-          // visitor_norm 필드가 존재하면 해당 값을 가중치로 사용
-          // 대소문자 구분 없이 찾기
-          if (reviewInfo.visitor_norm !== undefined) {
-            weight = parseFloat(reviewInfo.visitor_norm);
-          } else if (reviewInfo.Visitor_Norm !== undefined) {
-            weight = parseFloat(reviewInfo.Visitor_Norm);
-          }
+        const reviewInfo = reviews.find((r: any) => r.id === info.id || r.id === info.id);
+        if (reviewInfo && reviewInfo.visitor_norm) {
+          // Basic weight calculation based on normalized visitor count
+          weight = reviewInfo.visitor_norm;
           
-          // 가중치 로깅
-          console.log(`숙소 ${info.Place_Name || info.place_name} 가중치:`, weight);
-        } else {
-          console.log(`숙소 ID ${placeId}에 대한 리뷰 데이터를 찾지 못했습니다.`);
+          // Log for debugging
+          console.log(`Accommodation ${info.Place_Name || info.place_name} weight: ${weight}`);
         }
       }
 
-      // 카테고리 정보 추출
       const categoryDetail = category ? 
         (category.categories_details !== undefined ? 
           category.categories_details : "") : "";
 
-      // 링크 처리 - 로그 추가 및 대소문자 구분 없이 필드 접근
-      let naverLink = "";
-      let instaLink = "";
-      
-      if (linkData) {
-        // 대소문자 구분 없이 필드 찾기
-        for (const key in linkData) {
-          if (key.toLowerCase() === "link") {
-            naverLink = linkData[key] || "";
-          }
-          if (key.toLowerCase() === "instagram") {
-            instaLink = linkData[key] || "";
-          }
-        }
-        
-        console.log(`숙소 ${info.Place_Name || info.place_name} 링크:`, { 네이버: naverLink, 인스타그램: instaLink });
-      }
+      // Format and normalize links
+      const naverLink = link?.link || "";
+      const instaLink = link?.instagram || "";
 
-      // 장소 객체 생성 및 반환
-      const result = {
-        id: `accommodation-${placeId}`,
-        name: info.Place_Name || info.place_name || "",
-        address: info.Lot_Address || info.Road_Address || info.lot_address || info.road_address || "",
+      return {
+        id: `accommodation-${info.id}`,
+        name: info.Place_Name || "",
+        address: info.Lot_Address || info.Road_Address || "",
         category: "accommodation",
         categoryDetail,
-        x: info.longitude || info.Longitude || 0,
-        y: info.latitude || info.Latitude || 0,
-        naverLink,
-        instaLink,
+        x: info.longitude || 0,
+        y: info.latitude || 0,
+        naverLink: link?.link || "",
+        instaLink: link?.instagram || "",
         rating,
         reviewCount,
         operatingHours: "",
-        weight, // 가중치 설정
+        weight, // Ensure weight is set
       };
-
-      // 디버그를 위해 최종 결과 객체 로깅
-      console.log(`숙소 ${result.name} 최종 데이터:`, {
-        rating: result.rating,
-        reviewCount: result.reviewCount,
-        weight: result.weight,
-        naverLink: result.naverLink ? "있음" : "없음",
-        instaLink: result.instaLink ? "있음" : "없음"
-      });
-
-      return result;
     });
   } catch (error) {
-    console.error("숙소 데이터 로딩 오류:", error);
+    console.error("Error fetching accommodations:", error);
     return [];
   }
 }
