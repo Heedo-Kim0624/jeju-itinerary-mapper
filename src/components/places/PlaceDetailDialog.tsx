@@ -19,9 +19,9 @@ const PlaceDetailDialog: React.FC<PlaceDetailDialogProps> = ({ place, onClose })
   console.log("Place detail data:", {
     name: place.name,
     category: place.category,
-    weight: place.weight,
-    naverLink: place.naverLink,
-    instaLink: place.instaLink
+    rating: place.rating,
+    reviewCount: place.reviewCount,
+    weight: place.weight
   });
 
   return (

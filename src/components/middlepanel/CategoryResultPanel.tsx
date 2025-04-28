@@ -37,9 +37,12 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
     
     if (locations.length > 0 && recommendedPlaces.length > 0) {
       panTo(locations[0]);
-      addMarkers(recommendedPlaces, { highlight: true });
+      addMarkers(recommendedPlaces, { useRecommendedStyle: true });
+      
+      // Log successful places loaded
+      console.log(`장소 로딩 완료: 추천 장소 ${recommendedPlaces.length}개, 주변 장소 ${normalPlaces.length}개`);
     }
-  }, [recommendedPlaces, locations]);
+  }, [recommendedPlaces, normalPlaces, locations, clearMarkersAndUiElements, panTo, addMarkers]);
 
   const handleViewDetails = (place: Place) => {
     setSelectedPlace(place);
