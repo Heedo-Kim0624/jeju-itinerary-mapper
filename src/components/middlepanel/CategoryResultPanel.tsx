@@ -38,7 +38,8 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
     if (locations.length > 0 && recommendedPlaces.length > 0) {
       panTo(locations[0]);
       
-      addMarkers(recommendedPlaces.map(place => ({
+      // Convert recommendedPlaces to Place objects with required fields
+      const placesForMarkers: Place[] = recommendedPlaces.map(place => ({
         id: place.id,
         name: place.place_name,
         category: category,
@@ -49,8 +50,12 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
         reviewCount: place.visitor_review_count || 0,
         naverLink: place.naverLink ?? "",
         instaLink: place.instaLink ?? "",
-        weight: place.weight
-      })), { highlight: true });
+        weight: place.weight,
+        categoryDetail: "",
+        operatingHours: ""
+      }));
+      
+      addMarkers(placesForMarkers, { highlight: true });
     }
   }, [recommendedPlaces]);
 
@@ -64,7 +69,7 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
     }
   };
 
-  const recommendedPlacesConverted = recommendedPlaces.map(place => ({
+  const recommendedPlacesConverted: Place[] = recommendedPlaces.map(place => ({
     id: place.id,
     name: place.place_name,
     category: category,
@@ -75,10 +80,12 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
     reviewCount: place.visitor_review_count || 0,
     naverLink: place.naverLink ?? "",
     instaLink: place.instaLink ?? "",
-    weight: place.weight
+    weight: place.weight,
+    categoryDetail: "",
+    operatingHours: ""
   }));
 
-  const nearbyPlacesConverted = nearbyPlaces.map(place => ({
+  const nearbyPlacesConverted: Place[] = nearbyPlaces.map(place => ({
     id: place.id,
     name: place.place_name,
     category: category,
@@ -89,7 +96,9 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
     reviewCount: place.visitor_review_count || 0,
     naverLink: place.naverLink ?? "",
     instaLink: place.instaLink ?? "",
-    weight: place.weight
+    weight: place.weight,
+    categoryDetail: "",
+    operatingHours: ""
   }));
 
   return (

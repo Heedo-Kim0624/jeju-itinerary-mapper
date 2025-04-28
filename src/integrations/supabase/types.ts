@@ -1482,7 +1482,7 @@ export type Database = {
           Fri_19: string | null
           Fri_20: string | null
           Fri_21: string | null
-          ID: number
+          id: number
           Mon_09: string | null
           Mon_10: string | null
           Mon_11: string | null
@@ -1576,7 +1576,7 @@ export type Database = {
           Fri_19?: string | null
           Fri_20?: string | null
           Fri_21?: string | null
-          ID: number
+          id: number
           Mon_09?: string | null
           Mon_10?: string | null
           Mon_11?: string | null
@@ -1670,7 +1670,7 @@ export type Database = {
           Fri_19?: string | null
           Fri_20?: string | null
           Fri_21?: string | null
-          ID?: number
+          id?: number
           Mon_09?: string | null
           Mon_10?: string | null
           Mon_11?: string | null
@@ -1752,8 +1752,8 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "restaurant_openinghours_logical_ID_fkey"
-            columns: ["ID"]
+            foreignKeyName: "restaurant_openinghours_logical_id_fkey"
+            columns: ["id"]
             isOneToOne: true
             referencedRelation: "restaurant_information"
             referencedColumns: ["id"]

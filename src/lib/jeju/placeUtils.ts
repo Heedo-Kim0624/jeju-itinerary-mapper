@@ -25,14 +25,15 @@ export function convertToPlace(pr: PlaceResult): Place {
     name: pr.place_name,
     address: pr.road_address,
     category: pr.category,
-    categoryDetail: pr.categoryDetail,
+    categoryDetail: pr.categoryDetail || "",
     x: pr.x,
     y: pr.y,
     naverLink: pr.naverLink || '',
     instaLink: pr.instaLink || '',
     rating: pr.rating,
     reviewCount: pr.visitor_review_count,
-    weight: pr.weight,  // 가중치 추가
+    weight: pr.weight,
+    operatingHours: ""
   };
 }
 

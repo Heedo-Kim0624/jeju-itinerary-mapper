@@ -150,7 +150,8 @@ export const useCategoryResults = (
           panTo(locations[0]);
         }
 
-        const recommendedMarkers = sortedResults.slice(0, MAX_RECOMMENDATIONS).map(place => ({
+        // Create properly typed Place objects for markers
+        const recommendedMarkers: Place[] = sortedResults.slice(0, MAX_RECOMMENDATIONS).map(place => ({
           id: place.id,
           name: place.place_name,
           category: category,
@@ -161,7 +162,9 @@ export const useCategoryResults = (
           reviewCount: place.visitor_review_count || 0,
           naverLink: place.naverLink ?? "",
           instaLink: place.instaLink ?? "",
-          weight: place.weight // 지도 마커에도 가중치 포함
+          weight: place.weight,
+          categoryDetail: "",
+          operatingHours: "" 
         }));
         
         addMarkers(recommendedMarkers, { highlight: true });

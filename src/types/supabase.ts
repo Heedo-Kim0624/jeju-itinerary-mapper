@@ -13,6 +13,7 @@ export interface Place {
   naverLink?: string;
   instaLink?: string;
   weight?: number; // Added weight field
+  used?: boolean; // Added used field to track if a place is already used in an itinerary
 }
 
 export interface ItineraryDay {
