@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { Place } from '@/types/supabase';
 import { useItineraryCreator, ItineraryDay } from './use-itinerary-creator';
+import { toast } from 'sonner';
 
 export const useItinerary = () => {
   const [itinerary, setItinerary] = useState<ItineraryDay[] | null>(null);
@@ -20,19 +21,35 @@ export const useItinerary = () => {
     startTime: string,
     endTime: string
   ) => {
-    const generatedItinerary = createItinerary(
-      placesToUse,
-      startDate,
-      endDate,
-      startTime,
-      endTime
-    );
+    try {
+      if (placesToUse.length === 0) {
+        toast.error("선택된 장소가 없습니다.");
+        return null;
+      }
     
-    setItinerary(generatedItinerary);
-    setSelectedItineraryDay(1);
-    setShowItinerary(true);
-    
-    return generatedItinerary;
+      const generatedItinerary = createItinerary(
+        placesToUse,
+        startDate,
+        endDate,
+        startTime,
+        endTime
+      );
+      
+      if (generatedItinerary.length === 0) {
+        toast.error("일정을 생성할 수 없습니다. 더 많은 장소를 선택해주세요.");
+        return null;
+      }
+      
+      setItinerary(generatedItinerary);
+      setSelectedItineraryDay(1);
+      setShowItinerary(true);
+      
+      return generatedItinerary;
+    } catch (error) {
+      console.error("일정 생성 오류:", error);
+      toast.error("일정 생성 중 오류가 발생했습니다.");
+      return null;
+    }
   };
 
   return {

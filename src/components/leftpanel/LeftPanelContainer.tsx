@@ -6,6 +6,7 @@ import PlaceCart from './PlaceCart';
 import ItineraryButton from './ItineraryButton';
 import LeftPanelContent from './LeftPanelContent';
 import { ScheduleGenerator } from './ScheduleGenerator';
+import { useItinerary } from '@/hooks/use-itinerary';
 
 interface LeftPanelContainerProps {
   showItinerary: boolean;
@@ -33,6 +34,13 @@ const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
   children,
   dates
 }) => {
+  const {
+    setItinerary,
+    setSelectedItineraryDay,
+    handleSelectItineraryDay,
+    generateItinerary
+  } = useItinerary();
+
   const handleCreateItinerary = () => {
     if (!dates) {
       toast.error("여행 날짜와 시간을 먼저 선택해주세요.");
@@ -42,7 +50,24 @@ const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
       toast.error("장소를 먼저 선택해주세요.");
       return;
     }
+
+    // 일정 생성 및 상태 업데이트
+    if (dates) {
+      generateItinerary(
+        selectedPlaces,
+        dates.startDate,
+        dates.endDate,
+        dates.startTime,
+        dates.endTime
+      );
+    }
+    
     onSetShowItinerary(true);
+  };
+
+  const handleCloseItinerary = () => {
+    onSetShowItinerary(false);
+    setSelectedItineraryDay(null);
   };
 
   if (showItinerary) {
@@ -51,7 +76,7 @@ const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
         <ScheduleGenerator
           selectedPlaces={selectedPlaces}
           dates={dates}
-          onClose={() => onSetShowItinerary(false)}
+          onClose={handleCloseItinerary}
         />
       </div>
     );

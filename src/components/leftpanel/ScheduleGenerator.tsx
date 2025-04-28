@@ -1,9 +1,9 @@
 
-import React from 'react';
-import axios from 'axios';
-import { ScrollArea } from "@/components/ui/scroll-area";
+import React, { useState, useEffect } from 'react';
 import { Place } from '@/types/supabase';
 import { toast } from 'sonner';
+import { useItineraryCreator, ItineraryDay } from '@/hooks/use-itinerary-creator';
+import ItineraryPanel from './ItineraryPanel';
 
 interface ScheduleGeneratorProps {
   selectedPlaces: Place[];
@@ -16,107 +16,82 @@ interface ScheduleGeneratorProps {
   onClose: () => void;
 }
 
-interface ScheduleItem {
-  time_block: string;
-  place_type: string;
-  place_name: string;
-}
-
 export const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({
   selectedPlaces,
   dates,
   onClose
 }) => {
-  const [schedule, setSchedule] = React.useState<ScheduleItem[]>([]);
-  const [loading, setLoading] = React.useState(false);
+  const [itinerary, setItinerary] = useState<ItineraryDay[]>([]);
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const { createItinerary } = useItineraryCreator();
 
-  const preparePayload = () => {
+  useEffect(() => {
     if (!dates) {
-      toast.error("여행 날짜와 시간을 먼저 선택해주세요.");
-      return null;
+      toast.error("여행 날짜와 시간 정보가 없습니다.");
+      onClose();
+      return;
     }
 
-    // Split selected places into main selections and backup candidates
-    const selected = selectedPlaces.filter(place => place.isSelected);
-    const candidates = selectedPlaces.filter(place => place.isRecommended && !place.isSelected);
+    if (selectedPlaces.length === 0) {
+      toast.error("선택된 장소가 없습니다.");
+      onClose();
+      return;
+    }
 
-    return {
-      selected_places: selected.map(place => ({
-        id: Number(place.id),
-        name: place.name
-      })),
-      candidate_places: candidates.map(place => ({
-        id: Number(place.id),
-        name: place.name
-      })),
-      start_datetime: new Date(dates.startDate.setHours(
-        parseInt(dates.startTime.split(':')[0]),
-        parseInt(dates.startTime.split(':')[1])
-      )).toISOString(),
-      end_datetime: new Date(dates.endDate.setHours(
-        parseInt(dates.endTime.split(':')[0]),
-        parseInt(dates.endTime.split(':')[1])
-      )).toISOString()
-    };
-  };
+    generateSchedule();
+  }, []);
 
-  const generateSchedule = async () => {
-    const payload = preparePayload();
-    if (!payload) return;
-
-    setLoading(true);
+  const generateSchedule = () => {
+    if (!dates) return;
+    
     try {
-      const response = await axios.post(
-        "https://80bb-34-75-100-175.ngrok-free.app/generate_schedule",
-        payload
+      setLoading(true);
+      const generatedItinerary = createItinerary(
+        selectedPlaces,
+        dates.startDate,
+        dates.endDate,
+        dates.startTime,
+        dates.endTime
       );
-
-      setSchedule(response.data.schedule);
+      
+      setItinerary(generatedItinerary);
+      
+      // 첫 번째 일자 선택
+      if (generatedItinerary.length > 0) {
+        setSelectedDay(generatedItinerary[0].day);
+      }
+      
       toast.success("일정이 성공적으로 생성되었습니다!");
-    } catch (err) {
-      console.error(err);
-      toast.error("일정 생성에 실패했습니다.");
+    } catch (error) {
+      console.error("일정 생성 오류:", error);
+      toast.error("일정 생성 중 오류가 발생했습니다.");
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <div className="h-full flex flex-col">
-      <div className="flex items-center justify-between p-4 border-b">
-        <h2 className="text-lg font-semibold">일정 생성</h2>
-        <button
-          onClick={onClose}
-          className="text-sm text-blue-600 hover:underline"
-        >
-          ← 뒤로
-        </button>
+  const handleSelectDay = (day: number) => {
+    setSelectedDay(day);
+  };
+
+  if (loading) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center">
+        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
+        <p className="text-lg font-medium">일정을 생성하는 중...</p>
+        <p className="text-sm text-muted-foreground mt-2">잠시만 기다려주세요</p>
       </div>
+    );
+  }
 
-      <ScrollArea className="flex-1 p-4">
-        <button
-          onClick={generateSchedule}
-          disabled={loading}
-          className="w-full bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-md disabled:opacity-50"
-        >
-          {loading ? "생성 중..." : "일정 생성하기"}
-        </button>
-
-        {schedule.length > 0 && (
-          <div className="mt-8">
-            <h3 className="text-lg font-semibold mb-4">생성된 일정</h3>
-            <div className="space-y-4">
-              {schedule.map((item, idx) => (
-                <div key={idx} className="p-4 bg-muted rounded-lg">
-                  <div className="font-medium">{item.time_block}</div>
-                  <div className="text-sm text-muted-foreground">{item.place_type}</div>
-                  <div className="mt-1">{item.place_name}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </ScrollArea>
-    </div>
+  return (
+    <ItineraryPanel 
+      itinerary={itinerary} 
+      startDate={dates?.startDate || new Date()}
+      onSelectDay={handleSelectDay}
+      onClose={onClose}
+      selectedDay={selectedDay}
+    />
   );
-};
+}

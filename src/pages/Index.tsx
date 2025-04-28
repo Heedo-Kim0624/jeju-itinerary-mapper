@@ -3,7 +3,8 @@ import React, { useState } from 'react';
 import LeftPanel from '@/components/leftpanel/LeftPanel';
 import RightPanel from '@/components/rightpanel/RightPanel';
 import RegionSlidePanel from '@/components/middlepanel/RegionSlidePanel';
-import type { Place, ItineraryDay } from '@/types/supabase';
+import { useItinerary } from '@/hooks/use-itinerary';
+import { useSelectedPlaces } from '@/hooks/use-selected-places';
 
 const Index: React.FC = () => {
   const [showRegionPanel, setShowRegionPanel] = useState(false);
@@ -17,10 +18,12 @@ const Index: React.FC = () => {
     );
   };
 
-  const places: Place[] = []; // 실제 데이터를 여기에 연결해야 함
-  const selectedPlace: Place | null = null;
-  const itinerary: ItineraryDay[] | null = null;
-  const selectedDay: number | null = null;
+  const { selectedPlaces } = useSelectedPlaces();
+  
+  const {
+    itinerary,
+    selectedItineraryDay,
+  } = useItinerary();
 
   return (
     <div className="flex h-screen overflow-hidden bg-jeju-light-gray relative">
@@ -29,10 +32,10 @@ const Index: React.FC = () => {
 
       {/* 오른쪽 지도 패널 */}
       <RightPanel
-        places={places}
-        selectedPlace={selectedPlace}
+        places={selectedPlaces}
+        selectedPlace={null}
         itinerary={itinerary}
-        selectedDay={selectedDay}
+        selectedDay={selectedItineraryDay}
       />
 
       {/* 오른쪽에 붙는 지역 슬라이드 패널 */}
