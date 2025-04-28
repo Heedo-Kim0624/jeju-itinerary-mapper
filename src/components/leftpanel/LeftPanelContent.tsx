@@ -1,7 +1,6 @@
 
 import React from 'react';
 import PanelHeader from './PanelHeader';
-import CategoryOrderingStep from './CategoryOrderingStep';
 import CategoryNavigation from './CategoryNavigation';
 import CategoryPanels from './CategoryPanels';
 
@@ -14,15 +13,11 @@ interface LeftPanelContentProps {
   }) => void;
   onOpenRegionPanel: () => void;
   hasSelectedDates: boolean;
-  categoryOrder: string[];
   onCategoryClick: (category: string) => void;
-  onBackToRegionSelect: () => void;
-  onConfirmCategoryOrder: () => void;
   regionConfirmed: boolean;
   categoryStepIndex: number;
-  categorySelectionConfirmed: boolean;
   activeMiddlePanelCategory: string | null;
-  confirmedCategories: string[];  // Added this prop
+  confirmedCategories: string[];
   selectedKeywordsByCategory: Record<string, string[]>;
   toggleKeyword: (category: string, keyword: string) => void;
   directInputValues: {
@@ -49,29 +44,25 @@ interface LeftPanelContentProps {
     restaurant: () => void;
     cafe: () => void;
   };
-  isCategoryButtonEnabled: (category: string) => boolean;  // Added this prop
+  isCategoryButtonEnabled: (category: string) => boolean;
 }
 
 const LeftPanelContent: React.FC<LeftPanelContentProps> = ({
   onDateSelect,
   onOpenRegionPanel,
   hasSelectedDates,
-  categoryOrder,
   onCategoryClick,
-  onBackToRegionSelect,
-  onConfirmCategoryOrder,
   regionConfirmed,
   categoryStepIndex,
-  categorySelectionConfirmed,
   activeMiddlePanelCategory,
-  confirmedCategories,  // Added this prop
+  confirmedCategories,
   selectedKeywordsByCategory,
   toggleKeyword,
   directInputValues,
   onDirectInputChange,
   onConfirmCategory,
   handlePanelBack,
-  isCategoryButtonEnabled,  // Added this prop
+  isCategoryButtonEnabled,
 }) => {
   return (
     <div className="flex-1 overflow-y-auto p-4 pb-24 space-y-6">
@@ -81,22 +72,14 @@ const LeftPanelContent: React.FC<LeftPanelContentProps> = ({
         hasSelectedDates={hasSelectedDates}
       />
 
-      <CategoryOrderingStep
-        categoryOrder={categoryOrder}
-        onCategoryClick={onCategoryClick}
-        onBackToRegionSelect={onBackToRegionSelect}
-        onConfirmCategoryOrder={onConfirmCategoryOrder}
-        regionConfirmed={regionConfirmed}
-      />
-
       <CategoryNavigation
-        categoryOrder={categoryOrder}
+        categoryOrder={["숙소", "관광지", "음식점", "카페"]}
         currentCategoryIndex={categoryStepIndex}
         onCategoryClick={onCategoryClick}
-        categorySelectionConfirmed={categorySelectionConfirmed}
-        confirmedCategories={confirmedCategories}  // Added this prop
-        isCategoryButtonEnabled={isCategoryButtonEnabled}  // Added this prop
-        activeMiddlePanelCategory={activeMiddlePanelCategory}  // Added this prop
+        categorySelectionConfirmed={true}
+        confirmedCategories={confirmedCategories}
+        isCategoryButtonEnabled={() => true}
+        activeMiddlePanelCategory={activeMiddlePanelCategory}
       />
 
       <CategoryPanels

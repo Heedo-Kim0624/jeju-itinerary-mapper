@@ -20,19 +20,14 @@ const LeftPanel: React.FC = () => {
   } = useSelectedPlaces();
   
   const {
-    categoryOrder,
-    categorySelectionConfirmed,
-    setCategorySelectionConfirmed,
     stepIndex: categoryStepIndex,
     activeMiddlePanelCategory,
     confirmedCategories,
     selectedKeywordsByCategory,
-    handleCategoryClick,
     handleCategoryButtonClick,
     toggleKeyword,
     handlePanelBack,
     handleConfirmCategory,
-    isCategoryButtonEnabled
   } = useCategorySelection();
 
   const {
@@ -129,13 +124,9 @@ const LeftPanel: React.FC = () => {
           onDateSelect={setDates}
           onOpenRegionPanel={() => setRegionSlidePanelOpen(true)}
           hasSelectedDates={!!dates}
-          categoryOrder={categoryOrder}
-          onCategoryClick={categorySelectionConfirmed ? handleCategoryButtonClick : handleCategoryClick}
-          onBackToRegionSelect={() => setRegionConfirmed(false)}
-          onConfirmCategoryOrder={() => setCategorySelectionConfirmed(true)}
+          onCategoryClick={handleCategoryButtonClick}
           regionConfirmed={regionConfirmed}
           categoryStepIndex={categoryStepIndex}
-          categorySelectionConfirmed={categorySelectionConfirmed}
           activeMiddlePanelCategory={activeMiddlePanelCategory}
           confirmedCategories={confirmedCategories}
           selectedKeywordsByCategory={selectedKeywordsByCategory}
@@ -144,7 +135,7 @@ const LeftPanel: React.FC = () => {
           onDirectInputChange={onDirectInputChange}
           onConfirmCategory={handleConfirmByCategory}
           handlePanelBack={handlePanelBackByCategory}
-          isCategoryButtonEnabled={isCategoryButtonEnabled}
+          isCategoryButtonEnabled={() => true}
         />
       </LeftPanelContainer>
 
