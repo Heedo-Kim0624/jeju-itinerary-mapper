@@ -1,6 +1,6 @@
 // src/types/supabase.ts
 export interface Place {
-  id: number;
+  id: number | string;
   name: string;
   address: string;
   category: string;
@@ -13,6 +13,9 @@ export interface Place {
   raw: any;
   isSelected?: boolean;
   isRecommended?: boolean;
+  x?: number;  // Add x coordinate for map
+  y?: number;  // Add y coordinate for map
+  operatingHours?: string;  // Add operating hours
 }
 
 export interface ItineraryDay {
@@ -151,7 +154,7 @@ export interface SchedulePayload {
 }
 
 export interface SelectedPlace {
-  id: string;
+  id: string | number;
   name: string;
 }
 

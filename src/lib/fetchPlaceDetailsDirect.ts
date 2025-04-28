@@ -24,13 +24,21 @@ function mapCategoryToPrefix(category: CategoryType): string {
 /**
  * 장소 상세 정보를 조회하는 함수
  * @param category 카테고리 이름 (숙소, 관광지, 음식점, 카페 또는 영문)
- * @param id 장소 ID (숫자)
+ * @param id 장소 ID (숫자 또는 문자열)
  * @returns Place 객체 또는 null (정보가 없을 경우)
  */
-export async function fetchPlaceDetails(category: CategoryType, id: number): Promise<Place | null> {
+export async function fetchPlaceDetails(category: CategoryType, id: number | string): Promise<Place | null> {
   console.log(`🔍 [fetchPlaceDetails] 상세 정보 조회 시작 - 카테고리: ${category}, ID: ${id}`);
   
   try {
+    // ID가 문자열로 들어올 경우 숫자로 변환
+    const numericId = typeof id === 'string' ? parseInt(id, 10) : id;
+    
+    if (isNaN(numericId)) {
+      console.error(`❌ [fetchPlaceDetails] 유효하지 않은 ID: ${id}`);
+      return null;
+    }
+    
     const prefix = mapCategoryToPrefix(category);
     
     const infoTable = `${prefix}_information`;
@@ -42,11 +50,11 @@ export async function fetchPlaceDetails(category: CategoryType, id: number): Pro
     console.log(`📁 [fetchPlaceDetails] 조회 테이블: ${infoTable}, ${ratingTable}, ${reviewTable}, ${linkTable}, ${categoryTable}`);
     
     const [infoResult, ratingResult, reviewResult, linkResult, categoryResult] = await Promise.all([
-      supabaseDirect.from(infoTable).select('*').eq('id', id).maybeSingle(),
-      supabaseDirect.from(ratingTable).select('*').eq('id', id).maybeSingle(),
-      supabaseDirect.from(reviewTable).select('*').eq('id', id).maybeSingle(),
-      supabaseDirect.from(linkTable).select('*').eq('id', id).maybeSingle(),
-      supabaseDirect.from(categoryTable).select('*').eq('id', id).maybeSingle()
+      supabaseDirect.from(infoTable).select('*').eq('id', numericId).maybeSingle(),
+      supabaseDirect.from(ratingTable).select('*').eq('id', numericId).maybeSingle(),
+      supabaseDirect.from(reviewTable).select('*').eq('id', numericId).maybeSingle(),
+      supabaseDirect.from(linkTable).select('*').eq('id', numericId).maybeSingle(),
+      supabaseDirect.from(categoryTable).select('*').eq('id', numericId).maybeSingle()
     ]);
 
     // 기본 정보가 없으면 null 반환
@@ -70,17 +78,13 @@ export async function fetchPlaceDetails(category: CategoryType, id: number): Pro
       categories: categories || 'null'
     });
 
-    console.log(`✅ [fetchPlaceDetails] 데이터 조회 완료:`, {
-      정보: info ? '있음' : '없음',
-      평점: rating ? '있음' : '없음',
-      리뷰: review ? '있음' : '없음',
-      링크: link ? '있음' : '없음',
-      카테고리: categories ? '있음' : '없음'
-    });
+    // 좌표 추출
+    const longitude = parseFloat(String(normalizeField(info, ['longitude', 'Longitude']) || '0'));
+    const latitude = parseFloat(String(normalizeField(info, ['latitude', 'Latitude']) || '0'));
 
     // 데이터 매핑 및 Place 객체 생성
     const place: Place = {
-      id: id,
+      id: numericId,
       name: normalizeField(info, ['place_name', 'Place_Name']) || 'Unknown',
       address: normalizeField(info, ['road_address', 'Road_Address', 'lot_address', 'Lot_Address']) || '',
       category: prefix,
@@ -90,6 +94,8 @@ export async function fetchPlaceDetails(category: CategoryType, id: number): Pro
       weight: review ? parseFloat(String(normalizeField(review, ['visitor_norm']) || '0')) : 0,
       naverLink: link ? normalizeField(link, ['link']) || '' : '', 
       instaLink: link ? normalizeField(link, ['instagram']) || '' : '',
+      x: longitude,
+      y: latitude,
       raw: {
         info,
         rating,
@@ -109,7 +115,9 @@ export async function fetchPlaceDetails(category: CategoryType, id: number): Pro
       reviewCount: place.reviewCount || '❌ 리뷰 수 매핑 실패',
       weight: place.weight || '(가중치 없음)',
       naverLink: place.naverLink || '(네이버 링크 없음)',
-      instaLink: place.instaLink || '(인스타 링크 없음)'
+      instaLink: place.instaLink || '(인스타 링크 없음)',
+      x: place.x || '❌ 경도 매핑 실패',
+      y: place.y || '❌ 위도 매핑 실패'
     });
 
     return place;

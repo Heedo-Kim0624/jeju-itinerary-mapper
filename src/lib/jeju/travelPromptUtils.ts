@@ -30,7 +30,9 @@ export function convertToPlace(placeResult: any) {
     reviewCount: placeResult.visitor_review_count || 0,
     weight: placeResult.visitor_norm || 0,
     naverLink: placeResult.naverLink || '',
-    instaLink: placeResult.instaLink || ''
+    instaLink: placeResult.instaLink || '',
+    operatingHours: placeResult.operatingHours || '',
+    raw: placeResult // Add raw property
   };
   
   console.log('✅ [Convert] 변환 완료:', { 

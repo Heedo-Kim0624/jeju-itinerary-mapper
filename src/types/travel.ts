@@ -27,4 +27,6 @@ export interface PlaceResult {
   visitor_norm?: number;
   naverLink?: string;
   instaLink?: string;
+  operatingHours?: string;
+  score?: number;
 }
