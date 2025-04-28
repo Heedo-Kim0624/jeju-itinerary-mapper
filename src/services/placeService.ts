@@ -2,19 +2,15 @@ import { supabase } from '@/lib/supabaseClient';
 import { TravelCategory } from '@/types/travel';
 import { categoryTableMap, categoryRatingMap } from '@/lib/jeju/dbMapping';
 
-/**
- * 필드명을 소문자 기준으로 찾아주는 보조 함수
- */
+// 필드명을 유연하게 찾는 함수
 function normalizeField(obj: any, field: string): any {
   if (obj[field] !== undefined) return obj[field];
-
   const lowerField = field.toLowerCase();
   for (const key in obj) {
     if (key.toLowerCase() === lowerField) {
       return obj[key];
     }
   }
-
   return undefined;
 }
 
@@ -24,69 +20,79 @@ export async function fetchPlaceData(
 ) {
   if (!categoryTableMap[category] || !categoryRatingMap[category]) {
     console.error(`Invalid category: ${category}`);
-    return { places: [], ratings: [], categories: [], links: [], reviews: [] };
+    return { places: [] };
   }
 
   const infoTable = categoryTableMap[category];
   const ratingTable = categoryRatingMap[category];
   const reviewTable = `${category}_review`;
+  const linkTable = `${category}_link`;
+  const categoryDetailTable = `${category}_categories`;
 
   try {
-    // 👉 장소 기본 정보 가져오기
+    // 1. 장소 기본 정보 가져오기
     let query = supabase.from(infoTable).select('*');
     if (locations.length > 0) {
       query = query.in('location', locations);
     }
-
     const { data: places, error: placesError } = await query;
+
     if (placesError) {
       console.error('Places fetch error:', placesError);
-      return { places: [], ratings: [], categories: [], links: [], reviews: [] };
+      return { places: [] };
     }
     if (!places || places.length === 0) {
       console.log('No places found matching the criteria');
-      return { places: [], ratings: [], categories: [], links: [], reviews: [] };
+      return { places: [] };
     }
 
-    // 👉 여기서 주의: 원본 숫자형 id만 추출
+    // 2. id 리스트 만들기 (가공 없이 숫자형 그대로)
     const placeIds = places
-      .map(p => normalizeField(p, 'id')) // id 필드를 정확히 찾아서
-      .filter(id => typeof id === 'number' || !isNaN(Number(id)))
-      .map(id => Number(id)); // 숫자로 확실히 변환
+      .map(p => normalizeField(p, 'id'))
+      .filter(id => typeof id === 'number');
 
-    // 👉 추가 데이터 병렬로 가져오기
-    const [ratingsResult, categoriesResult, linksResult, reviewsResult] = await Promise.all([
+    // 3. 추가 데이터 병렬로 가져오기
+    const [ratingsResult, linksResult, categoriesResult, reviewsResult] = await Promise.all([
       supabase.from(ratingTable).select('*').in('id', placeIds),
-      supabase.from(`${category}_categories`).select('*').in('id', placeIds),
-      supabase.from(`${category}_link`).select('*').in('id', placeIds),
+      supabase.from(linkTable).select('*').in('id', placeIds),
+      supabase.from(categoryDetailTable).select('*').in('id', placeIds),
       supabase.from(reviewTable).select('*').in('id', placeIds),
     ]);
 
-    // 👉 결과 정리
-    return {
-      places: places.map((info: any) => ({
-        dbId: normalizeField(info, 'id'), // DB 매칭용 id (숫자)
-        id: `${category}-${normalizeField(info, 'id')}`, // 표시용 id (문자열)
+    const ratings = ratingsResult.data || [];
+    const links = linksResult.data || [];
+    const categories = categoriesResult.data || [];
+    const reviews = reviewsResult.data || [];
+
+    // 4. 최종 place 객체 가공
+    const finalPlaces = places.map((info: any) => {
+      const id = normalizeField(info, 'id'); // 숫자 id
+
+      // 추가 데이터 매칭
+      const ratingInfo = ratings.find((r: any) => normalizeField(r, 'id') === id);
+      const linkInfo = links.find((l: any) => normalizeField(l, 'id') === id);
+      const categoryInfo = categories.find((c: any) => normalizeField(c, 'id') === id);
+      const reviewInfo = reviews.find((rev: any) => normalizeField(rev, 'id') === id);
+
+      return {
+        id, // 숫자 id 그대로
         name: normalizeField(info, 'place_name') || '',
         address: normalizeField(info, 'road_address') || normalizeField(info, 'lot_address') || '',
         category,
-        categoryDetail: '', // 이후 매칭해서 채울 수 있음
+        categoryDetail: normalizeField(categoryInfo || {}, 'categories_details') || '',
         x: parseFloat(normalizeField(info, 'longitude') || '0'),
         y: parseFloat(normalizeField(info, 'latitude') || '0'),
-        naverLink: '',
-        instaLink: '',
-        rating: 0,
-        reviewCount: 0,
-        operatingHours: '',
-        weight: 0,
-      })),
-      ratings: ratingsResult.data || [],
-      categories: categoriesResult.data || [],
-      links: linksResult.data || [],
-      reviews: reviewsResult.data || [],
-    };
+        naverLink: normalizeField(linkInfo || {}, 'link') || '',
+        instaLink: normalizeField(linkInfo || {}, 'instagram') || '',
+        rating: ratingInfo ? parseFloat(normalizeField(ratingInfo, 'rating') || '0') : 0,
+        reviewCount: ratingInfo ? parseInt(normalizeField(ratingInfo, 'visitor_review_count') || '0') : 0,
+        weight: reviewInfo ? parseFloat(normalizeField(reviewInfo, 'visitor_norm') || '0') : 0,
+      };
+    });
+
+    return { places: finalPlaces };
   } catch (error) {
     console.error('Error in fetchPlaceData:', error);
-    return { places: [], ratings: [], categories: [], links: [], reviews: [] };
+    return { places: [] };
   }
 }
