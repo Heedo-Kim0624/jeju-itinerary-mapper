@@ -5,6 +5,8 @@ import PlaceList from '@/components/middlepanel/PlaceList';
 import ItineraryView from '@/components/leftpanel/ItineraryView';
 import type { Place, ItineraryDay } from '@/types/supabase';
 import TravelPromptSearch from '@/components/jeju/TravelPromptSearch';
+import { fetchPlaceDetails } from '@/lib/fetchPlaceDetails';
+import { toast } from 'sonner';
 
 // ContentSection 컴포넌트의 Props 정의
 interface ContentSectionProps {
@@ -53,11 +55,40 @@ const ContentSection: React.FC<ContentSectionProps> = ({
     // 여기서 필요한 상태를 업데이트할 수 있습니다
   };
 
-  // Add a simple handler for viewing place details
-  const handleViewDetails = (place: Place) => {
+  // 수정된 handleViewDetails 함수
+  const handleViewDetails = async (place: Place) => {
     console.log("View details for place:", place);
-    // In a real implementation, this would show a details popup
-    // but we're just adding it to satisfy the type requirements
+    try {
+      // 카테고리와 ID를 추출하여 상세 정보 조회
+      const category = place.category as '숙소' | '관광지' | '음식점' | '카페' | 'accommodation' | 'landmark' | 'restaurant' | 'cafe';
+      const id = parseInt(place.id);
+      
+      if (!category || isNaN(id)) {
+        console.error("잘못된 장소 정보:", { category, id });
+        toast.error("장소 정보가 올바르지 않습니다.");
+        return;
+      }
+      
+      // 상세 정보 조회
+      console.log(`장소 상세 정보 조회: ${category}, ID: ${id}`);
+      const placeDetails = await fetchPlaceDetails(category, id);
+      
+      if (placeDetails) {
+        console.log("장소 상세 정보 조회 성공:", placeDetails);
+        // 상세 정보를 상위 컴포넌트로 전달
+        onSelectPlace(placeDetails as unknown as Place);
+      } else {
+        console.warn("장소 상세 정보를 찾을 수 없습니다.");
+        toast.warning("상세 정보를 불러올 수 없습니다");
+        // 상세 정보를 찾을 수 없더라도 기본 정보는 전달
+        onSelectPlace(place);
+      }
+    } catch (error) {
+      console.error("장소 상세 정보 조회 오류:", error);
+      toast.error("상세 정보를 불러오는 중 오류가 발생했습니다");
+      // 오류 발생 시 기본 정보 전달
+      onSelectPlace(place);
+    }
   };
 
   return (

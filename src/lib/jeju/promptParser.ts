@@ -1,3 +1,4 @@
+
 import { TravelCategory, PlaceResult } from '@/types/travel';
 import { fetchPlaceData } from '@/services/placeService';
 import { calculatePlaceScore } from './placeScoring';
@@ -141,7 +142,14 @@ export async function fetchWeightedResults(
       const score = calculatePlaceScore(place, keywordWeights, reviewNorm);
       
       // 결과 객체 생성 (PlaceResult 형식)
-      const result = convertToPlaceResult(place, ratings, categories, links, reviews);
+      // 수정: 각 인자를 배열로 감싸서 전달
+      const result = convertToPlaceResult(
+        place, 
+        rating ? [rating] : [], 
+        category ? [category] : [], 
+        link ? [link] : [], 
+        review ? [review] : []
+      );
       
       // 계산된 점수 추가
       return { ...result, score };
