@@ -16,6 +16,18 @@ export async function fetchAccommodations(): Promise<Place[]> {
     console.log("원본 링크 데이터:", links?.length);
     console.log("원본 리뷰 데이터:", reviews?.length);
 
+    // ID 필드명 확인을 위한 로깅
+    if (places.length > 0) {
+      console.log("샘플 숙소 데이터 필드:", Object.keys(places[0]));
+    }
+    if (links && links.length > 0) {
+      console.log("샘플 링크 데이터 필드:", Object.keys(links[0]));
+    }
+    if (reviews && reviews.length > 0) {
+      console.log("샘플 리뷰 데이터 필드:", Object.keys(reviews[0]));
+      console.log("샘플 리뷰 데이터 visitor_norm 값:", reviews[0].visitor_norm || reviews[0].Visitor_Norm);
+    }
+
     return places.map((info: any) => {
       // ID 필드 처리 - 대소문자 구분 없이 찾기
       const placeId = info.id || info.ID || info.Id;
@@ -30,6 +42,8 @@ export async function fetchAccommodations(): Promise<Place[]> {
         
         if (!linkData && placeId) {
           console.log(`숙소 ID ${placeId}에 대한 링크 데이터를 찾지 못했습니다.`);
+        } else if (linkData) {
+          console.log(`숙소 ID ${placeId}의 링크 데이터:`, linkData);
         }
       }
       
@@ -63,6 +77,7 @@ export async function fetchAccommodations(): Promise<Place[]> {
         
         if (reviewInfo) {
           // visitor_norm 필드가 존재하면 해당 값을 가중치로 사용
+          // 대소문자 구분 없이 찾기
           if (reviewInfo.visitor_norm !== undefined) {
             weight = parseFloat(reviewInfo.visitor_norm);
           } else if (reviewInfo.Visitor_Norm !== undefined) {
@@ -100,7 +115,7 @@ export async function fetchAccommodations(): Promise<Place[]> {
       }
 
       // 장소 객체 생성 및 반환
-      return {
+      const result = {
         id: `accommodation-${placeId}`,
         name: info.Place_Name || info.place_name || "",
         address: info.Lot_Address || info.Road_Address || info.lot_address || info.road_address || "",
@@ -115,6 +130,17 @@ export async function fetchAccommodations(): Promise<Place[]> {
         operatingHours: "",
         weight, // 가중치 설정
       };
+
+      // 디버그를 위해 최종 결과 객체 로깅
+      console.log(`숙소 ${result.name} 최종 데이터:`, {
+        rating: result.rating,
+        reviewCount: result.reviewCount,
+        weight: result.weight,
+        naverLink: result.naverLink ? "있음" : "없음",
+        instaLink: result.instaLink ? "있음" : "없음"
+      });
+
+      return result;
     });
   } catch (error) {
     console.error("숙소 데이터 로딩 오류:", error);
