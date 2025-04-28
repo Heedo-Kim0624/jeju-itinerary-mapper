@@ -68,9 +68,16 @@ export const useItineraryCreator = () => {
       
       // Fallback to any available place
       if (!currentPlace && places.length > 0) {
-        const anyPlace = places.find(p => !p.usedInItinerary);
-        if (anyPlace) {
-          const placeWithUsedFlag: PlaceWithUsedFlag = { ...anyPlace, usedInItinerary: true };
+        // Fixed the type error by using proper casting
+        const anyPlaceFromOriginal = places.find(p => 
+          !accommodations.some(a => a.id === p.id) && 
+          !attractions.some(a => a.id === p.id) && 
+          !restaurants.some(r => r.id === p.id) && 
+          !cafes.some(c => c.id === p.id)
+        );
+        
+        if (anyPlaceFromOriginal) {
+          const placeWithUsedFlag: PlaceWithUsedFlag = { ...anyPlaceFromOriginal, usedInItinerary: true };
           dayPlaces.push(placeWithUsedFlag);
           currentPlace = placeWithUsedFlag;
         }
