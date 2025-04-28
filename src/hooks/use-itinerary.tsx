@@ -7,6 +7,10 @@ export interface ItineraryDay {
   totalDistance: number;
 }
 
+interface PlaceWithUsedFlag extends Place {
+  usedInItinerary?: boolean;
+}
+
 export const useItinerary = () => {
   const [itinerary, setItinerary] = useState<ItineraryDay[] | null>(null);
   const [selectedItineraryDay, setSelectedItineraryDay] = useState<number | null>(null);
@@ -23,8 +27,6 @@ export const useItinerary = () => {
     const numDays = Math.max(1, daysDiff);
     
     const scheduleTable = createEmptyScheduleTable(startDate, startTime, endDate, endTime);
-    
-    type PlaceWithUsedFlag = Place & { usedInItinerary?: boolean };
     
     const placesByCategory: Record<string, PlaceWithUsedFlag[]> = {};
     places.forEach(place => {
@@ -108,7 +110,7 @@ export const useItinerary = () => {
       if (!currentPlace && places.length > 0) {
         const anyPlace = places.find(p => !p.usedInItinerary);
         if (anyPlace) {
-          const placeWithUsedFlag = { ...anyPlace, usedInItinerary: true } as PlaceWithUsedFlag;
+          const placeWithUsedFlag: PlaceWithUsedFlag = { ...anyPlace, usedInItinerary: true };
           dayPlaces.push(placeWithUsedFlag);
           currentPlace = placeWithUsedFlag;
         }
@@ -161,7 +163,7 @@ export const useItinerary = () => {
     
     return itinerary;
   };
-  
+
   const createEmptyScheduleTable = (startDate: Date, startTime: string, endDate: Date, endTime: string) => {
     const days = ['일', '월', '화', '수', '목', '금', '토'];
     const hours = Array.from({ length: 13 }, (_, i) => i + 9);
