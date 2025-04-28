@@ -1,22 +1,11 @@
-
+import { Place } from '@/types/supabase';
 import { supabase } from '@/lib/supabaseClient';
 import { normalizeField } from '@/lib/jeju/placeNormalizer';
 
 // 카테고리 타입 정의
 type CategoryType = '숙소' | '관광지' | '음식점' | '카페' | 'accommodation' | 'landmark' | 'restaurant' | 'cafe';
 
-// 반환되는 Place 타입 정의
-export interface Place {
-  id: number;
-  name: string;
-  address: string;
-  category: string;
-  categoryDetail: string;
-  rating: number;
-  reviewCount: number;
-  weight: number;
-  raw: any;
-}
+
 
 // 카테고리를 영문 테이블 prefix로 변환하는 함수
 function mapCategoryToPrefix(category: CategoryType): string {
