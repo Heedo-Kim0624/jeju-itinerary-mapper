@@ -24,12 +24,14 @@ export const useItinerary = () => {
     
     const scheduleTable = createEmptyScheduleTable(startDate, startTime, endDate, endTime);
     
-    const placesByCategory: Record<string, Place[]> = {};
+    type PlaceWithUsedFlag = Place & { usedInItinerary?: boolean };
+    
+    const placesByCategory: Record<string, PlaceWithUsedFlag[]> = {};
     places.forEach(place => {
       if (!placesByCategory[place.category]) {
         placesByCategory[place.category] = [];
       }
-      placesByCategory[place.category].push({ ...place, used: false });
+      placesByCategory[place.category].push({ ...place, usedInItinerary: false });
     });
     
     const itinerary: ItineraryDay[] = [];
@@ -40,11 +42,10 @@ export const useItinerary = () => {
       return Math.sqrt(dx * dx + dy * dy) * 111;
     };
     
-    const findNearestPlace = (currentPlace: Place, remainingPlaces: Place[]): Place | null => {
+    const findNearestPlace = (currentPlace: Place, remainingPlaces: PlaceWithUsedFlag[]): PlaceWithUsedFlag | null => {
       if (remainingPlaces.length === 0) return null;
       
-      // Filter out places that are already used
-      const availablePlaces = remainingPlaces.filter(p => !p.used);
+      const availablePlaces = remainingPlaces.filter(p => !p.usedInItinerary);
       if (availablePlaces.length === 0) return null;
       
       let nearestPlace = availablePlaces[0];
@@ -61,95 +62,94 @@ export const useItinerary = () => {
       return nearestPlace;
     };
     
-    // Handle accommodations separately - prioritize them first
-    const accommodations = places.filter(p => p.category === 'accommodation').map(p => ({ ...p, used: false }));
+    const accommodations = places
+      .filter(p => p.category === 'accommodation')
+      .map(p => ({ ...p, usedInItinerary: false })) as PlaceWithUsedFlag[];
     
-    // Other categories
-    const attractions = places.filter(p => p.category === 'attraction').map(p => ({ ...p, used: false }));
-    const restaurants = places.filter(p => p.category === 'restaurant').map(p => ({ ...p, used: false }));
-    const cafes = places.filter(p => p.category === 'cafe').map(p => ({ ...p, used: false }));
+    const attractions = places
+      .filter(p => p.category === 'attraction')
+      .map(p => ({ ...p, usedInItinerary: false })) as PlaceWithUsedFlag[];
     
-    // Calculate places per day
+    const restaurants = places
+      .filter(p => p.category === 'restaurant')
+      .map(p => ({ ...p, usedInItinerary: false })) as PlaceWithUsedFlag[];
+    
+    const cafes = places
+      .filter(p => p.category === 'cafe')
+      .map(p => ({ ...p, usedInItinerary: false })) as PlaceWithUsedFlag[];
+    
     const attractionsPerDay = Math.ceil(attractions.length / numDays);
     const restaurantsPerDay = Math.ceil(restaurants.length / numDays);
     const cafesPerDay = Math.ceil(cafes.length / numDays);
     
     for (let day = 1; day <= numDays; day++) {
-      const dayPlaces: Place[] = [];
+      const dayPlaces: PlaceWithUsedFlag[] = [];
       let totalDistance = 0;
       
-      // Start with accommodation if available
-      let currentPlace: Place | null = null;
+      let currentPlace: PlaceWithUsedFlag | null = null;
       if (accommodations.length > 0) {
-        const accommodation = accommodations.find(a => !a.used);
+        const accommodation = accommodations.find(a => !a.usedInItinerary);
         if (accommodation) {
-          accommodation.used = true;
+          accommodation.usedInItinerary = true;
           dayPlaces.push(accommodation);
           currentPlace = accommodation;
         }
       }
       
-      // If no accommodation, start with an attraction
       if (!currentPlace && attractions.length > 0) {
-        const attraction = attractions.find(a => !a.used);
+        const attraction = attractions.find(a => !a.usedInItinerary);
         if (attraction) {
-          attraction.used = true;
+          attraction.usedInItinerary = true;
           dayPlaces.push(attraction);
           currentPlace = attraction;
         }
       }
       
-      // If still no starting point, use any available place
       if (!currentPlace && places.length > 0) {
-        const anyPlace = places.find(p => !p.used);
+        const anyPlace = places.find(p => !p.usedInItinerary);
         if (anyPlace) {
-          anyPlace.used = true;
-          dayPlaces.push(anyPlace);
-          currentPlace = anyPlace;
+          const placeWithUsedFlag = { ...anyPlace, usedInItinerary: true } as PlaceWithUsedFlag;
+          dayPlaces.push(placeWithUsedFlag);
+          currentPlace = placeWithUsedFlag;
         }
       }
       
       if (currentPlace) {
-        // Add attractions for the day
-        for (let i = 0; i < attractionsPerDay && attractions.some(a => !a.used); i++) {
+        for (let i = 0; i < attractionsPerDay && attractions.some(a => !a.usedInItinerary); i++) {
           const nearest = findNearestPlace(currentPlace, attractions);
           if (nearest) {
             totalDistance += calculateDistance(currentPlace, nearest);
             currentPlace = nearest;
-            nearest.used = true;
+            nearest.usedInItinerary = true;
             dayPlaces.push(nearest);
           }
         }
         
-        // Add restaurants for the day
-        for (let i = 0; i < restaurantsPerDay && restaurants.some(r => !r.used); i++) {
+        for (let i = 0; i < restaurantsPerDay && restaurants.some(r => !r.usedInItinerary); i++) {
           const nearest = findNearestPlace(currentPlace, restaurants);
           if (nearest) {
             totalDistance += calculateDistance(currentPlace, nearest);
             currentPlace = nearest;
-            nearest.used = true;
+            nearest.usedInItinerary = true;
             dayPlaces.push(nearest);
           }
         }
         
-        // Add cafes for the day
-        for (let i = 0; i < cafesPerDay && cafes.some(c => !c.used); i++) {
+        for (let i = 0; i < cafesPerDay && cafes.some(c => !c.usedInItinerary); i++) {
           const nearest = findNearestPlace(currentPlace, cafes);
           if (nearest) {
             totalDistance += calculateDistance(currentPlace, nearest);
             currentPlace = nearest;
-            nearest.used = true;
+            nearest.usedInItinerary = true;
             dayPlaces.push(nearest);
           }
         }
         
-        // Calculate distance back to starting point if needed
         if (dayPlaces.length > 1) {
           totalDistance += calculateDistance(dayPlaces[dayPlaces.length - 1], dayPlaces[0]);
         }
         
-        // Remove the temporary 'used' property before adding to itinerary
-        const cleanDayPlaces = dayPlaces.map(({ used, ...rest }) => rest);
+        const cleanDayPlaces = dayPlaces.map(({ usedInItinerary, ...rest }) => rest);
         
         itinerary.push({
           day,
