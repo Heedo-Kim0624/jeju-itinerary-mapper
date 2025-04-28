@@ -1,66 +1,47 @@
 
 import { Place } from "@/types/supabase";
-import { fetchCategoryData } from "../utils/supabaseUtils";
+import { fetchPlaceData, processPlaceData } from "../placeService";
+import { TravelCategory } from "@/types/travel";
 
 export async function fetchAccommodations(): Promise<Place[]> {
   try {
-    const { places, links, categories, ratings, reviews } = await fetchCategoryData(
-      "accommodation_information",  // 오타 수정: accomodation → accommodation
-      "accommodation_link",         // 오타 수정: accomodation → accommodation
-      "accommodation_categories",   // 오타 수정: accomodation → accommodation
-      "accommodation_rating",       // 오타 수정: accomodation → accommodation
-      "accommodation_review"        // 오타 수정: accomodation → accommodation
+    // 숙소 데이터 조회
+    const { places, ratings, categories, links, reviews } = await fetchPlaceData(
+      "accommodation" as TravelCategory,
+      []  // 위치 필터 없이 모든 숙소 조회
     );
 
+    console.log(`Processing ${places.length} accommodations`);
+
+    // 각 숙소에 대해 데이터 처리
     return places.map((info: any) => {
-      const link = links?.find((link: any) => link.id === info.id);
-      const category = categories?.find((category: any) => category.id === info.id);
+      // 관련 데이터 처리
+      const processedData = processPlaceData(info, ratings, categories, links, reviews);
       
-      let rating = null;
-      let reviewCount = null;
-      if (ratings) {
-        const ratingInfo = ratings.find((r: any) => r.id === info.id);
-        if (ratingInfo) {
-          rating = ratingInfo.rating;
-          reviewCount = ratingInfo.visitor_review_count;
-        }
-      }
-
-      // Calculate weight based on review data
-      let weight = 0;
-      if (reviews) {
-        const reviewInfo = reviews.find((r: any) => r.id === info.id || r.id === info.id);
-        if (reviewInfo && reviewInfo.visitor_norm) {
-          // Basic weight calculation based on normalized visitor count
-          weight = reviewInfo.visitor_norm;
-          
-          // Log for debugging
-          console.log(`Accommodation ${info.Place_Name || info.place_name} weight: ${weight}`);
-        }
-      }
-
-      const categoryDetail = category ? 
-        (category.categories_details !== undefined ? 
-          category.categories_details : "") : "";
-
-      // Format and normalize links
-      const naverLink = link?.link || "";
-      const instaLink = link?.instagram || "";
-
+      // 장소 이름 및 주소 추출
+      const placeName = info.Place_Name || info.place_name || "";
+      const roadAddress = info.Road_Address || info.road_address || "";
+      const lotAddress = info.Lot_Address || info.lot_address || "";
+      
+      // 좌표 추출
+      const longitude = parseFloat(String(info.longitude || info.Longitude || 0));
+      const latitude = parseFloat(String(info.latitude || info.Latitude || 0));
+      
+      // Place 객체 생성
       return {
-        id: `accommodation-${info.id}`,
-        name: info.Place_Name || "",
-        address: info.Lot_Address || info.Road_Address || "",
+        id: `accommodation-${info.id || info.ID}`,
+        name: placeName,
+        address: roadAddress || lotAddress || "",
         category: "accommodation",
-        categoryDetail,
-        x: info.longitude || 0,
-        y: info.latitude || 0,
-        naverLink,
-        instaLink,
-        rating,
-        reviewCount,
+        categoryDetail: processedData.categoryDetail,
+        x: longitude,
+        y: latitude,
+        naverLink: processedData.naverLink,
+        instaLink: processedData.instaLink,
+        rating: processedData.rating,
+        reviewCount: processedData.reviewCount,
         operatingHours: "",
-        weight, // Ensure weight is set
+        weight: processedData.weight,
       };
     });
   } catch (error) {
