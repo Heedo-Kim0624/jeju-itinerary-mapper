@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useMapContext } from './MapContext';
 import MapMarkers from './MapMarkers';
 import MapLoadingOverlay from './MapLoadingOverlay';
