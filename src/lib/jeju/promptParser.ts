@@ -128,11 +128,11 @@ export async function fetchWeightedResults(
     console.log('🔢 [Prompt] 장소 점수 계산 중...');
     const scoredPlaces = places.map(place => {
       // ID로 관련 데이터 찾기
-      const placeId = normalizeField(place, 'id');
-      const rating = ratings.find(r => normalizeField(r, 'id') === placeId);
-      const category = categories.find(c => normalizeField(c, 'id') === placeId);
-      const link = links.find(l => normalizeField(l, 'id') === placeId);
-      const review = reviews.find(r => normalizeField(r, 'id') === placeId);
+      const placeId = normalizeField(place, ['id']);
+      const rating = ratings.find(r => normalizeField(r, ['id']) === placeId);
+      const category = categories.find(c => normalizeField(c, ['id']) === placeId);
+      const link = links.find(l => normalizeField(l, ['id']) === placeId);
+      const review = reviews.find(r => normalizeField(r, ['id']) === placeId);
       
       // 리뷰 정규화 값 (리뷰 수 / 최대 리뷰 수)
       const reviewNorm = review ? 
