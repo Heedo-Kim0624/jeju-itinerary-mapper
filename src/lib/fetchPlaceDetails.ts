@@ -95,6 +95,8 @@ export async function fetchPlaceDetails(category: CategoryType, id: number): Pro
       rating: rating ? parseFloat(String(normalizeField(rating, ['rating']) || '0')) : 0,
       reviewCount: rating ? parseInt(String(normalizeField(rating, ['visitor_review_count']) || '0'), 10) : 0,
       weight: review ? parseFloat(String(normalizeField(review, ['visitor_norm']) || '0')) : 0,
+      naverLink: link ? normalizeField(link, ['link']) || '' : '',         
+      instaLink: link ? normalizeField(link, ['instagram']) || '' : '',  
       raw: {
         info,
         rating,
@@ -103,6 +105,7 @@ export async function fetchPlaceDetails(category: CategoryType, id: number): Pro
         categories
       }
     };
+    
     
     console.log(`✅ [fetchPlaceDetails] 장소 객체 변환 완료:`, {
       id: place.id,

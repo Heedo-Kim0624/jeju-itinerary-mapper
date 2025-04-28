@@ -1,18 +1,16 @@
 // src/types/supabase.ts
 export interface Place {
-  id: string;
+  id: number;
   name: string;
   address: string;
-  category?: string;
-  categoryDetail?: string;
-  x: number;
-  y: number;
-  rating?: number;
-  reviewCount?: number;
-  operatingHours?: string;
-  naverLink?: string;
-  instaLink?: string;
+  category: string;
+  categoryDetail: string;
+  rating: number;
+  reviewCount: number;
   weight?: number;
+  naverLink: string;  
+  instaLink: string;  
+  raw: any;
   isSelected?: boolean;
   isRecommended?: boolean;
 }
