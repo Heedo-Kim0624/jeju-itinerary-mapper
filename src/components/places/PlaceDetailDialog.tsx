@@ -54,7 +54,7 @@ const PlaceDetailDialog: React.FC<PlaceDetailDialogProps> = ({ place, onClose })
       <DialogContent className="sm:max-w-md" aria-describedby="place-detail-description">
         <DialogHeader>
           <DialogTitle className="text-lg">{place.name}</DialogTitle>
-          <div className="flex items-center mt-1">
+          <div className="flex items-center gap-2 mt-1">
             <span className={cn("text-xs px-2 py-1 rounded-full font-medium", categoryColor)}>
               {categoryName}
             </span>
@@ -107,7 +107,7 @@ const PlaceDetailDialog: React.FC<PlaceDetailDialogProps> = ({ place, onClose })
             </div>
           )}
           
-          {/* 가중치 없는 경우 안내 메시지 */}
+          {/* 데이터 없을 때 안내 메시지 */}
           {!hasWeight && !hasRating && !hasReviews && (
             <div className="bg-amber-50 p-3 rounded-md">
               <div className="flex items-center gap-2">
