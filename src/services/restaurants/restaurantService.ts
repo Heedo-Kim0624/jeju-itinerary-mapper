@@ -47,7 +47,6 @@ export async function fetchRestaurants(): Promise<Place[]> {
         instaLink: processedData.instaLink,
         rating: processedData.rating,
         reviewCount: processedData.reviewCount,
-        operatingHours: "", // 운영시간 아직 없음
         weight: processedData.weight,
         raw: {
           info,

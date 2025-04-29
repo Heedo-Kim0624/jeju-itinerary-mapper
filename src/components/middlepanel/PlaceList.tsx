@@ -1,4 +1,4 @@
-
+// components/PlaceList.tsx
 import React, { useEffect, useRef, useState } from 'react';
 import { RefreshCw, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -37,6 +37,14 @@ const PlaceList: React.FC<PlaceListProps> = ({
   const scrollRef = useRef<HTMLDivElement>(null);
   const [sortOption, setSortOption] = useState<'recommendation' | 'rating' | 'reviews'>('recommendation');
 
+<<<<<<< HEAD
+  // 페이지 이동 시 스크롤 맨 위로
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = 0;
+  }, [page]);
+
+=======
+>>>>>>> f611264b314ac01677c237c8c28517e2019c5c8f
   // 데이터 검증 로그
   useEffect(() => {
     if (places.length > 0) {
@@ -60,25 +68,40 @@ const PlaceList: React.FC<PlaceListProps> = ({
 
   // places 데이터에서 정렬 옵션에 따라 정렬된 전체 장소 목록을 준비
   const sortedPlaces = React.useMemo(() => {
+<<<<<<< HEAD
+    let result = [...places].filter(place => place && place.name);
+    if (sortOption === 'recommendation' && orderedIds.length > 0) {
+      const placeMap = Object.fromEntries(result.map(p => [p.id, p]));
+      return orderedIds.filter(id => placeMap[id]).map(id => placeMap[id]);
+=======
     let result = [...places].filter(place => place && place.name);
     
     if (sortOption === 'recommendation') {
       // 가중치(weight) 기준 정렬
       return sortByWeightDescending(result);
+>>>>>>> f611264b314ac01677c237c8c28517e2019c5c8f
     }
     if (sortOption === 'rating') {
+<<<<<<< HEAD
+      return result.sort((a, b) => ((b.rating ?? 0) - (a.rating ?? 0)) || ((b.weight ?? 0) - (a.weight ?? 0)));
+=======
       return result.sort((a, b) => {
         // 별점 기준 내림차순, 동일 별점은 가중치로 정렬
         const ratingDiff = (b.rating ?? 0) - (a.rating ?? 0);
         return ratingDiff !== 0 ? ratingDiff : ((b.weight ?? 0) - (a.weight ?? 0));
       });
+>>>>>>> f611264b314ac01677c237c8c28517e2019c5c8f
     }
     if (sortOption === 'reviews') {
+<<<<<<< HEAD
+      return result.sort((a, b) => ((b.reviewCount ?? 0) - (a.reviewCount ?? 0)) || ((b.weight ?? 0) - (a.weight ?? 0)));
+=======
       return result.sort((a, b) => {
         // 리뷰 수 기준 내림차순, 동일 리뷰 수는 가중치로 정렬
         const reviewDiff = (b.reviewCount ?? 0) - (a.reviewCount ?? 0);
         return reviewDiff !== 0 ? reviewDiff : ((b.weight ?? 0) - (a.weight ?? 0));
       });
+>>>>>>> f611264b314ac01677c237c8c28517e2019c5c8f
     }
     return result;
   }, [places, sortOption]);
@@ -87,14 +110,8 @@ const PlaceList: React.FC<PlaceListProps> = ({
     if (checked) onSelectPlace(place);
   };
 
-  // 한 페이지에 표시할 아이템 수
-  const itemsPerPage = 20;
-  
-  // 현재 페이지에 표시할 장소 목록
-  const currentPagePlaces = paginateArray(sortedPlaces, itemsPerPage, page);
-  
-  // 총 페이지 수 계산
-  const calculatedTotalPages = calculateTotalPages(sortedPlaces.length, itemsPerPage);
+  const itemsPerPage = 20; // ✅ 한 페이지에 20개 표시
+  const currentPlaces = sortedPlaces.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
   if (loading) {
     return (
@@ -116,13 +133,15 @@ const PlaceList: React.FC<PlaceListProps> = ({
 
   return (
     <div className="w-full flex flex-col h-full">
+      {/* ✅ 타이틀 + 정렬 버튼 */}
       <PlaceSortControls
         sortOption={sortOption}
         onSortChange={(value) => setSortOption(value as typeof sortOption)}
         totalPlaces={sortedPlaces.length}
       />
 
-      <ScrollArea ref={scrollRef} className="flex-1 pr-2">
+      {/* ✅ 스크롤 되는 카드 영역 */}
+      <ScrollArea ref={scrollRef} className="flex-1 overflow-y-auto pr-2 mb-3">
         <div className="space-y-2">
           {currentPagePlaces.map((place) => (
             <PlaceCard
@@ -137,19 +156,30 @@ const PlaceList: React.FC<PlaceListProps> = ({
         </div>
       </ScrollArea>
 
+<<<<<<< HEAD
+      {/* ✅ 하단 고정 영역 */}
+      <div className="mt-3 space-y-2 border-t pt-3 bg-white">
+        <PlacePagination
+          currentPage={page}
+          totalPages={totalPages}
+          onPageChange={onPageChange}
+        />
+=======
       <PlacePagination
         currentPage={page}
         totalPages={calculatedTotalPages}
         onPageChange={onPageChange}
       />
+>>>>>>> f611264b314ac01677c237c8c28517e2019c5c8f
 
-      <div className="flex gap-2 mt-3">
-        <Button variant="outline" size="sm" className="flex-1">
-          <RefreshCw className="h-4 w-4 mr-1" /> 목록 새로고침
-        </Button>
-        <Button variant="outline" size="sm" className="flex-1">
-          <Filter className="h-4 w-4 mr-1" /> 필터 설정
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" className="flex-1">
+            <RefreshCw className="h-4 w-4 mr-1" /> 목록 새로고침
+          </Button>
+          <Button variant="outline" size="sm" className="flex-1">
+            <Filter className="h-4 w-4 mr-1" /> 필터 설정
+          </Button>
+        </div>
       </div>
     </div>
   );
