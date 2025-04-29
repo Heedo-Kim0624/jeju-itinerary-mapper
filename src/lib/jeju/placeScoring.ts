@@ -1,7 +1,7 @@
 
 import { PlaceResult } from '@/types/travel';
 import { KeywordWeight } from './interfaces';
-import { normalizeField } from './placeNormalizer';
+import { normalizeField } from './placeUtils';
 
 export function calculatePlaceScore(
   place: any,

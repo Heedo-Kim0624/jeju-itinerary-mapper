@@ -1,8 +1,9 @@
+
 import { TravelCategory, PlaceResult } from '@/types/travel';
 import { fetchPlaceData } from '@/services/placeService';
 import { calculatePlaceScore } from './placeScoring';
 import { convertToPlaceResult } from './placeScoring';
-import { normalizeField } from './placeNormalizer';
+import { normalizeField } from './placeUtils';
 import { KeywordWeight } from './interfaces';
 
 // 프롬프트 파싱 함수

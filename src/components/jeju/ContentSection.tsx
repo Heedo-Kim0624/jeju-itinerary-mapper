@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import PlaceList from '@/components/middlepanel/PlaceList';
@@ -5,6 +6,7 @@ import ItineraryView from '@/components/leftpanel/ItineraryView';
 import type { Place, ItineraryDay } from '@/types/supabase';
 import TravelPromptSearch from '@/components/jeju/TravelPromptSearch';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 // ContentSection 컴포넌트의 Props 정의
 interface ContentSectionProps {
@@ -26,6 +28,84 @@ interface ContentSectionProps {
   setShowItinerary: (show: boolean) => void;
   setItinerary: (itinerary: ItineraryDay[] | null) => void;
   setSelectedItineraryDay: (day: number | null) => void;
+}
+
+// Function to fetch place details directly from Supabase
+async function fetchPlaceDetails(category: string, id: number): Promise<Place | null> {
+  try {
+    console.log(`Fetching details for ${category} with ID ${id}`);
+    
+    // Map UI category to database category
+    const categoryMapping: Record<string, string> = {
+      '숙소': 'accommodation',
+      '관광지': 'landmark',
+      '음식점': 'restaurant',
+      '카페': 'cafe'
+    };
+    
+    // Use mapped category or original if not in mapping
+    const dbCategory = categoryMapping[category] || category;
+    
+    // Fetch information from the main table
+    const { data: infoData, error: infoError } = await supabase
+      .from(`${dbCategory}_information`)
+      .select('*')
+      .eq('id', id)
+      .single();
+      
+    if (infoError) {
+      console.error("Info fetch error:", infoError);
+      return null;
+    }
+    
+    if (!infoData) {
+      console.error("No place found with ID:", id);
+      return null;
+    }
+    
+    // Fetch ratings
+    const { data: ratingData } = await supabase
+      .from(`${dbCategory}_rating`)
+      .select('*')
+      .eq('id', id)
+      .single();
+      
+    // Fetch links
+    const { data: linkData } = await supabase
+      .from(`${dbCategory}_link`)
+      .select('*')
+      .eq('id', id)
+      .single();
+      
+    // Fetch categories
+    const { data: categoryData } = await supabase
+      .from(`${dbCategory}_categories`)
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    // Construct the Place object
+    const place: Place = {
+      id: id,
+      name: infoData.place_name || '',
+      address: infoData.road_address || infoData.lot_address || '',
+      category: category, 
+      categoryDetail: categoryData?.categories_details || '',
+      x: infoData.longitude || 0,
+      y: infoData.latitude || 0,
+      rating: ratingData?.rating || 0,
+      reviewCount: ratingData?.visitor_review_count || 0,
+      naverLink: linkData?.link || '',
+      instaLink: linkData?.instagram || '',
+      operatingHours: infoData.opening_hours || ''
+    };
+    
+    return place;
+    
+  } catch (error) {
+    console.error("Error fetching place details:", error);
+    return null;
+  }
 }
 
 const ContentSection: React.FC<ContentSectionProps> = ({

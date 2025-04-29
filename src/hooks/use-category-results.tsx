@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react';
 import { Place } from '@/types/supabase';
 import { toast } from 'sonner';
-import { useDebounceEffect } from './use-debounce-effect';
 import { fetchPlacesByCategory } from '@/services/restaurantService';
 
 interface CategoryResultsHookResult {
@@ -80,16 +79,22 @@ export function useCategoryResults(
     }
   }
 
-  // Fetch places when category or keywords change
-  useDebounceEffect(
-    () => {
-      if (category) {
+  // Use useEffect instead of useDebounceEffect
+  useEffect(() => {
+    let timeoutId: number | null = null;
+    
+    if (category) {
+      timeoutId = window.setTimeout(() => {
         fetchPlaces(category, keywords);
+      }, 500);
+    }
+    
+    return () => {
+      if (timeoutId !== null) {
+        clearTimeout(timeoutId);
       }
-    },
-    [category, keywords],
-    500
-  );
+    };
+  }, [category, keywords]);
 
   return {
     isLoading,
