@@ -92,7 +92,13 @@ const PlaceCard: React.FC<PlaceCardProps> = ({
               )}
             </div>
           )}
-
+          {/* 키워드 매칭 정도를 표시 */}
+          {weightPercent !== null && (
+            <div className="flex items-center gap-1 text-xs mt-1 text-blue-600">
+              <Info className="h-3 w-3 flex-shrink-0" />
+              <span>선택하신 키워드와 {weightPercent}% 일치합니다</span>
+            </div>
+          )}
           {/* 네이버 링크와 인스타그램 링크 - 하단에 배치 */}
           <div className="flex mt-2 gap-2">
             {place.naverLink && (
@@ -108,13 +114,7 @@ const PlaceCard: React.FC<PlaceCardProps> = ({
               </a>
             )}
 
-          {/* 키워드 매칭 정도를 표시 */}
-          {weightPercent !== null && (
-            <div className="flex items-center gap-1 text-xs mt-1 text-blue-600">
-              <Info className="h-3 w-3 flex-shrink-0" />
-              <span>선택하신 키워드와 {weightPercent}% 일치합니다</span>
-            </div>
-          )}
+
             
             {place.instaLink && (
               <a 
