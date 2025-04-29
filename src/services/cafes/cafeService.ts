@@ -25,7 +25,7 @@ export async function fetchCafes(): Promise<Place[]> {
       // 관련 데이터 처리
       const processedData = processPlaceData(info, ratings, categories, links, reviews);
       
-      // 장소 이름 및 주소 추출
+      // 장소 이름 및 주소 추출 (snake_case 사용)
       const placeName = info.place_name || "";
       const roadAddress = info.road_address || "";
       const lotAddress = info.lot_address || "";

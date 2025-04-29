@@ -1,3 +1,4 @@
+
 interface KeywordWeight {
   keyword: string;
   weight: number;
@@ -10,14 +11,14 @@ export function calculateWeights(
   const weights: KeywordWeight[] = [];
   
   // 순위별 가중치 (1순위: 0.4, 2순위: 0.3, 3순위: 0.2)
-  const rankedWeights = [0.4, 0.3, 0.2];
+  const rankedWeightValues = [0.4, 0.3, 0.2];
   
   // 랭크된 키워드에 가중치 할당
   rankedKeywords.forEach((keyword, index) => {
-    if (index < rankedWeights.length) {
+    if (index < rankedWeightValues.length) {
       weights.push({
         keyword,
-        weight: rankedWeights[index]
+        weight: rankedWeightValues[index]
       });
     }
   });

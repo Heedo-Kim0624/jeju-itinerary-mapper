@@ -20,15 +20,19 @@ export function calculatePlaceScore(
     if (place[keyword] !== undefined) {
       const keywordValue = parseFloat(String(place[keyword] || 0));
       
+      // 키워드 가중치 계산: 키워드 값 × 키워드 가중치 × visitor_norm
       if (keywordValue > 0) {
         foundKeywords++;
-        matchedKeywords.push({ keyword, value: keywordValue });
-        console.log(`  - 키워드 '${keyword}' 값: ${keywordValue}, 가중치: ${weight.toFixed(3)}, 곱: ${(keywordValue * weight).toFixed(3)}`);
+        const keywordScore = keywordValue * weight * reviewNorm;
+        matchedKeywords.push({ 
+          keyword, 
+          value: keywordScore
+        });
+        console.log(`  - 키워드 '${keyword}' 값: ${keywordValue}, 가중치: ${weight.toFixed(3)}, visitor_norm: ${reviewNorm}, 결과: ${keywordScore.toFixed(3)}`);
+        totalScore += keywordScore;
       } else {
         console.log(`  - 키워드 '${keyword}' 값: 없음 (0)`);
       }
-      
-      totalScore += keywordValue * weight;
     } else {
       console.log(`  - 키워드 '${keyword}' 매칭되는 컬럼 없음`);
     }
@@ -39,17 +43,14 @@ export function calculatePlaceScore(
     return 0;
   }
 
-  const finalScore = totalScore * reviewNorm;
-
   console.log('가중치 계산 결과:', {
     place_name: place.place_name || '이름 없음',
     matched_keywords: matchedKeywords,
     total_score: totalScore,
-    review_norm: reviewNorm,
-    final_score: finalScore
+    final_score: totalScore
   });
 
-  return finalScore;
+  return totalScore;
 }
 
 export function convertToPlaceResult(place: any, ratings: any[], categories: any[], links: any[], reviews: any[]): PlaceResult {

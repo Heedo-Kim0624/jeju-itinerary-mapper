@@ -133,17 +133,8 @@ export function processPlaceData(info: any, ratings: any[], categories: any[], l
   
   // 키워드가 제공된 경우, 가중치 계산 적용
   if (keywords.length > 0 && reviewInfo) {
-    // 키워드별 가중치 합산
-    keywords.forEach(({ keyword, weight: keywordWeight }) => {
-      // 리뷰 테이블에서 키워드에 해당하는 컬럼값 찾기
-      if (reviewInfo[keyword] !== undefined) {
-        const keywordValue = parseFloat(String(reviewInfo[keyword] || '0'));
-        weight += keywordValue * keywordWeight;
-      }
-    });
-    
-    // 최종 가중치에 visitor_norm 곱하기
-    weight *= visitorNorm;
+    // 가중치 계산 로직
+    weight = calculatePlaceScore(reviewInfo, keywords, visitorNorm);
   } else {
     // 키워드가 없는 경우 기본 가중치 설정 (평점 기반)
     weight = rating * 0.2;

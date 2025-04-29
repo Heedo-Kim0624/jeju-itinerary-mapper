@@ -93,13 +93,26 @@ export const useSelectedPlaces = () => {
       return null;
     }
 
+    // 선택된 장소를 처리
     const selected: SelectedPlace[] = places
       .filter(p => p.isSelected)
       .map(p => ({ id: Number(p.id), name: p.name }));
 
+    // 추천되었지만 선택되지 않은 장소를 후보 장소로 처리
     const candidates: SelectedPlace[] = places
       .filter(p => p.isRecommended && !p.isSelected)
       .map(p => ({ id: Number(p.id), name: p.name }));
+
+    // 후보 장소가 제대로 처리되는지 로깅
+    console.log('일정 생성 데이터:', {
+      선택된_장소: selected.length,
+      후보_장소: candidates.length,
+      날짜: dateTime
+    });
+
+    if (candidates.length > 0) {
+      console.log('후보 장소 목록:', candidates);
+    }
 
     return {
       selected_places: selected,

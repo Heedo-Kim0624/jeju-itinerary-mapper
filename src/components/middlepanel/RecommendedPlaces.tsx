@@ -19,6 +19,14 @@ const RecommendedPlaces: React.FC<RecommendedPlacesProps> = ({
   onSelectPlace,
   onViewDetails,
 }) => {
+  // 가중치(weight)를 기준으로 내림차순 정렬
+  const sortedPlaces = [...places].sort((a, b) => {
+    // weight값이 없으면 가장 뒤로
+    if (a.weight === undefined || a.weight === null) return 1;
+    if (b.weight === undefined || b.weight === null) return -1;
+    return b.weight - a.weight;
+  });
+
   if (loading) {
     return (
       <div className="p-4 space-y-2">
@@ -30,7 +38,7 @@ const RecommendedPlaces: React.FC<RecommendedPlacesProps> = ({
     );
   }
 
-  if (places.length === 0) {
+  if (sortedPlaces.length === 0) {
     return (
       <div className="p-4">
         <h2 className="text-sm font-medium mb-3">추천 장소</h2>
@@ -46,7 +54,7 @@ const RecommendedPlaces: React.FC<RecommendedPlacesProps> = ({
     <div className="p-4 border-b">
       <h2 className="text-sm font-medium mb-3">🌟 추천 장소</h2>
       <div className="space-y-2">
-        {places.map((place) => (
+        {sortedPlaces.map((place) => (
           <PlaceCard
             key={place.id}
             place={place}
