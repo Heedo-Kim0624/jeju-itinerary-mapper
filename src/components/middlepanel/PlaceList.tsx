@@ -7,6 +7,7 @@ import { Place } from '@/types/supabase';
 import PlaceCard from './PlaceCard';
 import PlacePagination from './PlacePagination';
 import PlaceSortControls from './PlaceSortControls';
+import { sortByWeightDescending, paginateArray, calculateTotalPages } from '@/lib/utils';
 
 interface PlaceListProps {
   places: Place[];
@@ -36,12 +37,6 @@ const PlaceList: React.FC<PlaceListProps> = ({
   const scrollRef = useRef<HTMLDivElement>(null);
   const [sortOption, setSortOption] = useState<'recommendation' | 'rating' | 'reviews'>('recommendation');
 
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = 0;
-    }
-  }, [page]);
-
   // 데이터 검증 로그
   useEffect(() => {
     if (places.length > 0) {
@@ -52,39 +47,54 @@ const PlaceList: React.FC<PlaceListProps> = ({
         reviewCount: places[0].reviewCount,
         weight: places[0].weight
       });
+      console.log(`총 장소 수: ${places.length}, 한 페이지에 20개씩 표시, 총 페이지 수: ${Math.ceil(places.length / 20)}`);
     }
   }, [places]);
 
+  // 페이지 변경 시 스크롤 맨 위로
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = 0;
+    }
+  }, [page]);
+
+  // places 데이터에서 정렬 옵션에 따라 정렬된 전체 장소 목록을 준비
   const sortedPlaces = React.useMemo(() => {
-    let result = [...places];
+    let result = [...places].filter(place => place && place.name);
     
-    // 데이터 없는 항목은 맨 아래로
-    result = result.filter(place => place && place.name);
-    
-    if (sortOption === 'recommendation' && orderedIds.length > 0) {
-      const placeMap = Object.fromEntries(result.map(p => [p.id, p]));
-      return orderedIds
-        .filter(id => placeMap[id])
-        .map(id => placeMap[id])
-        .filter(Boolean);
+    if (sortOption === 'recommendation') {
+      // 가중치(weight) 기준 정렬
+      return sortByWeightDescending(result);
     }
     if (sortOption === 'rating') {
-      return result
-        .sort((a, b) => ((b.rating ?? 0) - (a.rating ?? 0)) || ((b.weight ?? 0) - (a.weight ?? 0)));
+      return result.sort((a, b) => {
+        // 별점 기준 내림차순, 동일 별점은 가중치로 정렬
+        const ratingDiff = (b.rating ?? 0) - (a.rating ?? 0);
+        return ratingDiff !== 0 ? ratingDiff : ((b.weight ?? 0) - (a.weight ?? 0));
+      });
     }
     if (sortOption === 'reviews') {
-      return result
-        .sort((a, b) => ((b.reviewCount ?? 0) - (a.reviewCount ?? 0)) || ((b.weight ?? 0) - (a.weight ?? 0)));
+      return result.sort((a, b) => {
+        // 리뷰 수 기준 내림차순, 동일 리뷰 수는 가중치로 정렬
+        const reviewDiff = (b.reviewCount ?? 0) - (a.reviewCount ?? 0);
+        return reviewDiff !== 0 ? reviewDiff : ((b.weight ?? 0) - (a.weight ?? 0));
+      });
     }
     return result;
-  }, [places, orderedIds, sortOption]);
+  }, [places, sortOption]);
 
   const handleCheckboxChange = (place: Place, checked: boolean) => {
     if (checked) onSelectPlace(place);
   };
 
-  const itemsPerPage = 10;
-  const currentPlaces = sortedPlaces.slice((page - 1) * itemsPerPage, page * itemsPerPage);
+  // 한 페이지에 표시할 아이템 수
+  const itemsPerPage = 20;
+  
+  // 현재 페이지에 표시할 장소 목록
+  const currentPagePlaces = paginateArray(sortedPlaces, itemsPerPage, page);
+  
+  // 총 페이지 수 계산
+  const calculatedTotalPages = calculateTotalPages(sortedPlaces.length, itemsPerPage);
 
   if (loading) {
     return (
@@ -114,7 +124,7 @@ const PlaceList: React.FC<PlaceListProps> = ({
 
       <ScrollArea ref={scrollRef} className="flex-1 pr-2">
         <div className="space-y-2">
-          {currentPlaces.map((place) => (
+          {currentPagePlaces.map((place) => (
             <PlaceCard
               key={place.id}
               place={place}
@@ -129,7 +139,7 @@ const PlaceList: React.FC<PlaceListProps> = ({
 
       <PlacePagination
         currentPage={page}
-        totalPages={totalPages}
+        totalPages={calculatedTotalPages}
         onPageChange={onPageChange}
       />
 

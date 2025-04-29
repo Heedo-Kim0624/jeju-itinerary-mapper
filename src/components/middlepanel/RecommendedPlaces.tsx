@@ -3,6 +3,7 @@ import React from 'react';
 import { Place } from '@/types/supabase';
 import PlaceCard from './PlaceCard';
 import { Skeleton } from '@/components/ui/skeleton';
+import { sortByWeightDescending } from '@/lib/utils';
 
 interface RecommendedPlacesProps {
   places: Place[];
@@ -20,12 +21,7 @@ const RecommendedPlaces: React.FC<RecommendedPlacesProps> = ({
   onViewDetails,
 }) => {
   // 가중치(weight)를 기준으로 내림차순 정렬
-  const sortedPlaces = [...places].sort((a, b) => {
-    // weight값이 없으면 가장 뒤로
-    if (a.weight === undefined || a.weight === null) return 1;
-    if (b.weight === undefined || b.weight === null) return -1;
-    return b.weight - a.weight;
-  });
+  const sortedPlaces = sortByWeightDescending(places);
 
   if (loading) {
     return (
