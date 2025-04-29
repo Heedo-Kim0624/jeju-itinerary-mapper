@@ -1,11 +1,11 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import PlaceList from '@/components/middlepanel/PlaceList';
 import ItineraryView from '@/components/leftpanel/ItineraryView';
 import type { Place, ItineraryDay } from '@/types/supabase';
 import TravelPromptSearch from '@/components/jeju/TravelPromptSearch';
-// import { fetchPlaceDetails } from '@/lib/fetchPlaceDetails'; // ❌ 기존 lovable용
-import { fetchPlaceDetails } from '@/lib/fetchPlaceDetailsDirect'; // ✅ 직접 Supabase 연결용
+import { fetchPlaceDetails } from '@/lib/fetchPlaceDetailsDirect'; // Updated import
 import { toast } from 'sonner';
 
 // ContentSection 컴포넌트의 Props 정의

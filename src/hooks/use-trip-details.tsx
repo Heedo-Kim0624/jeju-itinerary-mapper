@@ -1,7 +1,8 @@
+
 import { useState } from 'react';
 import { format } from 'date-fns';
 
-interface TripDates {
+export interface TripDates {
   startDate: Date;
   endDate: Date;
   startTime: string;
