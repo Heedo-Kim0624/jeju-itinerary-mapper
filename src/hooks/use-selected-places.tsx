@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Place, SelectedPlace, SchedulePayload } from '@/types/supabase';
 import { useMapContext } from '@/components/rightpanel/MapContext';
@@ -20,44 +21,51 @@ export const useSelectedPlaces = () => {
   const { panTo, addMarkers, clearMarkersAndUiElements } = useMapContext();
 
   const handleSelectPlace = (place: Place, checked: boolean, category: string | null = null) => {
+    // Ensure place.id is always a number
+    const normalizedPlace = {
+      ...place,
+      id: typeof place.id === 'string' ? parseInt(place.id, 10) : place.id
+    };
+    
     if (checked) {
       setSelectedPlaces(prevPlaces => {
-        if (prevPlaces.some(p => p.id === place.id)) {
+        if (prevPlaces.some(p => p.id === normalizedPlace.id)) {
           return prevPlaces;
         }
-        return [...prevPlaces, place];
+        return [...prevPlaces, normalizedPlace];
       });
       
       if (category) {
         setSelectedPlacesByCategory(prev => ({
           ...prev,
-          [category]: [...prev[category as keyof typeof prev], place]
+          [category]: [...prev[category as keyof typeof prev], normalizedPlace]
         }));
       }
     } else {
-      setSelectedPlaces(prevPlaces => prevPlaces.filter(p => p.id !== place.id));
+      setSelectedPlaces(prevPlaces => prevPlaces.filter(p => p.id !== normalizedPlace.id));
       
       if (category) {
         setSelectedPlacesByCategory(prev => ({
           ...prev,
-          [category]: prev[category as keyof typeof prev].filter(p => p.id !== place.id)
+          [category]: prev[category as keyof typeof prev].filter(p => p.id !== normalizedPlace.id)
         }));
       }
     }
   };
 
   const handleRemovePlace = (placeId: string) => {
-    const placeToRemove = selectedPlaces.find(p => p.id === placeId);
+    const numericId = parseInt(placeId, 10);
+    const placeToRemove = selectedPlaces.find(p => Number(p.id) === numericId);
     
-    setSelectedPlaces(prevPlaces => prevPlaces.filter(p => p.id !== placeId));
+    setSelectedPlaces(prevPlaces => prevPlaces.filter(p => Number(p.id) !== numericId));
     
     if (placeToRemove) {
       Object.keys(selectedPlacesByCategory).forEach(category => {
         const categoryKey = category as keyof typeof selectedPlacesByCategory;
-        if (selectedPlacesByCategory[categoryKey].some(p => p.id === placeId)) {
+        if (selectedPlacesByCategory[categoryKey].some(p => Number(p.id) === numericId)) {
           setSelectedPlacesByCategory(prev => ({
             ...prev,
-            [categoryKey]: prev[categoryKey].filter(p => p.id !== placeId)
+            [categoryKey]: prev[categoryKey].filter(p => Number(p.id) !== numericId)
           }));
         }
       });
@@ -87,11 +95,11 @@ export const useSelectedPlaces = () => {
 
     const selected: SelectedPlace[] = places
       .filter(p => p.isSelected)
-      .map(p => ({ id: p.id, name: p.name }));
+      .map(p => ({ id: Number(p.id), name: p.name }));
 
     const candidates: SelectedPlace[] = places
       .filter(p => p.isRecommended && !p.isSelected)
-      .map(p => ({ id: p.id, name: p.name }));
+      .map(p => ({ id: Number(p.id), name: p.name }));
 
     return {
       selected_places: selected,

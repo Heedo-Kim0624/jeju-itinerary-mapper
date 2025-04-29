@@ -1,6 +1,6 @@
 // src/types/supabase.ts
 export interface Place {
-  id: number | string;
+  id: number;
   name: string;
   address: string;
   category: string;
@@ -10,11 +10,11 @@ export interface Place {
   weight?: number;
   naverLink: string;  
   instaLink: string;  
-  raw: any;
+  x: number;
+  y: number;
   isSelected?: boolean;
   isRecommended?: boolean;
-  x: number;  // Make x required
-  y: number;  // Make y required
+  operatingHours?: string;
 }
 
 export interface ItineraryDay {
@@ -152,12 +152,13 @@ export interface SchedulePayload {
   end_datetime: string;
 }
 
+// Modified SelectedPlace interface to ensure id is number
 export interface SelectedPlace {
-  id: string | number;
+  id: number;
   name: string;
 }
 
-// Naver Maps 타입 정의
+// Naver Maps type definitions
 declare global {
   interface Window {
     naver: any;

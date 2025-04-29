@@ -2,7 +2,7 @@
 import React from 'react';
 import { Place } from '@/types/supabase';
 import { cn } from '@/lib/utils';
-import { MapPin, Star } from 'lucide-react';
+import { MapPin, Star, ExternalLink, Instagram } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 
 interface PlaceCardProps {
@@ -20,13 +20,18 @@ const PlaceCard: React.FC<PlaceCardProps> = ({
   onClick,
   onViewDetails,
 }) => {
+  // Ensure place ID is always treated as a number
+  const normalizedPlace = {
+    ...place,
+    id: typeof place.id === 'string' ? parseInt(place.id, 10) : place.id
+  };
+
   const handleCheckboxChange = (checked: boolean) => {
-    onSelect(place, checked);
+    onSelect(normalizedPlace, checked);
   };
 
   const handleCardClick = (e: React.MouseEvent) => {
-    // 이벤트 핸들링을 위한 클릭 처리
-    e.stopPropagation(); // 이벤트 전파 방지
+    e.stopPropagation();
     
     if (onClick) {
       onClick();
@@ -34,8 +39,16 @@ const PlaceCard: React.FC<PlaceCardProps> = ({
   };
 
   const handleViewDetailsClick = (e: React.MouseEvent) => {
-    e.stopPropagation(); // 이벤트 전파 방지
-    onViewDetails(place);
+    e.stopPropagation();
+    onViewDetails(normalizedPlace);
+  };
+
+  // Handle external links
+  const handleExternalLinkClick = (e: React.MouseEvent, url: string) => {
+    e.stopPropagation();
+    if (url) {
+      window.open(url, '_blank');
+    }
   };
 
   return (
@@ -46,7 +59,7 @@ const PlaceCard: React.FC<PlaceCardProps> = ({
       )}
       onClick={handleCardClick}
     >
-      <div className="flex items-center gap-3">
+      <div className="flex items-start gap-3">
         <Checkbox 
           checked={isSelected}
           onCheckedChange={handleCheckboxChange}
@@ -61,17 +74,40 @@ const PlaceCard: React.FC<PlaceCardProps> = ({
             <span className="truncate">{place.address}</span>
           </div>
           
-          {place.rating ? (
+          {place.rating > 0 && (
             <div className="flex items-center gap-1 text-xs mt-1">
               <Star className="h-3 w-3 text-amber-500" />
               <span>{place.rating.toFixed(1)}</span>
-              {place.reviewCount && (
+              {place.reviewCount > 0 && (
                 <span className="text-muted-foreground">
                   ({place.reviewCount})
                 </span>
               )}
             </div>
-          ) : null}
+          )}
+
+          {(place.naverLink || place.instaLink) && (
+            <div className="flex items-center gap-2 mt-1">
+              {place.naverLink && (
+                <button 
+                  onClick={(e) => handleExternalLinkClick(e, place.naverLink)}
+                  className="text-xs text-blue-600 flex items-center"
+                >
+                  <ExternalLink className="h-3 w-3 mr-1" />
+                  네이버
+                </button>
+              )}
+              {place.instaLink && (
+                <button 
+                  onClick={(e) => handleExternalLinkClick(e, place.instaLink)}
+                  className="text-xs text-purple-600 flex items-center"
+                >
+                  <Instagram className="h-3 w-3 mr-1" />
+                  인스타
+                </button>
+              )}
+            </div>
+          )}
         </div>
         
         <button

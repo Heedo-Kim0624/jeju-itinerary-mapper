@@ -14,25 +14,27 @@ export type { PlaceResult } from '@/types/travel';
 export { calculatePlaceScore } from './placeScoring';
 export { fetchWeightedResults } from './promptParser';
 
-// Add the missing convertToPlace function
+// Add the missing convertToPlace function with proper ID handling
 export function convertToPlace(placeResult: any) {
   console.log('🔄 [Convert] Place 객체로 변환 중:', placeResult.place_name || placeResult.id || '이름 없음');
   
+  // Ensure ID is numeric
+  const id = typeof placeResult.id === 'string' ? parseInt(placeResult.id, 10) : placeResult.id;
+  
   const place = {
-    id: placeResult.id || '',
+    id: id,
     name: placeResult.place_name || '',
     address: placeResult.road_address || '',
     category: placeResult.category || '',
     categoryDetail: placeResult.categoryDetail || '',
-    x: placeResult.x || 0,
-    y: placeResult.y || 0,
-    rating: placeResult.rating || 0,
-    reviewCount: placeResult.visitor_review_count || 0,
-    weight: placeResult.visitor_norm || 0,
+    x: parseFloat(String(placeResult.x || 0)),
+    y: parseFloat(String(placeResult.y || 0)),
+    rating: parseFloat(String(placeResult.rating || 0)),
+    reviewCount: parseInt(String(placeResult.visitor_review_count || 0), 10),
+    weight: parseFloat(String(placeResult.visitor_norm || 0)),
     naverLink: placeResult.naverLink || '',
     instaLink: placeResult.instaLink || '',
-    operatingHours: placeResult.operatingHours || '',
-    raw: placeResult // Add raw property
+    operatingHours: placeResult.operatingHours || ''
   };
   
   console.log('✅ [Convert] 변환 완료:', { 

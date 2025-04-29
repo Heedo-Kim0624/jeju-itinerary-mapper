@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Check, MapPin, X } from 'lucide-react';
+import { Check, MapPin, X, Star, ExternalLink } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Place } from '@/types/supabase';
@@ -41,35 +41,64 @@ const PlaceCart: React.FC<PlaceCartProps> = ({
           {selectedPlaces.map(place => (
             <div 
               key={place.id} 
-              className="flex items-start justify-between border rounded-md p-2 text-sm bg-muted/30"
+              className="flex flex-col border rounded-md p-2 text-sm bg-muted/30"
             >
-              <div className="flex-1 pr-2">
-                <p className="font-medium text-xs line-clamp-1">{place.name}</p>
-                <p className="text-xs text-muted-foreground line-clamp-1">
-                  {place.address || place.categoryDetail || place.category}
-                </p>
+              <div className="flex items-start justify-between">
+                <div className="flex-1 pr-2">
+                  <p className="font-medium text-xs line-clamp-1">{place.name}</p>
+                  <p className="text-xs text-muted-foreground line-clamp-1">
+                    {place.address || place.categoryDetail || place.category}
+                  </p>
+                </div>
+                
+                <div className="flex gap-1">
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-5 w-5" 
+                    onClick={() => onViewOnMap(place)}
+                    title="지도에서 보기"
+                  >
+                    <MapPin className="h-3 w-3" />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-5 w-5 text-destructive hover:text-destructive" 
+                    onClick={() => onRemovePlace(String(place.id))}
+                    title="선택 취소"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
               </div>
               
-              <div className="flex gap-1">
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-5 w-5" 
-                  onClick={() => onViewOnMap(place)}
-                  title="지도에서 보기"
-                >
-                  <MapPin className="h-3 w-3" />
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-5 w-5 text-destructive hover:text-destructive" 
-                  onClick={() => onRemovePlace(String(place.id))}
-                  title="선택 취소"
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              </div>
+              {/* 평점 및 리뷰 정보 표시 */}
+              {place.rating > 0 && (
+                <div className="flex items-center mt-1 text-xs">
+                  <Star className="h-3 w-3 text-yellow-500 mr-1" />
+                  <span>{place.rating.toFixed(1)}</span>
+                  {place.reviewCount > 0 && (
+                    <span className="text-muted-foreground ml-1">({place.reviewCount})</span>
+                  )}
+                </div>
+              )}
+              
+              {/* 링크 정보 */}
+              {(place.naverLink || place.instaLink) && (
+                <div className="mt-1 flex items-center text-xs">
+                  <ExternalLink className="h-3 w-3 mr-1 text-blue-500" />
+                  <a 
+                    href={place.naverLink} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-blue-500 hover:underline truncate"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    네이버 지도
+                  </a>
+                </div>
+              )}
             </div>
           ))}
         </div>

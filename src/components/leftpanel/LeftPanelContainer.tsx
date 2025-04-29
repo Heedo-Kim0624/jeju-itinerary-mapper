@@ -54,10 +54,10 @@ const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
 
     const payload = {
       selected_places: selectedPlaces.map(place => ({
-        id: parseInt(String(place.id).replace(/[^0-9]/g, '')),
+        id: parseInt(String(place.id)),
         name: place.name
       })),
-      candidate_places: [], // 필요에 따라 구현
+      candidate_places: [],
       start_datetime: `${dates.startDate.toISOString().split('T')[0]}T${dates.startTime}:00`,
       end_datetime: `${dates.endDate.toISOString().split('T')[0]}T${dates.endTime}:00`
     };
@@ -65,7 +65,6 @@ const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
     generateSchedule(payload);
     onSetShowItinerary(true);
     
-    // 로그 메시지 추가
     console.log("일정 생성 요청 완료:", {
       선택된_장소: selectedPlaces.length,
       시작_날짜: dates.startDate,
