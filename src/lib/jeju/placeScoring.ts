@@ -16,27 +16,22 @@ export function calculatePlaceScore(
   console.log('장소 객체 속성:', Object.keys(place));
 
   keywordWeights.forEach(({ keyword, weight }) => {
-    const possibleFields = [
-      keyword, 
-      keyword.toLowerCase(), 
-      keyword.toUpperCase(),
-      `${keyword}_score`,
-      `${keyword.toLowerCase()}_score`,
-      `${keyword}_rating`,
-      `${keyword.toLowerCase()}_rating`
-    ];
-    
-    const keywordValue = normalizeField(place, possibleFields);
-    
-    if (keywordValue > 0) {
-      foundKeywords++;
-      matchedKeywords.push({ keyword, value: keywordValue });
-      console.log(`  - 키워드 '${keyword}' 값: ${keywordValue}, 가중치: ${weight.toFixed(3)}, 곱: ${(keywordValue * weight).toFixed(3)}`);
+    // 키워드가 직접 컬럼명과 매칭되는지 확인
+    if (place[keyword] !== undefined) {
+      const keywordValue = parseFloat(String(place[keyword] || 0));
+      
+      if (keywordValue > 0) {
+        foundKeywords++;
+        matchedKeywords.push({ keyword, value: keywordValue });
+        console.log(`  - 키워드 '${keyword}' 값: ${keywordValue}, 가중치: ${weight.toFixed(3)}, 곱: ${(keywordValue * weight).toFixed(3)}`);
+      } else {
+        console.log(`  - 키워드 '${keyword}' 값: 없음 (0)`);
+      }
+      
+      totalScore += keywordValue * weight;
     } else {
-      console.log(`  - 키워드 '${keyword}' 값: 없음 (0)`);
+      console.log(`  - 키워드 '${keyword}' 매칭되는 컬럼 없음`);
     }
-    
-    totalScore += keywordValue * weight;
   });
 
   if (foundKeywords === 0 && keywordWeights.length > 0) {
@@ -47,7 +42,7 @@ export function calculatePlaceScore(
   const finalScore = totalScore * reviewNorm;
 
   console.log('가중치 계산 결과:', {
-    place_name: normalizeField(place, ['place_name', 'Place_Name']) || '이름 없음',
+    place_name: place.place_name || '이름 없음',
     matched_keywords: matchedKeywords,
     total_score: totalScore,
     review_norm: reviewNorm,
@@ -58,27 +53,19 @@ export function calculatePlaceScore(
 }
 
 export function convertToPlaceResult(place: any, ratings: any[], categories: any[], links: any[], reviews: any[]): PlaceResult {
-  // Use the imported normalizePlaceFields function from placeNormalizer
-  const normalized = {
-    id: normalizeField(place, ['id', 'ID']),
-    placeName: normalizeField(place, ['place_name', 'Place_Name']),
-    roadAddress: normalizeField(place, ['road_address', 'Road_Address']),
-    lotAddress: normalizeField(place, ['lot_address', 'Lot_Address']),
-    longitude: parseFloat(String(normalizeField(place, ['longitude', 'Longitude']) || 0)),
-    latitude: parseFloat(String(normalizeField(place, ['latitude', 'Latitude']) || 0))
-  };
+  const id = place.id;
   
-  const rating = ratings.find(r => r.id === normalized.id);
-  const category = categories.find(c => c.id === normalized.id);
-  const link = links.find(l => l.id === normalized.id);
-  const review = reviews.find(r => r.id === normalized.id);
+  const rating = ratings.find(r => r.id === id);
+  const category = categories.find(c => c.id === id);
+  const link = links.find(l => l.id === id);
+  const review = reviews.find(r => r.id === id);
   
   let ratingValue = 0;
   let reviewCount = 0;
   
   if (rating) {
-    ratingValue = parseFloat(String(normalizeField(rating, ['rating']) || '0'));
-    reviewCount = parseInt(String(normalizeField(rating, ['visitor_review_count']) || '0'));
+    ratingValue = parseFloat(String(rating.rating || '0'));
+    reviewCount = parseInt(String(rating.visitor_review_count || '0'));
   }
   
   let visitorNorm = 1;
@@ -87,18 +74,18 @@ export function convertToPlaceResult(place: any, ratings: any[], categories: any
   }
 
   const categoryDetail = category ? 
-    (normalizeField(category, ['categories_details', 'Categories_Details', 'categories', 'Categories']) || '') : '';
+    (category.categories_details || '') : '';
 
   const naverLink = link ? (link.link || '') : '';
   const instaLink = link ? (link.instagram || '') : '';
 
   return {
-    id: String(normalized.id),
-    place_name: normalized.placeName,
-    road_address: normalized.roadAddress || normalized.lotAddress || "",
+    id: String(id),
+    place_name: place.place_name || '',
+    road_address: place.road_address || place.lot_address || "",
     category: place.category || '',
-    x: normalized.longitude,
-    y: normalized.latitude,
+    x: parseFloat(String(place.longitude || 0)),
+    y: parseFloat(String(place.latitude || 0)),
     rating: ratingValue,
     visitor_review_count: reviewCount,
     visitor_norm: visitorNorm,

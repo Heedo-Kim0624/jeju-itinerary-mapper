@@ -2,17 +2,19 @@
 import { supabase } from '@/lib/supabaseClient';
 import { TravelCategory } from '@/types/travel';
 import { categoryTableMap, categoryRatingMap } from '@/lib/jeju/dbMapping';
+import { calculatePlaceScore } from '@/lib/jeju/placeScoring';
 
 // 필드명을 유연하게 찾는 함수
-export function normalizeField(obj: any, field: string): any {
-  if (obj[field] !== undefined) return obj[field];
-  const lowerField = field.toLowerCase();
-  for (const key in obj) {
-    if (key.toLowerCase() === lowerField) {
-      return obj[key];
+export function normalizeField(obj: any, possibleFields: string[]): any {
+  if (!obj) return null;
+  
+  for (const field of possibleFields) {
+    if (obj[field] !== undefined) {
+      return obj[field];
     }
   }
-  return undefined;
+  
+  return null;
 }
 
 export async function fetchPlaceData(
@@ -61,8 +63,8 @@ export async function fetchPlaceData(
 
     // 2. id 리스트 만들기 (가공 없이 숫자형 그대로)
     const placeIds = places
-      .map(p => normalizeField(p, 'id'))
-      .filter(id => typeof id === 'number');
+      .map(p => p.id)
+      .filter(id => id !== undefined);
     
     console.log(`🔢 [Supabase] ${category} ID 목록: ${placeIds.length}개`);
 
@@ -106,22 +108,46 @@ export async function fetchPlaceData(
   }
 }
 
-// 데이터 처리 함수 추가
-export function processPlaceData(info: any, ratings: any[], categories: any[], links: any[], reviews: any[]) {
-  const id = parseInt(String(normalizeField(info, 'id')));
+// 데이터 처리 함수 - 가중치 계산 로직 적용
+export function processPlaceData(info: any, ratings: any[], categories: any[], links: any[], reviews: any[], keywords: { keyword: string, weight: number }[] = []) {
+  const id = typeof info.id === 'string' ? parseInt(info.id, 10) : info.id;
 
-  const ratingInfo = ratings.find((r: any) => parseInt(String(normalizeField(r, 'id'))) === id);
-  const categoryInfo = categories.find((c: any) => parseInt(String(normalizeField(c, 'id'))) === id);
-  const linkInfo = links.find((l: any) => parseInt(String(normalizeField(l, 'id'))) === id);
-  const reviewInfo = reviews.find((rev: any) => parseInt(String(normalizeField(rev, 'id'))) === id);
+  const ratingInfo = ratings.find((r: any) => r.id === id);
+  const categoryInfo = categories.find((c: any) => c.id === id);
+  const linkInfo = links.find((l: any) => l.id === id);
+  const reviewInfo = reviews.find((rev: any) => rev.id === id);
 
-  const rating = ratingInfo ? parseFloat(String(normalizeField(ratingInfo, 'rating') || '0')) : 0;
-  const reviewCount = ratingInfo ? parseInt(String(normalizeField(ratingInfo, 'visitor_review_count') || '0'), 10) : 0;
-  const categoryDetail = categoryInfo ?
-    (normalizeField(categoryInfo, 'categories_details') || '') : '';
-  const naverLink = linkInfo ? (normalizeField(linkInfo, 'link') || '') : '';
-  const instaLink = linkInfo ? (normalizeField(linkInfo, 'instagram') || '') : '';
-  const weight = reviewInfo ? parseFloat(String(normalizeField(reviewInfo, 'visitor_norm') || '0')) : 0;
+  // 기본 데이터 추출
+  const rating = ratingInfo ? parseFloat(String(ratingInfo.rating || '0')) : 0;
+  const reviewCount = ratingInfo ? parseInt(String(ratingInfo.visitor_review_count || '0'), 10) : 0;
+  const categoryDetail = categoryInfo ? (categoryInfo.categories_details || '') : '';
+  const naverLink = linkInfo ? (linkInfo.link || '') : '';
+  const instaLink = linkInfo ? (linkInfo.instagram || '') : '';
+  
+  // visitor_norm 값 추출 (리뷰 정규화 값)
+  const visitorNorm = reviewInfo?.visitor_norm !== undefined ? 
+    parseFloat(String(reviewInfo.visitor_norm)) : 1;
+  
+  // 가중치 계산
+  let weight = 0;
+  
+  // 키워드가 제공된 경우, 가중치 계산 적용
+  if (keywords.length > 0 && reviewInfo) {
+    // 키워드별 가중치 합산
+    keywords.forEach(({ keyword, weight: keywordWeight }) => {
+      // 리뷰 테이블에서 키워드에 해당하는 컬럼값 찾기
+      if (reviewInfo[keyword] !== undefined) {
+        const keywordValue = parseFloat(String(reviewInfo[keyword] || '0'));
+        weight += keywordValue * keywordWeight;
+      }
+    });
+    
+    // 최종 가중치에 visitor_norm 곱하기
+    weight *= visitorNorm;
+  } else {
+    // 키워드가 없는 경우 기본 가중치 설정 (평점 기반)
+    weight = rating * 0.2;
+  }
 
   return {
     rating,
@@ -129,6 +155,7 @@ export function processPlaceData(info: any, ratings: any[], categories: any[], l
     categoryDetail,
     naverLink,
     instaLink,
-    weight
+    weight,
+    visitorNorm
   };
 }
