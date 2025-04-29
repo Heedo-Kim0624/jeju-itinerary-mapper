@@ -38,7 +38,10 @@ const PlaceListingView: React.FC<PlaceListingViewProps> = ({
     return (
       <div className="p-4">
         <h2 className="text-sm font-medium mb-3">{title}</h2>
-        <p className="text-sm text-muted-foreground">장소가 없습니다.</p>
+        <p className="text-sm text-muted-foreground text-center py-4">
+          장소가 없습니다.<br />
+          다른 키워드나 지역을 선택해보세요.
+        </p>
       </div>
     );
   }

@@ -3,10 +3,6 @@ export * from '@/types/travel';
 export * from './dbMapping';
 export * from './promptParser';
 export * from './weightCalculator';
-// Remove placeNormalizer import
-
-// Avoid re-exporting placeScoring directly to prevent ambiguity
-// Instead, import specific functions
 export * from './interfaces';
 
 // Explicitly re-export PlaceResult to resolve ambiguity
@@ -27,4 +23,18 @@ export function normalizeField(object: any, possibleFields: string[]): any {
   }
 
   return null;
+}
+
+// Ensure all IDs are numeric
+export function ensureNumericId(id: string | number): number {
+  if (typeof id === 'string') {
+    return parseInt(id, 10);
+  }
+  return id;
+}
+
+// Function to truncate text with ellipsis
+export function truncateText(text: string, maxLength: number): string {
+  if (!text) return '';
+  return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
 }

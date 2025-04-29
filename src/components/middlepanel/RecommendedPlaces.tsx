@@ -34,14 +34,17 @@ const RecommendedPlaces: React.FC<RecommendedPlacesProps> = ({
     return (
       <div className="p-4">
         <h2 className="text-sm font-medium mb-3">추천 장소</h2>
-        <p className="text-sm text-muted-foreground">추천 장소가 없습니다.</p>
+        <p className="text-sm text-muted-foreground text-center py-4">
+          추천 장소가 없습니다.<br />
+          다른 키워드나 지역을 선택해보세요.
+        </p>
       </div>
     );
   }
 
   return (
     <div className="p-4 border-b">
-      <h2 className="text-sm font-medium mb-3">추천 장소</h2>
+      <h2 className="text-sm font-medium mb-3">🌟 추천 장소</h2>
       <div className="space-y-2">
         {places.map((place) => (
           <PlaceCard

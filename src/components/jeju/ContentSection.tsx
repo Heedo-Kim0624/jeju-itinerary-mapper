@@ -46,58 +46,148 @@ async function fetchPlaceDetails(category: string, id: number): Promise<Place | 
     // Use mapped category or original if not in mapping
     const dbCategory = categoryMapping[category] || category;
     
-    // Fetch information from the main table
-    const { data: infoData, error: infoError } = await supabase
-      .from(`${dbCategory}_information`)
-      .select('*')
-      .eq('id', id)
-      .single();
-      
-    if (infoError) {
-      console.error("Info fetch error:", infoError);
-      return null;
-    }
+    // Fetch from the appropriate tables using explicit table names to satisfy TypeScript
+    let infoData = null;
+    let ratingData = null;
+    let linkData = null;
+    let categoryData = null;
     
+    if (dbCategory === 'accommodation') {
+      const { data: info } = await supabase
+        .from('accommodation_information')
+        .select('*')
+        .eq('id', id)
+        .single();
+      infoData = info;
+      
+      const { data: rating } = await supabase
+        .from('accommodation_rating')
+        .select('*')
+        .eq('id', id)
+        .single();
+      ratingData = rating;
+      
+      const { data: link } = await supabase
+        .from('accommodation_link')
+        .select('*')
+        .eq('id', id)
+        .single();
+      linkData = link;
+      
+      const { data: cat } = await supabase
+        .from('accommodation_categories')
+        .select('*')
+        .eq('id', id)
+        .single();
+      categoryData = cat;
+    } 
+    else if (dbCategory === 'landmark') {
+      const { data: info } = await supabase
+        .from('landmark_information')
+        .select('*')
+        .eq('id', id)
+        .single();
+      infoData = info;
+      
+      const { data: rating } = await supabase
+        .from('landmark_rating')
+        .select('*')
+        .eq('id', id)
+        .single();
+      ratingData = rating;
+      
+      const { data: link } = await supabase
+        .from('landmark_link')
+        .select('*')
+        .eq('id', id)
+        .single();
+      linkData = link;
+      
+      const { data: cat } = await supabase
+        .from('landmark_categories')
+        .select('*')
+        .eq('id', id)
+        .single();
+      categoryData = cat;
+    }
+    else if (dbCategory === 'restaurant') {
+      const { data: info } = await supabase
+        .from('restaurant_information')
+        .select('*')
+        .eq('id', id)
+        .single();
+      infoData = info;
+      
+      const { data: rating } = await supabase
+        .from('restaurant_rating')
+        .select('*')
+        .eq('id', id)
+        .single();
+      ratingData = rating;
+      
+      const { data: link } = await supabase
+        .from('restaurant_link')
+        .select('*')
+        .eq('id', id)
+        .single();
+      linkData = link;
+      
+      const { data: cat } = await supabase
+        .from('restaurant_categories')
+        .select('*')
+        .eq('id', id)
+        .single();
+      categoryData = cat;
+    }
+    else if (dbCategory === 'cafe') {
+      const { data: info } = await supabase
+        .from('cafe_information')
+        .select('*')
+        .eq('id', id)
+        .single();
+      infoData = info;
+      
+      const { data: rating } = await supabase
+        .from('cafe_rating')
+        .select('*')
+        .eq('id', id)
+        .single();
+      ratingData = rating;
+      
+      const { data: link } = await supabase
+        .from('cafe_link')
+        .select('*')
+        .eq('id', id)
+        .single();
+      linkData = link;
+      
+      const { data: cat } = await supabase
+        .from('cafe_categories')
+        .select('*')
+        .eq('id', id)
+        .single();
+      categoryData = cat;
+    }
+
     if (!infoData) {
       console.error("No place found with ID:", id);
       return null;
     }
     
-    // Fetch ratings
-    const { data: ratingData } = await supabase
-      .from(`${dbCategory}_rating`)
-      .select('*')
-      .eq('id', id)
-      .single();
-      
-    // Fetch links
-    const { data: linkData } = await supabase
-      .from(`${dbCategory}_link`)
-      .select('*')
-      .eq('id', id)
-      .single();
-      
-    // Fetch categories
-    const { data: categoryData } = await supabase
-      .from(`${dbCategory}_categories`)
-      .select('*')
-      .eq('id', id)
-      .single();
-    
-    // Construct the Place object
+    // Construct the Place object with safe property access
     const place: Place = {
       id: id,
-      name: infoData.place_name || '',
-      address: infoData.road_address || infoData.lot_address || '',
+      name: infoData?.place_name || '',
+      address: infoData?.road_address || infoData?.lot_address || '',
       category: category, 
-      categoryDetail: categoryData?.categories_details || '',
-      x: infoData.longitude || 0,
-      y: infoData.latitude || 0,
+      categoryDetail: categoryData?.categories_details || categoryData?.Categories_Details || '',
+      x: infoData?.longitude || 0,
+      y: infoData?.latitude || 0,
       rating: ratingData?.rating || 0,
       reviewCount: ratingData?.visitor_review_count || 0,
       naverLink: linkData?.link || '',
       instaLink: linkData?.instagram || '',
-      operatingHours: infoData.opening_hours || ''
+      operatingHours: infoData?.opening_hours || ''
     };
     
     return place;
