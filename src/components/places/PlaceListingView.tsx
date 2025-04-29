@@ -40,7 +40,7 @@ const PlaceListingView: React.FC<PlaceListingViewProps> = ({
   };
 
   const handleSelectPlace = (place: Place) => {
-    const isCurrentlySelected = isPlaceSelected(place.id);
+    const isCurrentlySelected = isPlaceSelected(String(place.id));
     onSelectPlace(place, !isCurrentlySelected);
     
     if (!isCurrentlySelected) {
@@ -106,17 +106,17 @@ const PlaceListingView: React.FC<PlaceListingViewProps> = ({
                     <h3 className="font-medium text-sm">{place.name}</h3>
                   </div>
                   <Button 
-                    variant={isPlaceSelected(place.id) ? "destructive" : "default"}
+                    variant={isPlaceSelected(String(place.id)) ? "destructive" : "default"}
                     size="sm"
                     className="h-7 px-2"
                     onClick={() => handleSelectPlace(place)}
                   >
-                    {isPlaceSelected(place.id) ? (
+                    {isPlaceSelected(String(place.id)) ? (
                       <X className="w-3.5 h-3.5 mr-1" />
                     ) : (
                       <Check className="w-3.5 h-3.5 mr-1" />
                     )}
-                    {isPlaceSelected(place.id) ? '취소' : '선택'}
+                    {isPlaceSelected(String(place.id)) ? '취소' : '선택'}
                   </Button>
                 </div>
 

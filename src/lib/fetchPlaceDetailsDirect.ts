@@ -96,6 +96,7 @@ export async function fetchPlaceDetails(category: CategoryType, id: number | str
       instaLink: link ? normalizeField(link, ['instagram']) || '' : '',
       x: longitude,
       y: latitude,
+      operatingHours: '', 
       raw: {
         info,
         rating,

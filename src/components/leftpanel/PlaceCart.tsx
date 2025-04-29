@@ -64,7 +64,7 @@ const PlaceCart: React.FC<PlaceCartProps> = ({
                   variant="ghost" 
                   size="icon" 
                   className="h-5 w-5 text-destructive hover:text-destructive" 
-                  onClick={() => onRemovePlace(place.id)}
+                  onClick={() => onRemovePlace(String(place.id))}
                   title="선택 취소"
                 >
                   <X className="h-3 w-3" />

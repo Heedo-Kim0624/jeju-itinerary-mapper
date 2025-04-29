@@ -36,10 +36,10 @@ export async function fetchLandmarks(): Promise<Place[]> {
       
       // Place 객체 생성
       return {
-        id: info.id,  // 명시적으로 id 필드 사용
+        id: typeof info.id === 'string' ? parseInt(info.id.replace(/[^0-9]/g, '')) : info.id,
         name: placeName,
         address: roadAddress || lotAddress || "",
-        category: "attraction",
+        category: "accommodation",
         categoryDetail: processedData.categoryDetail,
         x: longitude,
         y: latitude,
@@ -47,8 +47,12 @@ export async function fetchLandmarks(): Promise<Place[]> {
         instaLink: processedData.instaLink,
         rating: processedData.rating,
         reviewCount: processedData.reviewCount,
-        operatingHours: "",
+        operatingHours: "", // 운영시간 아직 없음
         weight: processedData.weight,
+        raw: {
+          info,
+          processedData, // 전체 원본 데이터 보관 (이게 raw에 들어가야 TypeScript Place 통과)
+        }
       };
     });
     
