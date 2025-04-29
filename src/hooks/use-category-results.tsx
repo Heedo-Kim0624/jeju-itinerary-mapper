@@ -62,7 +62,8 @@ export const useCategoryResults = (category: string, keywords: string[] = []) =>
             naverLink: '',
             instaLink: '',
             weight: 0,
-            operatingHours: ''
+            operatingHours: '',
+            raw: place // Add raw property
           };
         }) || [];
         

@@ -13,9 +13,9 @@ export interface Place {
   raw: any;
   isSelected?: boolean;
   isRecommended?: boolean;
-  x?: number;  // Add x coordinate for map
-  y?: number;  // Add y coordinate for map
-  operatingHours?: string;  // Add operating hours
+  x: number;  // Make x required
+  y: number;  // Make y required
+  operatingHours: string;  // Make operating hours required
 }
 
 export interface ItineraryDay {
