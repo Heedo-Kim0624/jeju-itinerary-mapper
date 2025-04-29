@@ -15,6 +15,7 @@ export interface Place {
   isRecommended?: boolean;
   x: number;  // Make x required
   y: number;  // Make y required
+  operatingHours: string; // Add operatingHours
 }
 
 export interface ItineraryDay {
