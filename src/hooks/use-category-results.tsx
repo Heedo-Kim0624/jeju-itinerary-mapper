@@ -1,176 +1,101 @@
 
 import { useState, useEffect } from 'react';
-import { toast } from 'sonner';
-import { useCategoryOrder } from './use-category-order';
-import { useRegionSelection } from './use-region-selection';
 import { Place } from '@/types/supabase';
-import { fetchPlaceData } from '@/services/placeService';
-import { TravelCategory } from '@/types/travel';
-import { categoryMap, CategoryName } from '@/utils/categoryUtils';
+import { toast } from 'sonner';
+import { useDebounceEffect } from './use-debounce-effect';
+import { fetchPlacesByCategory } from '@/services/restaurantService';
 
-export const useCategoryResults = (category: string, keywords: string[] = []) => {
-  const [places, setPlaces] = useState<Place[]>([]);
-  const [filteredPlaces, setFilteredPlaces] = useState<Place[]>([]);
-  const [sortOrder, setSortOrder] = useState<'recommended' | 'rating' | 'reviews'>('recommended');
-  const [loading, setLoading] = useState(true);
+interface CategoryResultsHookResult {
+  isLoading: boolean;
+  error: string | null;
+  recommendedPlaces: Place[];
+  normalPlaces: Place[];
+  fetchPlaces: (category: string, keywords: string[]) => Promise<void>;
+}
+
+export function useCategoryResults(
+  category: string,
+  keywords: string[] = []
+): CategoryResultsHookResult {
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const { categoryOrder } = useCategoryOrder();
-  const { selectedRegions } = useRegionSelection();
+  const [recommendedPlaces, setRecommendedPlaces] = useState<Place[]>([]);
+  const [normalPlaces, setNormalPlaces] = useState<Place[]>([]);
 
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadPlaces = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        // Convert Korean category name to English for API
-        const categoryKey = category as CategoryName;
-        const travelCategory = categoryMap[categoryKey] as TravelCategory;
-
-        // Use the placeService to fetch data
-        const result = await fetchPlaceData(travelCategory, selectedRegions);
-        
-        if (!result.places || result.places.length === 0) {
-          setPlaces([]);
-          setFilteredPlaces([]);
-          setLoading(false);
-          return;
-        }
-        
-        const fetchedPlaces = result.places?.map(place => {
-          const id = place.id || '';
-          const name = place.place_name || '';
-          const roadAddress = place.road_address || '';
-          const lotAddress = place.lot_address || '';
-          const longitude = parseFloat(String(place.longitude || '0'));
-          const latitude = parseFloat(String(place.latitude || '0'));
-          const rating = parseFloat(String(place.rating || '0'));
-          const reviewCount = parseInt(String(place.visitor_review_count || '0'), 10);
-          
-          return {
-            id: String(id),
-            name,
-            address: roadAddress || lotAddress || "",
-            category,
-            categoryDetail: '',
-            x: longitude,
-            y: latitude,
-            rating,
-            reviewCount,
-            naverLink: '',
-            instaLink: '',
-            weight: 0,
-            operatingHours: '',
-            raw: place // Add raw property
-          };
-        }) || [];
-        
-        if (!isMounted) return;
-        
-        // Process places
-        let processedPlaces = fetchedPlaces;
-        
-        // 지역 필터링 적용
-        if (selectedRegions.length > 0) {
-          processedPlaces = processedPlaces.filter(place => {
-            const address = place.address?.toLowerCase() || '';
-            return selectedRegions.some(region => 
-              address.includes(region.toLowerCase())
-            );
-          });
-        }
-        
-        // 키워드 기반 필터링 및 가중치 계산
-        if (keywords.length > 0) {
-          processedPlaces = processedPlaces.map(place => {
-            // Simplified weight calculation for now
-            const keywordMatch = keywords.some(
-              keyword => place.name.toLowerCase().includes(keyword.toLowerCase()) || 
-                        place.address.toLowerCase().includes(keyword.toLowerCase())
-            );
-            return {
-              ...place,
-              weight: keywordMatch ? 1 : 0
-            };
-          });
-        }
-        
-        setPlaces(processedPlaces);
-        
-        // 기본 정렬 적용 (추천 순)
-        const sorted = sortPlaces(processedPlaces, 'recommended');
-        setFilteredPlaces(sorted);
-        
-        console.log(`로드된 ${category} 장소:`, processedPlaces.length);
-      } catch (err) {
-        console.error("Places loading error:", err);
-        if (isMounted) {
-          setError("데이터를 로드하는 중 오류가 발생했습니다.");
-          toast.error("장소 데이터를 불러오는 데 실패했습니다.");
-        }
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    };
+  async function fetchPlaces(category: string, keywords: string[] = []): Promise<void> {
+    setIsLoading(true);
+    setError(null);
     
-    loadPlaces();
-    
-    return () => {
-      isMounted = false;
-    };
-  }, [category, keywords, selectedRegions]);
-  
-  // Helper function to sort places
-  const sortPlaces = (places: Place[], sortType: 'recommended' | 'rating' | 'reviews'): Place[] => {
-    return [...places].sort((a, b) => {
-      switch (sortType) {
-        case 'recommended':
-          return (b.weight || 0) - (a.weight || 0);
-        case 'rating':
-          return (b.rating || 0) - (a.rating || 0);
-        case 'reviews':
-          return (b.reviewCount || 0) - (a.reviewCount || 0);
-        default:
-          return 0;
+    try {
+      console.log(`Fetching places for category: ${category}, keywords:`, keywords);
+      
+      // Map category from UI to database category
+      const categoryMapping: Record<string, string> = {
+        '숙소': 'accommodation',
+        '관광지': 'attraction',
+        '음식점': 'restaurant',
+        '카페': 'cafe'
+      };
+      
+      const dbCategory = categoryMapping[category] || category;
+      
+      // Fetch places from the service
+      const places = await fetchPlacesByCategory(dbCategory);
+      console.log(`Fetched ${places.length} places for ${category}`);
+      
+      if (places.length === 0) {
+        setError(`${category}을(를) 찾을 수 없습니다.`);
+        setRecommendedPlaces([]);
+        setNormalPlaces([]);
+        return;
       }
-    });
-  };
-  
-  useEffect(() => {
-    // 필터링된 결과 정렬
-    const sorted = sortPlaces([...places], sortOrder);
-    setFilteredPlaces(sorted);
-  }, [sortOrder, places]);
+      
+      // Convert string IDs to numbers if needed
+      const normalizedPlaces = places.map(place => ({
+        ...place,
+        id: typeof place.id === 'string' ? parseInt(place.id, 10) : place.id
+      }));
 
-  const handleSortChange = (newOrder: 'recommended' | 'rating' | 'reviews') => {
-    setSortOrder(newOrder);
-  };
+      // For now, just split the results into recommended and normal
+      // In a real implementation, you would use keywords to calculate recommendations
+      const recommended = normalizedPlaces
+        .filter(p => p.rating >= 4.5)
+        .slice(0, 5);
+        
+      const normal = normalizedPlaces
+        .filter(p => !recommended.some(r => r.id === p.id))
+        .slice(0, 15);
+        
+      setRecommendedPlaces(recommended);
+      setNormalPlaces(normal);
+      
+      console.log(`Processed: ${recommended.length} recommended, ${normal.length} normal places`);
+      
+    } catch (err) {
+      console.error("Error fetching places:", err);
+      setError(`데이터를 불러오는 중 오류가 발생했습니다.`);
+      toast.error(`${category} 데이터를 불러오는 데 실패했습니다.`);
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
-  // 필터링된 결과를 추천 장소와 일반 장소로 나누기
-  const getRecommendedPlaces = () => {
-    // weight 값이 있고 0보다 큰 장소를 추천 장소로 간주
-    return filteredPlaces
-      .filter(place => place.weight && place.weight > 0)
-      .slice(0, 80); // 최대 80개까지 표시
-  };
-
-  const getNormalPlaces = () => {
-    // weight 값이 없거나 0인 장소를 일반 장소로 간주
-    return filteredPlaces
-      .filter(place => !place.weight || place.weight <= 0)
-      .slice(0, 80); // 최대 80개까지 표시
-  };
+  // Fetch places when category or keywords change
+  useDebounceEffect(
+    () => {
+      if (category) {
+        fetchPlaces(category, keywords);
+      }
+    },
+    [category, keywords],
+    500
+  );
 
   return {
-    isLoading: loading,
+    isLoading,
     error,
-    allPlaces: places,
-    filteredPlaces,
-    recommendedPlaces: getRecommendedPlaces(),
-    normalPlaces: getNormalPlaces(),
-    sortOrder,
-    handleSortChange
+    recommendedPlaces,
+    normalPlaces,
+    fetchPlaces
   };
-};
+}
