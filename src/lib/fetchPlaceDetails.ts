@@ -1,7 +1,5 @@
-
 import { Place } from '@/types/supabase';
 import { supabase } from '@/lib/supabaseClient';
-import { normalizeField } from '@/lib/jeju/placeNormalizer';
 
 // 카테고리 타입 정의
 type CategoryType = '숙소' | '관광지' | '음식점' | '카페' | 'accommodation' | 'landmark' | 'restaurant' | 'cafe';
@@ -36,13 +34,12 @@ export async function fetchPlaceDetails(category: CategoryType, id: number | str
 
     const prefix = mapCategoryToPrefix(category);
 
-    // 데이터 가져오기
-    const [infoResult, ratingResult, linkResult, categoryResult, reviewResult] = await Promise.all([
+    const [infoResult, ratingResult, reviewResult, linkResult, categoryResult] = await Promise.all([
       supabase.from(`${prefix}_information`).select('*').eq('id', numericId).maybeSingle(),
       supabase.from(`${prefix}_rating`).select('*').eq('id', numericId).maybeSingle(),
+      supabase.from(`${prefix}_review`).select('*').eq('id', numericId).maybeSingle(),
       supabase.from(`${prefix}_link`).select('*').eq('id', numericId).maybeSingle(),
       supabase.from(`${prefix}_categories`).select('*').eq('id', numericId).maybeSingle(),
-      supabase.from(`${prefix}_review`).select('*').eq('id', numericId).maybeSingle(),
     ]);
 
     if (infoResult.error || !infoResult.data) {
@@ -50,84 +47,44 @@ export async function fetchPlaceDetails(category: CategoryType, id: number | str
       return null;
     }
 
-    // .data 속성 추출하여 변수에 저장
     const info = infoResult.data;
-    const rating = ratingResult.data || null;
-    const link = linkResult.data || null;
-    const categories = categoryResult.data || null;
-    const review = reviewResult.data || null;
+    const rating = ratingResult.data;
+    const review = reviewResult.data;
+    const link = linkResult.data;
+    const categoryData = categoryResult.data; // ✅ 이름을 바꿔야 충돌 없음
 
     console.log('🧩 [fetchPlaceDetails] 쿼리 결과:', {
-      info: JSON.stringify(info).substring(0, 100) + '...',
-      rating: rating ? JSON.stringify(rating).substring(0, 100) + '...' : 'null',
-      link: link ? JSON.stringify(link).substring(0, 100) + '...' : 'null',
-      categories: categories ? JSON.stringify(categories).substring(0, 100) + '...' : 'null',
-      review: review ? JSON.stringify(review).substring(0, 100) + '...' : 'null'
+      info: !!info, rating: !!rating, review: !!review, link: !!link, category: !!categoryData,
     });
 
-    // 좌표 정보 추출
-    const longitude = normalizeField(info, ['longitude', 'Longitude', 'x', 'X']) || 0;
-    const latitude = normalizeField(info, ['latitude', 'Latitude', 'y', 'Y']) || 0;
-
-    // 장소 이름 추출
-    const name = normalizeField(info, ['place_name', 'Place_Name', 'name', 'Name']) || '';
-
-    // 주소 추출
-    const roadAddress = normalizeField(info, ['road_address', 'Road_Address', 'roadAddress', 'RoadAddress']) || '';
-    const lotAddress = normalizeField(info, ['lot_address', 'Lot_Address', 'lotAddress', 'LotAddress']) || '';
-    const address = roadAddress || lotAddress || '';
-
-    // 평점 정보 추출
-    const ratingValue = rating ? normalizeField(rating, ['rating', 'Rating', 'rate']) : 0;
-    const reviewCount = rating ? normalizeField(rating, ['visitor_review_count', 'Visitor_Review_Count', 'review_count', 'Review_Count']) : 0;
-    const parsedRating = typeof ratingValue === 'number' ? ratingValue : parseFloat(String(ratingValue || 0));
-    const parsedReviewCount = typeof reviewCount === 'number' ? reviewCount : parseInt(String(reviewCount || 0), 10);
-
-    // 카테고리 상세 정보 추출
-    const categoryDetail = categories ? 
-      normalizeField(categories, ['categories_details', 'Categories_Details', 'category_details', 'Category_Details']) || '' : '';
-
-    // 링크 정보 추출
-    const naverLink = link ? normalizeField(link, ['link', 'Link', 'naver_link', 'Naver_Link']) || '' : '';
-    const instaLink = link ? normalizeField(link, ['instagram', 'Instagram', 'insta_link', 'Insta_Link']) || '' : '';
-
-    // 가중치 정보 추출
-    const weight = review ? normalizeField(review, ['visitor_norm', 'Visitor_Norm', 'weight', 'Weight']) || 0 : 0;
-    const parsedWeight = typeof weight === 'number' ? weight : parseFloat(String(weight || 0));
+    const longitude = typeof info.longitude === 'number' ? info.longitude :
+                      typeof info.Longitude === 'number' ? info.Longitude : 0;
+    const latitude = typeof info.latitude === 'number' ? info.latitude :
+                     typeof info.Latitude === 'number' ? info.Latitude : 0;
 
     const place: Place = {
-      id: id,
-      name: name,
-      address: address,
+      id: numericId,
+      name: info.place_name ?? 'Unknown',
+      address: info.road_address ?? info.lot_address ?? '',
       category: prefix,
-      categoryDetail: categoryDetail,
-      rating: parsedRating,
-      reviewCount: parsedReviewCount,
-      weight: parsedWeight,
-      naverLink: naverLink,
-      instaLink: instaLink,
-      x: typeof longitude === 'number' ? longitude : parseFloat(String(longitude)),
-      y: typeof latitude === 'number' ? latitude : parseFloat(String(latitude)),
-      operatingHours: '', // 운영시간 정보는 현재 Supabase에 없음
+      categoryDetail: categoryData?.categories_details ?? '',
+      rating: rating?.rating ?? 0,
+      reviewCount: rating?.visitor_review_count ?? 0,
+      weight: review?.visitor_norm ?? 0,
+      naverLink: link?.link ?? '',
+      instaLink: link?.instagram ?? '',
+      x: longitude,
+      y: latitude,
       raw: {
         info,
         rating,
+        review,
         link,
-        categories,
-        review
+        category: categoryData
       }
     };
 
-    console.log('✅ [fetchPlaceDetails] 매핑 결과:', {
-      id: place.id,
-      name: place.name,
-      address: place.address,
-      rating: place.rating,
-      reviewCount: place.reviewCount,
-      naverLink: place.naverLink ? '있음' : '없음',
-      instaLink: place.instaLink ? '있음' : '없음',
-      categoryDetail: place.categoryDetail
-    });
+    console.log('✅ [fetchPlaceDetails] 최종 매핑 결과:', place);
 
     return place;
   } catch (error) {

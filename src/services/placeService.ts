@@ -1,3 +1,4 @@
+
 import { supabase } from '@/lib/supabaseClient';
 import { TravelCategory } from '@/types/travel';
 import { categoryTableMap, categoryRatingMap } from '@/lib/jeju/dbMapping';
