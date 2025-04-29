@@ -1,6 +1,6 @@
 
 import { Place } from '@/types/supabase';
-import { supabaseDirect } from '@/lib/supabaseDirectClient'; // ✅
+import { supabase } from '@/lib/supabaseClient'; // ✅
 import { normalizeField } from '@/lib/jeju/placeNormalizer';
 
 // 카테고리 타입 정의
@@ -50,11 +50,11 @@ export async function fetchPlaceDetails(category: CategoryType, id: number | str
     console.log(`📁 [fetchPlaceDetails] 조회 테이블: ${infoTable}, ${ratingTable}, ${reviewTable}, ${linkTable}, ${categoryTable}`);
     
     const [infoResult, ratingResult, reviewResult, linkResult, categoryResult] = await Promise.all([
-      supabaseDirect.from(infoTable).select('*').eq('id', numericId).maybeSingle(),
-      supabaseDirect.from(ratingTable).select('*').eq('id', numericId).maybeSingle(),
-      supabaseDirect.from(reviewTable).select('*').eq('id', numericId).maybeSingle(),
-      supabaseDirect.from(linkTable).select('*').eq('id', numericId).maybeSingle(),
-      supabaseDirect.from(categoryTable).select('*').eq('id', numericId).maybeSingle()
+      supabase.from(infoTable).select('*').eq('id', numericId).maybeSingle(),
+      supabase.from(ratingTable).select('*').eq('id', numericId).maybeSingle(),
+      supabase.from(reviewTable).select('*').eq('id', numericId).maybeSingle(),
+      supabase.from(linkTable).select('*').eq('id', numericId).maybeSingle(),
+      supabase.from(categoryTable).select('*').eq('id', numericId).maybeSingle()
     ]);
 
     // 기본 정보가 없으면 null 반환

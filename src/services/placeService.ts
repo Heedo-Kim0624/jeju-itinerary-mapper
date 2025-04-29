@@ -108,26 +108,21 @@ export async function fetchPlaceData(
 
 // 데이터 처리 함수 추가
 export function processPlaceData(info: any, ratings: any[], categories: any[], links: any[], reviews: any[]) {
-  const id = normalizeField(info, 'id');
-  
-  // 추가 데이터 매칭
-  const ratingInfo = ratings.find((r: any) => normalizeField(r, 'id') === id);
-  const categoryInfo = categories.find((c: any) => normalizeField(c, 'id') === id);
-  const linkInfo = links.find((l: any) => normalizeField(l, 'id') === id);
-  const reviewInfo = reviews.find((rev: any) => normalizeField(rev, 'id') === id);
-  
-  // 데이터 가공
+  const id = parseInt(String(normalizeField(info, 'id')));
+
+  const ratingInfo = ratings.find((r: any) => parseInt(String(normalizeField(r, 'id'))) === id);
+  const categoryInfo = categories.find((c: any) => parseInt(String(normalizeField(c, 'id'))) === id);
+  const linkInfo = links.find((l: any) => parseInt(String(normalizeField(l, 'id'))) === id);
+  const reviewInfo = reviews.find((rev: any) => parseInt(String(normalizeField(rev, 'id'))) === id);
+
   const rating = ratingInfo ? parseFloat(String(normalizeField(ratingInfo, 'rating') || '0')) : 0;
   const reviewCount = ratingInfo ? parseInt(String(normalizeField(ratingInfo, 'visitor_review_count') || '0'), 10) : 0;
-  const categoryDetail = categoryInfo ? 
-    (normalizeField(categoryInfo, 'categories_details') || 
-     normalizeField(categoryInfo, 'Categories_Details') || 
-     normalizeField(categoryInfo, 'categories') || 
-     normalizeField(categoryInfo, 'Categories') || '') : '';
+  const categoryDetail = categoryInfo ?
+    (normalizeField(categoryInfo, 'categories_details') || '') : '';
   const naverLink = linkInfo ? (normalizeField(linkInfo, 'link') || '') : '';
   const instaLink = linkInfo ? (normalizeField(linkInfo, 'instagram') || '') : '';
   const weight = reviewInfo ? parseFloat(String(normalizeField(reviewInfo, 'visitor_norm') || '0')) : 0;
-  
+
   return {
     rating,
     reviewCount,
