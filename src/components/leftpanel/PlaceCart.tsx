@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { TrashIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -14,35 +13,29 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
 
-interface PlaceCartProps {
-  selectedPlaces: Place[];
-  onRemovePlace: (id: string) => void;
-  onViewOnMap: (place: Place) => void;
-}
-
-const PlaceCart: React.FC<PlaceCartProps> = ({ selectedPlaces, onRemovePlace, onViewOnMap }) => {
-  const { dates } = useTripDetails();
-  const { selectedRegions } = useRegionSelection();
-  const { createItinerary } = useItineraryCreator();
+const PlaceCart: React.FC = () => {
+  const { selectedPlaces, removePlace } = useSelectedPlaces();
+  const { startDate, endDate } = useTripDetails();
+  const { selectedLocations } = useRegionSelection();
+  const { createItinerary, isCreating } = useItineraryCreator();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [isCreating, setIsCreating] = React.useState(false);
 
   const formatDateRange = () => {
-    if (!dates) return '';
+    if (!startDate || !endDate) return '';
     
-    const start = format(new Date(dates.startDate), 'M.d (E)', { locale: ko });
-    const end = format(new Date(dates.endDate), 'M.d (E)', { locale: ko });
+    const start = format(new Date(startDate), 'M.d (E)', { locale: ko });
+    const end = format(new Date(endDate), 'M.d (E)', { locale: ko });
     
     return `${start} ~ ${end}`;
   };
 
   const renderLocationBadges = () => {
-    if (!selectedRegions?.length) return null;
+    if (!selectedLocations.length) return null;
     
     return (
       <div className="flex flex-wrap gap-1 mb-2">
-        {selectedRegions.map((location) => (
+        {selectedLocations.map((location) => (
           <Badge key={location} variant="outline" className="text-xs">
             {location}
           </Badge>
@@ -53,11 +46,11 @@ const PlaceCart: React.FC<PlaceCartProps> = ({ selectedPlaces, onRemovePlace, on
 
   const handleRemovePlace = (place: Place, event: React.MouseEvent) => {
     event.stopPropagation();
-    onRemovePlace(place.id.toString());
+    removePlace(place);
   };
 
   const handleCreateItinerary = async () => {
-    if (!dates) {
+    if (!startDate || !endDate) {
       toast({
         title: "일정 기간을 선택해주세요",
         variant: "destructive",
@@ -74,21 +67,16 @@ const PlaceCart: React.FC<PlaceCartProps> = ({ selectedPlaces, onRemovePlace, on
     }
 
     try {
-      setIsCreating(true);
-      const result = createItinerary(
-        selectedPlaces,
-        dates.startDate,
-        dates.endDate,
-        dates.startTime,
-        dates.endTime
-      );
-      setIsCreating(false);
-      
-      if (result && result.length > 0) {
-        navigate('/itinerary');
-      }
+      await createItinerary({
+        selected_places: selectedPlaces.map(p => ({ 
+          id: p.id.toString(), // Convert ID to string
+          name: p.name 
+        })),
+        candidate_places: [],
+        start_datetime: startDate,
+        end_datetime: endDate
+      });
     } catch (error) {
-      setIsCreating(false);
       console.error("일정 생성 중 오류 발생:", error);
       toast({
         title: "일정 생성 중 오류가 발생했습니다",
@@ -115,7 +103,6 @@ const PlaceCart: React.FC<PlaceCartProps> = ({ selectedPlaces, onRemovePlace, on
               <div 
                 key={place.id} 
                 className="flex items-center justify-between bg-muted/30 rounded-md p-2 hover:bg-muted/50"
-                onClick={() => onViewOnMap(place)}
               >
                 <div className="flex-1">
                   <div className="font-medium text-sm">{place.name}</div>

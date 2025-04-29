@@ -54,7 +54,7 @@ const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
 
     const payload = {
       selected_places: selectedPlaces.map(place => ({
-        id: place.id.toString(),
+        id: parseInt(String(place.id).replace(/[^0-9]/g, '')),
         name: place.name
       })),
       candidate_places: [], // 필요에 따라 구현
