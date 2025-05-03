@@ -1,11 +1,13 @@
 
 import { useRef, useCallback } from 'react';
 import { Place } from '@/types/supabase';
+import { getCategoryColor, mapCategoryNameToKey } from '@/utils/categoryColors';
 
 type MarkerOptions = {
   highlight?: boolean;
   isItinerary?: boolean;
   useRecommendedStyle?: boolean;
+  useColorByCategory?: boolean;
 };
 
 export const useMapMarkers = (map: any) => {
@@ -50,7 +52,7 @@ export const useMapMarkers = (map: any) => {
   const addMarkers = useCallback((places: Place[], opts: MarkerOptions = {}) => {
     if (!map || !window.naver || !places || places.length === 0) return;
 
-    const { highlight = false, isItinerary = false, useRecommendedStyle = false } = opts;
+    const { highlight = false, isItinerary = false, useRecommendedStyle = false, useColorByCategory = false } = opts;
 
     places.forEach((place, index) => {
       if (!place.x || !place.y) {
@@ -60,6 +62,11 @@ export const useMapMarkers = (map: any) => {
 
       const position = new window.naver.maps.LatLng(place.y, place.x);
 
+      // 장소 카테고리에 따른 색상 결정
+      const categoryColor = useColorByCategory && place.category 
+        ? getCategoryColor(mapCategoryNameToKey(place.category)) 
+        : (highlight ? '#FF3B30' : '#4CD964');
+
       // 마커 스타일 결정
       let markerIcon;
       if (isItinerary) {
@@ -68,7 +75,7 @@ export const useMapMarkers = (map: any) => {
           content: `
             <div class="custom-marker" style="
               width: 36px; height: 36px; border-radius: 50%; 
-              background-color: ${highlight ? '#FF3B30' : '#007AFF'};
+              background-color: ${categoryColor};
               color: white; font-weight: bold; display: flex;
               align-items: center; justify-content: center;
               box-shadow: 0 2px 6px rgba(0,0,0,0.3); border: 2px solid white;
@@ -84,7 +91,7 @@ export const useMapMarkers = (map: any) => {
           content: `
             <div class="custom-marker" style="
               width: 32px; height: 32px; border-radius: 50%;
-              background-color: ${index < 5 ? '#FFCC00' : '#FF9500'};
+              background-color: ${categoryColor};
               color: white; font-weight: bold; display: flex;
               align-items: center; justify-content: center;
               box-shadow: 0 2px 6px rgba(0,0,0,0.3); border: 2px solid white;
@@ -100,7 +107,7 @@ export const useMapMarkers = (map: any) => {
           content: `
             <div class="custom-marker" style="
               width: 24px; height: 24px; border-radius: 50%;
-              background-color: ${highlight ? '#FF3B30' : '#4CD964'};
+              background-color: ${categoryColor};
               border: 2px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.3);
             "></div>
           `,
@@ -123,9 +130,9 @@ export const useMapMarkers = (map: any) => {
         <div style="padding: 10px; max-width: 200px; font-size: 13px;">
           <h3 style="font-weight: bold; margin-bottom: 5px;">${place.name}</h3>
           ${place.address ? `<p style="color: #666; margin: 4px 0;">${place.address}</p>` : ''}
-          ${place.category ? `<p style="color: #007AFF; margin: 4px 0; font-size: 12px;">${place.category}</p>` : ''}
+          ${place.category ? `<p style="color: ${categoryColor}; margin: 4px 0; font-size: 12px;">${place.category}</p>` : ''}
           ${place.rating ? `<p style="color: #FF9500; margin: 4px 0;">⭐ ${place.rating.toFixed(1)}</p>` : ''}
-          ${isItinerary ? `<strong style="color: #FF3B30; font-size: 14px;">방문 순서: ${index + 1}</strong>` : ''}
+          ${isItinerary ? `<strong style="color: ${categoryColor}; font-size: 14px;">방문 순서: ${index + 1}</strong>` : ''}
         </div>
       `;
 
@@ -190,4 +197,4 @@ export const useMapMarkers = (map: any) => {
     clearMarkersAndUiElements,
     calculateRoutes
   };
-};
+}, []);

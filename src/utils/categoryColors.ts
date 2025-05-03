@@ -45,6 +45,22 @@ export const getCategoryName = (category: string): string => {
   }
 };
 
+// 역방향 매핑 함수: 한글 카테고리명 -> 영문 키
+export const mapCategoryNameToKey = (categoryName: string): string => {
+  switch (categoryName) {
+    case '음식점':
+      return 'restaurant';
+    case '카페':
+      return 'cafe';
+    case '관광지':
+      return 'attraction';
+    case '숙소':
+      return 'accommodation';
+    default:
+      return 'attraction'; // 기본값
+  }
+};
+
 export const getCategoryColor = (category: string): string => {
   return categoryColors[category]?.marker || '#1F1F1F';
 };

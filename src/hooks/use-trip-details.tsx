@@ -1,60 +1,55 @@
-import { useState } from 'react';
-import { format } from 'date-fns';
 
-interface TripDates {
-  startDate: Date;
-  endDate: Date;
+import { useState, useMemo } from 'react';
+
+interface TripDetails {
+  startDate: Date | null;
+  endDate: Date | null;
   startTime: string;
   endTime: string;
 }
 
 export const useTripDetails = () => {
-  const [dates, setDates] = useState<TripDates | null>(null);
-  const [accomodationDirectInput, setAccomodationDirectInput] = useState('');
-  const [landmarkDirectInput, setLandmarkDirectInput] = useState('');
-  const [restaurantDirectInput, setRestaurantDirectInput] = useState('');
-  const [cafeDirectInput, setCafeDirectInput] = useState('');
+  const [details, setDetails] = useState<TripDetails>({
+    startDate: null,
+    endDate: null,
+    startTime: '10:00',
+    endTime: '22:00',
+  });
 
-  const formatToISOString = (date: Date, time: string): string => {
-    const [hours, minutes] = time.split(':');
-    const newDate = new Date(date);
-    newDate.setHours(Number(hours), Number(minutes), 0);
-    return newDate.toISOString();
-  };
-
-  const buildScheduleDateTime = () => {
-    if (!dates) return null;
+  // 여행 기간 계산 (n박)
+  const tripDuration = useMemo(() => {
+    if (!details.startDate || !details.endDate) return null;
     
-    return {
-      start_datetime: formatToISOString(dates.startDate, dates.startTime),
-      end_datetime: formatToISOString(dates.endDate, dates.endTime)
-    };
+    // 날짜 차이 계산 (밀리초 -> 일)
+    const diffTime = details.endDate.getTime() - details.startDate.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    // 총 박수 계산 (1일 여행이면 0박, 2일 여행이면 1박, ...)
+    return Math.max(0, diffDays);
+  }, [details.startDate, details.endDate]);
+
+  const setStartDate = (date: Date | null) => {
+    setDetails((prev) => ({ ...prev, startDate: date }));
   };
 
-  const buildPromptKeywords = () => {
-    const allKeywords: string[] = [];
+  const setEndDate = (date: Date | null) => {
+    setDetails((prev) => ({ ...prev, endDate: date }));
+  };
 
-    if (dates) {
-      const formattedStartDate = format(dates.startDate, 'MM.dd');
-      const formattedEndDate = format(dates.endDate, 'MM.dd');
-      allKeywords.push(`일정[${formattedStartDate},${dates.startTime},${formattedEndDate},${dates.endTime}]`);
-    }
+  const setStartTime = (time: string) => {
+    setDetails((prev) => ({ ...prev, startTime: time }));
+  };
 
-    return allKeywords;
+  const setEndTime = (time: string) => {
+    setDetails((prev) => ({ ...prev, endTime: time }));
   };
 
   return {
-    dates,
-    setDates,
-    buildScheduleDateTime,
-    accomodationDirectInput,
-    setAccomodationDirectInput,
-    landmarkDirectInput,
-    setLandmarkDirectInput,
-    restaurantDirectInput,
-    setRestaurantDirectInput,
-    cafeDirectInput,
-    setCafeDirectInput,
-    buildPromptKeywords
+    ...details,
+    tripDuration,
+    setStartDate,
+    setEndDate,
+    setStartTime,
+    setEndTime,
   };
 };

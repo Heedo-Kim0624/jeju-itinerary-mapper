@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Place, SelectedPlace, SchedulePayload } from '@/types/supabase';
 import { useMapContext } from '@/components/rightpanel/MapContext';
 import { toast } from 'sonner';
+import { useTripDetails } from './use-trip-details';
 
 export const useSelectedPlaces = () => {
   const [selectedPlaces, setSelectedPlaces] = useState<Place[]>([]);
@@ -17,6 +18,9 @@ export const useSelectedPlaces = () => {
     '음식점': [],
     '카페': [],
   });
+
+  // Get trip details to check accommodation limits
+  const { tripDuration } = useTripDetails();
 
   // allCategoriesSelected 상태를 명확하게 계산
   const [allCategoriesSelected, setAllCategoriesSelected] = useState(false);
@@ -44,6 +48,14 @@ export const useSelectedPlaces = () => {
 
   const { panTo, addMarkers, clearMarkersAndUiElements } = useMapContext();
 
+  // Check if accommodation limit reached
+  const isAccommodationLimitReached = (currentCount: number): boolean => {
+    if (!tripDuration || tripDuration < 1) return false;
+    
+    // n박 여행이면 최대 n개의 숙소만 선택 가능
+    return currentCount >= tripDuration;
+  };
+
   const handleSelectPlace = (place: Place, checked: boolean, category: string | null = null) => {
     // 카테고리가 제공되었는지 확인하고, 누락된 경우 콘솔 로그 추가
     if (!category) {
@@ -57,6 +69,16 @@ export const useSelectedPlaces = () => {
     };
     
     if (checked) {
+      // If trying to add accommodation, check limit
+      if (category === '숙소') {
+        const currentAccommodationCount = selectedPlacesByCategory['숙소'].length;
+        
+        if (isAccommodationLimitReached(currentAccommodationCount)) {
+          toast.error(`${tripDuration}박 여행에는 최대 ${tripDuration}개의 숙소만 선택할 수 있습니다.`);
+          return;
+        }
+      }
+
       setSelectedPlaces(prevPlaces => {
         if (prevPlaces.some(p => p.id === normalizedPlace.id)) {
           return prevPlaces;
@@ -152,6 +174,7 @@ export const useSelectedPlaces = () => {
     handleRemovePlace,
     handleViewOnMap,
     allCategoriesSelected,
-    prepareSchedulePayload
+    prepareSchedulePayload,
+    isAccommodationLimitReached
   };
 };

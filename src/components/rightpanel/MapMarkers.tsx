@@ -2,6 +2,7 @@
 import React, { useEffect } from 'react';
 import { useMapContext } from './MapContext';
 import { Place, ItineraryDay } from '@/types/supabase';
+import { getCategoryColor } from '@/utils/categoryColors';
 
 interface MapMarkersProps {
   places: Place[];
@@ -53,7 +54,13 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
       const selectedItinerary = itinerary.find(day => day.day === selectedDay);
       if (selectedItinerary) {
         console.log(`[MapMarkers] 일정 ${selectedDay}일차 표시, 장소 ${selectedItinerary.places.length}개`);
-        addMarkers(selectedItinerary.places, { isItinerary: true });
+        
+        // 카테고리별로 색상을 다르게 표시
+        addMarkers(selectedItinerary.places, { 
+          isItinerary: true,
+          useColorByCategory: true 
+        });
+        
         calculateRoutes(selectedItinerary.places);
         
         // 첫 번째 장소로 지도 중심 이동
@@ -67,14 +74,16 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
         }
       } else {
         console.warn(`No itinerary found for day ${selectedDay}`);
-        addMarkers(selectedPlaces, { highlight: true });
+        if (selectedPlaces && selectedPlaces.length > 0) {
+          addMarkers(selectedPlaces, { highlight: true, useColorByCategory: true });
+        }
       }
     } else if (selectedPlaces && selectedPlaces.length > 0) {
-      // 명시적으로 선택된 장소들을 표시
-      addMarkers(selectedPlaces, { highlight: true });
+      // 명시적으로 선택된 장소들을 표시 (카테고리별 색상)
+      addMarkers(selectedPlaces, { highlight: true, useColorByCategory: true });
     } else {
-      // 기본 상태: 모든 장소 표시
-      addMarkers(places, { highlight: false });
+      // 기본 상태: 모든 장소 표시하지 않음 - 사용자 요청대로 변경
+      // 불필요한 장소 표시를 제거
     }
   };
 

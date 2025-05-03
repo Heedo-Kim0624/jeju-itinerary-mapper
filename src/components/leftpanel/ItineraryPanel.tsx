@@ -1,10 +1,10 @@
 
-import React, { useState } from 'react';
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { ItineraryDay, Place } from '@/types/supabase'; 
-import { format } from 'date-fns';
-import { ko } from 'date-fns/locale';
+import React from 'react';
+import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ItineraryDay } from '@/types/supabase';
+import DaySelector from './DaySelector';
+import ScheduleViewer from './ScheduleViewer';
 
 interface ItineraryPanelProps {
   itinerary: ItineraryDay[];
@@ -19,87 +19,38 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
   startDate,
   onSelectDay,
   onClose,
-  selectedDay,
+  selectedDay
 }) => {
+  // 현재 선택된 일자의 일정
+  const currentDayItinerary = selectedDay 
+    ? itinerary.find(day => day.day === selectedDay) 
+    : null;
+
   return (
-    <div className="h-full flex flex-col">
-      <div className="flex items-center justify-between p-4 border-b">
-        <h2 className="text-lg font-semibold">생성된 여행 일정</h2>
-        <button
-          onClick={onClose}
-          className="text-sm text-blue-600 hover:underline"
-        >
-          ← 뒤로
-        </button>
+    <div className="min-h-full w-full flex flex-col divide-y">
+      <div className="p-4 flex justify-between items-center">
+        <h2 className="text-lg font-medium">생성된 일정</h2>
+        <Button variant="ghost" size="icon" onClick={onClose}>
+          <X className="h-4 w-4" />
+        </Button>
       </div>
-
-      <div className="flex overflow-x-auto p-2 border-b">
-        {itinerary.map((day) => {
-          const dayDate = new Date(startDate);
-          dayDate.setDate(startDate.getDate() + day.day - 1);
-          const formattedDate = format(dayDate, 'MM/dd(eee)', { locale: ko });
-          
-          return (
-            <Button
-              key={day.day}
-              variant={selectedDay === day.day ? "default" : "outline"}
-              className="mx-1 whitespace-nowrap"
-              onClick={() => onSelectDay(day.day)}
-            >
-              {day.day}일차 ({formattedDate})
-            </Button>
-          );
-        })}
-      </div>
-
-      <ScrollArea className="flex-1">
-        {selectedDay !== null && itinerary.find(d => d.day === selectedDay) ? (
-          <div className="p-4">
-            <div className="mb-4">
-              <h3 className="text-md font-medium mb-2">{selectedDay}일차 일정</h3>
-              <div className="text-sm text-muted-foreground mb-4">
-                총 이동 거리: {itinerary.find(d => d.day === selectedDay)?.totalDistance.toFixed(2)} km
-              </div>
-            </div>
-            
-            <div className="space-y-4">
-              {itinerary
-                .find(d => d.day === selectedDay)
-                ?.places.map((place, idx) => (
-                  <div key={place.id} className="flex border rounded-lg overflow-hidden bg-white">
-                    <div className="h-full bg-primary-100 flex items-center justify-center w-12 font-bold text-lg border-r">
-                      {idx + 1}
-                    </div>
-                    <div className="p-3 flex-1">
-                      <div className="font-medium">{place.name}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {categoryToKorean(place.category)}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-            </div>
-          </div>
-        ) : (
-          <div className="h-full flex items-center justify-center text-muted-foreground">
-            일자를 선택해주세요
+      
+      <div className="flex-1 overflow-auto">
+        <DaySelector
+          itinerary={itinerary}
+          selectedDay={selectedDay}
+          onSelectDay={onSelectDay}
+          startDate={startDate}
+        />
+        
+        {currentDayItinerary && (
+          <div className="p-4 pt-24">
+            <ScheduleViewer itineraryDay={currentDayItinerary} />
           </div>
         )}
-      </ScrollArea>
+      </div>
     </div>
   );
 };
-
-// 카테고리를 한글로 표시하는 헬퍼 함수
-function categoryToKorean(category: string): string {
-  const categoryMap: Record<string, string> = {
-    'accommodation': '숙소',
-    'attraction': '관광지',
-    'restaurant': '음식점',
-    'cafe': '카페'
-  };
-  
-  return categoryMap[category] || category;
-}
 
 export default ItineraryPanel;
