@@ -1,3 +1,4 @@
+
 // components/PlaceList.tsx
 import React, { useEffect, useRef, useState } from 'react';
 import { RefreshCw, Filter } from 'lucide-react';
