@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { useCategorySelection } from '@/hooks/use-category-selection';
 import { useRegionSelection } from '@/hooks/use-region-selection';
