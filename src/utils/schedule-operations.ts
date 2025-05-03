@@ -107,11 +107,14 @@ export const isCategoryTimeSlotCompatible = (category: string, hour: number): bo
  * @returns 해당 시간에 영업 중인지 여부
  */
 export const isPlaceOpenAt = (place: Place, dayHour: string): boolean => {
-  if (!place.operationTimeData) {
+  // Fix: Check if the place has operationTimeData property before accessing it
+  if (!place.operatingHours || typeof place.operatingHours !== 'object') {
     return true; // 영업 시간 데이터가 없으면 항상 영업 중으로 간주
   }
   
-  const operationStatus = place.operationTimeData[dayHour];
+  // Assume operatingHours has the data structure we need
+  const operatingHoursObj = place.operatingHours as Record<string, number>;
+  const operationStatus = operatingHoursObj[dayHour];
   
   // 0: 영업 안함, 1: 영업 중, 999: 정보 없음
   if (operationStatus === 0) {

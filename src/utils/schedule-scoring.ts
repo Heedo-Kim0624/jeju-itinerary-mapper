@@ -1,4 +1,3 @@
-
 import { Place } from '@/types/supabase';
 import { ItineraryScore } from './schedule-types';
 
@@ -71,9 +70,8 @@ export const generateOptimalPlaceOrder = async (
   places: Place[],
   prompt: string
 ): Promise<string[]> => {
-  // TODO: 실제 HuggingFace LLM 모델 API 연동 구현
-  // 현재는 임시 구현으로 원래 순서 반환
-  return places.map(place => place.id);
+  // Fix: Convert place.id to string before returning
+  return places.map(place => String(place.id));
 };
 
 /**
