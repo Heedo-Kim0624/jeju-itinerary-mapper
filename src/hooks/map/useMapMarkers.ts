@@ -197,4 +197,4 @@ export const useMapMarkers = (map: any) => {
     clearMarkersAndUiElements,
     calculateRoutes
   };
-}, []);
+};
