@@ -2,9 +2,10 @@
 import React from 'react';
 import CategoryResultPanel from '../middlepanel/CategoryResultPanel';
 import { Place } from '@/types/supabase';
+import type { CategoryName } from '@/utils/categoryUtils';
 
 interface CategoryResultHandlerProps {
-  showCategoryResult: string | null;
+  showCategoryResult: CategoryName | null;
   selectedRegions: string[];
   selectedKeywordsByCategory: Record<string, string[]>;
   onClose: () => void;

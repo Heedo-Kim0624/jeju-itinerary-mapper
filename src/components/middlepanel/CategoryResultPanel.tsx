@@ -12,39 +12,44 @@ import ErrorState from './category-result/ErrorState';
 
 interface CategoryResultPanelProps {
   category: '숙소' | '관광지' | '음식점' | '카페';
-  locations: string[];
+  regions: string[];
   keywords: string[];
   onClose: () => void;
   onSelectPlace: (place: Place, checked: boolean) => void;
-  selectedPlaces: Place[];
+  isPlaceSelected: (id: string | number) => boolean;
+  isOpen: boolean;
 }
 
 const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
   category,
-  locations,
+  regions,
   keywords,
   onClose,
   onSelectPlace,
-  selectedPlaces
+  isPlaceSelected,
+  isOpen
 }) => {
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const { panTo, addMarkers, clearMarkersAndUiElements } = useMapContext();
   
-  // locations 배열을 useCategoryResults에 직접 전달
-  const { isLoading, error, recommendedPlaces, normalPlaces } = useCategoryResults(category, keywords, locations);
+  // 안전하게 regions 배열을 처리 - regions가 undefined일 경우 빈 배열 사용
+  const safeRegions = Array.isArray(regions) ? regions : [];
+  
+  // useCategoryResults에 regions 대신 safeRegions 전달
+  const { isLoading, error, recommendedPlaces, normalPlaces } = useCategoryResults(category, keywords, safeRegions);
 
   useEffect(() => {
     clearMarkersAndUiElements();
     
     if (recommendedPlaces.length > 0) {
-      console.log(`[CategoryResultPanel] 장소 표시: ${recommendedPlaces.length}개 추천 장소 (지역: ${locations.join(', ')})`);
+      console.log(`[CategoryResultPanel] 장소 표시: ${recommendedPlaces.length}개 추천 장소 (지역: ${safeRegions.join(', ')})`);
       
       // 첫번째 장소가 있으면 지도 중앙을 해당 위치로 이동
       if (recommendedPlaces[0] && recommendedPlaces[0].x && recommendedPlaces[0].y) {
         panTo({ lat: recommendedPlaces[0].y, lng: recommendedPlaces[0].x });
-      } else if (locations.length > 0) {
+      } else if (safeRegions.length > 0) {
         // 장소가 없으면 선택된 지역으로 이동
-        panTo(locations[0]);
+        panTo(safeRegions[0]);
       }
       
       addMarkers(recommendedPlaces, { useRecommendedStyle: true });
@@ -52,7 +57,7 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
       // Log successful places loaded
       console.log(`장소 로딩 완료: 추천 장소 ${recommendedPlaces.length}개, 주변 장소 ${normalPlaces.length}개`);
     }
-  }, [recommendedPlaces, normalPlaces, locations, clearMarkersAndUiElements, panTo, addMarkers]);
+  }, [recommendedPlaces, normalPlaces, safeRegions, clearMarkersAndUiElements, panTo, addMarkers]);
 
   const handleViewDetails = (place: Place) => {
     setSelectedPlace(place);
@@ -77,11 +82,12 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
             <>
               <PlaceListingView
                 places={recommendedPlaces}
-                title={`🌟 추천 장소 (${locations.join(', ')})`}
+                title={`🌟 추천 장소 (${safeRegions.join(', ')})`}
                 isLoading={isLoading}
-                selectedPlaces={selectedPlaces}
+                selectedPlaces={[]}
                 onSelectPlace={onSelectPlace}
                 onViewOnMap={handleViewDetails}
+                isPlaceSelected={isPlaceSelected}
               />
               
               {normalPlaces.length > 0 && (
@@ -89,9 +95,10 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
                   places={normalPlaces}
                   title="📍 주변 장소"
                   isLoading={isLoading}
-                  selectedPlaces={selectedPlaces}
+                  selectedPlaces={[]}
                   onSelectPlace={onSelectPlace}
                   onViewOnMap={handleViewDetails}
+                  isPlaceSelected={isPlaceSelected}
                 />
               )}
             </>
