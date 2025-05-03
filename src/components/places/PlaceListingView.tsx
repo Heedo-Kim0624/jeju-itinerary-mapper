@@ -12,6 +12,7 @@ interface PlaceListingViewProps {
   selectedPlaces: Place[];
   onSelectPlace: (place: Place, checked: boolean) => void;
   onViewOnMap: (place: Place) => void;
+  isPlaceSelected?: (id: string | number) => boolean;  // Added the isPlaceSelected prop as optional
 }
 
 const PlaceListingView: React.FC<PlaceListingViewProps> = ({
@@ -20,7 +21,8 @@ const PlaceListingView: React.FC<PlaceListingViewProps> = ({
   isLoading,
   selectedPlaces,
   onSelectPlace,
-  onViewOnMap
+  onViewOnMap,
+  isPlaceSelected
 }) => {
   // 가중치(weight)를 기준으로 내림차순 정렬
   const sortedPlaces = sortByWeightDescending(places);
@@ -58,7 +60,7 @@ const PlaceListingView: React.FC<PlaceListingViewProps> = ({
           <PlaceCard
             key={place.id}
             place={place}
-            isSelected={selectedPlaces.some(p => p.id === place.id)}
+            isSelected={isPlaceSelected ? isPlaceSelected(place.id) : selectedPlaces.some(p => p.id === place.id)}
             onSelect={onSelectPlace}
             onViewDetails={() => onViewOnMap(place)}
           />
