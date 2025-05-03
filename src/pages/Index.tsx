@@ -23,7 +23,9 @@ const Index: React.FC = () => {
   const {
     itinerary,
     selectedItineraryDay,
-    showItinerary
+    showItinerary,
+    setShowItinerary,
+    generateItinerary
   } = useItinerary();
 
   // selectedCategoriesCount 상태 추가하여 디버그

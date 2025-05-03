@@ -36,7 +36,7 @@ const PlaceCart: React.FC<PlaceCartProps> = ({
         </div>
       </div>
       
-      <ScrollArea className="h-[400px] px-2">
+      <ScrollArea className="h-[200px] px-2">
         <div className="space-y-2 py-2">
           {selectedPlaces.map(place => (
             <div 

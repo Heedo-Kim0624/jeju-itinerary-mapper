@@ -11,16 +11,27 @@ const ItineraryButton: React.FC<ItineraryButtonProps> = ({
   allCategoriesSelected,
   onCreateItinerary
 }) => {
+  const handleClick = () => {
+    if (!allCategoriesSelected) {
+      toast.error("모든 카테고리에서 최소 1개 이상의 장소를 선택해주세요");
+      return;
+    }
+    onCreateItinerary();
+  };
+
   return (
     <div className="mt-4">
-      {allCategoriesSelected && (
-        <button
-          onClick={onCreateItinerary}
-          className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 transition-colors flex items-center justify-center"
-        >
-          <span className="mr-1">경로 생성</span>
-        </button>
-      )}
+      <button
+        onClick={handleClick}
+        className={`w-full py-2 rounded flex items-center justify-center transition-colors ${
+          allCategoriesSelected 
+            ? "bg-green-600 text-white hover:bg-green-700" 
+            : "bg-gray-300 text-gray-600 cursor-not-allowed"
+        }`}
+        disabled={!allCategoriesSelected}
+      >
+        <span className="mr-1">경로 생성</span>
+      </button>
     </div>
   );
 };
