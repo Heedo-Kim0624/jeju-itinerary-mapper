@@ -1,28 +1,21 @@
 
 import { Place, ItineraryPlaceWithTime } from '@/types/supabase';
-import { PlaceWithUsedFlag, findNearestPlace, categorizeAndFlagPlaces } from '../utils/schedule';
-import { calculateDistance, calculateTotalDistance } from '../utils/distance';
-import { format, addMinutes, parse } from 'date-fns';
+import { PlaceWithUsedFlag } from '../utils/schedule';
+import { calculateTotalDistance } from '../utils/distance';
+import {
+  addAccommodationToItinerary,
+  addAttractionToItinerary,
+  addRestaurantToItinerary,
+  addCafeToItinerary,
+  addFirstPlaceToItinerary,
+  finalizeItineraryDay
+} from '../utils/place-assignment';
 
 export interface ItineraryDay {
   day: number;
   places: ItineraryPlaceWithTime[];
   totalDistance: number;
 }
-
-// 이동 시간을 추정하는 함수 (거리에 기반한 간단한 추정)
-const estimateTravelTime = (distance: number): number => {
-  // 거리(km)에 따라 소요 시간(분) 추정 
-  // 평균 속도 40km/h로 가정 (40km/60min = 0.667km/min)
-  return Math.ceil(distance / 0.667);
-};
-
-// 시간대 블록을 결정하는 함수
-const getTimeBlock = (day: number, hour: number): string => {
-  if (hour < 12) return `${day}일차 오전`;
-  if (hour < 17) return `${day}일차 오후`;
-  return `${day}일차 저녁`;
-};
 
 export const useItineraryCreator = () => {
   const createItinerary = (
@@ -68,189 +61,83 @@ export const useItineraryCreator = () => {
       let currentTime = new Date();
       currentTime.setHours(startHour, startMinute, 0);
       
-      // Add accommodation if available
-      if (accommodations.length > 0) {
-        const accommodation = accommodations.find(a => !a.usedInItinerary);
-        if (accommodation) {
-          accommodation.usedInItinerary = true;
-          
-          const placeWithTime: ItineraryPlaceWithTime = {
-            ...accommodation,
-            arrival_time: format(currentTime, 'HH:mm'),
-            time_block: getTimeBlock(day, currentTime.getHours())
-          };
-          
-          dayPlaces.push(placeWithTime);
-          currentPlace = accommodation;
-          
-          // 숙소에서 30분 머무른다고 가정
-          currentTime = addMinutes(currentTime, 30);
-        }
-      }
+      // 첫 번째로 숙소 추가 시도
+      const accommodationResult = addAccommodationToItinerary(
+        accommodations, 
+        dayPlaces, 
+        currentTime, 
+        day
+      );
       
-      // Start with an attraction if no accommodation
-      if (!currentPlace && attractions.length > 0) {
-        const attraction = attractions.find(a => !a.usedInItinerary);
-        if (attraction) {
-          attraction.usedInItinerary = true;
-          
-          const placeWithTime: ItineraryPlaceWithTime = {
-            ...attraction,
-            arrival_time: format(currentTime, 'HH:mm'),
-            time_block: getTimeBlock(day, currentTime.getHours())
-          };
-          
-          dayPlaces.push(placeWithTime);
-          currentPlace = attraction;
-          
-          // 관광지에서 1시간 머무른다고 가정
-          currentTime = addMinutes(currentTime, 60);
-        }
-      }
+      dayPlaces.splice(0, dayPlaces.length, ...accommodationResult.updatedDayPlaces);
+      currentPlace = accommodationResult.currentPlace;
+      currentTime = accommodationResult.updatedTime;
       
-      // Fallback to any available place
-      if (!currentPlace && places.length > 0) {
-        const anyPlaceFromOriginal = places.find(p => 
-          !accommodations.some(a => a.id === p.id) && 
-          !attractions.some(a => a.id === p.id) && 
-          !restaurants.some(r => r.id === p.id) && 
-          !cafes.some(c => c.id === p.id)
+      // 숙소가 없다면 관광지나 다른 장소로 시작
+      if (!currentPlace) {
+        const firstPlaceResult = addFirstPlaceToItinerary(
+          attractions, 
+          places, 
+          dayPlaces, 
+          currentTime, 
+          day
         );
         
-        if (anyPlaceFromOriginal) {
-          const placeWithUsedFlag: PlaceWithUsedFlag = { ...anyPlaceFromOriginal, usedInItinerary: true };
-          
-          const placeWithTime: ItineraryPlaceWithTime = {
-            ...placeWithUsedFlag,
-            arrival_time: format(currentTime, 'HH:mm'),
-            time_block: getTimeBlock(day, currentTime.getHours())
-          };
-          
-          dayPlaces.push(placeWithTime);
-          currentPlace = placeWithUsedFlag;
-          
-          // 기본 장소에서 45분 머무른다고 가정
-          currentTime = addMinutes(currentTime, 45);
-        }
+        dayPlaces.splice(0, dayPlaces.length, ...firstPlaceResult.updatedDayPlaces);
+        currentPlace = firstPlaceResult.currentPlace;
+        currentTime = firstPlaceResult.updatedTime;
       }
       
       // 이전 장소 위치에서 다음 장소를 선택하며 일정 구성
       if (currentPlace) {
-        // Add attractions
-        for (let i = 0; i < attractionsPerDay && attractions.some(a => !a.usedInItinerary); i++) {
-          if (!currentPlace) continue;
-          const nearest = findNearestPlace(currentPlace, attractions, calculateDistance);
-          
-          if (nearest) {
-            nearest.usedInItinerary = true;
-            
-            // 이동 시간 계산
-            const distance = calculateDistance(currentPlace, nearest);
-            const travelTime = estimateTravelTime(distance);
-            
-            // 이전 장소에 이동 시간 정보 추가
-            if (dayPlaces.length > 0) {
-              const lastPlace = dayPlaces[dayPlaces.length - 1];
-              lastPlace.travel_time_to_next = `${travelTime}분`;
-            }
-            
-            // 이동 시간을 현재 시간에 추가
-            currentTime = addMinutes(currentTime, travelTime);
-            
-            const placeWithTime: ItineraryPlaceWithTime = {
-              ...nearest,
-              arrival_time: format(currentTime, 'HH:mm'),
-              time_block: getTimeBlock(day, currentTime.getHours())
-            };
-            
-            dayPlaces.push(placeWithTime);
-            currentPlace = nearest;
-            
-            // 관광지에서 보내는 시간 (60분)
-            currentTime = addMinutes(currentTime, 60);
-          }
-        }
+        // 관광지 추가
+        const attractionsResult = addAttractionToItinerary(
+          attractions, 
+          dayPlaces, 
+          currentTime, 
+          day, 
+          currentPlace, 
+          attractionsPerDay
+        );
         
-        // Add restaurants
-        for (let i = 0; i < restaurantsPerDay && restaurants.some(r => !r.usedInItinerary); i++) {
-          if (!currentPlace) continue;
-          const nearest = findNearestPlace(currentPlace, restaurants, calculateDistance);
-          
-          if (nearest) {
-            nearest.usedInItinerary = true;
-            
-            // 이동 시간 계산
-            const distance = calculateDistance(currentPlace, nearest);
-            const travelTime = estimateTravelTime(distance);
-            
-            // 이전 장소에 이동 시간 정보 추가
-            if (dayPlaces.length > 0) {
-              const lastPlace = dayPlaces[dayPlaces.length - 1];
-              lastPlace.travel_time_to_next = `${travelTime}분`;
-            }
-            
-            // 이동 시간을 현재 시간에 추가
-            currentTime = addMinutes(currentTime, travelTime);
-            
-            const placeWithTime: ItineraryPlaceWithTime = {
-              ...nearest,
-              arrival_time: format(currentTime, 'HH:mm'),
-              time_block: getTimeBlock(day, currentTime.getHours())
-            };
-            
-            dayPlaces.push(placeWithTime);
-            currentPlace = nearest;
-            
-            // 식당에서 보내는 시간 (90분)
-            currentTime = addMinutes(currentTime, 90);
-          }
-        }
+        dayPlaces.splice(0, dayPlaces.length, ...attractionsResult.updatedDayPlaces);
+        currentPlace = attractionsResult.currentPlace;
+        currentTime = attractionsResult.updatedTime;
         
-        // Add cafes
-        for (let i = 0; i < cafesPerDay && cafes.some(c => !c.usedInItinerary); i++) {
-          if (!currentPlace) continue;
-          const nearest = findNearestPlace(currentPlace, cafes, calculateDistance);
-          
-          if (nearest) {
-            nearest.usedInItinerary = true;
-            
-            // 이동 시간 계산
-            const distance = calculateDistance(currentPlace, nearest);
-            const travelTime = estimateTravelTime(distance);
-            
-            // 이전 장소에 이동 시간 정보 추가
-            if (dayPlaces.length > 0) {
-              const lastPlace = dayPlaces[dayPlaces.length - 1];
-              lastPlace.travel_time_to_next = `${travelTime}분`;
-            }
-            
-            // 이동 시간을 현재 시간에 추가
-            currentTime = addMinutes(currentTime, travelTime);
-            
-            const placeWithTime: ItineraryPlaceWithTime = {
-              ...nearest,
-              arrival_time: format(currentTime, 'HH:mm'),
-              time_block: getTimeBlock(day, currentTime.getHours())
-            };
-            
-            dayPlaces.push(placeWithTime);
-            currentPlace = nearest;
-            
-            // 카페에서 보내는 시간 (60분)
-            currentTime = addMinutes(currentTime, 60);
-          }
-        }
+        // 식당 추가
+        const restaurantResult = addRestaurantToItinerary(
+          restaurants, 
+          dayPlaces, 
+          currentTime, 
+          day, 
+          currentPlace, 
+          restaurantsPerDay
+        );
         
-        // 마지막 장소는 travel_time_to_next가 없음
-        if (dayPlaces.length > 0) {
-          dayPlaces[dayPlaces.length - 1].travel_time_to_next = "-";
-        }
+        dayPlaces.splice(0, dayPlaces.length, ...restaurantResult.updatedDayPlaces);
+        currentPlace = restaurantResult.currentPlace;
+        currentTime = restaurantResult.updatedTime;
         
-        const totalDistance = calculateTotalDistance(dayPlaces);
+        // 카페 추가
+        const cafesResult = addCafeToItinerary(
+          cafes, 
+          dayPlaces, 
+          currentTime, 
+          day, 
+          currentPlace, 
+          cafesPerDay
+        );
+        
+        dayPlaces.splice(0, dayPlaces.length, ...cafesResult.updatedDayPlaces);
+        
+        // 마지막 장소 처리
+        const finalPlaces = finalizeItineraryDay(dayPlaces);
+        
+        const totalDistance = calculateTotalDistance(finalPlaces);
         
         itinerary.push({
           day,
-          places: dayPlaces,
+          places: finalPlaces,
           totalDistance
         });
       }
