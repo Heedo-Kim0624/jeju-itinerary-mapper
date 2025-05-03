@@ -1,6 +1,6 @@
 
-import React, { useState } from 'react';
-import { Calendar, Clock, MapPin } from 'lucide-react';
+import React from 'react';
+import { Calendar, Clock, MapPin, Navigation } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { format, addDays } from 'date-fns';
@@ -45,15 +45,16 @@ const ItineraryView: React.FC<ItineraryViewProps> = ({
 
   return (
     <div className="w-full h-full flex flex-col">
-      <div className="flex overflow-x-auto pb-2 mb-4">
+      <div className="flex overflow-x-auto pb-2 mb-4 gap-2">
         {itinerary.map((day) => (
           <Button
             key={day.day}
             variant={selectedDay === day.day ? "default" : "outline"}
-            className="mr-2 whitespace-nowrap"
+            className="flex flex-col h-16 min-w-16 whitespace-nowrap"
             onClick={() => handleDayClick(day.day)}
           >
-            Day {day.day}
+            <span className="font-bold text-sm">{day.day}일차</span>
+            <span className="text-xs">{format(addDays(startDate, day.day - 1), 'MM/dd(EEE)', { locale: ko })}</span>
           </Button>
         ))}
       </div>
@@ -94,10 +95,21 @@ const ItineraryView: React.FC<ItineraryViewProps> = ({
                         <span className="truncate">{place.address}</span>
                       </div>
                       
-                      <div className="flex items-center text-xs text-muted-foreground mt-1 gap-1">
-                        <Clock className="h-3 w-3" />
-                        <span>{place.operatingHours}</span>
-                      </div>
+                      {/* 도착 시간 표시 */}
+                      {place.arrival_time && (
+                        <div className="flex items-center text-xs text-muted-foreground mt-1 gap-1">
+                          <Clock className="h-3 w-3" />
+                          <span>도착: {place.arrival_time}</span>
+                        </div>
+                      )}
+                      
+                      {/* 다음 장소까지 이동 시간 */}
+                      {place.travel_time_to_next && place.travel_time_to_next !== "-" && (
+                        <div className="flex items-center text-xs text-muted-foreground mt-1 gap-1">
+                          <Navigation className="h-3 w-3" />
+                          <span>다음 장소까지: {place.travel_time_to_next}</span>
+                        </div>
+                      )}
                       
                       <div className="mt-2">
                         <span 

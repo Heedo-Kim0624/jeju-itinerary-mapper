@@ -2,9 +2,10 @@
 import React from 'react';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import { ItineraryDay } from '@/hooks/use-itinerary-creator';
+import { ItineraryDay } from '@/types/supabase';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
+import { Clock, Navigation } from 'lucide-react';
 
 interface ScheduleViewerProps {
   schedule?: ItineraryDay[];
@@ -83,17 +84,39 @@ const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
               </div>
             </div>
             
-            <div className="space-y-4">
+            <div className="space-y-4 relative">
+              {/* 일정 타임라인 가이드 라인 */}
+              <div className="absolute top-0 bottom-0 left-6 w-0.5 bg-gray-200 z-0"></div>
+              
               {currentDay.places.map((place, idx) => (
-                <div key={place.id} className="flex border rounded-lg overflow-hidden bg-white">
-                  <div className="h-full bg-primary-100 flex items-center justify-center w-12 font-bold text-lg border-r">
+                <div key={place.id} className="flex relative z-10">
+                  {/* 숫자 원형 마커 */}
+                  <div className="h-12 w-12 rounded-full bg-blue-500 text-white font-bold flex items-center justify-center border-2 border-white shadow-md z-10">
                     {idx + 1}
                   </div>
-                  <div className="p-3 flex-1">
+                  
+                  {/* 장소 정보 카드 */}
+                  <div className="ml-4 flex-1 border rounded-lg p-3 bg-white">
                     <div className="font-medium">{place.name}</div>
                     <div className="text-sm text-muted-foreground">
                       {categoryToKorean(place.category)}
                     </div>
+                    
+                    {/* 도착 시간 표시 */}
+                    {place.arrival_time && (
+                      <div className="flex items-center mt-2 text-xs text-gray-600">
+                        <Clock className="w-3 h-3 mr-1" />
+                        <span>도착: {place.arrival_time}</span>
+                      </div>
+                    )}
+                    
+                    {/* 다음 장소까지의 이동 시간 */}
+                    {place.travel_time_to_next && place.travel_time_to_next !== "-" && (
+                      <div className="flex items-center mt-1 text-xs text-gray-600">
+                        <Navigation className="w-3 h-3 mr-1" />
+                        <span>다음 장소까지: {place.travel_time_to_next}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}

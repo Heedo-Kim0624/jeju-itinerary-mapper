@@ -37,7 +37,7 @@ const DaySelector: React.FC<DaySelectorProps> = ({
             key={day.day}
             variant={selectedDay === day.day ? "default" : "outline"}
             size="sm"
-            className={`min-w-20 h-16 rounded-md flex flex-col items-center justify-center gap-0.5 px-3 ${
+            className={`min-w-16 h-16 rounded-md flex flex-col items-center justify-center gap-0.5 px-3 ${
               selectedDay === day.day ? 'bg-primary text-primary-foreground' : ''
             }`}
             onClick={() => onSelectDay(day.day)}

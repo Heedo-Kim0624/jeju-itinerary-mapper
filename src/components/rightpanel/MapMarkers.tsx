@@ -74,17 +74,12 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
         }
       } else {
         console.warn(`No itinerary found for day ${selectedDay}`);
-        if (selectedPlaces && selectedPlaces.length > 0) {
-          addMarkers(selectedPlaces, { highlight: true, useColorByCategory: true });
-        }
       }
     } else if (selectedPlaces && selectedPlaces.length > 0) {
       // 명시적으로 선택된 장소들을 표시 (카테고리별 색상)
       addMarkers(selectedPlaces, { highlight: true, useColorByCategory: true });
-    } else {
-      // 기본 상태: 모든 장소 표시하지 않음 - 사용자 요청대로 변경
-      // 불필요한 장소 표시를 제거
     }
+    // 불필요한 장소들은 표시하지 않음
   };
 
   return null; // 이 컴포넌트는 아무것도 렌더링하지 않고, 지도에 마커만 추가함

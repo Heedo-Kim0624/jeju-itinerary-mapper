@@ -23,6 +23,18 @@ export interface ItineraryDay {
   totalDistance: number;
 }
 
+export interface ItineraryPlaceWithTime extends Place {
+  arrival_time?: string;       // 도착 시간 (HH:MM)
+  travel_time_to_next?: string; // 다음 장소까지의 이동 시간
+  time_block?: string;         // 예: "1일차 오전"
+}
+
+export interface ItineraryDayWithTime {
+  day: number;
+  places: ItineraryPlaceWithTime[];
+  totalDistance: number;
+}
+
 export interface RestaurantInformation {
   id: number;
   place_name?: string;

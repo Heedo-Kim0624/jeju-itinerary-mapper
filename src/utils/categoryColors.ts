@@ -11,22 +11,22 @@ export const categoryColors: CategoryColors = {
   restaurant: {
     bg: 'bg-jeju-orange',
     text: 'text-white',
-    marker: '#FF8C3E',
+    marker: '#FF5252', // 빨강 - 음식점
   },
   cafe: {
     bg: 'bg-jeju-green',
     text: 'text-white',
-    marker: '#6CCEA0',
+    marker: '#9C27B0', // 보라 - 카페
   },
   attraction: {
     bg: 'bg-jeju-blue',
     text: 'text-white',
-    marker: '#5EAEFF',
+    marker: '#4CAF50', // 초록 - 관광지
   },
   accommodation: {
     bg: 'bg-purple-500',
     text: 'text-white',
-    marker: '#9B87F5',
+    marker: '#2196F3', // 파랑 - 숙소
   },
 };
 
