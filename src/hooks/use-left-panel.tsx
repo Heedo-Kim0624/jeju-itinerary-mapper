@@ -38,7 +38,12 @@ export const useLeftPanel = () => {
     handleRegionToggle
   } = useRegionSelection();
 
+  // Get both specific trip details and the combined dates object
   const {
+    startDate,
+    endDate,
+    startTime,
+    endTime,
     dates,
     setDates,
     accomodationDirectInput,

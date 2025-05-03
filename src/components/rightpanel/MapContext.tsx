@@ -9,7 +9,12 @@ interface MapContextType {
   isMapInitialized: boolean;
   isNaverLoaded: boolean;
   isMapError: boolean;
-  addMarkers: (places: Place[], opts?: { highlight?: boolean; isItinerary?: boolean; useRecommendedStyle?: boolean }) => void;
+  addMarkers: (places: Place[], opts?: { 
+    highlight?: boolean; 
+    isItinerary?: boolean; 
+    useRecommendedStyle?: boolean;
+    useColorByCategory?: boolean;
+  }) => void;
   calculateRoutes: (places: Place[]) => void;
   clearMarkersAndUiElements: () => void;
   panTo: (locationOrCoords: string | {lat: number, lng: number}) => void;

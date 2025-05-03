@@ -56,13 +56,18 @@ export const useTripDetails = () => {
   const [cafeDirectInput, setCafeDirectInput] = useState('');
 
   return {
-    ...details,
+    startDate: details.startDate,
+    endDate: details.endDate,
+    startTime: details.startTime,
+    endTime: details.endTime,
     tripDuration,
     setStartDate,
     setEndDate,
     setStartTime,
     setEndTime,
     setDates,
+    // For use in use-left-panel.tsx
+    dates: details,
     accomodationDirectInput,
     setAccomodationDirectInput,
     landmarkDirectInput,
