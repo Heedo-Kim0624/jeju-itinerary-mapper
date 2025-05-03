@@ -49,13 +49,25 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
     }
 
     if (itinerary && itinerary.length > 0 && selectedDay !== null) {
+      // 일정이 선택된 경우 해당 일자의 장소와 경로를 표시
       const selectedItinerary = itinerary.find(day => day.day === selectedDay);
       if (selectedItinerary) {
+        console.log(`[MapMarkers] 일정 ${selectedDay}일차 표시, 장소 ${selectedItinerary.places.length}개`);
         addMarkers(selectedItinerary.places, { isItinerary: true });
         calculateRoutes(selectedItinerary.places);
+        
+        // 첫 번째 장소로 지도 중심 이동
+        if (selectedItinerary.places.length > 0 && 
+            selectedItinerary.places[0].x && 
+            selectedItinerary.places[0].y) {
+          panTo({
+            lat: selectedItinerary.places[0].y,
+            lng: selectedItinerary.places[0].x
+          });
+        }
       } else {
         console.warn(`No itinerary found for day ${selectedDay}`);
-        addMarkers(places, { highlight: false });
+        addMarkers(selectedPlaces, { highlight: true });
       }
     } else if (selectedPlaces && selectedPlaces.length > 0) {
       // 명시적으로 선택된 장소들을 표시

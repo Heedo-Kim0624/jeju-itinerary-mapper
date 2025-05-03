@@ -30,13 +30,23 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const { panTo, addMarkers, clearMarkersAndUiElements } = useMapContext();
   
-  const { isLoading, error, recommendedPlaces, normalPlaces } = useCategoryResults(category, keywords);
+  // locations 배열을 useCategoryResults에 직접 전달
+  const { isLoading, error, recommendedPlaces, normalPlaces } = useCategoryResults(category, keywords, locations);
 
   useEffect(() => {
     clearMarkersAndUiElements();
     
-    if (locations.length > 0 && recommendedPlaces.length > 0) {
-      panTo(locations[0]);
+    if (recommendedPlaces.length > 0) {
+      console.log(`[CategoryResultPanel] 장소 표시: ${recommendedPlaces.length}개 추천 장소 (지역: ${locations.join(', ')})`);
+      
+      // 첫번째 장소가 있으면 지도 중앙을 해당 위치로 이동
+      if (recommendedPlaces[0] && recommendedPlaces[0].x && recommendedPlaces[0].y) {
+        panTo({ lat: recommendedPlaces[0].y, lng: recommendedPlaces[0].x });
+      } else if (locations.length > 0) {
+        // 장소가 없으면 선택된 지역으로 이동
+        panTo(locations[0]);
+      }
+      
       addMarkers(recommendedPlaces, { useRecommendedStyle: true });
       
       // Log successful places loaded
@@ -67,7 +77,7 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
             <>
               <PlaceListingView
                 places={recommendedPlaces}
-                title="🌟 추천 장소"
+                title={`🌟 추천 장소 (${locations.join(', ')})`}
                 isLoading={isLoading}
                 selectedPlaces={selectedPlaces}
                 onSelectPlace={onSelectPlace}

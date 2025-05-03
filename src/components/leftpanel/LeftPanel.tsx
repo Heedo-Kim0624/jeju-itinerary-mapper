@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useCategorySelection } from '@/hooks/use-category-selection';
 import { useRegionSelection } from '@/hooks/use-region-selection';
@@ -5,6 +6,7 @@ import { useTripDetails } from '@/hooks/use-trip-details';
 import { usePanelVisibility } from '@/hooks/use-panel-visibility';
 import { useSelectedPlaces } from '@/hooks/use-selected-places';
 import { useMapContext } from '@/components/rightpanel/MapContext';
+import { useItinerary } from '@/hooks/use-itinerary';
 import LeftPanelContent from './LeftPanelContent';
 import RegionSlidePanel from '../middlepanel/RegionSlidePanel';
 import CategoryResultHandler from './CategoryResultHandler';
@@ -59,6 +61,13 @@ const LeftPanel: React.FC = () => {
     setShowCategoryResult,
   } = usePanelVisibility();
 
+  const {
+    itinerary,
+    selectedItineraryDay,
+    handleSelectItineraryDay,
+    generateItinerary
+  } = useItinerary();
+
   const { panTo } = useMapContext();
 
   const directInputValues = {
@@ -109,6 +118,23 @@ const LeftPanel: React.FC = () => {
     setShowCategoryResult(null);
   };
 
+  // 경로 생성 버튼 핸들러
+  const handleCreateItinerary = () => {
+    if (dates && selectedPlaces.length > 0) {
+      const generatedItinerary = generateItinerary(
+        selectedPlaces,
+        dates.startDate,
+        dates.endDate,
+        dates.startTime,
+        dates.endTime
+      );
+      
+      if (generatedItinerary) {
+        setShowItinerary(true);
+      }
+    }
+  };
+
   return (
     <div className="relative h-full">
       <LeftPanelContainer
@@ -119,6 +145,10 @@ const LeftPanel: React.FC = () => {
         onViewOnMap={handleViewOnMap}
         allCategoriesSelected={allCategoriesSelected}
         dates={dates}
+        onCreateItinerary={handleCreateItinerary}
+        itinerary={itinerary}
+        selectedItineraryDay={selectedItineraryDay}
+        onSelectDay={handleSelectItineraryDay}
       >
         <LeftPanelContent
           onDateSelect={setDates}

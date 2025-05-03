@@ -2,9 +2,9 @@
 import React from 'react';
 import { toast } from 'sonner';
 import { Place } from '@/types/supabase';
+import { ItineraryDay } from '@/hooks/use-itinerary-creator';
 import PlaceCart from './PlaceCart';
 import ItineraryButton from './ItineraryButton';
-import { useScheduleGenerator } from '@/hooks/use-schedule-generator';
 import ScheduleViewer from './ScheduleViewer';
 
 interface LeftPanelContainerProps {
@@ -21,6 +21,10 @@ interface LeftPanelContainerProps {
     startTime: string;
     endTime: string;
   } | null;
+  onCreateItinerary: () => void;
+  itinerary: ItineraryDay[] | null;
+  selectedItineraryDay: number | null;
+  onSelectDay: (day: number) => void;
 }
 
 const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
@@ -31,62 +35,25 @@ const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
   onViewOnMap,
   allCategoriesSelected,
   children,
-  dates
+  dates,
+  onCreateItinerary,
+  itinerary,
+  selectedItineraryDay,
+  onSelectDay
 }) => {
-  const {
-    schedule,
-    loading,
-    error,
-    selectedDay,
-    setSelectedDay,
-    generateSchedule
-  } = useScheduleGenerator();
-
-  const handleCreateItinerary = () => {
-    if (!dates) {
-      toast.error("여행 날짜와 시간을 먼저 선택해주세요.");
-      return;
-    }
-    if (selectedPlaces.length === 0) {
-      toast.error("장소를 먼저 선택해주세요.");
-      return;
-    }
-
-    const payload = {
-      selected_places: selectedPlaces.map(place => ({
-        id: typeof place.id === 'string' ? parseInt(String(place.id), 10) : place.id,
-        name: place.name
-      })),
-      candidate_places: [],
-      start_datetime: `${dates.startDate.toISOString().split('T')[0]}T${dates.startTime}:00`,
-      end_datetime: `${dates.endDate.toISOString().split('T')[0]}T${dates.endTime}:00`
-    };
-
-    generateSchedule(payload);
-    onSetShowItinerary(true);
-    
-    console.log("일정 생성 요청 완료:", {
-      선택된_장소: selectedPlaces.length,
-      시작_날짜: dates.startDate,
-      종료_날짜: dates.endDate
-    });
-    
-    toast.success("일정 생성 요청을 완료했습니다.");
-  };
-
   const handleCloseItinerary = () => {
     onSetShowItinerary(false);
-    setSelectedDay(null);
   };
 
-  if (showItinerary) {
+  if (showItinerary && itinerary) {
     return (
       <div className="fixed top-0 left-0 w-[300px] h-full bg-white border-r border-gray-200 z-40 shadow-md">
         <ScheduleViewer
-          schedule={schedule}
-          selectedDay={selectedDay}
-          onDaySelect={setSelectedDay}
+          schedule={itinerary}
+          selectedDay={selectedItineraryDay}
+          onDaySelect={onSelectDay}
           onClose={handleCloseItinerary}
+          startDate={dates?.startDate || new Date()}
         />
       </div>
     );
@@ -103,7 +70,7 @@ const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
         />
         <ItineraryButton 
           allCategoriesSelected={allCategoriesSelected}
-          onCreateItinerary={handleCreateItinerary}
+          onCreateItinerary={onCreateItinerary}
         />
       </div>
     </div>

@@ -44,6 +44,12 @@ export const useItinerary = () => {
       setSelectedItineraryDay(1);
       setShowItinerary(true);
       
+      console.log("일정 생성 완료:", {
+        일수: generatedItinerary.length,
+        총장소수: generatedItinerary.reduce((sum, day) => sum + day.places.length, 0),
+        첫날장소: generatedItinerary[0]?.places.map(p => p.name).join(', ')
+      });
+      
       return generatedItinerary;
     } catch (error) {
       console.error("일정 생성 오류:", error);

@@ -23,6 +23,7 @@ const Index: React.FC = () => {
   const {
     itinerary,
     selectedItineraryDay,
+    showItinerary
   } = useItinerary();
 
   return (
