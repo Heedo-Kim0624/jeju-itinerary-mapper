@@ -19,6 +19,9 @@ const ItineraryButton: React.FC<ItineraryButtonProps> = ({
     onCreateItinerary();
   };
 
+  // 디버깅을 위한 로깅 추가
+  console.log('경로 생성 버튼 활성화 상태:', allCategoriesSelected);
+
   return (
     <div className="mt-4">
       <button

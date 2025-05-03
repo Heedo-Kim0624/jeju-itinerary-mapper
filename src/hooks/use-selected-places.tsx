@@ -21,6 +21,7 @@ export const useSelectedPlaces = () => {
   // allCategoriesSelected 상태를 명확하게 계산
   const [allCategoriesSelected, setAllCategoriesSelected] = useState(false);
   
+  // 더 자세한 디버깅을 위해 카테고리별 선택 여부 상태 추가
   useEffect(() => {
     // 각 카테고리별로 최소 1개 이상 선택되었는지 확인
     const hasAccommodation = selectedPlacesByCategory['숙소'].length > 0;
@@ -44,6 +45,11 @@ export const useSelectedPlaces = () => {
   const { panTo, addMarkers, clearMarkersAndUiElements } = useMapContext();
 
   const handleSelectPlace = (place: Place, checked: boolean, category: string | null = null) => {
+    // 카테고리가 제공되었는지 확인하고, 누락된 경우 콘솔 로그 추가
+    if (!category) {
+      console.warn('카테고리 값이 누락되었습니다:', place.name);
+    }
+    
     // Ensure place.id is always a number
     const normalizedPlace = {
       ...place,
@@ -80,6 +86,7 @@ export const useSelectedPlaces = () => {
     const numericId = parseInt(placeId, 10);
     const placeToRemove = selectedPlaces.find(p => Number(p.id) === numericId);
     
+    // 장소 제거 시 해당 카테고리에서도 제거
     setSelectedPlaces(prevPlaces => prevPlaces.filter(p => Number(p.id) !== numericId));
     
     if (placeToRemove) {
