@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { format, addDays } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { categoryColors, getCategoryName } from '@/utils/categoryColors';
-import type { Place, ItineraryDay } from '@/types/supabase';
+import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/supabase';
 
 interface ItineraryViewProps {
   itinerary: ItineraryDay[];
@@ -96,18 +96,18 @@ const ItineraryView: React.FC<ItineraryViewProps> = ({
                       </div>
                       
                       {/* 도착 시간 표시 */}
-                      {place.arrival_time && (
+                      {(place as ItineraryPlaceWithTime).arrival_time && (
                         <div className="flex items-center text-xs text-muted-foreground mt-1 gap-1">
                           <Clock className="h-3 w-3" />
-                          <span>도착: {place.arrival_time}</span>
+                          <span>도착: {(place as ItineraryPlaceWithTime).arrival_time}</span>
                         </div>
                       )}
                       
                       {/* 다음 장소까지 이동 시간 */}
-                      {place.travel_time_to_next && place.travel_time_to_next !== "-" && (
+                      {(place as ItineraryPlaceWithTime).travel_time_to_next && (place as ItineraryPlaceWithTime).travel_time_to_next !== "-" && (
                         <div className="flex items-center text-xs text-muted-foreground mt-1 gap-1">
                           <Navigation className="h-3 w-3" />
-                          <span>다음 장소까지: {place.travel_time_to_next}</span>
+                          <span>다음 장소까지: {(place as ItineraryPlaceWithTime).travel_time_to_next}</span>
                         </div>
                       )}
                       

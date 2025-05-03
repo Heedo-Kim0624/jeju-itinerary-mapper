@@ -2,7 +2,7 @@
 import React from 'react';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import { ItineraryDay } from '@/types/supabase';
+import { ItineraryDay, ItineraryPlaceWithTime } from '@/types/supabase';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Clock, Navigation } from 'lucide-react';
@@ -64,10 +64,11 @@ const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
               <Button
                 key={day.day}
                 variant={selectedDay === day.day ? "default" : "outline"}
-                className="mx-1 whitespace-nowrap"
+                className="flex flex-col h-16 min-w-16 mx-1 whitespace-nowrap"
                 onClick={() => onDaySelect(day.day)}
               >
-                {day.day}일차 ({formattedDate})
+                <span className="font-bold text-sm">{day.day}일차</span>
+                <span className="text-xs">{formattedDate}</span>
               </Button>
             );
           })}
@@ -103,18 +104,18 @@ const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
                     </div>
                     
                     {/* 도착 시간 표시 */}
-                    {place.arrival_time && (
+                    {(place as ItineraryPlaceWithTime).arrival_time && (
                       <div className="flex items-center mt-2 text-xs text-gray-600">
                         <Clock className="w-3 h-3 mr-1" />
-                        <span>도착: {place.arrival_time}</span>
+                        <span>도착: {(place as ItineraryPlaceWithTime).arrival_time}</span>
                       </div>
                     )}
                     
                     {/* 다음 장소까지의 이동 시간 */}
-                    {place.travel_time_to_next && place.travel_time_to_next !== "-" && (
+                    {(place as ItineraryPlaceWithTime).travel_time_to_next && (place as ItineraryPlaceWithTime).travel_time_to_next !== "-" && (
                       <div className="flex items-center mt-1 text-xs text-gray-600">
                         <Navigation className="w-3 h-3 mr-1" />
-                        <span>다음 장소까지: {place.travel_time_to_next}</span>
+                        <span>다음 장소까지: {(place as ItineraryPlaceWithTime).travel_time_to_next}</span>
                       </div>
                     )}
                   </div>

@@ -10,6 +10,7 @@ import { useItinerary } from './use-itinerary';
 import { Place } from '@/types/supabase';
 
 export const useLeftPanel = () => {
+  // Place selection functionality
   const {
     selectedPlaces,
     handleSelectPlace,
@@ -18,6 +19,7 @@ export const useLeftPanel = () => {
     allCategoriesSelected
   } = useSelectedPlaces();
   
+  // Category selection functionality
   const {
     stepIndex: categoryStepIndex,
     activeMiddlePanelCategory,
@@ -29,6 +31,7 @@ export const useLeftPanel = () => {
     handleConfirmCategory,
   } = useCategorySelection();
 
+  // Region selection functionality
   const {
     selectedRegions,
     regionConfirmed,
@@ -38,7 +41,7 @@ export const useLeftPanel = () => {
     handleRegionToggle
   } = useRegionSelection();
 
-  // Get both specific trip details and the combined dates object
+  // Trip details functionality
   const {
     startDate,
     endDate,
@@ -56,6 +59,7 @@ export const useLeftPanel = () => {
     setCafeDirectInput,
   } = useTripDetails();
 
+  // Panel visibility functionality
   const {
     showItinerary,
     setShowItinerary,
@@ -63,6 +67,7 @@ export const useLeftPanel = () => {
     setShowCategoryResult,
   } = usePanelVisibility();
 
+  // Itinerary functionality
   const {
     itinerary,
     selectedItineraryDay,
@@ -72,7 +77,7 @@ export const useLeftPanel = () => {
 
   const { panTo } = useMapContext();
 
-  // 경로 생성 버튼 활성화 여부 디버깅
+  // Debug info - log when important state changes
   useEffect(() => {
     console.log("경로 생성 버튼 상태:", {
       allCategoriesSelected,
@@ -80,6 +85,7 @@ export const useLeftPanel = () => {
     });
   }, [allCategoriesSelected, selectedPlaces]);
 
+  // Group direct input values and handlers for cleaner code
   const directInputValues = {
     accomodation: accomodationDirectInput,
     landmark: landmarkDirectInput,
@@ -94,6 +100,7 @@ export const useLeftPanel = () => {
     cafe: setCafeDirectInput
   };
 
+  // Category-specific confirmation handlers
   const handleConfirmByCategory = {
     accomodation: (finalKeywords: string[], clearSelection: boolean = false) => {
       handleConfirmCategory('숙소', finalKeywords, clearSelection);
@@ -117,6 +124,7 @@ export const useLeftPanel = () => {
     }
   };
 
+  // Panel back handlers by category
   const handlePanelBackByCategory = {
     accomodation: () => handlePanelBack(),
     landmark: () => handlePanelBack(),
@@ -124,11 +132,12 @@ export const useLeftPanel = () => {
     cafe: () => handlePanelBack()
   };
 
+  // Result close handler
   const handleResultClose = () => {
     setShowCategoryResult(null);
   };
 
-  // 경로 생성 버튼 핸들러
+  // Itinerary creation handler
   const handleCreateItinerary = () => {
     if (dates && selectedPlaces.length > 0) {
       console.log("경로 생성 시작:", {
@@ -152,51 +161,66 @@ export const useLeftPanel = () => {
     }
   };
 
+  // Return all hooks and handlers grouped by functionality
   return {
-    // Region and selections
-    selectedRegions,
-    regionConfirmed,
-    setRegionConfirmed,
-    regionSlidePanelOpen,
-    setRegionSlidePanelOpen,
-    handleRegionToggle,
+    // Region selection
+    regionSelection: {
+      selectedRegions,
+      regionConfirmed,
+      setRegionConfirmed,
+      regionSlidePanelOpen, 
+      setRegionSlidePanelOpen,
+      handleRegionToggle
+    },
     
-    // Category panel
-    categoryStepIndex,
-    activeMiddlePanelCategory,
-    confirmedCategories,
-    handleCategoryButtonClick,
+    // Category selection
+    categorySelection: {
+      categoryStepIndex,
+      activeMiddlePanelCategory,
+      confirmedCategories,
+      handleCategoryButtonClick,
+      selectedKeywordsByCategory,
+      toggleKeyword,
+      handlePanelBackByCategory
+    },
     
     // Keywords and inputs
-    selectedKeywordsByCategory,
-    toggleKeyword,
-    directInputValues,
-    onDirectInputChange,
-    handleConfirmByCategory,
-    handlePanelBackByCategory,
+    keywordsAndInputs: {
+      directInputValues,
+      onDirectInputChange,
+      handleConfirmByCategory,
+    },
     
-    // Places
-    selectedPlaces,
-    handleSelectPlace,
-    handleRemovePlace,
-    handleViewOnMap,
-    allCategoriesSelected,
+    // Places management
+    placesManagement: {
+      selectedPlaces,
+      handleSelectPlace,
+      handleRemovePlace,
+      handleViewOnMap,
+      allCategoriesSelected,
+    },
     
-    // Dates and trips
-    dates,
-    setDates,
+    // Trip details
+    tripDetails: {
+      dates,
+      setDates,
+    },
     
     // UI visibility
-    showItinerary,
-    setShowItinerary,
-    showCategoryResult,
-    setShowCategoryResult,
-    handleResultClose,
+    uiVisibility: {
+      showItinerary,
+      setShowItinerary,
+      showCategoryResult,
+      setShowCategoryResult,
+      handleResultClose,
+    },
     
-    // Itinerary
-    itinerary,
-    selectedItineraryDay,
-    handleSelectItineraryDay,
-    handleCreateItinerary,
+    // Itinerary management
+    itineraryManagement: {
+      itinerary,
+      selectedItineraryDay,
+      handleSelectItineraryDay,
+      handleCreateItinerary,
+    },
   };
 };
