@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Place, SelectedPlace, SchedulePayload } from '@/types/supabase';
 import { useMapContext } from '@/components/rightpanel/MapContext';
 import { toast } from 'sonner';
@@ -17,6 +17,29 @@ export const useSelectedPlaces = () => {
     '음식점': [],
     '카페': [],
   });
+
+  // allCategoriesSelected 상태를 명확하게 계산
+  const [allCategoriesSelected, setAllCategoriesSelected] = useState(false);
+  
+  useEffect(() => {
+    // 각 카테고리별로 최소 1개 이상 선택되었는지 확인
+    const hasAccommodation = selectedPlacesByCategory['숙소'].length > 0;
+    const hasLandmark = selectedPlacesByCategory['관광지'].length > 0;
+    const hasRestaurant = selectedPlacesByCategory['음식점'].length > 0;
+    const hasCafe = selectedPlacesByCategory['카페'].length > 0;
+    
+    const allSelected = hasAccommodation && hasLandmark && hasRestaurant && hasCafe;
+    
+    console.log('카테고리별 선택 현황:', {
+      숙소: selectedPlacesByCategory['숙소'].length,
+      관광지: selectedPlacesByCategory['관광지'].length,
+      음식점: selectedPlacesByCategory['음식점'].length,
+      카페: selectedPlacesByCategory['카페'].length,
+      모든카테고리선택됨: allSelected
+    });
+    
+    setAllCategoriesSelected(allSelected);
+  }, [selectedPlacesByCategory]);
 
   const { panTo, addMarkers, clearMarkersAndUiElements } = useMapContext();
 
@@ -77,12 +100,6 @@ export const useSelectedPlaces = () => {
     addMarkers([place], { highlight: true });
     panTo({ lat: place.y, lng: place.x });
   };
-
-  const allCategoriesSelected = 
-    selectedPlacesByCategory['숙소'].length > 0 && 
-    selectedPlacesByCategory['관광지'].length > 0 && 
-    selectedPlacesByCategory['음식점'].length > 0 && 
-    selectedPlacesByCategory['카페'].length > 0;
 
   const prepareSchedulePayload = (
     places: Place[], 

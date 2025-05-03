@@ -18,13 +18,16 @@ const Index: React.FC = () => {
     );
   };
 
-  const { selectedPlaces } = useSelectedPlaces();
+  const { selectedPlaces, allCategoriesSelected } = useSelectedPlaces();
   
   const {
     itinerary,
     selectedItineraryDay,
     showItinerary
   } = useItinerary();
+
+  // selectedCategoriesCount 상태 추가하여 디버그
+  console.log('모든 카테고리 선택 여부:', allCategoriesSelected);
 
   return (
     <div className="flex h-screen overflow-hidden bg-jeju-light-gray relative">

@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useCategorySelection } from '@/hooks/use-category-selection';
 import { useRegionSelection } from '@/hooks/use-region-selection';
 import { useTripDetails } from '@/hooks/use-trip-details';
@@ -70,6 +70,14 @@ const LeftPanel: React.FC = () => {
 
   const { panTo } = useMapContext();
 
+  // 경로 생성 버튼 활성화 여부 디버깅
+  useEffect(() => {
+    console.log("경로 생성 버튼 상태:", {
+      allCategoriesSelected,
+      selectedPlaces: selectedPlaces.length
+    });
+  }, [allCategoriesSelected, selectedPlaces]);
+
   const directInputValues = {
     accomodation: accomodationDirectInput,
     landmark: landmarkDirectInput,
@@ -121,6 +129,11 @@ const LeftPanel: React.FC = () => {
   // 경로 생성 버튼 핸들러
   const handleCreateItinerary = () => {
     if (dates && selectedPlaces.length > 0) {
+      console.log("경로 생성 시작:", {
+        장소수: selectedPlaces.length,
+        날짜: dates
+      });
+      
       const generatedItinerary = generateItinerary(
         selectedPlaces,
         dates.startDate,
@@ -132,6 +145,8 @@ const LeftPanel: React.FC = () => {
       if (generatedItinerary) {
         setShowItinerary(true);
       }
+    } else {
+      console.error("경로 생성 불가:", { 날짜있음: !!dates, 장소수: selectedPlaces.length });
     }
   };
 

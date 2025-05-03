@@ -61,8 +61,10 @@ const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
 
   return (
     <div className="fixed top-0 left-0 w-[300px] h-full bg-white border-l border-r border-gray-200 z-40 shadow-md flex flex-col">
-      {children}
-      <div className="px-4 mb-4">
+      <div className="flex-1 overflow-auto">
+        {children}
+      </div>
+      <div className="px-4 py-4 border-t">
         <PlaceCart 
           selectedPlaces={selectedPlaces} 
           onRemovePlace={onRemovePlace}
