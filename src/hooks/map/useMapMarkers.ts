@@ -1,4 +1,3 @@
-
 import { useRef, useCallback } from 'react';
 import { Place } from '@/types/supabase';
 import { getCategoryColor, mapCategoryNameToKey } from '@/utils/categoryColors';

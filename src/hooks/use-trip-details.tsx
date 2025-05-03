@@ -44,6 +44,17 @@ export const useTripDetails = () => {
     setDetails((prev) => ({ ...prev, endTime: time }));
   };
 
+  // Add a function to set all dates at once
+  const setDates = (dates: TripDetails) => {
+    setDetails(dates);
+  };
+
+  // Adding direct input state that's referenced in use-left-panel.tsx
+  const [accomodationDirectInput, setAccomodationDirectInput] = useState('');
+  const [landmarkDirectInput, setLandmarkDirectInput] = useState('');
+  const [restaurantDirectInput, setRestaurantDirectInput] = useState('');
+  const [cafeDirectInput, setCafeDirectInput] = useState('');
+
   return {
     ...details,
     tripDuration,
@@ -51,5 +62,14 @@ export const useTripDetails = () => {
     setEndDate,
     setStartTime,
     setEndTime,
+    setDates,
+    accomodationDirectInput,
+    setAccomodationDirectInput,
+    landmarkDirectInput,
+    setLandmarkDirectInput,
+    restaurantDirectInput,
+    setRestaurantDirectInput,
+    cafeDirectInput,
+    setCafeDirectInput,
   };
 };
