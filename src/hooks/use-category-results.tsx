@@ -3,10 +3,10 @@ import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Place } from '@/types/supabase';
 import axios from 'axios';
-import { fetchAccommodationData } from '@/services/accommodations/accommodationService';
-import { fetchLandmarkData } from '@/services/landmarks/landmarkService';
-import { fetchRestaurantData } from '@/services/restaurants/restaurantService';
-import { fetchCafeData } from '@/services/cafes/cafeService';
+import { fetchAccommodations } from '@/services/accommodations/accommodationService';
+import { fetchLandmarks } from '@/services/landmarks/landmarkService';
+import { fetchRestaurants } from '@/services/restaurants/restaurantService';
+import { fetchCafes } from '@/services/cafes/cafeService';
 import { useDebounceEffect } from './use-debounce-effect';
 
 export const useCategoryResults = (
@@ -31,8 +31,7 @@ export const useCategoryResults = (
       
       // 선택된 지역 중 하나라도 주소에 포함되면 결과에 포함
       return selectedRegions.some(region => 
-        place.address.includes(region) || 
-        (place.locationName && place.locationName.includes(region))
+        place.address.includes(region)
       );
     });
   };
@@ -51,16 +50,16 @@ export const useCategoryResults = (
       // 카테고리에 따라 적절한 서비스 함수 호출
       switch (category) {
         case '숙소':
-          data = await fetchAccommodationData(keywords);
+          data = await fetchAccommodations();
           break;
         case '관광지':
-          data = await fetchLandmarkData(keywords);
+          data = await fetchLandmarks();
           break;
         case '음식점':
-          data = await fetchRestaurantData(keywords);
+          data = await fetchRestaurants();
           break;
         case '카페':
-          data = await fetchCafeData(keywords);
+          data = await fetchCafes();
           break;
         default:
           throw new Error('지원하지 않는 카테고리입니다.');
