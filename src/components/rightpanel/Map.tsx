@@ -42,8 +42,13 @@ const Map: React.FC<MapProps> = ({
         selectedPlaces={selectedPlaces}
       />
       
-      {isMapInitialized && (
-        <GeoJsonLayer map={map} visible={showGeoJson} />
+      {map && (
+        <GeoJsonLayer 
+          map={map} 
+          visible={showGeoJson} 
+          isMapInitialized={isMapInitialized}
+          isNaverLoaded={isNaverLoaded}
+        />
       )}
       
       <MapControls

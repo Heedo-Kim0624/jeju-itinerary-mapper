@@ -4,9 +4,16 @@ import { useEffect, useRef, useState } from 'react';
 interface GeoJsonLayerProps {
   map: any;
   visible: boolean;
+  isMapInitialized?: boolean;
+  isNaverLoaded?: boolean;
 }
 
-const GeoJsonLayer: React.FC<GeoJsonLayerProps> = ({ map, visible }) => {
+const GeoJsonLayer: React.FC<GeoJsonLayerProps> = ({ 
+  map, 
+  visible,
+  isMapInitialized = true,
+  isNaverLoaded = true 
+}) => {
   const linkFeatures = useRef<any[]>([]);
   const nodeFeatures = useRef<any[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -14,19 +21,32 @@ const GeoJsonLayer: React.FC<GeoJsonLayerProps> = ({ map, visible }) => {
   const MAX_RETRIES = 5;
 
   useEffect(() => {
-    if (!map) return;
+    // 지도가 없거나 지도가 초기화되지 않았거나 네이버 API가 로드되지 않았으면 리턴
+    if (!map || !isMapInitialized || !isNaverLoaded) {
+      console.log("지도가 준비되지 않아 GeoJSON을 로드하지 않습니다.");
+      return;
+    }
 
     const loadGeoJson = async () => {
       try {
-        // 먼저 naver maps API가 로드되었는지 확인
-        if (!window.naver || !window.naver.maps || !window.naver.maps.GeoJSON) {
+        // 네이버 맵스 GeoJSON API가 로드되었는지 확인
+        if (!window.naver?.maps?.GeoJSON) {
           if (retryCount < MAX_RETRIES) {
-            console.log(`🔄 네이버 지도 API가 아직 로드되지 않았습니다. 다시 시도합니다. (${retryCount + 1}/${MAX_RETRIES})`);
+            console.log(`네이버 GeoJSON API가 준비되지 않았습니다. 잠시 후 재시도합니다. (${retryCount + 1}/${MAX_RETRIES})`);
             setRetryCount(prev => prev + 1);
             setTimeout(loadGeoJson, 1000); // 1초 후 다시 시도
           } else {
-            console.log('❌ 네이버 지도 API 로드 최대 재시도 횟수 초과');
+            console.log('네이버 GeoJSON API 로드 최대 재시도 횟수 초과');
             return;
+          }
+          return;
+        }
+
+        // GeoJSON이 이미 로드되었으면 다시 로드하지 않음
+        if (isLoaded && linkFeatures.current.length > 0) {
+          console.log('GeoJSON이 이미 로드되어 있습니다.');
+          if (visible) {
+            showGeoJsonOnMap();
           }
           return;
         }
@@ -41,8 +61,8 @@ const GeoJsonLayer: React.FC<GeoJsonLayerProps> = ({ map, visible }) => {
           nodeRes.json()
         ]);
     
-        console.log('🧪 linkGeoJson loaded');
-        console.log('🧪 nodeGeoJson loaded');
+        console.log('linkGeoJson 로드 완료');
+        console.log('nodeGeoJson 로드 완료');
     
         linkFeatures.current = window.naver.maps.GeoJSON.read(linkGeoJson);
         nodeFeatures.current = window.naver.maps.GeoJSON.read(nodeGeoJson);
@@ -58,12 +78,12 @@ const GeoJsonLayer: React.FC<GeoJsonLayerProps> = ({ map, visible }) => {
           showGeoJsonOnMap();
         }
       } catch (err) {
-        console.error('❌ GeoJSON 파일 로드 오류:', err);
+        console.error('GeoJSON 파일 로드 오류:', err);
         if (retryCount < MAX_RETRIES) {
           setRetryCount(prev => prev + 1);
           setTimeout(loadGeoJson, 3000); // 오류 발생 시 3초 후 다시 시도
         } else {
-          console.log('❌ GeoJSON 로드 최대 재시도 횟수 초과');
+          console.log('GeoJSON 로드 최대 재시도 횟수 초과');
         }
       }
     };
@@ -73,7 +93,7 @@ const GeoJsonLayer: React.FC<GeoJsonLayerProps> = ({ map, visible }) => {
     return () => {
       hideGeoJsonFromMap();
     };
-  }, [map]);
+  }, [map, isMapInitialized, isNaverLoaded]);
 
   useEffect(() => {
     if (!isLoaded) return;

@@ -10,25 +10,33 @@ export const useMapInitialization = (mapContainer: React.RefObject<HTMLDivElemen
   const [isMapError, setIsMapError] = useState<boolean>(false);
   const [loadAttempts, setLoadAttempts] = useState<number>(0);
   const [map, setMap] = useState<any>(null);
+  const [isInitializing, setIsInitializing] = useState<boolean>(false);
 
   // 네이버 지도 API 로드
   useEffect(() => {
     const initNaverMaps = async () => {
+      if (isNaverLoaded) return; // 이미 로드되었으면 중복 실행 방지
+      if (isInitializing) return; // 이미 초기화 중이면 중복 실행 방지
+      
       if (loadAttempts >= 3) {
-        console.error("Maximum load attempts reached. Stopping retries.");
+        console.error("최대 로드 시도 횟수에 도달했습니다. 재시도를 중단합니다.");
         setIsMapError(true);
         toast.error("지도 로드에 실패했습니다. 페이지를 새로고침해주세요.");
         return;
       }
+
+      setIsInitializing(true);
 
       try {
         console.log(`네이버 지도 API 로드 시도 (${loadAttempts + 1}/3)`);
         await loadNaverMaps();
         console.log("네이버 지도 API 로드 성공");
         setIsNaverLoaded(true);
+        setIsInitializing(false);
       } catch (error) {
         console.error("네이버 지도 API 로드 실패:", error);
         setIsMapError(true);
+        setIsInitializing(false);
         
         // 3초 후 재시도 설정
         setTimeout(() => {
@@ -38,16 +46,18 @@ export const useMapInitialization = (mapContainer: React.RefObject<HTMLDivElemen
       }
     };
     
-    if (!isNaverLoaded && !isMapError) {
+    if (!isNaverLoaded && !isMapError && !isInitializing) {
       initNaverMaps();
     }
-  }, [loadAttempts, isNaverLoaded, isMapError]);
+  }, [loadAttempts, isNaverLoaded, isMapError, isInitializing]);
 
   // 지도 초기화
   useEffect(() => {
-    if (!isNaverLoaded || !mapContainer.current) {
+    if (!isNaverLoaded || !mapContainer.current || isMapInitialized) {
       return;
     }
+
+    let initTimeout: number;
 
     try {
       console.log("지도 초기화 시작");
@@ -56,8 +66,19 @@ export const useMapInitialization = (mapContainer: React.RefObject<HTMLDivElemen
       if (newMap) {
         // 지도 초기화 이벤트 리스너 추가
         if (window.naver && window.naver.maps) {
+          // 이벤트 리스너가 트리거되지 않을 경우를 대비한 타임아웃 설정
+          initTimeout = window.setTimeout(() => {
+            if (!isMapInitialized) {
+              console.log("지도 초기화 타임아웃 후 완료 처리");
+              setMap(newMap);
+              setIsMapInitialized(true);
+              toast.success("지도가 준비되었습니다");
+            }
+          }, 5000);
+          
           window.naver.maps.Event.once(newMap, 'init_stylemap', () => {
-            console.log("지도 초기화 완료");
+            window.clearTimeout(initTimeout);
+            console.log("지도 초기화 완료 이벤트 발생");
             setMap(newMap);
             setIsMapInitialized(true);
             toast.success("지도가 준비되었습니다");
@@ -65,6 +86,7 @@ export const useMapInitialization = (mapContainer: React.RefObject<HTMLDivElemen
         } else {
           setMap(newMap);
           setIsMapInitialized(true);
+          toast.success("지도가 준비되었습니다");
         }
       } else {
         throw new Error("지도 초기화 실패");
@@ -74,7 +96,13 @@ export const useMapInitialization = (mapContainer: React.RefObject<HTMLDivElemen
       setIsMapError(true);
       toast.error("지도 초기화에 실패했습니다.");
     }
-  }, [isNaverLoaded, mapContainer]);
+
+    return () => {
+      if (initTimeout) {
+        window.clearTimeout(initTimeout);
+      }
+    };
+  }, [isNaverLoaded, mapContainer, isMapInitialized]);
 
   return {
     map,

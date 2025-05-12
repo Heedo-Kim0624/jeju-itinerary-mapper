@@ -1,7 +1,8 @@
 
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useState, useEffect } from 'react';
 import { Place, ItineraryDay } from '@/types/supabase';
 import { clearPolylines } from '@/utils/map/mapCleanup';
+import { getCategoryColor, mapCategoryNameToKey } from '@/utils/categoryColors';
 
 // 날짜별 경로 색상 팔레트
 const ROUTE_COLORS = [
@@ -24,6 +25,7 @@ interface ItineraryRouteOptions {
 
 export const useMapItineraryRouting = (map: any) => {
   const polylines = useRef<any[]>([]);
+  const [totalDistance, setTotalDistance] = useState<number>(0);
 
   // 모든 경로 초기화
   const clearAllRoutes = useCallback(() => {
@@ -31,6 +33,20 @@ export const useMapItineraryRouting = (map: any) => {
       clearPolylines(polylines.current);
       polylines.current = [];
     }
+  }, []);
+
+  // 두 좌표 사이의 거리 계산 (km)
+  const calculateDistance = useCallback((lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371; // 지구 반경 (km)
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const distance = R * c;
+    return distance;
   }, []);
 
   // 일정 날짜에 해당하는 경로 그리기
@@ -49,7 +65,19 @@ export const useMapItineraryRouting = (map: any) => {
     clearAllRoutes();
     
     try {
-      // 일정의 장소들로 경로 생성
+      let calculatedDistance = 0;
+      
+      // 카테고리별로 경로를 다르게 표시
+      const placesByCategory: Record<string, Place[]> = {};
+      itineraryDay.places.forEach(place => {
+        const category = place.category || 'default';
+        if (!placesByCategory[category]) {
+          placesByCategory[category] = [];
+        }
+        placesByCategory[category].push(place);
+      });
+      
+      // 전체 순서대로 경로 생성 (기본 경로)
       const pathPoints = itineraryDay.places.map(place => {
         return new window.naver.maps.LatLng(place.y, place.x);
       });
@@ -58,8 +86,8 @@ export const useMapItineraryRouting = (map: any) => {
       const dayIndex = (itineraryDay.day - 1) % ROUTE_COLORS.length;
       const strokeColor = options?.strokeColor || ROUTE_COLORS[dayIndex];
       
-      // 경로 폴리라인 생성
-      const polyline = new window.naver.maps.Polyline({
+      // 경로 폴리라인 생성 (기본 경로)
+      const mainPolyline = new window.naver.maps.Polyline({
         map: map,
         path: pathPoints,
         strokeColor: strokeColor,
@@ -69,16 +97,29 @@ export const useMapItineraryRouting = (map: any) => {
         zIndex: options?.zIndex || 100,
       });
       
-      // 참조에 저장하여 나중에 제거할 수 있도록 함
-      polylines.current.push(polyline);
+      polylines.current.push(mainPolyline);
       
-      console.log(`${itineraryDay.day}일차 경로가 성공적으로 렌더링되었습니다. (${itineraryDay.places.length}개 장소)`);
+      // 각 구간별 거리 계산
+      let totalDist = 0;
+      for (let i = 0; i < itineraryDay.places.length - 1; i++) {
+        const current = itineraryDay.places[i];
+        const next = itineraryDay.places[i + 1];
+        
+        if (current.x && current.y && next.x && next.y) {
+          const segmentDist = calculateDistance(current.y, current.x, next.y, next.x);
+          totalDist += segmentDist;
+        }
+      }
       
-      return () => clearPolylines([polyline]);
+      setTotalDistance(totalDist);
+      
+      console.log(`${itineraryDay.day}일차 경로가 성공적으로 렌더링되었습니다. (${itineraryDay.places.length}개 장소, 총 거리: ${totalDist.toFixed(2)}km)`);
+      
+      return () => clearPolylines([mainPolyline]);
     } catch (error) {
       console.error("경로 렌더링 중 오류 발생:", error);
     }
-  }, [map]);
+  }, [map, calculateDistance, clearAllRoutes]);
 
   // 여러 일정에 대한 경로 한번에 그리기 (옵션)
   const renderMultiDayRoutes = useCallback((itinerary: ItineraryDay[] | null) => {
@@ -117,11 +158,12 @@ export const useMapItineraryRouting = (map: any) => {
     } catch (error) {
       console.error("다중 경로 렌더링 중 오류 발생:", error);
     }
-  }, [map]);
+  }, [map, clearAllRoutes]);
 
   return {
     renderDayRoute,
     renderMultiDayRoutes,
-    clearAllRoutes
+    clearAllRoutes,
+    totalDistance
   };
 };
