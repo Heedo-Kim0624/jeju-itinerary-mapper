@@ -25,18 +25,32 @@ export const loadNaverMaps = (): Promise<void> => {
         }
       }, 100);
       
-      // 최대 8초 대기 후 타임아웃 (GeoJSON 서브모듈이 로드되는 시간 추가 고려)
+      // 최대 15초 대기 후 타임아웃 (GeoJSON 서브모듈이 로드되는 시간 추가 고려, 대기 시간 증가)
       setTimeout(() => {
         clearInterval(checkInterval);
         if (window.naver?.maps?.Map) {
           console.log("Naver Maps API 초기화 완료 (타임아웃 후)");
-          // GeoJSON 서브모듈은 없어도 기본 기능은 작동하도록 함
-          resolve();
+          
+          // GeoJSON 서브모듈이 없는 경우, 서브모듈만 다시 로드 시도
+          if (!(window.naver.maps.GeoJSON && typeof window.naver.maps.GeoJSON.read === 'function')) {
+            console.warn("GeoJSON 서브모듈이 로드되지 않았습니다. 서브모듈만 추가로 로드합니다.");
+            
+            const clientId = import.meta.env.VITE_NAVER_CLIENT_ID;
+            const geoJsonScript = document.createElement('script');
+            geoJsonScript.src = `https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${clientId}&submodules=geojson`;
+            geoJsonScript.async = true;
+            document.head.appendChild(geoJsonScript);
+            
+            // 그래도 기본 지도는 사용 가능하므로 resolve
+            resolve();
+          } else {
+            resolve();
+          }
         } else {
           console.error("Naver Maps API 초기화 타임아웃");
           reject(new Error("Naver Maps API 초기화 타임아웃"));
         }
-      }, 8000);
+      }, 15000);
       return;
     }
 
@@ -72,7 +86,7 @@ export const loadNaverMaps = (): Promise<void> => {
         }
       }, 100);
 
-      // 최대 8초 대기 후 타임아웃
+      // 최대 15초 대기 후 타임아웃
       setTimeout(() => {
         clearInterval(checkInterval);
         if (window.naver?.maps?.Map) {
@@ -82,7 +96,7 @@ export const loadNaverMaps = (): Promise<void> => {
           console.error("Naver Maps API 초기화 타임아웃");
           reject(new Error("Naver Maps API 초기화 타임아웃"));
         }
-      }, 8000);
+      }, 15000);
     };
 
     script.onerror = (error) => {

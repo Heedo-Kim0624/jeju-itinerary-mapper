@@ -29,8 +29,15 @@ const Map: React.FC<MapProps> = ({
     isNaverLoaded,
     isMapError,
     showGeoJson,
-    toggleGeoJsonVisibility
+    toggleGeoJsonVisibility,
+    handleGeoJsonLoaded
   } = useMapContext();
+
+  // 장소 클릭 핸들러
+  const handlePlaceClick = (place: Place, index: number) => {
+    console.log(`장소 클릭됨: ${place.name} (${index + 1}번)`);
+    // 추가적인 상호작용 로직을 여기에 구현할 수 있습니다.
+  };
 
   return (
     <div ref={mapContainer} className="w-full h-full relative flex-grow">
@@ -40,6 +47,7 @@ const Map: React.FC<MapProps> = ({
         itinerary={itinerary}
         selectedDay={selectedDay}
         selectedPlaces={selectedPlaces}
+        onPlaceClick={handlePlaceClick}
       />
       
       {map && (
@@ -48,6 +56,7 @@ const Map: React.FC<MapProps> = ({
           visible={showGeoJson} 
           isMapInitialized={isMapInitialized}
           isNaverLoaded={isNaverLoaded}
+          onGeoJsonLoaded={handleGeoJsonLoaded}
         />
       )}
       

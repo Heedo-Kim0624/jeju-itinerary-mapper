@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 
 interface ItineraryButtonProps {
   allCategoriesSelected: boolean;
-  onCreateItinerary: () => void;
+  onCreateItinerary: () => boolean; // 반환 타입을 boolean으로 변경
 }
 
 const ItineraryButton: React.FC<ItineraryButtonProps> = ({

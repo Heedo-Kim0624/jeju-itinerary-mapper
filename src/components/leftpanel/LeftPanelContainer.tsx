@@ -21,7 +21,7 @@ interface LeftPanelContainerProps {
     startTime: string;
     endTime: string;
   } | null;
-  onCreateItinerary: () => void;
+  onCreateItinerary: () => boolean; // 반환 타입을 boolean으로 변경
   itinerary: ItineraryDay[] | null;
   selectedItineraryDay: number | null;
   onSelectDay: (day: number) => void;
