@@ -22,6 +22,7 @@ const ItineraryView: React.FC<ItineraryViewProps> = ({
   selectedDay,
 }) => {
   const handleDayClick = (day: number) => {
+    console.log(`일자 선택: ${day}일차`);
     onSelectDay(day);
   };
 
@@ -43,30 +44,43 @@ const ItineraryView: React.FC<ItineraryViewProps> = ({
     );
   }
 
+  console.log("ItineraryView 렌더링", {
+    일수: itinerary.length,
+    선택일자: selectedDay
+  });
+
   const currentDayItinerary = selectedDay ? itinerary.find(day => day.day === selectedDay) : null;
 
   return (
     <div className="w-full h-full flex flex-col">
-      <div className="flex overflow-x-auto pb-2 mb-4 gap-2">
-        {itinerary.map((day) => (
-          <Button
-            key={day.day}
-            variant={selectedDay === day.day ? "default" : "outline"}
-            className="flex flex-col h-16 min-w-16 whitespace-nowrap"
-            onClick={() => handleDayClick(day.day)}
-          >
-            <span className="font-bold text-sm">{day.day}일차</span>
-            <span className="text-xs">{format(addDays(startDate, day.day - 1), 'MM/dd(EEE)', { locale: ko })}</span>
-          </Button>
-        ))}
+      <h2 className="text-lg font-semibold p-4 border-b">생성된 여행 일정</h2>
+      
+      <div className="flex overflow-x-auto pb-2 p-4 gap-2 border-b">
+        {itinerary.map((day) => {
+          const dayDate = new Date(startDate);
+          dayDate.setDate(startDate.getDate() + day.day - 1);
+          const formattedDate = format(dayDate, 'MM/dd(EEE)', { locale: ko });
+          
+          return (
+            <Button
+              key={day.day}
+              variant={selectedDay === day.day ? "default" : "outline"}
+              className="flex flex-col h-16 min-w-16 whitespace-nowrap"
+              onClick={() => handleDayClick(day.day)}
+            >
+              <span className="font-bold text-sm">{day.day}일차</span>
+              <span className="text-xs">{formattedDate}</span>
+            </Button>
+          );
+        })}
       </div>
       
-      {currentDayItinerary && (
-        <div className="flex-1">
+      {currentDayItinerary ? (
+        <div className="flex-1 p-4">
           <div className="mb-4">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Calendar className="h-4 w-4" />
-              <span>{getDateForDay(selectedDay)} ({getDayOfWeek(selectedDay)})</span>
+              <span>{getDateForDay(currentDayItinerary.day)} ({getDayOfWeek(currentDayItinerary.day)})</span>
             </div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
               <MapPin className="h-4 w-4" />
@@ -78,12 +92,16 @@ const ItineraryView: React.FC<ItineraryViewProps> = ({
             </div>
           </div>
           
-          <ScrollArea className="flex-1">
+          <ScrollArea className="h-[calc(100%-120px)]">
             <div className="space-y-4 relative">
               <div className="absolute top-0 bottom-0 left-6 w-0.5 bg-gray-200 z-0"></div>
               
               {currentDayItinerary.places.map((place, index) => (
-                <div key={place.id} className="relative z-10 ml-16 bg-white rounded-lg p-3 border animate-fade-in" style={{ animationDelay: `${index * 100}ms` }}>
+                <div 
+                  key={place.id} 
+                  className="relative z-10 ml-16 bg-white rounded-lg p-3 border shadow-sm animate-in fade-in-0 slide-in-from-bottom-1" 
+                  style={{ animationDelay: `${index * 100}ms` }}
+                >
                   <div 
                     className="absolute left-[-32px] w-12 h-12 rounded-full flex items-center justify-center font-bold text-white z-10" 
                     style={{ backgroundColor: categoryColors[place.category]?.marker || '#1F1F1F' }}
@@ -131,6 +149,10 @@ const ItineraryView: React.FC<ItineraryViewProps> = ({
               ))}
             </div>
           </ScrollArea>
+        </div>
+      ) : (
+        <div className="flex-1 flex items-center justify-center">
+          <p className="text-muted-foreground">일차를 선택해주세요</p>
         </div>
       )}
     </div>

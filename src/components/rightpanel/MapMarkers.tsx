@@ -27,13 +27,30 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
     renderItineraryRoute
   } = useMapContext();
 
+  // 종속성 배열에 모든 관련 props 추가하여 변경 시 재렌더링
   useEffect(() => {
     if (!isMapInitialized) {
       return;
     }
 
+    console.log("MapMarkers: 데이터 변경 감지", {
+      placesCount: places.length,
+      selectedPlaceExists: !!selectedPlace,
+      itineraryDays: itinerary?.length || 0,
+      selectedDay,
+      selectedPlacesCount: selectedPlaces.length,
+      isMapReady: isMapInitialized
+    });
+
     renderData();
-  }, [places, selectedPlace, itinerary, selectedDay, selectedPlaces, isMapInitialized]);
+  }, [
+    places, 
+    selectedPlace, 
+    itinerary, 
+    selectedDay, 
+    selectedPlaces, 
+    isMapInitialized
+  ]);
 
   const renderData = () => {
     if (!isMapInitialized) {
@@ -41,6 +58,7 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
       return;
     }
 
+    console.log("MapMarkers: 데이터 렌더링 시작");
     clearMarkersAndUiElements();
 
     if (selectedPlace) {
@@ -67,7 +85,8 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
           useColorByCategory: true 
         });
         
-        // 해당 일자의 경로 시각화
+        // 해당 일자의 경로 시각화 - 중요!
+        console.log(`[MapMarkers] ${selectedDay}일차 경로 렌더링 시작`);
         renderItineraryRoute(selectedItinerary);
         
         // 첫 번째 장소로 지도 중심 이동
@@ -84,9 +103,11 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
       }
     } else if (selectedPlaces && selectedPlaces.length > 0) {
       // 명시적으로 선택된 장소들을 표시 (카테고리별 색상)
+      console.log("선택된 장소 목록 표시", selectedPlaces.length);
       addMarkers(selectedPlaces, { highlight: true, useColorByCategory: true });
     } else if (places && places.length > 0) {
       // 일반 장소 리스트 표시
+      console.log("일반 장소 목록 표시", places.length);
       addMarkers(places, { useColorByCategory: true });
     }
   };

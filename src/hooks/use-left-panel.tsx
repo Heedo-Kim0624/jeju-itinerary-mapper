@@ -80,7 +80,7 @@ export const useLeftPanel = () => {
     });
   }, [allCategoriesSelected, selectedPlaces.length]);
 
-  // 일정 생성 핸들러 - 일정 액션 래핑
+  // 일정 생성 함수에 대한 래퍼
   const createItinerary = () => {
     console.log("경로 생성 함수 호출됨", {
       selectedPlaces: selectedPlaces.length,
@@ -100,10 +100,16 @@ export const useLeftPanel = () => {
     const result = handleCreateItinerary(selectedPlaces, dates);
     
     if (result) {
-      // 일정 생성 성공 시 일정 보기로 전환 (수정된 부분)
-      // panelHandlers.setItineraryMode 대신 직접 상태 업데이트
+      // 일정 생성 성공 시 일정 보기로 전환
       setShowItinerary(true);
-      console.log("일정 생성 성공! 일정 보기로 전환");
+      
+      // 필수: UI 상태 변경을 명시적으로 설정
+      panelHandlers.setItineraryMode(true);
+      
+      console.log("일정 생성 성공! 일정 보기로 전환", {
+        일수: result.length,
+        showItinerary: true
+      });
     }
     
     return result;
