@@ -62,11 +62,8 @@ export const useSelectedPlaces = () => {
       console.warn('카테고리 값이 누락되었습니다:', place.name);
     }
     
-    // Ensure place.id is always a number
-    const normalizedPlace = {
-      ...place,
-      id: typeof place.id === 'string' ? parseInt(place.id, 10) : place.id
-    };
+    // 타입 호환성을 위해 place.id가 string인지 확인
+    const normalizedPlace = { ...place };
     
     if (checked) {
       // If trying to add accommodation, check limit
@@ -105,19 +102,19 @@ export const useSelectedPlaces = () => {
   };
 
   const handleRemovePlace = (placeId: string) => {
-    const numericId = parseInt(placeId, 10);
-    const placeToRemove = selectedPlaces.find(p => Number(p.id) === numericId);
+    // 타입 호환성을 위해 직접 비교
+    const placeToRemove = selectedPlaces.find(p => p.id === placeId);
     
     // 장소 제거 시 해당 카테고리에서도 제거
-    setSelectedPlaces(prevPlaces => prevPlaces.filter(p => Number(p.id) !== numericId));
+    setSelectedPlaces(prevPlaces => prevPlaces.filter(p => p.id !== placeId));
     
     if (placeToRemove) {
       Object.keys(selectedPlacesByCategory).forEach(category => {
         const categoryKey = category as keyof typeof selectedPlacesByCategory;
-        if (selectedPlacesByCategory[categoryKey].some(p => Number(p.id) === numericId)) {
+        if (selectedPlacesByCategory[categoryKey].some(p => p.id === placeId)) {
           setSelectedPlacesByCategory(prev => ({
             ...prev,
-            [categoryKey]: prev[categoryKey].filter(p => Number(p.id) !== numericId)
+            [categoryKey]: prev[categoryKey].filter(p => p.id !== placeId)
           }));
         }
       });
@@ -142,12 +139,12 @@ export const useSelectedPlaces = () => {
     // 선택된 장소를 처리
     const selected: SelectedPlace[] = places
       .filter(p => p.isSelected)
-      .map(p => ({ id: Number(p.id), name: p.name }));
+      .map(p => ({ id: parseInt(p.id, 10), name: p.name }));
 
     // 추천되었지만 선택되지 않은 장소를 후보 장소로 처리
     const candidates: SelectedPlace[] = places
       .filter(p => p.isRecommended && !p.isSelected)
-      .map(p => ({ id: Number(p.id), name: p.name }));
+      .map(p => ({ id: parseInt(p.id, 10), name: p.name }));
 
     // 후보 장소가 제대로 처리되는지 로깅
     console.log('일정 생성 데이터:', {
