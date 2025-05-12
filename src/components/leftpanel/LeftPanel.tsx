@@ -23,14 +23,12 @@ const LeftPanel: React.FC = () => {
     console.log("LeftPanel - 일정 관련 상태 변화 감지:", {
       일정생성됨: !!itineraryManagement.itinerary,
       일정패널표시: uiVisibility.showItinerary,
-      선택된일자: itineraryManagement.selectedItineraryDay,
-      일정모드: itineraryManagement.isItineraryMode
+      선택된일자: itineraryManagement.selectedItineraryDay
     });
   }, [
     itineraryManagement.itinerary, 
     uiVisibility.showItinerary, 
-    itineraryManagement.selectedItineraryDay,
-    itineraryManagement.isItineraryMode
+    itineraryManagement.selectedItineraryDay
   ]);
 
   return (
@@ -57,7 +55,6 @@ const LeftPanel: React.FC = () => {
           itinerary={itineraryManagement.itinerary}
           selectedItineraryDay={itineraryManagement.selectedItineraryDay}
           onSelectDay={itineraryManagement.handleSelectItineraryDay}
-          isItineraryMode={itineraryManagement.isItineraryMode}
         >
           <LeftPanelContent
             onDateSelect={tripDetails.setDates}

@@ -21,11 +21,10 @@ interface LeftPanelContainerProps {
     startTime: string;
     endTime: string;
   } | null;
-  onCreateItinerary: () => boolean; // This prop should return boolean
+  onCreateItinerary: () => void;
   itinerary: ItineraryDay[] | null;
   selectedItineraryDay: number | null;
   onSelectDay: (day: number) => void;
-  isItineraryMode?: boolean;
 }
 
 const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
@@ -40,21 +39,13 @@ const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
   onCreateItinerary,
   itinerary,
   selectedItineraryDay,
-  onSelectDay,
-  isItineraryMode = false
+  onSelectDay
 }) => {
   const handleCloseItinerary = () => {
     onSetShowItinerary(false);
   };
 
-  // isItineraryMode가 true이고 itinerary가 있으면 일정 뷰를 보여줌
-  if ((showItinerary || isItineraryMode) && itinerary) {
-    console.log("LeftPanelContainer: 일정 뷰 표시", {
-      showItinerary,
-      isItineraryMode,
-      itineraryExists: !!itinerary
-    });
-    
+  if (showItinerary && itinerary) {
     return (
       <div className="fixed top-0 left-0 w-[300px] h-full bg-white border-r border-gray-200 z-40 shadow-md">
         <ScheduleViewer
