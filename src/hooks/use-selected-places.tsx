@@ -1,41 +1,33 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Place, SelectedPlace, SchedulePayload } from '@/types/supabase';
 import { useMapContext } from '@/components/rightpanel/MapContext';
 import { toast } from 'sonner';
 import { useTripDetails } from './use-trip-details';
 
-// Create a separate type for the category mapping to improve readability
-type PlacesByCategory = {
-  '숙소': Place[];
-  '관광지': Place[];
-  '음식점': Place[];
-  '카페': Place[];
-};
-
 export const useSelectedPlaces = () => {
-  // State for selected places
   const [selectedPlaces, setSelectedPlaces] = useState<Place[]>([]);
-  
-  // State for selected places organized by category
-  const [selectedPlacesByCategory, setSelectedPlacesByCategory] = useState<PlacesByCategory>({
+  const [selectedPlacesByCategory, setSelectedPlacesByCategory] = useState<{
+    '숙소': Place[],
+    '관광지': Place[],
+    '음식점': Place[],
+    '카페': Place[],
+  }>({
     '숙소': [],
     '관광지': [],
     '음식점': [],
     '카페': [],
   });
 
-  // State for tracking if all categories have selections
-  const [allCategoriesSelected, setAllCategoriesSelected] = useState(false);
-
   // Get trip details to check accommodation limits
   const { tripDuration } = useTripDetails();
-  
-  // Get map context for interacting with the map
-  const { panTo, addMarkers, clearMarkersAndUiElements } = useMapContext();
 
-  // Check if all categories have at least one place selected
+  // allCategoriesSelected 상태를 명확하게 계산
+  const [allCategoriesSelected, setAllCategoriesSelected] = useState(false);
+  
+  // 더 자세한 디버깅을 위해 카테고리별 선택 여부 상태 추가
   useEffect(() => {
+    // 각 카테고리별로 최소 1개 이상 선택되었는지 확인
     const hasAccommodation = selectedPlacesByCategory['숙소'].length > 0;
     const hasLandmark = selectedPlacesByCategory['관광지'].length > 0;
     const hasRestaurant = selectedPlacesByCategory['음식점'].length > 0;
@@ -54,29 +46,30 @@ export const useSelectedPlaces = () => {
     setAllCategoriesSelected(allSelected);
   }, [selectedPlacesByCategory]);
 
-  // Check if accommodation limit reached based on trip duration
-  const isAccommodationLimitReached = useCallback((currentCount: number): boolean => {
+  const { panTo, addMarkers, clearMarkersAndUiElements } = useMapContext();
+
+  // Check if accommodation limit reached
+  const isAccommodationLimitReached = (currentCount: number): boolean => {
     if (!tripDuration || tripDuration < 1) return false;
     
     // n박 여행이면 최대 n개의 숙소만 선택 가능
     return currentCount >= tripDuration;
-  }, [tripDuration]);
+  };
 
-  // Handle selecting or deselecting a place
-  const handleSelectPlace = useCallback((place: Place, checked: boolean, category: string | null = null) => {
+  const handleSelectPlace = (place: Place, checked: boolean, category: string | null = null) => {
+    // 카테고리가 제공되었는지 확인하고, 누락된 경우 콘솔 로그 추가
     if (!category) {
       console.warn('카테고리 값이 누락되었습니다:', place.name);
-      return;
     }
     
-    // Normalize place ID to ensure it's always a number
+    // Ensure place.id is always a number
     const normalizedPlace = {
       ...place,
       id: typeof place.id === 'string' ? parseInt(place.id, 10) : place.id
     };
     
     if (checked) {
-      // Check accommodation limit before adding
+      // If trying to add accommodation, check limit
       if (category === '숙소') {
         const currentAccommodationCount = selectedPlacesByCategory['숙소'].length;
         
@@ -86,7 +79,6 @@ export const useSelectedPlaces = () => {
         }
       }
 
-      // Add to selectedPlaces if not already included
       setSelectedPlaces(prevPlaces => {
         if (prevPlaces.some(p => p.id === normalizedPlace.id)) {
           return prevPlaces;
@@ -94,55 +86,51 @@ export const useSelectedPlaces = () => {
         return [...prevPlaces, normalizedPlace];
       });
       
-      // Add to category-specific collection
-      if (category in selectedPlacesByCategory) {
+      if (category) {
         setSelectedPlacesByCategory(prev => ({
           ...prev,
-          [category]: [...prev[category as keyof PlacesByCategory], normalizedPlace]
+          [category]: [...prev[category as keyof typeof prev], normalizedPlace]
         }));
       }
     } else {
-      // Remove from selectedPlaces
       setSelectedPlaces(prevPlaces => prevPlaces.filter(p => p.id !== normalizedPlace.id));
       
-      // Remove from category-specific collection
-      if (category in selectedPlacesByCategory) {
+      if (category) {
         setSelectedPlacesByCategory(prev => ({
           ...prev,
-          [category]: prev[category as keyof PlacesByCategory].filter(p => p.id !== normalizedPlace.id)
+          [category]: prev[category as keyof typeof prev].filter(p => p.id !== normalizedPlace.id)
         }));
       }
     }
-  }, [selectedPlacesByCategory, tripDuration, isAccommodationLimitReached]);
+  };
 
-  // Handle removing a place from selections
-  const handleRemovePlace = useCallback((placeId: string) => {
+  const handleRemovePlace = (placeId: string) => {
     const numericId = parseInt(placeId, 10);
+    const placeToRemove = selectedPlaces.find(p => Number(p.id) === numericId);
     
-    // Remove from selectedPlaces
+    // 장소 제거 시 해당 카테고리에서도 제거
     setSelectedPlaces(prevPlaces => prevPlaces.filter(p => Number(p.id) !== numericId));
     
-    // Remove from all category collections where it exists
-    setSelectedPlacesByCategory(prev => {
-      const updated = { ...prev };
-      
-      (Object.keys(updated) as Array<keyof PlacesByCategory>).forEach(category => {
-        updated[category] = updated[category].filter(p => Number(p.id) !== numericId);
+    if (placeToRemove) {
+      Object.keys(selectedPlacesByCategory).forEach(category => {
+        const categoryKey = category as keyof typeof selectedPlacesByCategory;
+        if (selectedPlacesByCategory[categoryKey].some(p => Number(p.id) === numericId)) {
+          setSelectedPlacesByCategory(prev => ({
+            ...prev,
+            [categoryKey]: prev[categoryKey].filter(p => Number(p.id) !== numericId)
+          }));
+        }
       });
-      
-      return updated;
-    });
-  }, []);
+    }
+  };
 
-  // Handle viewing a place on the map
-  const handleViewOnMap = useCallback((place: Place) => {
+  const handleViewOnMap = (place: Place) => {
     clearMarkersAndUiElements();
     addMarkers([place], { highlight: true });
     panTo({ lat: place.y, lng: place.x });
-  }, [clearMarkersAndUiElements, addMarkers, panTo]);
+  };
 
-  // Prepare payload for schedule generation
-  const prepareSchedulePayload = useCallback((
+  const prepareSchedulePayload = (
     places: Place[], 
     dateTime: { start_datetime: string; end_datetime: string } | null
   ): SchedulePayload | null => {
@@ -151,27 +139,33 @@ export const useSelectedPlaces = () => {
       return null;
     }
 
-    // Process selected and candidate places
+    // 선택된 장소를 처리
     const selected: SelectedPlace[] = places
       .filter(p => p.isSelected)
       .map(p => ({ id: Number(p.id), name: p.name }));
 
+    // 추천되었지만 선택되지 않은 장소를 후보 장소로 처리
     const candidates: SelectedPlace[] = places
       .filter(p => p.isRecommended && !p.isSelected)
       .map(p => ({ id: Number(p.id), name: p.name }));
 
+    // 후보 장소가 제대로 처리되는지 로깅
     console.log('일정 생성 데이터:', {
       선택된_장소: selected.length,
       후보_장소: candidates.length,
       날짜: dateTime
     });
 
+    if (candidates.length > 0) {
+      console.log('후보 장소 목록:', candidates);
+    }
+
     return {
       selected_places: selected,
       candidate_places: candidates,
       ...dateTime
     };
-  }, []);
+  };
 
   return {
     selectedPlaces,

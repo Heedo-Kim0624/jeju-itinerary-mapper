@@ -14,7 +14,7 @@ export interface Place {
   y: number;
   isSelected?: boolean;
   isRecommended?: boolean;
-  operatingHours?: string | Record<string, number>;
+  operatingHours?: string;
   arrival_time?: string;       // 도착 시간 (HH:MM)
   travel_time_to_next?: string; // 다음 장소까지의 이동 시간
   time_block?: string;         // 예: "1일차 오전"
