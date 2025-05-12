@@ -16,7 +16,7 @@ export const useScheduleGenerator = () => {
 
     try {
       const response = await axios.post(
-        "https://fa1c-34-75-244-221.ngrok-free.app/generate_schedule",
+        "https://fcb1-34-75-95-54.ngrok-free.app/generate_schedule",
         payload
       );
 
