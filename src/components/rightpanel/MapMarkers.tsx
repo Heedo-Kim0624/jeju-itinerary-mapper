@@ -19,7 +19,13 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
   selectedDay,
   selectedPlaces = [],
 }) => {
-  const { isMapInitialized, calculateRoutes, addMarkers, clearMarkersAndUiElements, panTo } = useMapContext();
+  const { 
+    isMapInitialized, 
+    addMarkers, 
+    clearMarkersAndUiElements,
+    panTo,
+    renderItineraryRoute
+  } = useMapContext();
 
   useEffect(() => {
     if (!isMapInitialized) {
@@ -31,7 +37,7 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
 
   const renderData = () => {
     if (!isMapInitialized) {
-      console.warn("Map is not yet initialized.");
+      console.warn("지도가 초기화되지 않았습니다.");
       return;
     }
 
@@ -39,7 +45,7 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
 
     if (selectedPlace) {
       // 장소가 선택되었을 때, 해당 장소를 지도에 하이라이트
-      console.log("Rendering selected place:", selectedPlace);
+      console.log("선택된 장소 표시:", selectedPlace.name);
       addMarkers([selectedPlace], { highlight: true });
       
       // 선택된 장소로 지도 이동
@@ -61,7 +67,8 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
           useColorByCategory: true 
         });
         
-        calculateRoutes(selectedItinerary.places);
+        // 해당 일자의 경로 시각화
+        renderItineraryRoute(selectedItinerary);
         
         // 첫 번째 장소로 지도 중심 이동
         if (selectedItinerary.places.length > 0 && 
@@ -73,7 +80,7 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
           });
         }
       } else {
-        console.warn(`No itinerary found for day ${selectedDay}`);
+        console.warn(`${selectedDay}일차 일정을 찾을 수 없습니다`);
       }
     } else if (selectedPlaces && selectedPlaces.length > 0) {
       // 명시적으로 선택된 장소들을 표시 (카테고리별 색상)

@@ -70,6 +70,10 @@ const ItineraryView: React.FC<ItineraryViewProps> = ({
               <MapPin className="h-4 w-4" />
               <span>총 이동거리: {itinerary.find(day => day.day === selectedDay)?.totalDistance.toFixed(1)} km</span>
             </div>
+            <div className="flex items-center gap-2 text-sm text-primary mt-2 bg-primary/10 p-2 rounded-md">
+              <Navigation className="h-4 w-4" />
+              <span>지도에 {selectedDay}일차 경로가 표시됩니다</span>
+            </div>
           </div>
           
           <ScrollArea className="flex-1">

@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useRef } from 'react';
-import { Place } from '@/types/supabase';
+import { Place, ItineraryDay } from '@/types/supabase';
 import useMapCore from './useMapCore';
 
 interface MapContextType {
@@ -20,6 +20,8 @@ interface MapContextType {
   panTo: (locationOrCoords: string | {lat: number, lng: number}) => void;
   showGeoJson: boolean;
   toggleGeoJsonVisibility: () => void;
+  renderItineraryRoute: (itineraryDay: ItineraryDay | null) => void;
+  clearAllRoutes: () => void;
 }
 
 const defaultContext: MapContextType = {
@@ -33,7 +35,9 @@ const defaultContext: MapContextType = {
   clearMarkersAndUiElements: () => {},
   panTo: () => {},
   showGeoJson: false,
-  toggleGeoJsonVisibility: () => {}
+  toggleGeoJsonVisibility: () => {},
+  renderItineraryRoute: () => {},
+  clearAllRoutes: () => {}
 };
 
 const MapContext = createContext<MapContextType>(defaultContext);

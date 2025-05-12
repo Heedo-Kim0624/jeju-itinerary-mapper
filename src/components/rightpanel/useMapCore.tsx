@@ -5,6 +5,8 @@ import { useMapInitialization } from '@/hooks/map/useMapInitialization';
 import { useMapMarkers } from '@/hooks/map/useMapMarkers';
 import { useMapRouting } from '@/hooks/map/useMapRouting';
 import { useMapNavigation } from '@/hooks/map/useMapNavigation';
+import { useMapItineraryRouting } from '@/hooks/map/useMapItineraryRouting';
+import { ItineraryDay } from '@/types/supabase';
 
 export const useMapCore = () => {
   const mapContainer = useRef<HTMLDivElement>(null);
@@ -20,12 +22,22 @@ export const useMapCore = () => {
   const { addMarkers, clearMarkersAndUiElements } = useMapMarkers(map);
   const { calculateRoutes } = useMapRouting(map);
   const { panTo } = useMapNavigation(map);
+  const { renderDayRoute, clearAllRoutes } = useMapItineraryRouting(map);
 
   useMapResize(map);
 
   const toggleGeoJsonVisibility = useCallback(() => {
     setShowGeoJson(!showGeoJson);
   }, [showGeoJson]);
+
+  // 일정 경로 렌더링을 위한 함수 추가
+  const renderItineraryRoute = useCallback((itineraryDay: ItineraryDay | null) => {
+    if (itineraryDay) {
+      renderDayRoute(itineraryDay);
+    } else {
+      clearAllRoutes();
+    }
+  }, [renderDayRoute, clearAllRoutes]);
 
   return {
     mapContainer,
@@ -38,7 +50,9 @@ export const useMapCore = () => {
     clearMarkersAndUiElements,
     showGeoJson,
     toggleGeoJsonVisibility,
-    panTo
+    panTo,
+    renderItineraryRoute,
+    clearAllRoutes
   };
 };
 
