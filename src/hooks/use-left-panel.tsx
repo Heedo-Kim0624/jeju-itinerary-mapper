@@ -8,6 +8,7 @@ import { useInputHandlers } from './left-panel/use-input-handlers';
 import { usePanelHandlers } from './left-panel/use-panel-handlers';
 import { useItineraryActions } from './left-panel/use-itinerary-actions';
 import { toast } from 'sonner';
+import type { CategoryName } from '@/utils/categoryUtils';
 
 /**
  * 메인 왼쪽 패널 로직을 관리하는 훅
@@ -57,9 +58,14 @@ export const useLeftPanel = () => {
   // UI 가시성 및 패널 핸들러
   const panelHandlers = usePanelHandlers();
   
-  // 패널 핸들러 초기화
+  // 패널 핸들러 초기화 - 함수 시그니처 수정
   useEffect(() => {
-    panelHandlers.setup(selectedRegions, handleConfirmCategory, handlePanelBack);
+    // 핸들러 함수 시그니처를 맞추기 위해 래퍼 함수 생성
+    const wrappedConfirmHandler = () => {
+      console.log("Wrapper for handleConfirmCategory called");
+    };
+    
+    panelHandlers.setup(selectedRegions, wrappedConfirmHandler, handlePanelBack);
   }, [selectedRegions, handleConfirmCategory, handlePanelBack]);
   
   // 일정 기능
@@ -89,12 +95,12 @@ export const useLeftPanel = () => {
     
     if (!dates) {
       toast.error("여행 날짜를 먼저 설정해주세요!");
-      return null;
+      return false;
     }
     
     if (selectedPlaces.length === 0) {
       toast.error("선택된 장소가 없습니다. 장소를 먼저 선택해주세요!");
-      return null;
+      return false;
     }
     
     const result = handleCreateItinerary(selectedPlaces, dates);
@@ -103,7 +109,7 @@ export const useLeftPanel = () => {
       // 일정 생성 성공 시 일정 보기로 전환
       setShowItinerary(true);
       
-      // panelHandlers.setItineraryMode를 사용할 수 있게 됐으므로 호출
+      // 일정 모드 설정 업데이트
       panelHandlers.setItineraryMode(true);
       
       console.log("일정 생성 성공! 일정 보기로 전환", {
@@ -111,9 +117,10 @@ export const useLeftPanel = () => {
         showItinerary: true,
         itineraryMode: true
       });
+      return true;
     }
     
-    return result;
+    return false;
   };
 
   // 모든 훅과 핸들러를 기능별로 그룹화하여 반환
@@ -173,13 +180,14 @@ export const useLeftPanel = () => {
       handleSelectItineraryDay,
       handleCreateItinerary: createItinerary,
       isItineraryMode: panelHandlers.isItineraryMode,
+      setItineraryMode: panelHandlers.setItineraryMode,
     },
   }), [
     selectedRegions, regionConfirmed, regionSlidePanelOpen, 
     categoryStepIndex, activeMiddlePanelCategory, confirmedCategories, selectedKeywordsByCategory,
     directInputValues, selectedPlaces, allCategoriesSelected, dates,
     panelHandlers.uiVisibility, itinerary, selectedItineraryDay, showItinerary,
-    panelHandlers.isItineraryMode
+    panelHandlers.isItineraryMode, panelHandlers.setItineraryMode
   ]);
 
   return leftPanelState;

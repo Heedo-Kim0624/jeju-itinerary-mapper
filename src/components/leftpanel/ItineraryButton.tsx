@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 
 interface ItineraryButtonProps {
   allCategoriesSelected: boolean;
-  onCreateItinerary: () => void;
+  onCreateItinerary: () => boolean;
 }
 
 const ItineraryButton: React.FC<ItineraryButtonProps> = ({
@@ -25,12 +25,15 @@ const ItineraryButton: React.FC<ItineraryButtonProps> = ({
     console.log('경로 생성 버튼 클릭됨, 경로 생성 함수 호출');
     
     try {
-      // 함수 실행만 하고 결과값은 평가하지 않음
-      onCreateItinerary();
+      // onCreateItinerary 함수 실행 결과에 따라 처리
+      const itineraryCreated = onCreateItinerary();
       
-      // onCreateItinerary 함수가 에러를 던지지 않았다면 성공으로 간주
-      // 이 함수는 경로 생성 후 화면 전환을 처리하므로 여기서는 아무것도 하지 않음
-      console.log('경로 생성 함수 호출 완료');
+      if (!itineraryCreated) {
+        // 생성에 실패한 경우 버튼을 다시 활성화
+        setIsCreating(false);
+      }
+      
+      console.log('경로 생성 함수 호출 완료, 결과:', itineraryCreated);
       
     } catch (error) {
       console.error('경로 생성 중 오류 발생', error);
