@@ -20,10 +20,10 @@ const PlaceCard: React.FC<PlaceCardProps> = ({
   onClick,
   onViewDetails,
 }) => {
-  // Ensure place ID is always treated as a number
+  // Ensure place ID is always treated as a string
   const normalizedPlace = {
     ...place,
-    id: typeof place.id === 'string' ? parseInt(place.id, 10) : place.id
+    id: typeof place.id === 'number' ? String(place.id) : place.id
   };
 
   const handleRadioChange = (e: React.ChangeEvent<HTMLInputElement>) => {

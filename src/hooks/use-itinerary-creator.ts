@@ -1,4 +1,3 @@
-
 import { Place, ItineraryPlaceWithTime } from '@/types/supabase';
 import { PlaceWithUsedFlag, findNearestPlace, categorizeAndFlagPlaces } from '../utils/schedule';
 import { calculateDistance, calculateTotalDistance } from '../utils/distance';

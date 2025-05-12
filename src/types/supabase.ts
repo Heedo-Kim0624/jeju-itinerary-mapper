@@ -1,4 +1,5 @@
 
+
 export interface User {
   id: string;
   email: string;
@@ -49,6 +50,7 @@ export interface ItineraryDay {
 export interface ItineraryPlaceWithTime extends Place {
   arrival_time?: string;
   travel_time_to_next?: string;
+  time_block?: string; // 추가: 시간대 블록 정보 (오전/오후/저녁)
 }
 
 export interface SelectedPlace {
@@ -62,3 +64,4 @@ export interface SchedulePayload {
   start_datetime: string;
   end_datetime: string;
 }
+

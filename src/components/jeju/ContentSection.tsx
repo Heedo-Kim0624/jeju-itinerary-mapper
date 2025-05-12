@@ -176,7 +176,7 @@ async function fetchPlaceDetails(category: string, id: number): Promise<Place | 
     
     // Construct the Place object with safe property access
     const place: Place = {
-      id: id,
+      id: id.toString(), // 수정: id를 문자열로 변환
       name: infoData?.place_name || '',
       address: infoData?.road_address || infoData?.lot_address || '',
       category: category, 
@@ -228,7 +228,7 @@ const ContentSection: React.FC<ContentSectionProps> = ({
     console.log("View details for place:", place);
     try {
       const category = place.category as '숙소' | '관광지' | '음식점' | '카페' | 'accommodation' | 'landmark' | 'restaurant' | 'cafe';
-      const id = typeof place.id === 'string' ? parseInt(place.id) : place.id;
+      const id = typeof place.id === 'string' ? parseInt(place.id) : Number(place.id);
 
       if (!category || isNaN(id)) {
         console.error("잘못된 장소 정보:", { category, id });
