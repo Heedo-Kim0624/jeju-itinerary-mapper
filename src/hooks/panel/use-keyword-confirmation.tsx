@@ -12,23 +12,31 @@ export const useKeywordConfirmation = (handleShowCategoryResult: (category: Cate
   const handleConfirmByCategory = {
     accomodation: (finalKeywords: string[], clearSelection: boolean = false) => {
       console.log("숙소 키워드 확인:", finalKeywords);
-      handleConfirmCategory('숙소', finalKeywords, clearSelection);
-      handleShowCategoryResult('숙소');
+      const success = handleConfirmCategory('숙소', finalKeywords, clearSelection);
+      if (success) {
+        handleShowCategoryResult('숙소');
+      }
     },
     landmark: (finalKeywords: string[], clearSelection: boolean = false) => {
       console.log("관광지 키워드 확인:", finalKeywords);
-      handleConfirmCategory('관광지', finalKeywords, clearSelection);
-      handleShowCategoryResult('관광지');
+      const success = handleConfirmCategory('관광지', finalKeywords, clearSelection);
+      if (success) {
+        handleShowCategoryResult('관광지');
+      }
     },
     restaurant: (finalKeywords: string[], clearSelection: boolean = false) => {
       console.log("음식점 키워드 확인:", finalKeywords);
-      handleConfirmCategory('음식점', finalKeywords, clearSelection);
-      handleShowCategoryResult('음식점');
+      const success = handleConfirmCategory('음식점', finalKeywords, clearSelection);
+      if (success) {
+        handleShowCategoryResult('음식점');
+      }
     },
     cafe: (finalKeywords: string[], clearSelection: boolean = false) => {
       console.log("카페 키워드 확인:", finalKeywords);
-      handleConfirmCategory('카페', finalKeywords, clearSelection);
-      handleShowCategoryResult('카페');
+      const success = handleConfirmCategory('카페', finalKeywords, clearSelection);
+      if (success) {
+        handleShowCategoryResult('카페');
+      }
     }
   };
 
@@ -36,7 +44,7 @@ export const useKeywordConfirmation = (handleShowCategoryResult: (category: Cate
   const handleConfirmCategory = (categoryName: CategoryName, finalKeywords: string[], clearSelection: boolean) => {
     if (finalKeywords.length === 0) {
       toast.warning("키워드를 하나 이상 선택해주세요");
-      return;
+      return false;
     }
     
     // 키워드 저장 및 업데이트
@@ -45,6 +53,7 @@ export const useKeywordConfirmation = (handleShowCategoryResult: (category: Cate
     
     // 패널 닫기
     handlePanelBack();
+    return true;
   };
 
   // Panel back handlers by category

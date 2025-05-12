@@ -61,6 +61,11 @@ const CategoryResultHandler: React.FC<CategoryResultHandlerProps> = ({
     return keywords.filter(Boolean);
   };
 
+  const handleClosePanel = () => {
+    console.log("카테고리 결과 패널 닫기 요청");
+    onClose();
+  };
+
   return (
     <>
       {showCategoryResult && (
@@ -68,10 +73,10 @@ const CategoryResultHandler: React.FC<CategoryResultHandlerProps> = ({
           category={showCategoryResult}
           regions={selectedRegions}
           keywords={extractKeywords(selectedKeywordsByCategory[showCategoryResult])}
-          onClose={onClose}
+          onClose={handleClosePanel}
           onSelectPlace={onSelectPlace}
           isPlaceSelected={isPlaceSelected}
-          isOpen={true}
+          isOpen={!!showCategoryResult}
         />
       )}
     </>

@@ -54,6 +54,13 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
       clearMarkersAndUiElements();
       refetch();
     }
+    
+    // Clean up function to clear markers when component unmounts
+    return () => {
+      if (isOpen) {
+        clearMarkersAndUiElements();
+      }
+    };
   }, [isOpen, category, refetch, clearMarkersAndUiElements]);
 
   useEffect(() => {
@@ -92,6 +99,11 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
     }
   };
 
+  const handleClose = () => {
+    console.log("카테고리 결과 패널 닫기");
+    onClose();
+  };
+
   if (!isOpen) {
     return null;
   }
@@ -99,7 +111,7 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
   return (
     <div className="fixed top-0 left-[300px] w-[300px] h-full bg-white border-l border-r border-gray-200 z-40 shadow-md">
       <div className="h-full flex flex-col">
-        <ResultHeader category={category} onClose={onClose} />
+        <ResultHeader category={category} onClose={handleClose} />
 
         <div className="flex-1 overflow-auto">
           {isLoading && <LoadingState />}
@@ -133,7 +145,7 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
           )}
         </div>
 
-        <ResultFooter onClose={onClose} />
+        <ResultFooter onClose={handleClose} />
       </div>
 
       {selectedPlace && (

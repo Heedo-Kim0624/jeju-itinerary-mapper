@@ -85,7 +85,7 @@ const BaseKeywordPanel: React.FC<KeywordPanelProps & { accommodationTypeUI?: Rea
     onConfirm(finalKeywords, true);
   };
 
-  // 닫기 버튼 클릭 시 패널만 닫도록 수정
+  // 닫기 버튼 클릭 시 이벤트 처리
   const handleClose = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     e.stopPropagation();
@@ -98,7 +98,11 @@ const BaseKeywordPanel: React.FC<KeywordPanelProps & { accommodationTypeUI?: Rea
     <div className="fixed top-0 left-[300px] w-[300px] h-full bg-white border-l border-r border-gray-200 z-40 shadow-md p-4 overflow-y-auto">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold">{categoryName} 키워드 선택</h2>
-        <button type="button" onClick={handleClose} className="text-sm text-blue-600 hover:underline">
+        <button 
+          type="button" 
+          onClick={handleClose} 
+          className="text-sm text-blue-600 hover:underline"
+        >
           닫기
         </button>
       </div>
