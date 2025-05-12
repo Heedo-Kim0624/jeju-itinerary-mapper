@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Place } from '@/types/supabase';
 import { toast } from 'sonner';
@@ -33,8 +34,8 @@ export const useScheduleGenerator = () => {
     setError(null);
 
     try {
-      // 서버 URL 확인 - ngrok URL 사용
-      const serverUrl = 'https://fcb1-34-75-95-54.ngrok-free.app';
+      // 서버 URL 변경
+      const serverUrl = 'https://4bd1-34-80-234-13.ngrok-free.app';
       
       console.log('일정 생성 요청 전송:', {
         장소수: places.length,
@@ -58,7 +59,7 @@ export const useScheduleGenerator = () => {
             category: place.category,
             address: place.address,
             rating: place.rating || 0,
-            visit_time: place.visit_time || 60, // 기본 방문 시간 1시간
+            visit_time: place.visit_time || 60, // 타입 문제 해결을 위한 fallback
           })),
           startDate: startDate.toISOString(),
           endDate: endDate.toISOString(),
