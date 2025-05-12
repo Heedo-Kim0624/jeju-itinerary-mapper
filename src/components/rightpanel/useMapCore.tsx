@@ -31,8 +31,8 @@ export const useMapCore = () => {
   useMapResize(map);
 
   const toggleGeoJsonVisibility = useCallback(() => {
-    setShowGeoJson(!showGeoJson);
-  }, [showGeoJson]);
+    setShowGeoJson(prev => !prev);
+  }, []);
 
   // GeoJSON 데이터가 로드되면 호출되는 콜백 함수
   const handleGeoJsonLoaded = useCallback((nodes: any[], links: any[]) => {
@@ -55,19 +55,26 @@ export const useMapCore = () => {
   }, [renderDayRoute, clearAllRoutes]);
 
   // 특정 장소 간의 경로만 하이라이트하는 기능
-  const highlightSegment = useCallback((fromPlaceId: string, toPlaceId: string) => {
+  const highlightSegment = useCallback((fromIndex: number, toIndex: number, itineraryDay?: ItineraryDay) => {
     if (!map || !isGeoJsonLoaded) {
       toast.error("지도 데이터가 아직 준비되지 않았습니다.");
       return;
     }
     
-    // 여기서 fromPlaceId와 toPlaceId를 사용하여 
-    // geoJsonNodes.current와 geoJsonLinks.current에서 해당 경로만 표시하는 로직 구현
-    console.log(`${fromPlaceId}에서 ${toPlaceId}까지의 경로를 하이라이트합니다.`);
-    
-    // 구현 예시 (실제로는 노드와 링크의 ID를 비교하여 관련된 것만 표시해야 함)
     try {
-      // 여기에 경로 하이라이트 구현이 필요합니다
+      console.log(`${fromIndex}번에서 ${toIndex}번까지의 경로를 하이라이트합니다.`);
+      
+      // 현재는 더미 기능이지만, 나중에 실제 구현이 필요합니다
+      // 실제 구현 시에는 fromIndex, toIndex를 사용하여
+      // geoJsonNodes.current와 geoJsonLinks.current에서 해당 경로를 찾아 표시합니다
+      
+      if (itineraryDay) {
+        const places = itineraryDay.places;
+        if (fromIndex >= 0 && fromIndex < places.length && 
+            toIndex >= 0 && toIndex < places.length) {
+          console.log(`${places[fromIndex].name}에서 ${places[toIndex].name}까지의 경로 하이라이트`);
+        }
+      }
     } catch (error) {
       console.error("경로 하이라이트 오류:", error);
       toast.error("경로 표시 중 오류가 발생했습니다.");

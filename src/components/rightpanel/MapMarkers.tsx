@@ -46,9 +46,7 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
         const nextIndex = (index + 1) % currentDayItinerary.places.length;
         
         // 경로 하이라이트 호출
-        if (typeof highlightSegment === 'function') {
-          highlightSegment(index, nextIndex);
-        }
+        highlightSegment(index, nextIndex, currentDayItinerary);
       }
     }
     
@@ -114,8 +112,7 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
         // 카테고리별로 색상을 다르게 표시
         const markers = addMarkers(selectedItinerary.places, { 
           isItinerary: true,
-          useColorByCategory: true,
-          onClick: handleMarkerClick // 마커 클릭 핸들러 추가
+          useColorByCategory: true
         });
         
         setMarkerRefs(markers);
@@ -146,28 +143,6 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
       console.log("일반 장소 목록 표시", places.length);
       const markers = addMarkers(places, { useColorByCategory: true });
       setMarkerRefs(markers);
-    }
-  };
-
-  // 특정 장소 간 경로 하이라이트 함수
-  const highlightRoute = (fromIndex: number, toIndex: number) => {
-    if (!itinerary || selectedDay === null) {
-      toast.error("일정이 선택되지 않았습니다.");
-      return;
-    }
-
-    const dayItinerary = itinerary.find(day => day.day === selectedDay);
-    if (!dayItinerary) {
-      toast.error("해당 일자의 일정을 찾을 수 없습니다.");
-      return;
-    }
-
-    // 맵 컨텍스트의 highlightSegment 함수 호출
-    if (typeof highlightSegment === 'function') {
-      highlightSegment(fromIndex, toIndex, dayItinerary);
-      console.log(`${fromIndex + 1}번 장소에서 ${toIndex + 1}번 장소까지 경로 하이라이트`);
-    } else {
-      console.error("highlightSegment 함수가 정의되지 않았습니다.");
     }
   };
 

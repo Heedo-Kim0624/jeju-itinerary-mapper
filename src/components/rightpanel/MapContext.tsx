@@ -14,7 +14,8 @@ interface MapContextType {
     isItinerary?: boolean; 
     useRecommendedStyle?: boolean;
     useColorByCategory?: boolean;
-  }) => void;
+    onClick?: (place: Place, index: number) => void;
+  }) => any[];
   calculateRoutes: (places: Place[]) => void;
   clearMarkersAndUiElements: () => void;
   panTo: (locationOrCoords: string | {lat: number, lng: number}) => void;
@@ -22,6 +23,9 @@ interface MapContextType {
   toggleGeoJsonVisibility: () => void;
   renderItineraryRoute: (itineraryDay: ItineraryDay | null) => void;
   clearAllRoutes: () => void;
+  handleGeoJsonLoaded: (nodes: any[], links: any[]) => void;
+  highlightSegment: (fromIndex: number, toIndex: number, itineraryDay?: ItineraryDay) => void;
+  isGeoJsonLoaded: boolean;
 }
 
 const defaultContext: MapContextType = {
@@ -30,14 +34,17 @@ const defaultContext: MapContextType = {
   isMapInitialized: false,
   isNaverLoaded: false,
   isMapError: false,
-  addMarkers: () => {},
+  addMarkers: () => [],
   calculateRoutes: () => {},
   clearMarkersAndUiElements: () => {},
   panTo: () => {},
   showGeoJson: false,
   toggleGeoJsonVisibility: () => {},
   renderItineraryRoute: () => {},
-  clearAllRoutes: () => {}
+  clearAllRoutes: () => {},
+  handleGeoJsonLoaded: () => {},
+  highlightSegment: () => {},
+  isGeoJsonLoaded: false
 };
 
 const MapContext = createContext<MapContextType>(defaultContext);

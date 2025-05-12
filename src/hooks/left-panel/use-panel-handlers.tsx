@@ -1,4 +1,5 @@
 
+import { useState } from 'react';
 import { usePanelVisibility } from '../use-panel-visibility';
 import { useMapContext } from '@/components/rightpanel/MapContext';
 
@@ -11,6 +12,7 @@ export const usePanelHandlers = () => {
     setShowCategoryResult,
   } = usePanelVisibility();
 
+  const [isItineraryMode, setIsItineraryMode] = useState(false);
   const { panTo } = useMapContext();
 
   // Result close handler
@@ -50,6 +52,16 @@ export const usePanelHandlers = () => {
     cafe: () => handlePanelBack()
   };
 
+  // 일정 모드 설정 함수
+  const setItineraryMode = (value: boolean) => {
+    setIsItineraryMode(value);
+    
+    // 일정 모드가 활성화되면 일정 화면을 자동으로 표시
+    if (value && !showItinerary) {
+      setShowItinerary(true);
+    }
+  };
+
   // These functions will be provided by props from use-left-panel
   let selectedRegions: any[] = [];
   let handleConfirmCategory = (category: string, keywords: string[], clear?: boolean) => {};
@@ -76,6 +88,8 @@ export const usePanelHandlers = () => {
     },
     handleConfirmByCategory,
     handlePanelBackByCategory,
+    setItineraryMode,
+    isItineraryMode,
     setup
   };
 };

@@ -1,3 +1,4 @@
+
 import { useRef, useCallback } from 'react';
 import { Place } from '@/types/supabase';
 import { getCategoryColor, mapCategoryNameToKey } from '@/utils/categoryColors';
@@ -7,6 +8,7 @@ type MarkerOptions = {
   isItinerary?: boolean;
   useRecommendedStyle?: boolean;
   useColorByCategory?: boolean;
+  onClick?: (place: Place, index: number) => void;
 };
 
 export const useMapMarkers = (map: any) => {
@@ -49,9 +51,10 @@ export const useMapMarkers = (map: any) => {
 
   // 마커 추가
   const addMarkers = useCallback((places: Place[], opts: MarkerOptions = {}) => {
-    if (!map || !window.naver || !places || places.length === 0) return;
+    if (!map || !window.naver || !places || places.length === 0) return [];
 
-    const { highlight = false, isItinerary = false, useRecommendedStyle = false, useColorByCategory = false } = opts;
+    const { highlight = false, isItinerary = false, useRecommendedStyle = false, useColorByCategory = false, onClick } = opts;
+    const createdMarkers: any[] = [];
 
     places.forEach((place, index) => {
       if (!place.x || !place.y) {
@@ -152,11 +155,19 @@ export const useMapMarkers = (map: any) => {
         
         // 새로운 정보창 열기
         infoWindow.open(map, marker);
+        
+        // 커스텀 onClick 핸들러가 있으면 호출
+        if (onClick) {
+          onClick(place, index);
+        }
       });
 
       markers.current.push(marker);
       infoWindows.current.push(infoWindow);
+      createdMarkers.push(marker);
     });
+    
+    return createdMarkers;
   }, [map]);
 
   // 경로 계산 및 표시

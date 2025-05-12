@@ -1,66 +1,113 @@
-
 import { useState } from 'react';
-import axios from 'axios';
-import { SchedulePayload, ScheduleItem, DaySchedule } from '@/types/schedule';
-import { differenceInDays, parseISO, format } from 'date-fns';
+import { Place } from '@/types/supabase';
+import { toast } from 'sonner';
+
+interface ScheduleGeneratorOptions {
+  places: Place[];
+  startDate: Date;
+  endDate: Date;
+  startTime: string;
+  endTime: string;
+}
+
+interface ScheduleDay {
+  day: number;
+  places: Place[];
+  totalDistance: number;
+}
 
 export const useScheduleGenerator = () => {
-  const [schedule, setSchedule] = useState<DaySchedule[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedDay, setSelectedDay] = useState<number | null>(null);
 
-  const generateSchedule = async (payload: SchedulePayload) => {
-    setLoading(true);
+  const generateSchedule = async (options: ScheduleGeneratorOptions): Promise<ScheduleDay[] | null> => {
+    const { places, startDate, endDate, startTime, endTime } = options;
+    
+    if (places.length === 0) {
+      setError('선택된 장소가 없습니다.');
+      toast.error('선택된 장소가 없습니다.');
+      return null;
+    }
+
+    setIsGenerating(true);
     setError(null);
 
     try {
-      const response = await axios.post(
-        "https://fcb1-34-75-95-54.ngrok-free.app/generate_schedule",
-        payload
-      );
-
-      // Calculate number of days
-      const days = differenceInDays(
-        parseISO(payload.end_datetime),
-        parseISO(payload.start_datetime)
-      ) + 1;
-
-      // Group schedule items by day
-      const scheduleByDay: DaySchedule[] = Array.from({ length: days }, (_, i) => ({
-        day: i + 1,
-        items: []
-      }));
-
-      // Sort items by time_block and group by day
-      const sortedItems = [...response.data.schedule].sort((a, b) => 
-        a.time_block.localeCompare(b.time_block)
-      );
-
-      // Distribute items into days (simplified version - you may need to adjust based on your actual data structure)
-      sortedItems.forEach((item: ScheduleItem, index: number) => {
-        const dayIndex = Math.floor(index / (sortedItems.length / days));
-        if (scheduleByDay[dayIndex]) {
-          scheduleByDay[dayIndex].items.push(item);
-        }
+      // 서버 URL 확인 - ngrok URL 사용
+      const serverUrl = 'https://fcb1-34-75-95-54.ngrok-free.app';
+      
+      console.log('일정 생성 요청 전송:', {
+        장소수: places.length,
+        시작일: startDate,
+        종료일: endDate,
+        시작시간: startTime,
+        종료시간: endTime
       });
 
-      setSchedule(scheduleByDay);
-      setSelectedDay(1); // Select first day by default
-    } catch (err) {
-      console.error(err);
-      setError("일정 생성에 실패했습니다.");
-    }
+      const response = await fetch(`${serverUrl}/generate-schedule`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          places: places.map(place => ({
+            id: place.id,
+            name: place.name,
+            x: place.x,
+            y: place.y,
+            category: place.category,
+            address: place.address,
+            rating: place.rating || 0,
+            visit_time: place.visit_time || 60, // 기본 방문 시간 1시간
+          })),
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString(),
+          startTime,
+          endTime,
+        }),
+      });
 
-    setLoading(false);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: '서버 응답 오류' }));
+        throw new Error(errorData.message || '일정 생성 중 오류가 발생했습니다.');
+      }
+
+      const data = await response.json();
+      console.log('일정 생성 결과:', data);
+
+      if (!data.schedule || !Array.isArray(data.schedule) || data.schedule.length === 0) {
+        throw new Error('유효한 일정을 생성할 수 없습니다.');
+      }
+
+      // 서버에서 받은 일정 데이터 변환
+      const schedule: ScheduleDay[] = data.schedule.map((day: any) => ({
+        day: day.day,
+        places: day.places.map((placeId: string) => {
+          const place = places.find(p => p.id === placeId);
+          if (!place) {
+            console.warn(`ID가 ${placeId}인 장소를 찾을 수 없습니다.`);
+            return null;
+          }
+          return place;
+        }).filter(Boolean),
+        totalDistance: day.totalDistance || 0,
+      }));
+
+      return schedule;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
+      console.error('일정 생성 오류:', errorMessage);
+      setError(errorMessage);
+      toast.error(errorMessage);
+      return null;
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   return {
-    schedule,
-    loading,
+    generateSchedule,
+    isGenerating,
     error,
-    selectedDay,
-    setSelectedDay,
-    generateSchedule
   };
 };

@@ -1,5 +1,5 @@
 
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 interface GeoJsonLayerProps {
@@ -116,7 +116,7 @@ const GeoJsonLayer: React.FC<GeoJsonLayerProps> = ({
     return () => {
       hideGeoJsonFromMap();
     };
-  }, [map, isMapInitialized, isNaverLoaded]);
+  }, [map, isMapInitialized, isNaverLoaded, retryCount]);
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -131,20 +131,15 @@ const GeoJsonLayer: React.FC<GeoJsonLayerProps> = ({
   const showGeoJsonOnMap = () => {
     if (!map || !linkFeatures.current.length) return;
     console.log('GeoJSON 데이터를 지도에 표시합니다');
-    linkFeatures.current.forEach(f => f.setMap(map));
-    nodeFeatures.current.forEach(f => f.setMap(map));
+    linkFeatures.current.forEach((f: any) => f.setMap(map));
+    nodeFeatures.current.forEach((f: any) => f.setMap(map));
   };
   
   const hideGeoJsonFromMap = () => {
     if (!linkFeatures.current.length) return;
     console.log('GeoJSON 데이터를 지도에서 제거합니다');
-    linkFeatures.current.forEach(f => f.setMap(null));
-    nodeFeatures.current.forEach(f => f.setMap(null));
-  };
-
-  // 특정 구간의 GeoJSON 데이터만 표시하는 함수
-  const showSegment = (fromNodeId: string, toNodeId: string) => {
-    // 이 함수는 향후 구현할 예정
+    linkFeatures.current.forEach((f: any) => f.setMap(null));
+    nodeFeatures.current.forEach((f: any) => f.setMap(null));
   };
 
   return null;

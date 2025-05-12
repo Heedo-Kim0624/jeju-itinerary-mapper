@@ -89,30 +89,40 @@ export const useLeftPanel = () => {
     
     if (!dates) {
       toast.error("여행 날짜를 먼저 설정해주세요!");
-      return null;
+      return false;
     }
     
     if (selectedPlaces.length === 0) {
       toast.error("선택된 장소가 없습니다. 장소를 먼저 선택해주세요!");
-      return null;
+      return false;
     }
     
-    const result = handleCreateItinerary(selectedPlaces, dates);
-    
-    if (result) {
-      // 일정 생성 성공 시 일정 보기로 전환
-      setShowItinerary(true);
+    try {
+      const result = handleCreateItinerary(selectedPlaces, dates);
       
-      // 필수: UI 상태 변경을 명시적으로 설정
-      panelHandlers.setItineraryMode(true);
-      
-      console.log("일정 생성 성공! 일정 보기로 전환", {
-        일수: result.length,
-        showItinerary: true
-      });
+      if (result && result.length > 0) {
+        // 일정 생성 성공 시 일정 보기로 전환
+        setShowItinerary(true);
+        
+        if (typeof panelHandlers.setItineraryMode === 'function') {
+          panelHandlers.setItineraryMode(true);
+        }
+        
+        console.log("일정 생성 성공! 일정 보기로 전환", {
+          일수: result.length,
+          showItinerary: true
+        });
+        return true;
+      } else {
+        console.log("일정 생성 실패: 결과가 없거나 빈 배열입니다.");
+        toast.error("일정을 생성할 수 없습니다. 장소를 더 선택하거나 날짜를 확인해주세요.");
+        return false;
+      }
+    } catch (error) {
+      console.error("일정 생성 중 오류 발생:", error);
+      toast.error("경로 생성 중 오류가 발생했습니다");
+      return false;
     }
-    
-    return result;
   };
 
   // 모든 훅과 핸들러를 기능별로 그룹화하여 반환
