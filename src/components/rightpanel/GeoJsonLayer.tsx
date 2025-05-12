@@ -20,6 +20,11 @@ const GeoJsonLayer: React.FC<GeoJsonLayerProps> = ({
   const [retryCount, setRetryCount] = useState(0);
   const MAX_RETRIES = 5;
 
+  // 명확하게 GeoJSON API가 로드되었는지 확인하는 함수
+  const isGeoJsonReady = () => {
+    return !!(window.naver?.maps?.GeoJSON && typeof window.naver.maps.GeoJSON.read === 'function');
+  };
+
   useEffect(() => {
     // 지도가 없거나 지도가 초기화되지 않았거나 네이버 API가 로드되지 않았으면 리턴
     if (!map || !isMapInitialized || !isNaverLoaded) {
@@ -30,13 +35,13 @@ const GeoJsonLayer: React.FC<GeoJsonLayerProps> = ({
     const loadGeoJson = async () => {
       try {
         // 네이버 맵스 GeoJSON API가 로드되었는지 확인
-        if (!window.naver?.maps?.GeoJSON) {
+        if (!isGeoJsonReady()) {
           if (retryCount < MAX_RETRIES) {
             console.log(`네이버 GeoJSON API가 준비되지 않았습니다. 잠시 후 재시도합니다. (${retryCount + 1}/${MAX_RETRIES})`);
             setRetryCount(prev => prev + 1);
             setTimeout(loadGeoJson, 1000); // 1초 후 다시 시도
           } else {
-            console.log('네이버 GeoJSON API 로드 최대 재시도 횟수 초과');
+            console.warn('네이버 GeoJSON API 로드 최대 재시도 횟수 초과');
             return;
           }
           return;

@@ -12,6 +12,15 @@ export const useMapInitialization = (mapContainer: React.RefObject<HTMLDivElemen
   const [map, setMap] = useState<any>(null);
   const [isInitializing, setIsInitializing] = useState<boolean>(false);
 
+  // 지도 API 초기화 상태 확인 헬퍼 함수
+  const checkMapInitialized = () => {
+    return !!(window.naver?.maps?.Map);
+  };
+  
+  const checkGeoJsonInitialized = () => {
+    return !!(window.naver?.maps?.GeoJSON && typeof window.naver.maps.GeoJSON.read === 'function');
+  };
+
   // 네이버 지도 API 로드
   useEffect(() => {
     const initNaverMaps = async () => {
@@ -61,6 +70,16 @@ export const useMapInitialization = (mapContainer: React.RefObject<HTMLDivElemen
 
     try {
       console.log("지도 초기화 시작");
+      
+      // 지도 API가 실제로 완전히 로드되었는지 다시 한번 확인
+      if (!checkMapInitialized()) {
+        console.log("지도 API가 아직 준비되지 않았습니다. 1초 후 재시도합니다.");
+        setTimeout(() => {
+          setIsNaverLoaded(false); // 로드 시도 재개
+        }, 1000);
+        return;
+      }
+      
       const newMap = initializeNaverMap(mapContainer.current);
       
       if (newMap) {
@@ -109,5 +128,6 @@ export const useMapInitialization = (mapContainer: React.RefObject<HTMLDivElemen
     isMapInitialized,
     isNaverLoaded,
     isMapError,
+    isGeoJsonInitialized: checkGeoJsonInitialized()
   };
 };

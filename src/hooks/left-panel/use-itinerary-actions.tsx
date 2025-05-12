@@ -11,6 +11,7 @@ export const useItineraryActions = () => {
   const { createItinerary } = useItineraryCreator();
 
   const handleSelectItineraryDay = (day: number) => {
+    console.log('일정 일자 선택:', day);
     setSelectedItineraryDay(day);
   };
 
@@ -27,6 +28,14 @@ export const useItineraryActions = () => {
         return null;
       }
     
+      console.log('일정 생성 시작', {
+        장소수: placesToUse.length,
+        시작일: startDate,
+        종료일: endDate,
+        시작시간: startTime,
+        종료시간: endTime
+      });
+      
       const generatedItinerary = createItinerary(
         placesToUse,
         startDate,
@@ -68,23 +77,36 @@ export const useItineraryActions = () => {
       endTime: string;
     } | null
   ) => {
-    if (dates && selectedPlaces.length > 0) {
-      console.log("경로 생성 시작:", {
-        장소수: selectedPlaces.length,
-        날짜: dates
-      });
-      
-      return generateItinerary(
-        selectedPlaces,
-        dates.startDate,
-        dates.endDate,
-        dates.startTime,
-        dates.endTime
-      );
-    } else {
-      console.error("경로 생성 불가:", { 날짜있음: !!dates, 장소수: selectedPlaces.length });
+    if (!dates) {
+      console.error('경로 생성 실패: 날짜 정보가 없습니다.');
+      toast.error("여행 날짜를 설정해주세요!");
       return null;
     }
+    
+    if (selectedPlaces.length === 0) {
+      console.error('경로 생성 실패: 선택된 장소가 없습니다.');
+      toast.error("장소를 먼저 선택해주세요!");
+      return null;
+    }
+    
+    console.log("경로 생성 시작:", {
+      장소수: selectedPlaces.length,
+      날짜: dates
+    });
+    
+    const result = generateItinerary(
+      selectedPlaces,
+      dates.startDate,
+      dates.endDate,
+      dates.startTime,
+      dates.endTime
+    );
+    
+    if (result) {
+      toast.success("일정이 성공적으로 생성되었습니다!");
+    }
+    
+    return result;
   };
 
   return {

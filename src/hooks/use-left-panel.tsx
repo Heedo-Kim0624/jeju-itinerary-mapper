@@ -7,6 +7,7 @@ import { useSelectedPlaces } from './use-selected-places';
 import { useInputHandlers } from './left-panel/use-input-handlers';
 import { usePanelHandlers } from './left-panel/use-panel-handlers';
 import { useItineraryActions } from './left-panel/use-itinerary-actions';
+import { toast } from 'sonner';
 
 /**
  * 메인 왼쪽 패널 로직을 관리하는 훅
@@ -65,6 +66,8 @@ export const useLeftPanel = () => {
   const {
     itinerary,
     selectedItineraryDay,
+    showItinerary,
+    setShowItinerary,
     handleSelectItineraryDay,
     handleCreateItinerary
   } = useItineraryActions();
@@ -79,7 +82,31 @@ export const useLeftPanel = () => {
 
   // 일정 생성 핸들러 - 일정 액션 래핑
   const createItinerary = () => {
-    return handleCreateItinerary(selectedPlaces, dates);
+    console.log("경로 생성 함수 호출됨", {
+      selectedPlaces: selectedPlaces.length,
+      dates: dates
+    });
+    
+    if (!dates) {
+      toast.error("여행 날짜를 먼저 설정해주세요!");
+      return null;
+    }
+    
+    if (selectedPlaces.length === 0) {
+      toast.error("선택된 장소가 없습니다. 장소를 먼저 선택해주세요!");
+      return null;
+    }
+    
+    const result = handleCreateItinerary(selectedPlaces, dates);
+    
+    if (result) {
+      // 일정 생성 성공 시 일정 보기로 전환
+      panelHandlers.setItineraryMode(true);
+      setShowItinerary(true);
+      console.log("일정 생성 성공! 일정 보기로 전환");
+    }
+    
+    return result;
   };
 
   // 모든 훅과 핸들러를 기능별로 그룹화하여 반환
@@ -134,6 +161,8 @@ export const useLeftPanel = () => {
     itineraryManagement: {
       itinerary,
       selectedItineraryDay,
+      showItinerary,
+      setShowItinerary,
       handleSelectItineraryDay,
       handleCreateItinerary: createItinerary,
     },
@@ -141,7 +170,7 @@ export const useLeftPanel = () => {
     selectedRegions, regionConfirmed, regionSlidePanelOpen, 
     categoryStepIndex, activeMiddlePanelCategory, confirmedCategories, selectedKeywordsByCategory,
     directInputValues, selectedPlaces, allCategoriesSelected, dates,
-    panelHandlers.uiVisibility, itinerary, selectedItineraryDay
+    panelHandlers.uiVisibility, itinerary, selectedItineraryDay, showItinerary
   ]);
 
   return leftPanelState;

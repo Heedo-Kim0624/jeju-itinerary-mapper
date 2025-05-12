@@ -16,6 +16,9 @@ const ItineraryButton: React.FC<ItineraryButtonProps> = ({
       toast.error("모든 카테고리에서 최소 1개 이상의 장소를 선택해주세요");
       return;
     }
+    
+    // 디버깅용 로그 추가
+    console.log('경로 생성 버튼 클릭됨, 경로 생성 함수 호출');
     onCreateItinerary();
   };
 
