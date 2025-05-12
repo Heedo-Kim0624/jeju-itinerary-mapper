@@ -54,38 +54,27 @@ const BaseKeywordPanel: React.FC<KeywordPanelProps & { accommodationTypeUI?: Rea
     e.stopPropagation();
 
     const allKeywords: string[] = [];
-    
-    // 순위가 있는 키워드는 특별한 형식으로 추가
     if (ranking.length > 0) {
       const rankedString = `{${ranking.join(',')}}`;
       allKeywords.push(rankedString);
     }
 
-    // 순위가 없는 키워드 추가
     const unrankedKeywords = selectedKeywords.filter((kw) => !ranking.includes(kw));
     allKeywords.push(...unrankedKeywords);
 
-    // 직접 입력한 키워드가 있으면 추가
     if (directInputValue.trim() !== '') {
       allKeywords.push(directInputValue.trim());
     }
 
-    // 최종 키워드 그룹 포맷팅
-    const finalKeywords = allKeywords.length > 0 ? 
-      [`${categoryName}[${allKeywords.join(',')}]`] : 
-      [];
-      
-    console.log("확인 버튼 클릭 - 최종 키워드:", finalKeywords);
-    
-    // 상태 초기화
+    const groupFinalKeyword = `${categoryName}[${allKeywords.join(',')}]`;
     setRanking([]);
     onDirectInputChange('');
     
-    // 부모 컴포넌트에 최종 키워드 전달
-    onConfirm(finalKeywords, true);
+    // Issue #5 fix - Clear selected keywords when confirming
+    onConfirm([groupFinalKeyword], true);
   };
 
-  // 닫기 버튼 클릭 시 이벤트 처리
+  // 닫기 버튼 클릭 시 패널만 닫도록 수정
   const handleClose = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     e.stopPropagation();
@@ -98,11 +87,7 @@ const BaseKeywordPanel: React.FC<KeywordPanelProps & { accommodationTypeUI?: Rea
     <div className="fixed top-0 left-[300px] w-[300px] h-full bg-white border-l border-r border-gray-200 z-40 shadow-md p-4 overflow-y-auto">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold">{categoryName} 키워드 선택</h2>
-        <button 
-          type="button" 
-          onClick={handleClose} 
-          className="text-sm text-blue-600 hover:underline"
-        >
+        <button type="button" onClick={handleClose} className="text-sm text-blue-600 hover:underline">
           닫기
         </button>
       </div>

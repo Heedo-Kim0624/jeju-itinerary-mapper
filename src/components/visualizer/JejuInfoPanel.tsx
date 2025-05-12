@@ -12,22 +12,6 @@ interface JejuInfoPanelProps {
 }
 
 const JejuInfoPanel: React.FC<JejuInfoPanelProps> = ({ place, onClose, onSelectLocation }) => {
-  // Format operating hours to ensure it's a string for rendering
-  const formatOperatingHours = (hours: string | Record<string, number> | undefined): string => {
-    if (!hours) return '';
-    if (typeof hours === 'string') return hours;
-    
-    // If hours is an object, convert it to a readable string format
-    try {
-      return Object.entries(hours)
-        .map(([day, time]) => `${day}: ${time}시`)
-        .join(', ');
-    } catch (e) {
-      console.error("Error formatting operating hours:", e);
-      return '정보 형식 오류';
-    }
-  };
-
   if (place) {
     const hasWeight = place.weight !== undefined && place.weight !== null && place.weight > 0;
     
@@ -60,7 +44,7 @@ const JejuInfoPanel: React.FC<JejuInfoPanelProps> = ({ place, onClose, onSelectL
           {place.operatingHours && (
             <div className="flex items-center space-x-2 text-sm">
               <Clock className="h-4 w-4 text-gray-500" />
-              <span>{formatOperatingHours(place.operatingHours)}</span>
+              <span>{place.operatingHours}</span>
             </div>
           )}
           

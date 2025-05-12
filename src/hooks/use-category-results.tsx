@@ -37,19 +37,11 @@ export const useCategoryResults = (
   };
 
   const fetchCategoryData = async () => {
-    if (!category || keywords.length === 0) {
-      console.log("카테고리 또는 키워드가 없어 데이터를 가져오지 않습니다.");
-      setRecommendedPlaces([]);
-      setNormalPlaces([]);
-      setError(null);
-      return;
-    }
+    if (!category || keywords.length === 0) return;
 
-    console.log(`[useCategoryResults] 데이터 가져오기 시작: 카테고리=${category}, 키워드=${keywords.join(', ')}, 지역=${regions.join(', ')}`);
-    
     setIsLoading(true);
     setError(null);
-    
+
     try {
       console.log(`[useCategoryResults] 카테고리 '${category}' 데이터 가져오기, 키워드: ${keywords.join(', ')}, 지역: ${regions.join(', ')}`);
 
@@ -73,21 +65,13 @@ export const useCategoryResults = (
           throw new Error('지원하지 않는 카테고리입니다.');
       }
 
-      console.log(`[useCategoryResults] 초기 데이터 로드됨: ${data.length}개 항목`);
-
       // 지역으로 필터링
-      const filteredByRegion = filterByRegion(data, regions);
-      console.log(`[useCategoryResults] 지역 필터링 후: ${filteredByRegion.length}개 항목`);
+      data = filterByRegion(data, regions);
       
-      if (filteredByRegion.length === 0) {
-        console.log("[useCategoryResults] 필터링 후 결과가 없습니다.");
-        setRecommendedPlaces([]);
-        setNormalPlaces([]);
-        return;
-      }
+      console.log(`[useCategoryResults] ${data.length}개의 장소 로드됨. 지역 필터링 후.`);
 
       // weight 기준으로 정렬
-      const sortedData = [...filteredByRegion].sort((a, b) => {
+      const sortedData = [...data].sort((a, b) => {
         const weightA = a.weight || 0;
         const weightB = b.weight || 0;
         return weightB - weightA;
@@ -104,20 +88,15 @@ export const useCategoryResults = (
       console.error('장소 데이터 로드 중 오류 발생:', err);
       setError(err instanceof Error ? err.message : '장소 데이터를 가져오지 못했습니다.');
       toast.error(`${category} 데이터를 불러오는 데 실패했습니다.`);
-      setRecommendedPlaces([]);
-      setNormalPlaces([]);
     } finally {
       setIsLoading(false);
     }
   };
 
   // 디바운스 효과로 검색 요청 최적화
-  useEffect(() => {
-    if (category && keywords.length > 0) {
-      console.log(`[useCategoryResults] 즉시 데이터 요청: ${category}, 키워드 수: ${keywords.length}`);
-      fetchCategoryData();
-    }
-  }, [category, JSON.stringify(keywords), JSON.stringify(regions)]);
+  useDebounceEffect(() => {
+    fetchCategoryData();
+  }, [category, keywords.join(','), regions.join(',')], 300);
 
   return {
     isLoading,
