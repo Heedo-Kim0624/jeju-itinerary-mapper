@@ -39,6 +39,22 @@ const PlaceDetailDialog: React.FC<PlaceDetailDialogProps> = ({ place, onClose })
   const categoryName = categoryMap[place.category || ''] || place.category;
   const categoryColor = categoryColorMap[place.category || ''] || 'bg-gray-50 text-gray-800';
 
+  // Format operating hours to ensure it's a string for rendering
+  const formatOperatingHours = (hours: string | Record<string, number> | undefined): string => {
+    if (!hours) return '정보 없음';
+    if (typeof hours === 'string') return hours;
+    
+    // If hours is an object, convert it to a readable string format
+    try {
+      return Object.entries(hours)
+        .map(([day, time]) => `${day}: ${time}시`)
+        .join(', ');
+    } catch (e) {
+      console.error("Error formatting operating hours:", e);
+      return '정보 형식 오류';
+    }
+  };
+
   // 디버깅용 로깅
   console.log("Place detail data:", {
     id: place.id,
@@ -104,7 +120,7 @@ const PlaceDetailDialog: React.FC<PlaceDetailDialogProps> = ({ place, onClose })
           {place.operatingHours && (
             <div className="flex items-start gap-2">
               <Clock className="h-5 w-5 text-gray-500 mt-0.5" />
-              <div className="text-sm text-gray-700">{place.operatingHours}</div>
+              <div className="text-sm text-gray-700">{formatOperatingHours(place.operatingHours)}</div>
             </div>
           )}
           
