@@ -25,15 +25,13 @@ const ItineraryButton: React.FC<ItineraryButtonProps> = ({
     console.log('경로 생성 버튼 클릭됨, 경로 생성 함수 호출');
     
     try {
-      const result = onCreateItinerary();
-      if (!result) {
-        console.log('경로 생성 결과 없음');
-        setIsCreating(false);
-      } else {
-        console.log('경로 생성 성공!', result);
-        // 성공 시에는 setIsCreating(false)를 호출하지 않음
-        // 일정 화면으로 전환되기 때문에 버튼이 보이지 않게 됨
-      }
+      // 함수 실행만 하고 결과값은 평가하지 않음
+      onCreateItinerary();
+      
+      // onCreateItinerary 함수가 에러를 던지지 않았다면 성공으로 간주
+      // 이 함수는 경로 생성 후 화면 전환을 처리하므로 여기서는 아무것도 하지 않음
+      console.log('경로 생성 함수 호출 완료');
+      
     } catch (error) {
       console.error('경로 생성 중 오류 발생', error);
       setIsCreating(false);

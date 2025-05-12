@@ -103,12 +103,13 @@ export const useLeftPanel = () => {
       // 일정 생성 성공 시 일정 보기로 전환
       setShowItinerary(true);
       
-      // 필수: UI 상태 변경을 명시적으로 설정
+      // panelHandlers.setItineraryMode를 사용할 수 있게 됐으므로 호출
       panelHandlers.setItineraryMode(true);
       
       console.log("일정 생성 성공! 일정 보기로 전환", {
         일수: result.length,
-        showItinerary: true
+        showItinerary: true,
+        itineraryMode: true
       });
     }
     
@@ -171,12 +172,14 @@ export const useLeftPanel = () => {
       setShowItinerary,
       handleSelectItineraryDay,
       handleCreateItinerary: createItinerary,
+      isItineraryMode: panelHandlers.isItineraryMode,
     },
   }), [
     selectedRegions, regionConfirmed, regionSlidePanelOpen, 
     categoryStepIndex, activeMiddlePanelCategory, confirmedCategories, selectedKeywordsByCategory,
     directInputValues, selectedPlaces, allCategoriesSelected, dates,
-    panelHandlers.uiVisibility, itinerary, selectedItineraryDay, showItinerary
+    panelHandlers.uiVisibility, itinerary, selectedItineraryDay, showItinerary,
+    panelHandlers.isItineraryMode
   ]);
 
   return leftPanelState;
