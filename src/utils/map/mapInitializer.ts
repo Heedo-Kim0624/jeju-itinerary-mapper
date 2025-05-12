@@ -5,8 +5,13 @@ import { toast } from "sonner";
 export const JEJU_CENTER = { lat: 33.3617, lng: 126.5292 };
 
 export const initializeNaverMap = (mapContainer: HTMLDivElement | null) => {
-  if (!mapContainer || !window.naver || !window.naver.maps) {
-    console.error("Cannot initialize map - container or naver maps not available");
+  if (!mapContainer) {
+    console.error("Map container is not available");
+    return null;
+  }
+  
+  if (!window.naver || !window.naver.maps) {
+    console.error("Naver Maps API is not loaded");
     return null;
   }
 
@@ -19,17 +24,12 @@ export const initializeNaverMap = (mapContainer: HTMLDivElement | null) => {
       zoomControl: true,
       zoomControlOptions: {
         position: window.naver.maps.Position.TOP_RIGHT
-      },
-      // 기본 확대 레벨 조정 (낮을수록 더 넓은 영역을 보여줌)
-      defaultLevel: 7
+      }
     };
 
+    console.log("Creating new Naver Map instance");
     const map = new window.naver.maps.Map(mapContainer, mapOptions);
     
-    window.naver.maps.Event.once(map, 'init', () => {
-      console.log("Naver Map initialized");
-    });
-
     return map;
   } catch (error) {
     console.error("Error initializing map:", error);

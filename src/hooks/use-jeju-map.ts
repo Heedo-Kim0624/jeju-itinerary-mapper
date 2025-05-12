@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from 'react';
 import { toast } from "sonner";
 import { loadNaverMaps } from "@/utils/loadNaverMaps";
@@ -15,31 +14,46 @@ export const useJejuMap = () => {
   const [isMapError, setIsMapError] = useState<boolean>(false);
   const [activeMarker, setActiveMarker] = useState<string | null>(null);
   const [showInfoPanel, setShowInfoPanel] = useState<boolean>(true);
+  const [loadAttempts, setLoadAttempts] = useState<number>(0);
 
   useEffect(() => {
     const initNaverMaps = async () => {
+      if (loadAttempts >= 3) {
+        console.error("Maximum load attempts reached for Jeju map");
+        setIsMapError(true);
+        toast.error("지도 로드에 실패했습니다.");
+        return;
+      }
+      
       try {
+        console.log(`제주 지도 API 로드 시도 (${loadAttempts + 1}/3)`);
         await loadNaverMaps();
         setIsNaverLoaded(true);
         console.log("Naver Maps loaded successfully for Jeju visualization");
       } catch (error) {
         console.error("Failed to load Naver Maps:", error);
         setIsMapError(true);
-        toast.error("지도 로드에 실패했습니다.");
+        
+        setTimeout(() => {
+          setLoadAttempts(prev => prev + 1);
+          setIsMapError(false);
+        }, 3000);
       }
     };
     
-    initNaverMaps();
+    if (!isNaverLoaded && !isMapError) {
+      initNaverMaps();
+    }
     
     return () => {
       clearMarkersAndInfoWindows();
     };
-  }, []);
+  }, [loadAttempts, isNaverLoaded, isMapError]);
 
   useEffect(() => {
-    if (isNaverLoaded) {
-      initializeJejuMap();
-    }
+    if (!isNaverLoaded || !mapContainer.current) return;
+    
+    initializeJejuMap();
   }, [isNaverLoaded]);
 
   const clearMarkersAndInfoWindows = () => {
@@ -104,9 +118,10 @@ export const useJejuMap = () => {
         mapTypeId: window.naver.maps.MapTypeId.TERRAIN
       };
 
+      console.log("Creating Jeju Map instance");
       map.current = new window.naver.maps.Map(mapContainer.current, options);
       
-      window.naver.maps.Event.once(map.current, 'init', function() {
+      window.naver.maps.Event.once(map.current, 'init_stylemap', function() {
         console.log("Jeju map initialized");
         setIsMapInitialized(true);
         toast.success("제주도 지도가 로드되었습니다");
@@ -123,6 +138,7 @@ export const useJejuMap = () => {
     } catch (error) {
       console.error("Failed to initialize Jeju map:", error);
       setIsMapError(true);
+      toast.error("제주도 지도 초기화에 실패했습니다");
     }
   };
 

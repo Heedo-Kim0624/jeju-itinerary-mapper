@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useEffect } from 'react';
 import { useJejuMap } from '@/hooks/use-jeju-map';
 import { useJejuBoundaryLayer } from './useJejuBoundaryLayer';
 import { useJejuLandmarks } from './useJejuLandmarks';
@@ -28,12 +28,23 @@ const JejuVisualizer: React.FC<JejuVisualizerProps> = ({ className }) => {
     clearMarkersAndInfoWindows
   } = useJejuMap();
   
-  // Use the boundary layer hook
+  // 경계선 그리기
   useJejuBoundaryLayer(map, isMapInitialized, markers);
   
-  // Use the landmarks hook
+  // 제주도 랜드마크 추가
   useJejuLandmarks(map, isMapInitialized, markers, infoWindows, setActiveMarker);
+  
+  // 디버깅 목적의 상태 로그
+  useEffect(() => {
+    console.log("제주도 지도 상태:", { 
+      isNaverLoaded, 
+      isMapInitialized,
+      isMapError,
+      showInfoPanel
+    });
+  }, [isNaverLoaded, isMapInitialized, isMapError, showInfoPanel]);
 
+  // 위치로 이동하는 함수
   const moveToLocation = (lat: number, lng: number, name: string) => {
     if (!map || !window.naver) return;
     
@@ -49,22 +60,26 @@ const JejuVisualizer: React.FC<JejuVisualizerProps> = ({ className }) => {
     }
   };
 
+  // 지도 타입 변경
   const setMapType = (mapType: string) => {
     if (!map || !window.naver || !window.naver.maps) return;
     map.setMapTypeId(window.naver.maps.MapTypeId[mapType]);
   };
 
+  // 로딩 상태 또는 에러 상태일 때
   if (!isNaverLoaded || isMapError) {
     return <JejuLoadingState isMapError={isMapError} className={className} />;
   }
 
   return (
     <div className={`relative w-full h-full ${className}`}>
+      {/* 지도 컨테이너 */}
       <div 
         ref={mapContainer} 
         className="absolute inset-0 rounded-lg overflow-hidden bg-blue-50" 
       />
       
+      {/* 초기화 중 로딩 표시 */}
       {!isMapInitialized && (
         <div className="absolute inset-0 flex items-center justify-center bg-white/50 backdrop-blur-sm z-10">
           <div className="flex flex-col items-center">
@@ -74,10 +89,12 @@ const JejuVisualizer: React.FC<JejuVisualizerProps> = ({ className }) => {
         </div>
       )}
       
+      {/* 정보 패널 */}
       {showInfoPanel && isMapInitialized && (
         <JejuInfoPanel onSelectLocation={moveToLocation} />
       )}
       
+      {/* 지도 컨트롤 */}
       <JejuMapControls 
         onToggleInfoPanel={() => setShowInfoPanel(!showInfoPanel)}
         showInfoPanel={showInfoPanel}

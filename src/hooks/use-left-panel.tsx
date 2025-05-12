@@ -1,5 +1,5 @@
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useCategorySelection } from './use-category-selection';
 import { useRegionSelection } from './use-region-selection';
 import { useTripDetails } from './use-trip-details';
@@ -8,8 +8,12 @@ import { useInputHandlers } from './left-panel/use-input-handlers';
 import { usePanelHandlers } from './left-panel/use-panel-handlers';
 import { useItineraryActions } from './left-panel/use-itinerary-actions';
 
+/**
+ * 메인 왼쪽 패널 로직을 관리하는 훅
+ * 여러 개별 훅들을 통합하여 일관된 인터페이스 제공
+ */
 export const useLeftPanel = () => {
-  // Place selection functionality
+  // 장소 선택 기능
   const {
     selectedPlaces,
     handleSelectPlace,
@@ -18,7 +22,7 @@ export const useLeftPanel = () => {
     allCategoriesSelected
   } = useSelectedPlaces();
   
-  // Category selection functionality
+  // 카테고리 선택 기능
   const {
     stepIndex: categoryStepIndex,
     activeMiddlePanelCategory,
@@ -30,7 +34,7 @@ export const useLeftPanel = () => {
     handleConfirmCategory,
   } = useCategorySelection();
 
-  // Region selection functionality
+  // 지역 선택 기능
   const {
     selectedRegions,
     regionConfirmed,
@@ -40,24 +44,24 @@ export const useLeftPanel = () => {
     handleRegionToggle
   } = useRegionSelection();
 
-  // Trip details functionality
+  // 여행 상세 정보 기능
   const {
     dates,
     setDates,
   } = useTripDetails();
 
-  // Input handlers for direct input fields
+  // 직접 입력 필드 핸들러
   const { directInputValues, onDirectInputChange } = useInputHandlers();
 
-  // UI visibility and panel handlers
+  // UI 가시성 및 패널 핸들러
   const panelHandlers = usePanelHandlers();
   
-  // Initialize panel handlers with dependencies
+  // 패널 핸들러 초기화
   useEffect(() => {
     panelHandlers.setup(selectedRegions, handleConfirmCategory, handlePanelBack);
   }, [selectedRegions, handleConfirmCategory, handlePanelBack]);
   
-  // Itinerary functionality
+  // 일정 기능
   const {
     itinerary,
     selectedItineraryDay,
@@ -65,22 +69,22 @@ export const useLeftPanel = () => {
     handleCreateItinerary
   } = useItineraryActions();
 
-  // Debug info - log when important state changes
+  // 디버깅 정보 - 중요 상태 변경 시 로그 출력
   useEffect(() => {
     console.log("경로 생성 버튼 상태:", {
       allCategoriesSelected,
       selectedPlaces: selectedPlaces.length
     });
-  }, [allCategoriesSelected, selectedPlaces]);
+  }, [allCategoriesSelected, selectedPlaces.length]);
 
-  // Itinerary creation handler wrapping the itinerary actions
+  // 일정 생성 핸들러 - 일정 액션 래핑
   const createItinerary = () => {
     return handleCreateItinerary(selectedPlaces, dates);
   };
 
-  // Return all hooks and handlers grouped by functionality
-  return {
-    // Region selection
+  // 모든 훅과 핸들러를 기능별로 그룹화하여 반환
+  const leftPanelState = useMemo(() => ({
+    // 지역 선택
     regionSelection: {
       selectedRegions,
       regionConfirmed,
@@ -90,7 +94,7 @@ export const useLeftPanel = () => {
       handleRegionToggle
     },
     
-    // Category selection
+    // 카테고리 선택
     categorySelection: {
       categoryStepIndex,
       activeMiddlePanelCategory,
@@ -101,14 +105,14 @@ export const useLeftPanel = () => {
       handlePanelBackByCategory: panelHandlers.handlePanelBackByCategory
     },
     
-    // Keywords and inputs
+    // 키워드 및 입력
     keywordsAndInputs: {
       directInputValues,
       onDirectInputChange,
       handleConfirmByCategory: panelHandlers.handleConfirmByCategory,
     },
     
-    // Places management
+    // 장소 관리
     placesManagement: {
       selectedPlaces,
       handleSelectPlace,
@@ -117,21 +121,28 @@ export const useLeftPanel = () => {
       allCategoriesSelected,
     },
     
-    // Trip details
+    // 여행 상세 정보
     tripDetails: {
       dates,
       setDates,
     },
     
-    // UI visibility
+    // UI 가시성
     uiVisibility: panelHandlers.uiVisibility,
     
-    // Itinerary management
+    // 일정 관리
     itineraryManagement: {
       itinerary,
       selectedItineraryDay,
       handleSelectItineraryDay,
       handleCreateItinerary: createItinerary,
     },
-  };
+  }), [
+    selectedRegions, regionConfirmed, regionSlidePanelOpen, 
+    categoryStepIndex, activeMiddlePanelCategory, confirmedCategories, selectedKeywordsByCategory,
+    directInputValues, selectedPlaces, allCategoriesSelected, dates,
+    panelHandlers.uiVisibility, itinerary, selectedItineraryDay
+  ]);
+
+  return leftPanelState;
 };
