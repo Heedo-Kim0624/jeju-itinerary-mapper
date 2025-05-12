@@ -104,6 +104,7 @@ export const useItineraryActions = () => {
     
     if (result) {
       toast.success("일정이 성공적으로 생성되었습니다!");
+      setShowItinerary(true); // 명시적으로 일정 패널을 표시하도록 추가
     }
     
     return result;

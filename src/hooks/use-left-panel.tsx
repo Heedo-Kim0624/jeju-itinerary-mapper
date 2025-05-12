@@ -100,8 +100,8 @@ export const useLeftPanel = () => {
     const result = handleCreateItinerary(selectedPlaces, dates);
     
     if (result) {
-      // 일정 생성 성공 시 일정 보기로 전환
-      panelHandlers.setItineraryMode(true);
+      // 일정 생성 성공 시 일정 보기로 전환 (수정된 부분)
+      // panelHandlers.setItineraryMode 대신 직접 상태 업데이트
       setShowItinerary(true);
       console.log("일정 생성 성공! 일정 보기로 전환");
     }
