@@ -12,8 +12,7 @@ import { useDebounceEffect } from './use-debounce-effect';
 export const useCategoryResults = (
   category: '숙소' | '관광지' | '음식점' | '카페' | null,
   keywords: string[],
-  regions: string[] = [],
-  onDataLoaded?: (category: string, places: Place[]) => void
+  regions: string[] = []
 ) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -85,11 +84,6 @@ export const useCategoryResults = (
       
       console.log(`[useCategoryResults] 추천 장소: ${cutoff}개, 일반 장소: ${sortedData.length - cutoff}개`);
 
-      // 전체 데이터(추천+일반)를 콜백 함수에 전달하여 후보지 자동 생성에 활용
-      if (onDataLoaded) {
-        onDataLoaded(category, sortedData);
-      }
-
     } catch (err) {
       console.error('장소 데이터 로드 중 오류 발생:', err);
       setError(err instanceof Error ? err.message : '장소 데이터를 가져오지 못했습니다.');
@@ -109,7 +103,6 @@ export const useCategoryResults = (
     error,
     recommendedPlaces,
     normalPlaces,
-    allPlaces: [...recommendedPlaces, ...normalPlaces],
     refetch: fetchCategoryData
   };
 };

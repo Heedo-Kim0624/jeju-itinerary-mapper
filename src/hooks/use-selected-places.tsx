@@ -127,66 +127,9 @@ export const useSelectedPlaces = () => {
     panTo({ lat: place.y, lng: place.x });
   };
 
-  // 여행 일정에 따른 필요 장소 수 계산 (새로운 함수)
-  const calculateRequiredPlaces = (days: number | null): { [category: string]: number } => {
-    if (!days || days < 1) {
-      return {
-        '관광지': 0,
-        '음식점': 0,
-        '카페': 0,
-        '숙소': 0
-      };
-    }
-
-    return {
-      '관광지': 4 * days, // 관광지: 4n개
-      '음식점': 3 * days, // 음식점: 3n개
-      '카페': 3 * days,   // 카페: 3n개
-      '숙소': days        // 숙소: n개 (1박에 1개)
-    };
-  };
-
-  // 사용자가 선택한 장소가 부족할 경우 후보 장소 자동 추가 기능 (새로운 함수)
-  const generateCandidatePlaces = (
-    allPlaces: { [category: string]: Place[] },
-    requiredCounts: { [category: string]: number }
-  ): Place[] => {
-    const candidates: Place[] = [];
-    
-    // 각 카테고리별로 부족한 장소 수 계산 및 후보 장소 추가
-    ['관광지', '음식점', '카페'].forEach(category => {
-      const categoryKey = category as keyof typeof selectedPlacesByCategory;
-      const selectedCount = selectedPlacesByCategory[categoryKey].length;
-      const requiredCount = requiredCounts[category];
-      const neededCount = Math.max(0, requiredCount - selectedCount);
-      
-      if (neededCount > 0) {
-        console.log(`${category} 카테고리 후보지 ${neededCount}개 자동 추가 필요`);
-        
-        // 이미 선택된 장소 ID 목록
-        const selectedIds = selectedPlacesByCategory[categoryKey].map(p => p.id);
-        
-        // 선택되지 않은 장소 중 가중치 높은 순으로 정렬
-        const availablePlaces = allPlaces[category]
-          ?.filter(p => !selectedIds.includes(p.id))
-          ?.sort((a, b) => (b.weight || 0) - (a.weight || 0)) || [];
-        
-        // 필요한 수만큼 후보 장소 추가
-        const candidatesForCategory = availablePlaces.slice(0, neededCount);
-        candidates.push(...candidatesForCategory);
-        
-        console.log(`${category} 자동 후보지 ${candidatesForCategory.length}개 추가됨`);
-      }
-    });
-    
-    return candidates;
-  };
-
-  // 일정 생성을 위한 데이터 준비 함수 업데이트
   const prepareSchedulePayload = (
     places: Place[], 
-    dateTime: { start_datetime: string; end_datetime: string } | null,
-    allAvailablePlaces: { [category: string]: Place[] } = {}
+    dateTime: { start_datetime: string; end_datetime: string } | null
   ): SchedulePayload | null => {
     if (!dateTime) {
       toast.error('여행 날짜와 시간을 선택해주세요');
@@ -194,40 +137,16 @@ export const useSelectedPlaces = () => {
     }
 
     // 선택된 장소를 처리
-    const selected: SelectedPlace[] = places.map(p => ({ 
-      id: typeof p.id === 'string' ? parseInt(p.id, 10) : p.id, 
-      name: p.name 
-    }));
+    const selected: SelectedPlace[] = places
+      .filter(p => p.isSelected)
+      .map(p => ({ id: parseInt(p.id, 10), name: p.name }));
 
-    // 여행 일수 계산
-    const startDate = new Date(dateTime.start_datetime);
-    const endDate = new Date(dateTime.end_datetime);
-    const diffTime = endDate.getTime() - startDate.getTime();
-    const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
-    
-    console.log(`여행 일수: ${days}일`);
+    // 추천되었지만 선택되지 않은 장소를 후보 장소로 처리
+    const candidates: SelectedPlace[] = places
+      .filter(p => p.isRecommended && !p.isSelected)
+      .map(p => ({ id: parseInt(p.id, 10), name: p.name }));
 
-    // 필요한 장소 수 계산
-    const requiredPlaces = calculateRequiredPlaces(days);
-    console.log('필요 장소 수:', requiredPlaces);
-    
-    // 현재 선택된 장소 수 확인
-    console.log('현재 선택된 장소 수:', {
-      '관광지': selectedPlacesByCategory['관광지'].length,
-      '음식점': selectedPlacesByCategory['음식점'].length,
-      '카페': selectedPlacesByCategory['카페'].length,
-      '숙소': selectedPlacesByCategory['숙소'].length
-    });
-
-    // 후보 장소 자동 생성
-    const candidatePlaces = generateCandidatePlaces(allAvailablePlaces, requiredPlaces);
-    
-    // 후보 장소를 SelectedPlace 타입으로 변환
-    const candidates: SelectedPlace[] = candidatePlaces.map(p => ({ 
-      id: typeof p.id === 'string' ? parseInt(p.id, 10) : p.id, 
-      name: p.name 
-    }));
-
+    // 후보 장소가 제대로 처리되는지 로깅
     console.log('일정 생성 데이터:', {
       선택된_장소: selected.length,
       후보_장소: candidates.length,
@@ -235,7 +154,7 @@ export const useSelectedPlaces = () => {
     });
 
     if (candidates.length > 0) {
-      console.log('후보 장소 목록:', candidates.map(c => c.name).join(', '));
+      console.log('후보 장소 목록:', candidates);
     }
 
     return {
@@ -253,7 +172,6 @@ export const useSelectedPlaces = () => {
     handleViewOnMap,
     allCategoriesSelected,
     prepareSchedulePayload,
-    isAccommodationLimitReached,
-    calculateRequiredPlaces
+    isAccommodationLimitReached
   };
 };
