@@ -4,6 +4,7 @@ import { Place } from '@/types/supabase';
 import { cn } from '@/lib/utils';
 import { MapPin, Star, ExternalLink, Instagram, Info } from 'lucide-react';
 import { truncateText } from '@/lib/utils';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 interface PlaceCardProps {
   place: Place;
@@ -26,8 +27,11 @@ const PlaceCard: React.FC<PlaceCardProps> = ({
     id: typeof place.id === 'number' ? String(place.id) : place.id
   };
 
-  const handleRadioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onSelect(normalizedPlace, e.target.checked);
+  const handleRadioChange = (value: string) => {
+    // RadioGroup always passes the new value
+    // If the value is the place ID, it means it's selected
+    const isChecked = value === normalizedPlace.id;
+    onSelect(normalizedPlace, isChecked);
   };
 
   const handleCardClick = (e: React.MouseEvent) => {
@@ -65,13 +69,18 @@ const PlaceCard: React.FC<PlaceCardProps> = ({
       </div>
       
       <div className="flex items-start gap-3">
-        <input 
-          type="radio"
-          checked={isSelected}
-          onChange={handleRadioChange}
-          onClick={(e) => e.stopPropagation()}
-          className="mt-1"
-        />
+        {/* 라디오 버튼 변경 - RadioGroup 사용 */}
+        <RadioGroup 
+          value={isSelected ? normalizedPlace.id : ""} 
+          onValueChange={handleRadioChange}
+          className="mt-1 flex"
+        >
+          <RadioGroupItem 
+            value={normalizedPlace.id as string} 
+            id={`radio-${normalizedPlace.id}`}
+            onClick={(e) => e.stopPropagation()}
+          />
+        </RadioGroup>
         
         <div className="flex-1">
           <h4 className="font-medium text-sm">{place.name}</h4>
