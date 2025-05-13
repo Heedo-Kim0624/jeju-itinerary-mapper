@@ -37,12 +37,12 @@ export const useLeftPanel = () => {
   // 일정 생성 및 관리 로직
   const itineraryManagement = useItineraryActions();
 
-  // 직접 입력 키워드 값 상태 - 빈 문자열로 초기화
+  // 직접 입력 키워드 값 상태
   const [directInputValues, setDirectInputValues] = useState<DirectInputValues>({
-    숙소: tripDetails.accomodationDirectInput || '',
-    관광지: tripDetails.landmarkDirectInput || '',
-    음식점: tripDetails.restaurantDirectInput || '',
-    카페: tripDetails.cafeDirectInput || ''
+    숙소: tripDetails.accomodationDirectInput,
+    관광지: tripDetails.landmarkDirectInput,
+    음식점: tripDetails.restaurantDirectInput,
+    카페: tripDetails.cafeDirectInput
   });
 
   // 직접 입력 값 변경 핸들러
@@ -71,12 +71,11 @@ export const useLeftPanel = () => {
 
   // 카테고리 키워드 확정 핸들러 (직접 입력 포함)
   const handleConfirmByCategory = (category: string) => {
-    // null 체크 추가
-    const directInput = directInputValues[category as keyof DirectInputValues] || '';
+    const directInput = directInputValues[category as keyof DirectInputValues];
     
     // 직접 입력 값이 있고 ',' 또는 공백으로 구분된 경우, 배열로 변환
     let additionalKeywords: string[] = [];
-    if (directInput && directInput.trim()) {
+    if (directInput) {
       additionalKeywords = directInput
         .split(/[,\s]+/) // 쉼표나 공백으로 분리
         .map(k => k.trim())
@@ -85,7 +84,7 @@ export const useLeftPanel = () => {
     
     // 선택된 키워드와 직접 입력 키워드를 결합
     const finalKeywords = [
-      ...(categorySelection.selectedKeywordsByCategory[category] || []),
+      ...categorySelection.selectedKeywordsByCategory[category] || [],
       ...additionalKeywords
     ];
     

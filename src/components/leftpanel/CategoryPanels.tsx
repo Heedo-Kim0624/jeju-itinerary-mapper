@@ -50,7 +50,7 @@ const CategoryPanels: React.FC<CategoryPanelsProps> = ({
         <AccomodationPanel
           selectedKeywords={selectedKeywordsByCategory['숙소'] || []}
           onToggleKeyword={(kw) => toggleKeyword('숙소', kw)}
-          directInputValue={directInputValues.accomodation || ''}
+          directInputValue={directInputValues.accomodation}
           onDirectInputChange={onDirectInputChange.accomodation}
           onConfirmAccomodation={(kw) => onConfirmCategory.accomodation(kw)}
           onClose={() => handlePanelBack.accomodation()}
@@ -61,7 +61,7 @@ const CategoryPanels: React.FC<CategoryPanelsProps> = ({
         <LandmarkPanel
           selectedKeywords={selectedKeywordsByCategory['관광지'] || []}
           onToggleKeyword={(kw) => toggleKeyword('관광지', kw)}
-          directInputValue={directInputValues.landmark || ''}
+          directInputValue={directInputValues.landmark}
           onDirectInputChange={onDirectInputChange.landmark}
           onConfirmLandmark={(kw) => onConfirmCategory.landmark(kw)}
           onClose={() => handlePanelBack.landmark()}
@@ -72,7 +72,7 @@ const CategoryPanels: React.FC<CategoryPanelsProps> = ({
         <RestaurantPanel
           selectedKeywords={selectedKeywordsByCategory['음식점'] || []}
           onToggleKeyword={(kw) => toggleKeyword('음식점', kw)}
-          directInputValue={directInputValues.restaurant || ''}
+          directInputValue={directInputValues.restaurant}
           onDirectInputChange={onDirectInputChange.restaurant}
           onConfirmRestaurant={(kw) => onConfirmCategory.restaurant(kw)}
           onClose={() => handlePanelBack.restaurant()}
@@ -83,7 +83,7 @@ const CategoryPanels: React.FC<CategoryPanelsProps> = ({
         <CafePanel
           selectedKeywords={selectedKeywordsByCategory['카페'] || []}
           onToggleKeyword={(kw) => toggleKeyword('카페', kw)}
-          directInputValue={directInputValues.cafe || ''}
+          directInputValue={directInputValues.cafe}
           onDirectInputChange={onDirectInputChange.cafe}
           onConfirmCafe={(kw) => onConfirmCategory.cafe(kw)}
           onClose={() =>handlePanelBack.cafe()}

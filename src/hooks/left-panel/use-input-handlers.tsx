@@ -19,12 +19,11 @@ export const useInputHandlers = () => {
   } = useTripDetails();
 
   // 직접 입력 값과 핸들러를 카테고리별로 그룹화
-  // 빈 문자열로 초기화하여 undefined 방지
   const directInputValues = useMemo(() => ({
-    accomodation: accomodationDirectInput || '',
-    landmark: landmarkDirectInput || '',
-    restaurant: restaurantDirectInput || '',
-    cafe: cafeDirectInput || ''
+    accomodation: accomodationDirectInput,
+    landmark: landmarkDirectInput,
+    restaurant: restaurantDirectInput,
+    cafe: cafeDirectInput
   }), [accomodationDirectInput, landmarkDirectInput, restaurantDirectInput, cafeDirectInput]);
 
   const onDirectInputChange = useMemo(() => ({

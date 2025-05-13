@@ -51,17 +51,12 @@ const LeftPanel: React.FC = () => {
           onViewOnMap={placesManagement.handleViewOnMap}
           allCategoriesSelected={placesManagement.allCategoriesSelected}
           dates={tripDetails.dates}
-          onCreateItinerary={
-            (selected, dates) => {
-              if (itineraryManagement.handleCreateItinerary && typeof itineraryManagement.handleCreateItinerary === 'function') {
-                return itineraryManagement.handleCreateItinerary(
-                  selected, 
-                  dates, 
-                  placesManagement.prepareSchedulePayload
-                );
-              }
-              return [];
-            }
+          onCreateItinerary={(selected, dates) => 
+            itineraryManagement.handleCreateItinerary(
+              selected, 
+              dates, 
+              placesManagement.prepareSchedulePayload
+            )
           }
           itinerary={itineraryManagement.itinerary}
           selectedItineraryDay={itineraryManagement.selectedItineraryDay}
@@ -73,7 +68,7 @@ const LeftPanel: React.FC = () => {
             hasSelectedDates={!!tripDetails.dates}
             onCategoryClick={categorySelection.handleCategoryButtonClick}
             regionConfirmed={regionSelection.regionConfirmed}
-            categoryStepIndex={categorySelection.categoryStepIndex} 
+            categoryStepIndex={categorySelection.categoryStepIndex}
             activeMiddlePanelCategory={categorySelection.activeMiddlePanelCategory}
             confirmedCategories={categorySelection.confirmedCategories}
             selectedKeywordsByCategory={categorySelection.selectedKeywordsByCategory}
@@ -81,7 +76,7 @@ const LeftPanel: React.FC = () => {
             directInputValues={keywordsAndInputs.directInputValues}
             onDirectInputChange={keywordsAndInputs.onDirectInputChange}
             onConfirmCategory={keywordsAndInputs.handleConfirmByCategory}
-            handlePanelBack={keywordsAndInputs.handlePanelBackByCategory}
+            handlePanelBack={categorySelection.handlePanelBackByCategory}
             isCategoryButtonEnabled={categorySelection.isCategoryButtonEnabled}
           />
         </LeftPanelContainer>
