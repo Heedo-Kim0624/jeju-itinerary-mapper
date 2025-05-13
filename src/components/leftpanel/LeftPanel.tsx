@@ -62,36 +62,16 @@ const LeftPanel: React.FC = () => {
             hasSelectedDates={!!tripDetails.dates}
             onCategoryClick={categorySelection.handleCategoryButtonClick}
             regionConfirmed={regionSelection.regionConfirmed}
-            categoryStepIndex={categorySelection.categoryStepIndex || 0}
+            categoryStepIndex={categorySelection.categoryStepIndex}
             activeMiddlePanelCategory={categorySelection.activeMiddlePanelCategory}
             confirmedCategories={categorySelection.confirmedCategories}
             selectedKeywordsByCategory={categorySelection.selectedKeywordsByCategory}
             toggleKeyword={categorySelection.toggleKeyword}
-            directInputValues={{
-              accomodation: keywordsAndInputs.directInputValues.숙소,
-              landmark: keywordsAndInputs.directInputValues.관광지,
-              restaurant: keywordsAndInputs.directInputValues.음식점,
-              cafe: keywordsAndInputs.directInputValues.카페
-            }}
-            onDirectInputChange={{
-              accomodation: (value) => keywordsAndInputs.onDirectInputChange('숙소', value),
-              landmark: (value) => keywordsAndInputs.onDirectInputChange('관광지', value),
-              restaurant: (value) => keywordsAndInputs.onDirectInputChange('음식점', value),
-              cafe: (value) => keywordsAndInputs.onDirectInputChange('카페', value)
-            }}
-            onConfirmCategory={{
-              accomodation: () => keywordsAndInputs.handleConfirmByCategory('숙소'),
-              landmark: () => keywordsAndInputs.handleConfirmByCategory('관광지'),
-              restaurant: () => keywordsAndInputs.handleConfirmByCategory('음식점'),
-              cafe: () => keywordsAndInputs.handleConfirmByCategory('카페')
-            }}
-            handlePanelBack={{
-              accomodation: () => keywordsAndInputs.handlePanelBackByCategory('숙소'),
-              landmark: () => keywordsAndInputs.handlePanelBackByCategory('관광지'),
-              restaurant: () => keywordsAndInputs.handlePanelBackByCategory('음식점'),
-              cafe: () => keywordsAndInputs.handlePanelBackByCategory('카페')
-            }}
-            isCategoryButtonEnabled={categorySelection.isCategoryButtonEnabled}
+            directInputValues={keywordsAndInputs.directInputValues}
+            onDirectInputChange={keywordsAndInputs.onDirectInputChange}
+            onConfirmCategory={keywordsAndInputs.handleConfirmByCategory}
+            handlePanelBack={categorySelection.handlePanelBackByCategory}
+            isCategoryButtonEnabled={() => true}
           />
         </LeftPanelContainer>
       )}
@@ -109,7 +89,7 @@ const LeftPanel: React.FC = () => {
       />
 
       <CategoryResultHandler
-        showCategoryResult={!!uiVisibility.showCategoryResult}
+        showCategoryResult={uiVisibility.showCategoryResult}
         selectedRegions={regionSelection.selectedRegions}
         selectedKeywordsByCategory={categorySelection.selectedKeywordsByCategory}
         onClose={uiVisibility.handleResultClose}

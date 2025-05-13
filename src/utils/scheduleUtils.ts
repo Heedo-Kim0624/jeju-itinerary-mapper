@@ -1,30 +1,33 @@
 
 import { format, isWithinInterval, parse, addDays } from 'date-fns';
-import { Place } from '@/types/supabase';
-import { calculateDistance, calculateTotalDistance, isCategoryTimeSlotCompatible } from './schedule';
 
-// 장소 인터페이스에 영업 시간 정보 추가
-interface PlaceWithOperationTime extends Place {
+// 장소 인터페이스
+interface Place {
+  id: string;
+  name: string;
+  category: string;
   operationTimeData?: {
     [key: string]: number; // 요일_시간: 0(영업안함), 1(영업중), 999(정보없음)
   };
+  x: number;
+  y: number;
   nodeId?: string;
 }
 
 // 스케줄 테이블 인터페이스
-export interface ScheduleTable {
+interface ScheduleTable {
   [dayHour: string]: Place | null; // 요일_시간: Place 객체 또는 null
 }
 
 // 일정 점수 인터페이스
-export interface ItineraryScore {
+interface ItineraryScore {
   score: number;
   totalDistance: number;
   placesCount: number;
 }
 
 // 일정 일자 인터페이스
-export interface ItineraryDay {
+interface ItineraryDay {
   day: number;
   places: Place[];
   totalDistance: number;
@@ -81,6 +84,12 @@ export const createEmptyScheduleTable = (
         shouldInclude = false;
       }
       
+      // 시작일부터 종료일 사이의 간격 계산
+      const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      // 시작일과 종료일 사이에 해당 요일이 없는 경우 제외
+      // (구현 필요 - 현재는 간소화된 버전)
+      
       // 조건에 맞는 경우에만 테이블에 추가
       if (shouldInclude) {
         table[dayHour] = null;
@@ -92,13 +101,45 @@ export const createEmptyScheduleTable = (
 };
 
 /**
+ * 카테고리별 시간대 배정 조건 확인
+ * 
+ * @param category 장소 카테고리
+ * @param hour 시간 (09 ~ 21)
+ * @returns 해당 시간에 배치 가능 여부
+ */
+export const isCategoryTimeSlotCompatible = (category: string, hour: number): boolean => {
+  switch (category) {
+    case 'restaurant':
+      // 식당: 12시 또는 13시, 18시 또는 19시에 배치
+      return hour === 12 || hour === 13 || hour === 18 || hour === 19;
+    
+    case 'attraction':
+      // 관광지: 09-11시, 14-17시, 20-21시에 배치
+      return (hour >= 9 && hour <= 11) || 
+             (hour >= 14 && hour <= 17) || 
+             (hour >= 20 && hour <= 21);
+    
+    case 'cafe':
+      // 카페: 13시 또는 14시에 배치
+      return hour === 13 || hour === 14;
+    
+    case 'accommodation':
+      // 숙소: 모든 시간 가능 (단, 실제 구현시 체크인/체크아웃 시간 고려 필요)
+      return true;
+    
+    default:
+      return true;
+  }
+};
+
+/**
  * 장소의 영업 시간 체크
  * 
  * @param place 장소 객체
  * @param dayHour 요일_시간 형식의 문자열 (예: '월_12시')
  * @returns 해당 시간에 영업 중인지 여부
  */
-export const isPlaceOpenAt = (place: PlaceWithOperationTime, dayHour: string): boolean => {
+export const isPlaceOpenAt = (place: Place, dayHour: string): boolean => {
   if (!place.operationTimeData) {
     return true; // 영업 시간 데이터가 없으면 항상 영업 중으로 간주
   }
@@ -114,6 +155,38 @@ export const isPlaceOpenAt = (place: PlaceWithOperationTime, dayHour: string): b
 };
 
 /**
+ * 경로 거리 계산 (간단한 구현, OSM 데이터 통합 시 교체 필요)
+ * 
+ * @param places 경로에 포함된 장소 배열
+ * @returns 총 이동 거리 (km)
+ */
+export const calculateRouteDistance = (places: Place[]): number => {
+  if (places.length <= 1) return 0;
+  
+  let totalDistance = 0;
+  
+  for (let i = 0; i < places.length - 1; i++) {
+    const p1 = places[i];
+    const p2 = places[i + 1];
+    
+    // 두 지점 간 직선 거리 계산 (Haversine formula)
+    const R = 6371; // 지구 반경 (km)
+    const dLat = (p2.y - p1.y) * Math.PI / 180;
+    const dLon = (p2.x - p1.x) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(p1.y * Math.PI / 180) * Math.cos(p2.y * Math.PI / 180) * 
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const distance = R * c;
+    
+    totalDistance += distance;
+  }
+  
+  return totalDistance;
+};
+
+/**
  * 일정 점수 계산
  * 
  * @param places 일정에 포함된 장소 배열
@@ -124,7 +197,7 @@ export const calculateItineraryScore = (places: Place[]): ItineraryScore => {
   const baseScore = 1000;
   
   // 총 이동 거리 계산
-  const totalDistance = calculateTotalDistance(places);
+  const totalDistance = calculateRouteDistance(places);
   
   // 이동 거리에 따른 감점 (거리 km × -0.001)
   const distancePenalty = totalDistance * -0.001;
@@ -170,11 +243,10 @@ export const createOptimizedItinerary = (
   };
   
   places.forEach(place => {
-    const category = place.category || 'other';
-    if (placesByCategory[category]) {
-      placesByCategory[category].push(place);
+    if (placesByCategory[place.category]) {
+      placesByCategory[place.category].push(place);
     } else {
-      placesByCategory[category] = [place];
+      placesByCategory[place.category] = [place];
     }
   });
   
@@ -186,50 +258,53 @@ export const createOptimizedItinerary = (
     const currentDate = addDays(startDate, day - 1);
     const dayPlaces: Place[] = [];
     
-    // 이 부분은 실제 강화학습 알고리즘으로 대체 가능
-    // 현재는 단순히 카테고리별로 순차 배치
+    // TODO: scheduleTable을 활용하여 각 카테고리별 조건에 맞게 장소 배치
+    // 이 부분은 강화학습 알고리즘으로 최적화될 수 있음
     
-    // 숙소를 첫 번째로 추가 (있는 경우)
-    if (placesByCategory.accommodation.length > 0) {
-      const accommodation = placesByCategory.accommodation[0];
-      dayPlaces.push(accommodation);
-    }
-    
-    // 관광지 추가 (오전)
-    const morningAttractions = placesByCategory.attraction.slice(0, 1);
-    dayPlaces.push(...morningAttractions);
-    
-    // 식당 추가 (점심)
-    const lunchRestaurant = placesByCategory.restaurant.slice(0, 1);
-    dayPlaces.push(...lunchRestaurant);
-    
-    // 카페 추가
-    const cafe = placesByCategory.cafe.slice(0, 1);
-    dayPlaces.push(...cafe);
-    
-    // 오후 관광지 추가
-    const afternoonAttractions = placesByCategory.attraction.slice(1, 2);
-    dayPlaces.push(...afternoonAttractions);
-    
-    // 식당 추가 (저녁)
-    const dinnerRestaurant = placesByCategory.restaurant.slice(1, 2);
-    dayPlaces.push(...dinnerRestaurant);
+    // 간단한 휴리스틱: 숙소 -> 관광지 -> 식당 -> 카페 -> 관광지 -> 식당 순으로 배치
+    // (실제 구현에서는 영업시간과 카테고리별 시간대 제약 고려 필요)
     
     // 경로 거리 계산
-    const totalDistance = calculateTotalDistance(dayPlaces);
+    const totalDistance = calculateRouteDistance(dayPlaces);
     
     itinerary.push({
       day,
       places: dayPlaces,
       totalDistance
     });
-    
-    // 이미 사용한 장소는 제거
-    placesByCategory.accommodation = placesByCategory.accommodation.slice(1);
-    placesByCategory.attraction = placesByCategory.attraction.slice(2);
-    placesByCategory.restaurant = placesByCategory.restaurant.slice(2);
-    placesByCategory.cafe = placesByCategory.cafe.slice(1);
   }
   
   return itinerary;
+};
+
+// 향후 HuggingFace LLM 모델과 통합할 주요 함수들
+/**
+ * HuggingFace LLM 모델을 사용하여 최적 장소 순서 생성
+ * 
+ * @param places 장소 배열
+ * @param prompt 사용자 프롬프트
+ * @returns 최적화된 장소 ID 배열
+ */
+export const generateOptimalPlaceOrder = async (
+  places: Place[],
+  prompt: string
+): Promise<string[]> => {
+  // TODO: 실제 HuggingFace LLM 모델 API 연동 구현
+  // 현재는 임시 구현으로 원래 순서 반환
+  return places.map(place => place.id);
+};
+
+/**
+ * OSM 데이터를 활용한 최적 경로 생성
+ * 
+ * @param places 장소 배열 (순서 정렬됨)
+ * @returns 최적화된 경로 정보
+ */
+export const generateOptimalRoute = (places: Place[]) => {
+  // TODO: OSM node, link, turntype 데이터를 활용한 경로 생성 로직 구현
+  // 현재는 임시 반환
+  return {
+    totalDistance: calculateRouteDistance(places),
+    duration: places.length * 20 // 임시 소요 시간 (분)
+  };
 };
