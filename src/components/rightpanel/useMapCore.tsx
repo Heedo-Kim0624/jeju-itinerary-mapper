@@ -1,4 +1,3 @@
-
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { useMapResize } from '@/hooks/useMapResize';
 import { useMapInitialization } from '@/hooks/map/useMapInitialization';
@@ -159,7 +158,7 @@ export const useMapCore = () => {
     }
   }, [map, isGeoJsonLoaded, mapPlacesWithGeoNodes]);
   
-  // 특정 장소의 경로를 시각화하는 새로운 함수 (숙소에서 특정 장소까지)
+  // Special route visualization for a specific place (fixed toast.warn issue)
   const showRouteForPlaceIndex = useCallback((placeIndex: number, itineraryDay: ItineraryDay) => {
     if (!map || !isGeoJsonLoaded || !itineraryDay) {
       console.warn("지도나 GeoJSON이 로드되지 않았거나 일정이 없습니다");
@@ -215,7 +214,8 @@ export const useMapCore = () => {
           toast.error("경로를 표시할 수 없습니다");
         }
       } else {
-        toast.warn("장소와 도로 네트워크의 매핑 정보가 없습니다");
+        // Fix: toast.warn -> toast.warning
+        toast.warning("장소와 도로 네트워크의 매핑 정보가 없습니다");
         console.warn(`장소의 GeoJSON 노드 ID가 없습니다: 
           숙소(${accommodation.name}): ${accommodation.geoNodeId}, 
           선택 장소(${selectedPlace.name}): ${selectedPlace.geoNodeId}`);

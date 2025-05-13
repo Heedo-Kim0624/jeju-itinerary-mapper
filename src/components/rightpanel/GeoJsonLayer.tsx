@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -10,6 +9,7 @@ interface GeoJsonLayerProps {
   onGeoJsonLoaded?: (nodes: any[], links: any[]) => void; // GeoJSON 로드 완료 콜백
 }
 
+// 파일은 너무 길어 중요 부분만 수정합니다.
 const GeoJsonLayer: React.FC<GeoJsonLayerProps> = ({ 
   map, 
   visible,
