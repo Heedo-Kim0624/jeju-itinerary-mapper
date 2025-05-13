@@ -60,13 +60,8 @@ export const addCandidatePlaces = (
     selectedIds.add(place.id.toString());
   });
 
-  // 후보지 리스트 (선택된 장소도 포함해야 함)
-  const candidates: Place[] = [
-    ...selectedPlaces['숙소'],
-    ...selectedPlaces['관광지'],
-    ...selectedPlaces['음식점'],
-    ...selectedPlaces['카페']
-  ];
+  // 후보지 리스트
+  const candidates: Place[] = [];
 
   // 음식점 후보지 추가
   if (selectedPlaces['음식점'].length < required.restaurant) {
@@ -106,7 +101,7 @@ export const addCandidatePlaces = (
 
   // 숙소는 사용자가 직접 선택한 것만 사용 (후보 없음)
 
-  console.log(`총 ${candidates.length}개의 장소가 준비되었습니다 (선택: ${selectedIds.size}개, 후보: ${candidates.length - selectedIds.size}개)`);
+  console.log(`총 ${candidates.length}개의 후보 장소가 추가되었습니다.`);
   return candidates;
 };
 
@@ -175,7 +170,7 @@ export const prepareSchedulePayload = (
     return null;
   }
 
-  // 전체 선택된 장소 목록 (이미 선택된 장소)
+  // 전체 선택된 장소
   const allSelectedPlaces = [
     ...selectedPlaces['숙소'],
     ...selectedPlaces['관광지'],
@@ -183,19 +178,11 @@ export const prepareSchedulePayload = (
     ...selectedPlaces['카페']
   ];
 
-  // 선택된 장소 ID를 추적 (중복 방지)
-  const selectedPlaceIds = new Set(allSelectedPlaces.map(place => place.id.toString()));
-
-  // 후보 장소 생성 (이 함수는 이미 선택된 장소도 포함하도록 수정됨)
-  const allCandidatePlaces = addCandidatePlaces(
+  // 후보 장소 생성
+  const candidatePlaces = addCandidatePlaces(
     selectedPlaces,
     recommendedPlacesByCategory,
     tripDuration
-  );
-
-  // 이미 선택된 장소를 제외한 실제 후보 장소만 추출
-  const candidatePlacesOnly = allCandidatePlaces.filter(place => 
-    !selectedPlaceIds.has(place.id.toString()) && place.isRecommended
   );
 
   return {
@@ -203,7 +190,7 @@ export const prepareSchedulePayload = (
       id: typeof place.id === 'string' ? parseInt(place.id, 10) : place.id,
       name: place.name
     })),
-    candidate_places: candidatePlacesOnly.map(place => ({ 
+    candidate_places: candidatePlaces.map(place => ({ 
       id: typeof place.id === 'string' ? parseInt(place.id, 10) : place.id,
       name: place.name
     })),

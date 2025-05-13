@@ -6,30 +6,19 @@ interface JejuOSMLayerProps {
   map: any;
 }
 
-/**
- * 제주 OSM 레이어 컴포넌트
- * Naver 지도에 제주 도로망 GeoJSON 파일을 배경 레이어로 표시
- */
 const JejuOSMLayer: React.FC<JejuOSMLayerProps> = ({ map }) => {
-  // 상태 관리
   const [isLoaded, setIsLoaded] = useState(false);
   const layersRef = useRef<any[]>([]);
   const [isDrawingModuleReady, setIsDrawingModuleReady] = useState<boolean>(false);
   const pollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   
-  /**
-   * drawing 모듈이 준비되었는지 확인
-   */
+  // drawing 모듈이 준비되었는지 확인
   const checkDrawingModule = () => {
-    // 네이버 맵과 drawing 모듈이 모두 존재하고 JSONReader 함수가 있는지 확인
-    return window.naver?.maps?.drawing && 
-           typeof window.naver.maps.drawing.JSONReader === 'function';
+    return window.naver?.maps?.drawing && typeof window.naver.maps.drawing.JSONReader === 'function';
   };
   
-  /**
-   * 안전하게 drawing 모듈 사용
-   */
+  // 안전하게 drawing 모듈 사용
   const waitForDrawingModule = () => {
     // 이미 준비되었으면 바로 설정
     if (checkDrawingModule()) {
@@ -81,15 +70,11 @@ const JejuOSMLayer: React.FC<JejuOSMLayerProps> = ({ map }) => {
     }, 10000);
   };
   
-  /**
-   * drawing 모듈이 없을 때 대안 방법 시도
-   * 네이버 맵 Data API를 사용하여 직접 GeoJSON 처리
-   */
+  // drawing 모듈이 없을 때 대안 방법 시도
   const tryFallbackMethod = async () => {
     console.log("JejuOSMLayer: 대안 방법으로 GeoJSON 처리 시도");
     
     try {
-      // GeoJSON 파일 로드
       const [linkResponse, nodeResponse] = await Promise.all([
         fetch('/data/LINK_JSON.geojson'),
         fetch('/data/NODE_JSON.geojson')
@@ -109,9 +94,15 @@ const JejuOSMLayer: React.FC<JejuOSMLayerProps> = ({ map }) => {
       // 네이버 지도의 Data API 사용 (drawing 대신 안전한 대안)
       if (window.naver?.maps?.Data) {
         // 기존 레이어 클리어
-        clearLayers();
+        if (layersRef.current.length > 0) {
+          layersRef.current.forEach(layer => {
+            if (layer && typeof layer.setMap === 'function') {
+              layer.setMap(null);
+            }
+          });
+          layersRef.current = [];
+        }
         
-        // 새로운 데이터 레이어 생성
         const linkLayer = new window.naver.maps.Data();
         const nodeLayer = new window.naver.maps.Data();
         
@@ -145,7 +136,6 @@ const JejuOSMLayer: React.FC<JejuOSMLayerProps> = ({ map }) => {
           clickable: false
         });
         
-        // 생성한 레이어 저장
         layersRef.current.push(linkLayer, nodeLayer);
         setIsLoaded(true);
         console.log("JejuOSMLayer: Data API를 통한 대안 방식 로드 성공");
@@ -156,24 +146,6 @@ const JejuOSMLayer: React.FC<JejuOSMLayerProps> = ({ map }) => {
     }
   };
   
-  /**
-   * 기존 레이어 제거
-   */
-  const clearLayers = () => {
-    if (layersRef.current.length > 0) {
-      console.log(`JejuOSMLayer: ${layersRef.current.length}개 레이어 제거`);
-      layersRef.current.forEach(layer => {
-        if (layer && typeof layer.setMap === 'function') {
-          layer.setMap(null);
-        }
-      });
-      layersRef.current = [];
-    }
-  };
-  
-  /**
-   * 맵 초기화 및 GeoJSON 로드
-   */
   useEffect(() => {
     if (!map || !window.naver || !window.naver.maps) return;
     
@@ -200,63 +172,65 @@ const JejuOSMLayer: React.FC<JejuOSMLayerProps> = ({ map }) => {
       }
       
       // 모든 레이어 제거
-      clearLayers();
-      setIsLoaded(false);
+      if (layersRef.current.length > 0) {
+        console.log(`JejuOSMLayer: ${layersRef.current.length}개 레이어 제거`);
+        layersRef.current.forEach(feature => {
+          if (feature && typeof feature.setMap === 'function') {
+            feature.setMap(null);
+          }
+        });
+        layersRef.current = [];
+        setIsLoaded(false);
+      }
     };
   }, [map, isLoaded]);
   
-  /**
-   * GeoJSON 파일 로드 및 처리 
-   * drawing 모듈 사용
-   */
-  const loadGeoJsonWithDrawingApi = async (url: string, style: any) => {
-    try {
-      console.log(`JejuOSMLayer: ${url} 로드 시작`);
-      const response = await fetch(url);
-      
-      if (!response.ok) {
-        throw new Error(`GeoJSON 로딩 실패: ${response.status} ${response.statusText}`);
-      }
-      
-      const geojson = await response.json();
-      console.log(`JejuOSMLayer: ${url} 로드 완료, 특성 ${geojson.features?.length || 0}개`);
-      
-      if (!geojson.features || geojson.features.length === 0) {
-        console.warn(`JejuOSMLayer: ${url}에 특성이 없음`);
-        return;
-      }
-      
-      try {
-        // 네이버 지도 drawing 기능 사용해 GeoJSON 렌더링
-        // 핵심 수정: JSONReader는 생성자가 아닌 함수로 호출해야 함
-        const reader = window.naver.maps.drawing.JSONReader(geojson, style);
-        const layer = reader.read();
-        
-        // 모든 객체를 지도에 추가
-        layer.forEach((feature: any) => {
-          if (feature) {
-            feature.setMap(map);
-            layersRef.current.push(feature);
-          }
-        });
-        
-        console.log(`JejuOSMLayer: ${url}의 ${layer.length}개 요소를 지도에 추가함`);
-      } catch (error) {
-        console.error(`JejuOSMLayer: JSONReader 처리 오류 (${url}):`, error);
-        // 오류 발생 시 대안 방법 시도
-        tryFallbackMethod();
-      }
-    } catch (error) {
-      console.error(`JejuOSMLayer: GeoJSON 파일(${url}) 로드 실패:`, error);
-    }
-  };
-  
-  /**
-   * drawing 모듈이 준비되면 GeoJSON 로드
-   */
+  // drawing 모듈이 준비되면 GeoJSON 로드
   useEffect(() => {
     if (!isDrawingModuleReady || !map || isLoaded) return;
     
+    const loadGeoJson = async (url: string, style: any) => {
+      try {
+        console.log(`JejuOSMLayer: ${url} 로드 시작`);
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+          throw new Error(`GeoJSON 로딩 실패: ${response.status} ${response.statusText}`);
+        }
+        
+        const geojson = await response.json();
+        console.log(`JejuOSMLayer: ${url} 로드 완료, 특성 ${geojson.features?.length || 0}개`);
+        
+        if (!geojson.features || geojson.features.length === 0) {
+          console.warn(`JejuOSMLayer: ${url}에 특성이 없음`);
+          return;
+        }
+        
+        try {
+          // 네이버 지도 drawing 기능 사용해 GeoJSON 렌더링
+          // 중요: JSONReader는 new로 생성하는 생성자가 아니라 함수임
+          const reader = window.naver.maps.drawing.JSONReader(geojson, style);
+          const layer = reader.read();
+          
+          // 모든 객체를 지도에 추가
+          layer.forEach((feature: any) => {
+            if (feature) {
+              feature.setMap(map);
+              layersRef.current.push(feature);
+            }
+          });
+          
+          console.log(`JejuOSMLayer: ${url}의 ${layer.length}개 요소를 지도에 추가함`);
+        } catch (error) {
+          console.error(`JejuOSMLayer: JSONReader 처리 오류 (${url}):`, error);
+          // 오류 발생 시 대안 방법 시도
+          tryFallbackMethod();
+        }
+      } catch (error) {
+        console.error(`JejuOSMLayer: GeoJSON 파일(${url}) 로드 실패:`, error);
+      }
+    };
+
     // 스타일 정의 - 훨씬 연하게 설정
     const linkStyle = {
       strokeColor: '#aaaaaa', // 더 연한 회색
@@ -275,9 +249,9 @@ const JejuOSMLayer: React.FC<JejuOSMLayerProps> = ({ map }) => {
     };
 
     // GeoJSON 로드
-    loadGeoJsonWithDrawingApi('/data/LINK_JSON.geojson', linkStyle);
+    loadGeoJson('/data/LINK_JSON.geojson', linkStyle);
     // 노드는 많아서 렌더링 안함
-    // loadGeoJsonWithDrawingApi('/data/NODE_JSON.geojson', nodeStyle);
+    // loadGeoJson('/data/NODE_JSON.geojson', nodeStyle);
     setIsLoaded(true);
   }, [isDrawingModuleReady, map, isLoaded]);
 
