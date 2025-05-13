@@ -31,6 +31,38 @@ const LeftPanel: React.FC = () => {
     itineraryManagement.selectedItineraryDay
   ]);
 
+  // Transform direct input values for CategoryPanels
+  const directInputValuesForPanel = {
+    accomodation: keywordsAndInputs.directInputValues['숙소'] || '',
+    landmark: keywordsAndInputs.directInputValues['관광지'] || '',
+    restaurant: keywordsAndInputs.directInputValues['음식점'] || '',
+    cafe: keywordsAndInputs.directInputValues['카페'] || '',
+  };
+
+  // Transform direct input change handlers for CategoryPanels
+  const onDirectInputChangeForPanel = {
+    accomodation: (value: string) => keywordsAndInputs.onDirectInputChange('숙소', value),
+    landmark: (value: string) => keywordsAndInputs.onDirectInputChange('관광지', value),
+    restaurant: (value: string) => keywordsAndInputs.onDirectInputChange('음식점', value),
+    cafe: (value: string) => keywordsAndInputs.onDirectInputChange('카페', value),
+  };
+
+  // Transform confirm handlers for CategoryPanels
+  const onConfirmCategoryForPanel = {
+    accomodation: (finalKeywords: string[]) => keywordsAndInputs.handleConfirmByCategory('숙소'),
+    landmark: (finalKeywords: string[]) => keywordsAndInputs.handleConfirmByCategory('관광지'),
+    restaurant: (finalKeywords: string[]) => keywordsAndInputs.handleConfirmByCategory('음식점'),
+    cafe: (finalKeywords: string[]) => keywordsAndInputs.handleConfirmByCategory('카페'),
+  };
+
+  // Transform panel back handlers for CategoryPanels
+  const handlePanelBackForCategory = {
+    accomodation: () => keywordsAndInputs.handlePanelBackByCategory('숙소'),
+    landmark: () => keywordsAndInputs.handlePanelBackByCategory('관광지'),
+    restaurant: () => keywordsAndInputs.handlePanelBackByCategory('음식점'),
+    cafe: () => keywordsAndInputs.handlePanelBackByCategory('카페'),
+  };
+
   return (
     <div className="relative h-full">
       {uiVisibility.showItinerary && itineraryManagement.itinerary ? (
@@ -51,13 +83,7 @@ const LeftPanel: React.FC = () => {
           onViewOnMap={placesManagement.handleViewOnMap}
           allCategoriesSelected={placesManagement.allCategoriesSelected}
           dates={tripDetails.dates}
-          onCreateItinerary={(selected, dates) => 
-            itineraryManagement.handleCreateItinerary(
-              selected, 
-              dates, 
-              placesManagement.prepareSchedulePayload
-            )
-          }
+          onCreateItinerary={itineraryManagement.handleCreateItinerary}
           itinerary={itineraryManagement.itinerary}
           selectedItineraryDay={itineraryManagement.selectedItineraryDay}
           onSelectDay={itineraryManagement.handleSelectItineraryDay}
@@ -68,15 +94,14 @@ const LeftPanel: React.FC = () => {
             hasSelectedDates={!!tripDetails.dates}
             onCategoryClick={categorySelection.handleCategoryButtonClick}
             regionConfirmed={regionSelection.regionConfirmed}
-            categoryStepIndex={categorySelection.categoryStepIndex}
             activeMiddlePanelCategory={categorySelection.activeMiddlePanelCategory}
             confirmedCategories={categorySelection.confirmedCategories}
             selectedKeywordsByCategory={categorySelection.selectedKeywordsByCategory}
             toggleKeyword={categorySelection.toggleKeyword}
-            directInputValues={keywordsAndInputs.directInputValues}
-            onDirectInputChange={keywordsAndInputs.onDirectInputChange}
-            onConfirmCategory={keywordsAndInputs.handleConfirmByCategory}
-            handlePanelBack={categorySelection.handlePanelBackByCategory}
+            directInputValues={directInputValuesForPanel}
+            onDirectInputChange={onDirectInputChangeForPanel}
+            onConfirmCategory={onConfirmCategoryForPanel}
+            handlePanelBack={handlePanelBackForCategory}
             isCategoryButtonEnabled={categorySelection.isCategoryButtonEnabled}
           />
         </LeftPanelContainer>
@@ -98,7 +123,7 @@ const LeftPanel: React.FC = () => {
         showCategoryResult={!!uiVisibility.showCategoryResult}
         selectedRegions={regionSelection.selectedRegions}
         selectedKeywordsByCategory={categorySelection.selectedKeywordsByCategory}
-        onClose={uiVisibility.handleResultClose}
+        onClose={() => uiVisibility.setShowCategoryResult(null)}
         onSelectPlace={placesManagement.handleSelectPlace}
         selectedPlaces={placesManagement.selectedPlaces}
         onPlacesLoaded={itineraryManagement.updateAvailablePlaces}

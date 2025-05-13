@@ -39,10 +39,10 @@ export const useLeftPanel = () => {
 
   // 직접 입력 키워드 값 상태
   const [directInputValues, setDirectInputValues] = useState<DirectInputValues>({
-    숙소: tripDetails.accomodationDirectInput,
-    관광지: tripDetails.landmarkDirectInput,
-    음식점: tripDetails.restaurantDirectInput,
-    카페: tripDetails.cafeDirectInput
+    숙소: tripDetails.accomodationDirectInput || '',
+    관광지: tripDetails.landmarkDirectInput || '',
+    음식점: tripDetails.restaurantDirectInput || '',
+    카페: tripDetails.cafeDirectInput || ''
   });
 
   // 직접 입력 값 변경 핸들러
@@ -71,7 +71,7 @@ export const useLeftPanel = () => {
 
   // 카테고리 키워드 확정 핸들러 (직접 입력 포함)
   const handleConfirmByCategory = (category: string) => {
-    const directInput = directInputValues[category as keyof DirectInputValues];
+    const directInput = directInputValues[category as keyof DirectInputValues] || '';
     
     // 직접 입력 값이 있고 ',' 또는 공백으로 구분된 경우, 배열로 변환
     let additionalKeywords: string[] = [];
@@ -104,7 +104,7 @@ export const useLeftPanel = () => {
     );
     
     // 결과 패널 표시
-    uiVisibility.setShowCategoryResult(true);
+    uiVisibility.setShowCategoryResult(category as any);
   };
 
   // 카테고리별 패널 뒤로가기 핸들러
@@ -118,7 +118,7 @@ export const useLeftPanel = () => {
     }
     
     // 결과 패널 닫기
-    uiVisibility.setShowCategoryResult(false);
+    uiVisibility.setShowCategoryResult(null);
   };
 
   return {
