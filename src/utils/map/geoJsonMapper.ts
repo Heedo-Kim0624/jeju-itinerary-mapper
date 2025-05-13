@@ -1,3 +1,4 @@
+
 /**
  * GeoJSON 노드와 장소 간의 매핑을 처리하는 유틸리티 함수들
  */
@@ -66,6 +67,12 @@ export const mapPlacesToNodes = (places: Place[], nodes: any[]): Place[] => {
   console.log(`${places.length}개 장소와 ${nodes.length}개 GeoJSON 노드 매핑 시작`);
 
   return places.map(place => {
+    // x와 y 좌표가 있는지 확인
+    if (typeof place.x !== 'number' || typeof place.y !== 'number') {
+      console.warn(`장소 ${place.name}의 좌표가 유효하지 않습니다`, place);
+      return place;
+    }
+
     const nearestNode = findNearestNode(nodes, place.x, place.y);
     
     return {
@@ -100,7 +107,14 @@ export const calculateHaversineDistance = (lat1: number, lng1: number, lat2: num
   return R * c; // 미터 단위 거리
 };
 
-// 너비 우선 탐색(BFS)을 사용하여 두 GeoJSON 노드 사이의 경로를 찾습니다
+/**
+ * 너비 우선 탐색(BFS)을 사용하여 두 GeoJSON 노드 사이의 경로를 찾습니다
+ * @param startNodeId 시작 노드 ID
+ * @param endNodeId 종료 노드 ID
+ * @param nodes 노드 배열
+ * @param links 링크 배열
+ * @returns 경로 노드 ID 배열
+ */
 export const findPathBetweenNodes = (
   startNodeId: string,
   endNodeId: string,
@@ -116,7 +130,6 @@ export const findPathBetweenNodes = (
 
   // 노드 연결 정보 구성
   const nodeConnections: Record<string, string[]> = {};
-  const linkMap: Record<string, any> = {};
   
   // 링크 정보 구성 및 연결 지도 생성
   links.forEach(link => {
@@ -131,12 +144,6 @@ export const findPathBetweenNodes = (
         
         nodeConnections[fromNode].push(toNode);
         nodeConnections[toNode].push(fromNode); // 양방향 연결
-        
-        // 링크 정보 저장
-        const linkKey1 = `${fromNode}-${toNode}`;
-        const linkKey2 = `${toNode}-${fromNode}`;
-        linkMap[linkKey1] = link;
-        linkMap[linkKey2] = link; // 양방향 링크
       }
     } catch (error) {
       console.error('링크 처리 중 오류:', error);
@@ -230,11 +237,64 @@ export const getLinksForPath = (path: string[], links: any[]): any[] => {
   return pathLinks;
 };
 
-// 특정 경로 강조를 위한 스타일 생성
+/**
+ * 특정 경로 강조를 위한 스타일 생성
+ * @param isHighlighted 강조 여부
+ */
 export const createPathStyle = (isHighlighted: boolean = false) => {
   return {
     strokeColor: isHighlighted ? '#FF3B30' : '#4CD964',
     strokeWeight: isHighlighted ? 5 : 3,
     strokeOpacity: isHighlighted ? 0.9 : 0.7
   };
+};
+
+/**
+ * 여러 장소를 지나는 전체 경로를 구성합니다
+ * @param places 노드 ID가 매핑된 장소 배열
+ * @param nodes GeoJSON 노드 배열
+ * @param links GeoJSON 링크 배열
+ */
+export const buildItineraryPath = (
+  places: Place[], 
+  nodes: any[], 
+  links: any[]
+): { paths: string[][], allLinks: any[] } => {
+  // 노드 ID가 있는 장소만 필터링
+  const validPlaces = places.filter(p => p.geoNodeId);
+  
+  if (validPlaces.length < 2) {
+    console.warn('경로 구성을 위한 유효한 장소가 2개 이상 필요합니다.');
+    return { paths: [], allLinks: [] };
+  }
+
+  const paths: string[][] = [];
+  const allLinks: any[] = [];
+  
+  // 각 연속된 장소 쌍에 대해 경로 찾기
+  for (let i = 0; i < validPlaces.length - 1; i++) {
+    const startNodeId = validPlaces[i].geoNodeId!;
+    const endNodeId = validPlaces[i + 1].geoNodeId!;
+    
+    // 두 노드 사이의 경로 찾기
+    const path = findPathBetweenNodes(startNodeId, endNodeId, nodes, links);
+    paths.push(path);
+    
+    // 경로에 대한 링크 찾기
+    const pathLinks = getLinksForPath(path, links);
+    
+    // 중복 제거하며 모든 링크 추가
+    pathLinks.forEach(link => {
+      const isDuplicate = allLinks.some(existingLink => 
+        existingLink.properties?.link_id === link.properties?.link_id
+      );
+      
+      if (!isDuplicate) {
+        allLinks.push(link);
+      }
+    });
+  }
+  
+  console.log(`일정 경로 구성 완료: ${paths.length}개 구간, ${allLinks.length}개 링크`);
+  return { paths, allLinks };
 };

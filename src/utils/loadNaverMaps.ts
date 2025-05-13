@@ -64,8 +64,8 @@ export const loadNaverMaps = (): Promise<void> => {
     console.log("Naver Maps 스크립트 로드 중...");
     const script = document.createElement('script');
     script.async = true;
-    // 명시적으로 모든 서브모듈을 로드하도록 설정
-    script.src = `https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${clientId}&submodules=drawing,geocoder,visualization,geojson`;
+    // 명시적으로 geojson과 drawing 서브모듈을 함께 로드하도록 설정
+    script.src = `https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${clientId}&submodules=geojson,drawing,geocoder,visualization`;
 
     script.onload = () => {
       console.log("Naver Maps 스크립트 로드 완료. 초기화 대기 중...");
@@ -119,7 +119,8 @@ function loadDrawingSubmodule() {
   
   console.log("drawing 서브모듈만 별도로 로드 시도...");
   const drawingScript = document.createElement('script');
-  drawingScript.src = `https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${clientId}&submodules=drawing`;
+  // geojson과 drawing 서브모듈을 함께 로드하도록 수정
+  drawingScript.src = `https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${clientId}&submodules=geojson,drawing`;
   drawingScript.async = true;
   
   drawingScript.onload = () => {

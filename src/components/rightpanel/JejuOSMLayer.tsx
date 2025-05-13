@@ -192,8 +192,12 @@ const JejuOSMLayer: React.FC<JejuOSMLayerProps> = ({ map }) => {
         
         try {
           // 네이버 지도 drawing 기능 사용해 GeoJSON 렌더링
-          const reader = new window.naver.maps.drawing.JSONReader(geojson, style);
-          const layer = reader.read();
+          const reader = new window.naver.maps.drawing.JSONReader({
+            type: 'FeatureCollection',
+            features: geojson.features
+          });
+          
+          const layer = reader.read(style);
           
           // 모든 객체를 지도에 추가
           layer.forEach((feature: any) => {

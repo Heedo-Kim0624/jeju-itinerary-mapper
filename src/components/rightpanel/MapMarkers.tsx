@@ -1,8 +1,7 @@
 
-import React, { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useMapContext } from './MapContext';
 import { Place, ItineraryDay } from '@/types/supabase';
-import { getCategoryColor } from '@/utils/categoryColors';
 import { toast } from 'sonner';
 
 interface MapMarkersProps {
@@ -34,7 +33,6 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
     showRouteForPlaceIndex
   } = useMapContext();
   
-  const [infoWindows, setInfoWindows] = useState<any[]>([]);
   const [markerRefs, setMarkerRefs] = useState<any[]>([]);
   const [geoJsonMappingChecked, setGeoJsonMappingChecked] = useState<boolean>(false);
 
@@ -62,23 +60,21 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
     }
   }, [itinerary, selectedDay, onPlaceClick, isGeoJsonLoaded, showRouteForPlaceIndex]);
 
-  // 종속성 배열에 모든 관련 props 추가하여 변경 시 재렌더링
+  // 데이터 변경 시 지도 업데이트
   useEffect(() => {
-    if (!isMapInitialized) {
-      return;
-    }
+    if (!isMapInitialized) return;
 
     console.log("MapMarkers: 데이터 변경 감지", {
       placesCount: places.length,
       selectedPlaceExists: !!selectedPlace,
       itineraryDays: itinerary?.length || 0,
       selectedDay,
-      selectedPlacesCount: selectedPlaces.length,
-      isMapReady: isMapInitialized,
-      isGeoJsonLoaded
+      selectedPlacesCount: selectedPlaces.length
     });
 
-    renderData();
+    // 데이터 렌더링 함수 호출
+    renderMapData();
+    
   }, [
     places, 
     selectedPlace, 
@@ -89,7 +85,8 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
     isGeoJsonLoaded // GeoJSON 로드 상태가 변경되면 다시 렌더링
   ]);
 
-  const renderData = () => {
+  // 지도에 데이터 렌더링
+  const renderMapData = () => {
     if (!isMapInitialized) {
       console.warn("지도가 초기화되지 않았습니다.");
       return;
@@ -102,7 +99,7 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
     const useMappedPlaces = isGeoJsonLoaded;
     
     if (selectedPlace) {
-      // 장소가 선택되었을 때, 해당 장소를 지도에 하이라이트
+      // 선택된 장소가 있으면 하이라이트하여 표시
       console.log("선택된 장소 표시:", selectedPlace.name);
       const placeToDisplay = useMappedPlaces ? 
         mapPlacesWithGeoNodes([selectedPlace])[0] : selectedPlace;
@@ -117,8 +114,8 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
       return;
     }
 
+    // 일정이 선택된 경우 - 주요 기능
     if (itinerary && itinerary.length > 0 && selectedDay !== null) {
-      // 일정이 선택된 경우 해당 일자의 장소와 경로를 표시
       const selectedItinerary = itinerary.find(day => day.day === selectedDay);
       if (selectedItinerary) {
         console.log(`[MapMarkers] 일정 ${selectedDay}일차 표시, 장소 ${selectedItinerary.places.length}개`);
@@ -128,7 +125,7 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
           mapPlacesWithGeoNodes(selectedItinerary.places) : 
           selectedItinerary.places;
           
-        // 카테고리별로 색상을 다르게 표시
+        // 카테고리별로 색상을 다르게 표시하는 마커 추가
         const markers = addMarkers(placesToDisplay, { 
           isItinerary: true,
           useColorByCategory: true,
@@ -137,10 +134,10 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
         
         setMarkerRefs(markers);
         
-        // 해당 일자의 경로 시각화 - 중요!
+        // 일정 경로 렌더링 - 중요!
         console.log(`[MapMarkers] ${selectedDay}일차 경로 렌더링 시작`);
         
-        // GeoJSON 매핑을 활용하여 경로 렌더링
+        // GeoJSON 매핑이 완료된 경우만 경로 렌더링
         if (useMappedPlaces) {
           console.log('GeoJSON 매핑된 장소로 경로 렌더링');
           
@@ -155,10 +152,12 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
             // 매핑율이 낮으면 경고
             if (mappingRate < 50) {
               console.warn('GeoJSON 노드 매핑율이 낮아 경로가 정확하지 않을 수 있습니다.');
+              toast.warning('일부 장소의 경로 정보가 부정확할 수 있습니다.');
             }
           }
         }
         
+        // 일정 경로 렌더링 (맵 컨텍스트 함수 사용)
         renderItineraryRoute(selectedItinerary);
         
         // 첫 번째 장소로 지도 중심 이동
@@ -173,8 +172,9 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
       } else {
         console.warn(`${selectedDay}일차 일정을 찾을 수 없습니다`);
       }
-    } else if (selectedPlaces && selectedPlaces.length > 0) {
-      // 명시적으로 선택된 장소들을 표시 (카테고리별 색상)
+    } 
+    // 선택된 장소들이 있는 경우 표시
+    else if (selectedPlaces && selectedPlaces.length > 0) {
       console.log("선택된 장소 목록 표시", selectedPlaces.length);
       
       // GeoJSON 매핑된 장소 사용
@@ -188,8 +188,9 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
         onClick: handleMarkerClick
       });
       setMarkerRefs(markers);
-    } else if (places && places.length > 0) {
-      // 일반 장소 리스트 표시
+    } 
+    // 일반 장소 목록 표시
+    else if (places && places.length > 0) {
       console.log("일반 장소 목록 표시", places.length);
       
       // GeoJSON 매핑된 장소 사용
@@ -197,12 +198,15 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
         mapPlacesWithGeoNodes(places) : 
         places;
         
-      const markers = addMarkers(placesToDisplay, { useColorByCategory: true });
+      const markers = addMarkers(placesToDisplay, { 
+        useColorByCategory: true,
+        onClick: handleMarkerClick
+      });
       setMarkerRefs(markers);
     }
   };
 
-  return null; // 이 컴포넌트는 아무것도 렌더링하지 않고, 지도에 마커만 추가함
+  return null; // 시각적 요소는 렌더링하지 않음
 };
 
 export default MapMarkers;
