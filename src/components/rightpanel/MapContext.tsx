@@ -35,6 +35,7 @@ interface MapContextType {
     message: string;
   };
   mapPlacesWithGeoNodes: (places: Place[]) => Place[];
+  showRouteForPlaceIndex: (placeIndex: number, itineraryDay: ItineraryDay) => void;
 }
 
 const defaultContext: MapContextType = {
@@ -62,7 +63,8 @@ const defaultContext: MapContextType = {
     success: false,
     message: '초기화되지 않음'
   }),
-  mapPlacesWithGeoNodes: (places) => places
+  mapPlacesWithGeoNodes: (places) => places,
+  showRouteForPlaceIndex: () => {}
 };
 
 const MapContext = createContext<MapContextType>(defaultContext);

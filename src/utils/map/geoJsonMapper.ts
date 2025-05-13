@@ -101,46 +101,99 @@ export const calculateHaversineDistance = (lat1: number, lng1: number, lat2: num
   return R * c; // 미터 단위 거리
 };
 
-/**
- * 두 GeoJSON 노드 사이의 경로를 찾습니다
- * @param startNodeId 시작 노드 ID
- * @param endNodeId 종료 노드 ID
- * @param nodes 전체 노드 목록
- * @param links 전체 링크 목록
- * @returns 경로를 구성하는 노드 ID 배열
- */
+// 너비 우선 탐색(BFS)을 사용하여 두 GeoJSON 노드 사이의 경로를 찾습니다
 export const findPathBetweenNodes = (
   startNodeId: string,
   endNodeId: string,
   nodes: any[],
   links: any[]
 ): string[] => {
-  // 실제 경로 탐색 알고리즘은 복잡하므로 간단한 구현으로 대체
-  // 실제로는 다익스트라 또는 A* 알고리즘을 사용해야 함
-  console.log(`${startNodeId}에서 ${endNodeId}까지의 경로 탐색`);
-  
+  // 시작 노드와 종료 노드가 동일한 경우
+  if (startNodeId === endNodeId) {
+    return [startNodeId];
+  }
+
+  console.log(`${startNodeId}에서 ${endNodeId}까지의 경로 탐색 시작`);
+
   // 노드 연결 정보 구성
   const nodeConnections: Record<string, string[]> = {};
+  const linkMap: Record<string, any> = {};
   
+  // 링크 정보 구성 및 연결 지도 생성
   links.forEach(link => {
     try {
       const fromNode = link.properties?.from_node;
       const toNode = link.properties?.to_node;
       
       if (fromNode && toNode) {
+        // 연결 정보 기록
         if (!nodeConnections[fromNode]) nodeConnections[fromNode] = [];
         if (!nodeConnections[toNode]) nodeConnections[toNode] = [];
         
         nodeConnections[fromNode].push(toNode);
-        nodeConnections[toNode].push(fromNode); // 양방향 연결 가정
+        nodeConnections[toNode].push(fromNode); // 양방향 연결
+        
+        // 링크 정보 저장
+        const linkKey1 = `${fromNode}-${toNode}`;
+        const linkKey2 = `${toNode}-${fromNode}`;
+        linkMap[linkKey1] = link;
+        linkMap[linkKey2] = link; // 양방향 링크
       }
     } catch (error) {
       console.error('링크 처리 중 오류:', error);
     }
   });
+
+  // 경로가 존재하는지 확인
+  if (!nodeConnections[startNodeId] || !nodeConnections[endNodeId]) {
+    console.warn(`출발 또는 도착 노드가 연결되지 않았습니다: ${startNodeId}, ${endNodeId}`);
+    return [startNodeId, endNodeId]; // 연결 없음, 직접 연결로 가정
+  }
+
+  // BFS 탐색을 위한 큐
+  const queue: string[] = [startNodeId];
+  const visited: Record<string, boolean> = { [startNodeId]: true };
+  const parent: Record<string, string> = {};
   
-  // 현재는 임시로 두 노드만 포함하는 경로 반환
-  return [startNodeId, endNodeId];
+  // BFS 수행
+  let pathFound = false;
+  
+  while (queue.length > 0 && !pathFound) {
+    const currentNodeId = queue.shift()!;
+    
+    // 현재 노드의 연결된 노드들을 탐색
+    for (const neighborId of nodeConnections[currentNodeId] || []) {
+      // 방문하지 않은 노드라면
+      if (!visited[neighborId]) {
+        visited[neighborId] = true;
+        parent[neighborId] = currentNodeId;
+        queue.push(neighborId);
+        
+        // 목적지에 도달했다면 탐색 종료
+        if (neighborId === endNodeId) {
+          pathFound = true;
+          break;
+        }
+      }
+    }
+  }
+  
+  // 경로 재구성
+  if (pathFound) {
+    const path: string[] = [endNodeId];
+    let current = endNodeId;
+    
+    while (current !== startNodeId) {
+      current = parent[current];
+      path.unshift(current);
+    }
+    
+    console.log(`경로 찾음 (${path.length} 노드): ${path.join(' -> ')}`);
+    return path;
+  } else {
+    console.warn(`${startNodeId}에서 ${endNodeId}까지 경로를 찾을 수 없습니다.`);
+    return [startNodeId, endNodeId]; // 경로가 없으면 직접 연결
+  }
 };
 
 /**
@@ -166,4 +219,13 @@ export const getLinksForPath = (path: string[], links: any[]): any[] => {
   }
   
   return pathLinks;
+};
+
+// 특정 경로 강조를 위한 스타일 생성
+export const createPathStyle = (isHighlighted: boolean = false) => {
+  return {
+    strokeColor: isHighlighted ? '#FF3B30' : '#4CD964',
+    strokeWeight: isHighlighted ? 5 : 3,
+    strokeOpacity: isHighlighted ? 0.9 : 0.7
+  };
 };

@@ -43,6 +43,18 @@ const Map: React.FC<MapProps> = ({
     }
   }, [isGeoJsonLoaded, showGeoJson]);
 
+  // 일정을 선택했을 때 GeoJSON 자동 활성화
+  useEffect(() => {
+    if (isGeoJsonLoaded && itinerary && selectedDay !== null) {
+      console.log("일정이 선택되었습니다. GeoJSON 표시를 활성화합니다.");
+      // toggleGeoJsonVisibility를 직접 호출하면 상태가 토글되기 때문에
+      // 이미 표시 중이라면 아무 작업도 하지 않도록 조건문 추가
+      if (!showGeoJson) {
+        toggleGeoJsonVisibility();
+      }
+    }
+  }, [itinerary, selectedDay, isGeoJsonLoaded, showGeoJson, toggleGeoJsonVisibility]);
+
   // 장소와 GeoJSON 매핑 검사
   useEffect(() => {
     if (isGeoJsonLoaded && places.length > 0 && isMapInitialized) {

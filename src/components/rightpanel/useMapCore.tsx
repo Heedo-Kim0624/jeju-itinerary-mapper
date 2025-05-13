@@ -1,3 +1,4 @@
+
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { useMapResize } from '@/hooks/useMapResize';
 import { useMapInitialization } from '@/hooks/map/useMapInitialization';
@@ -60,6 +61,9 @@ export const useMapCore = () => {
         첫번째링크: links.length > 0 ? links[0].properties : '없음'
       });
       toast.success("경로 데이터가 로드되었습니다");
+      
+      // GeoJSON 데이터가 로드되면 자동으로 표시
+      setShowGeoJson(true);
     } else {
       console.warn("빈 GeoJSON 데이터가 로드되었습니다");
       // 최대 3번까지 재시도
@@ -139,6 +143,9 @@ export const useMapCore = () => {
             // 하이라이트할 링크가 있으면 시각화
             if (pathLinks.length > 0) {
               console.log(`${pathLinks.length}개 링크로 경로 시각화`);
+              
+              // 경로를 지도에 시각화
+              visualizePathLinks(pathLinks);
             } else {
               console.warn(`경로를 구성하는 링크를 찾을 수 없습니다.`);
             }
@@ -151,6 +158,82 @@ export const useMapCore = () => {
       console.error("경로 하이라이트 오류:", error);
     }
   }, [map, isGeoJsonLoaded, mapPlacesWithGeoNodes]);
+  
+  // 특정 장소의 경로를 시각화하는 새로운 함수 (숙소에서 특정 장소까지)
+  const showRouteForPlaceIndex = useCallback((placeIndex: number, itineraryDay: ItineraryDay) => {
+    if (!map || !isGeoJsonLoaded || !itineraryDay) {
+      console.warn("지도나 GeoJSON이 로드되지 않았거나 일정이 없습니다");
+      return;
+    }
+    
+    try {
+      const places = mapPlacesWithGeoNodes(itineraryDay.places);
+      
+      // 유효한 인덱스인지 확인
+      if (placeIndex < 0 || placeIndex >= places.length) {
+        console.warn("유효하지 않은 장소 인덱스:", placeIndex);
+        return;
+      }
+      
+      // 숙소가 첫 번째 장소라고 가정 (인덱스 0)
+      const accommodation = places[0];
+      const selectedPlace = places[placeIndex];
+      
+      console.log(`숙소 ${accommodation.name}에서 ${selectedPlace.name}까지의 경로 시각화`);
+      
+      // GeoJSON 노드 ID가 있는지 확인
+      if (accommodation.geoNodeId && selectedPlace.geoNodeId) {
+        // 경로 찾기
+        const path = findPathBetweenNodes(
+          accommodation.geoNodeId,
+          selectedPlace.geoNodeId,
+          geoJsonNodes.current,
+          geoJsonLinks.current
+        );
+        
+        // 경로 정보 로깅
+        console.log(`경로 노드: ${path.join(' -> ')}`);
+        
+        // 경로상의 링크 찾기
+        const pathLinks = getLinksForPath(path, geoJsonLinks.current);
+        
+        // 경로 시각화
+        if (pathLinks.length > 0) {
+          console.log(`선택한 장소까지의 경로 (${pathLinks.length}개 링크) 시각화`);
+          
+          // 지도에 GeoJSON을 표시하도록 설정
+          setShowGeoJson(true);
+          
+          // 경로를 선명하게 표시 (직접 구현 필요)
+          visualizePathLinks(pathLinks);
+          
+          // 해당 장소로 지도 중심 이동
+          panTo({ lat: selectedPlace.y, lng: selectedPlace.x });
+          
+          toast.success(`${selectedPlace.name}까지의 경로가 표시되었습니다`);
+        } else {
+          toast.error("경로를 표시할 수 없습니다");
+        }
+      } else {
+        toast.warn("장소와 도로 네트워크의 매핑 정보가 없습니다");
+        console.warn(`장소의 GeoJSON 노드 ID가 없습니다: 
+          숙소(${accommodation.name}): ${accommodation.geoNodeId}, 
+          선택 장소(${selectedPlace.name}): ${selectedPlace.geoNodeId}`);
+      }
+    } catch (error) {
+      console.error("경로 시각화 오류:", error);
+      toast.error("경로 시각화 중 오류가 발생했습니다");
+    }
+  }, [map, isGeoJsonLoaded, mapPlacesWithGeoNodes, panTo]);
+  
+  // 경로를 시각화하는 내부 함수 (구현해야 함)
+  const visualizePathLinks = (pathLinks: any[]) => {
+    // 구현 필요: GeoJSON 링크를 지도에 시각적으로 강조
+    console.log(`${pathLinks.length}개 링크를 시각화해야 합니다`);
+    
+    // 현재는 GeoJSON 전체를 보여주는 것으로 대체
+    setShowGeoJson(true);
+  };
 
   // 디버그용: GeoJSON 매칭 상태 검사
   const checkGeoJsonMapping = useCallback((places) => {
@@ -209,7 +292,8 @@ export const useMapCore = () => {
     handleGeoJsonLoaded,
     isGeoJsonLoaded,
     checkGeoJsonMapping,
-    mapPlacesWithGeoNodes
+    mapPlacesWithGeoNodes,
+    showRouteForPlaceIndex
   };
 };
 

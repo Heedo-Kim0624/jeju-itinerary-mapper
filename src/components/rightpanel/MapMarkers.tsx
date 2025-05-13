@@ -30,7 +30,8 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
     renderItineraryRoute,
     highlightSegment,
     isGeoJsonLoaded,
-    mapPlacesWithGeoNodes
+    mapPlacesWithGeoNodes,
+    showRouteForPlaceIndex
   } = useMapContext();
   
   const [infoWindows, setInfoWindows] = useState<any[]>([]);
@@ -50,11 +51,8 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
     if (itinerary && selectedDay !== null) {
       const currentDayItinerary = itinerary.find(day => day.day === selectedDay);
       if (currentDayItinerary) {
-        // 다음 장소 인덱스 계산 (마지막 장소면 첫번째 장소로)
-        const nextIndex = (index + 1) % currentDayItinerary.places.length;
-        
-        // 경로 하이라이트 호출
-        highlightSegment(index, nextIndex, currentDayItinerary);
+        // 선택된 장소에 대한 경로 표시
+        showRouteForPlaceIndex(index, currentDayItinerary);
       }
     }
     
@@ -62,7 +60,7 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
     if (onPlaceClick) {
       onPlaceClick(place, index);
     }
-  }, [itinerary, selectedDay, highlightSegment, onPlaceClick, isGeoJsonLoaded]);
+  }, [itinerary, selectedDay, onPlaceClick, isGeoJsonLoaded, showRouteForPlaceIndex]);
 
   // 종속성 배열에 모든 관련 props 추가하여 변경 시 재렌더링
   useEffect(() => {
@@ -133,7 +131,8 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
         // 카테고리별로 색상을 다르게 표시
         const markers = addMarkers(placesToDisplay, { 
           isItinerary: true,
-          useColorByCategory: true
+          useColorByCategory: true,
+          onClick: handleMarkerClick
         });
         
         setMarkerRefs(markers);
@@ -183,7 +182,11 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
         mapPlacesWithGeoNodes(selectedPlaces) : 
         selectedPlaces;
         
-      const markers = addMarkers(placesToDisplay, { highlight: true, useColorByCategory: true });
+      const markers = addMarkers(placesToDisplay, {
+        highlight: true,
+        useColorByCategory: true,
+        onClick: handleMarkerClick
+      });
       setMarkerRefs(markers);
     } else if (places && places.length > 0) {
       // 일반 장소 리스트 표시
