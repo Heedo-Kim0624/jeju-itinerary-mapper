@@ -4,10 +4,24 @@ import { Place, SelectedPlace, SchedulePayload } from '@/types/supabase';
 import { useMapContext } from '@/components/rightpanel/MapContext';
 import { toast } from 'sonner';
 import { useTripDetails } from './use-trip-details';
+import { prepareSchedulePayload } from '@/utils/candidatePlacesUtil';
 
 export const useSelectedPlaces = () => {
   const [selectedPlaces, setSelectedPlaces] = useState<Place[]>([]);
   const [selectedPlacesByCategory, setSelectedPlacesByCategory] = useState<{
+    '숙소': Place[],
+    '관광지': Place[],
+    '음식점': Place[],
+    '카페': Place[],
+  }>({
+    '숙소': [],
+    '관광지': [],
+    '음식점': [],
+    '카페': [],
+  });
+
+  // 카테고리별 추천 장소 저장
+  const [recommendedPlacesByCategory, setRecommendedPlacesByCategory] = useState<{
     '숙소': Place[],
     '관광지': Place[],
     '음식점': Place[],
@@ -127,41 +141,29 @@ export const useSelectedPlaces = () => {
     panTo({ lat: place.y, lng: place.x });
   };
 
-  const prepareSchedulePayload = (
-    places: Place[], 
+  // 추천 장소 목록 업데이트 함수
+  const updateRecommendedPlaceList = (category: string, places: Place[]) => {
+    if (category === '숙소' || category === '관광지' || category === '음식점' || category === '카페') {
+      setRecommendedPlacesByCategory(prev => ({
+        ...prev,
+        [category]: places
+      }));
+      
+      console.log(`${category} 추천 장소 목록 업데이트: ${places.length}개`);
+    }
+  };
+
+  // 기존 함수를 확장하여 후보 장소 보완 로직 추가
+  const prepareSchedulePayloadWithCandidates = (
     dateTime: { start_datetime: string; end_datetime: string } | null
   ): SchedulePayload | null => {
-    if (!dateTime) {
-      toast.error('여행 날짜와 시간을 선택해주세요');
-      return null;
-    }
-
-    // 선택된 장소를 처리
-    const selected: SelectedPlace[] = places
-      .filter(p => p.isSelected)
-      .map(p => ({ id: parseInt(p.id, 10), name: p.name }));
-
-    // 추천되었지만 선택되지 않은 장소를 후보 장소로 처리
-    const candidates: SelectedPlace[] = places
-      .filter(p => p.isRecommended && !p.isSelected)
-      .map(p => ({ id: parseInt(p.id, 10), name: p.name }));
-
-    // 후보 장소가 제대로 처리되는지 로깅
-    console.log('일정 생성 데이터:', {
-      선택된_장소: selected.length,
-      후보_장소: candidates.length,
-      날짜: dateTime
-    });
-
-    if (candidates.length > 0) {
-      console.log('후보 장소 목록:', candidates);
-    }
-
-    return {
-      selected_places: selected,
-      candidate_places: candidates,
-      ...dateTime
-    };
+    // 새로운 유틸리티 함수 사용
+    return prepareSchedulePayload(
+      selectedPlacesByCategory,
+      recommendedPlacesByCategory,
+      tripDuration,
+      dateTime
+    );
   };
 
   return {
@@ -171,7 +173,9 @@ export const useSelectedPlaces = () => {
     handleRemovePlace,
     handleViewOnMap,
     allCategoriesSelected,
-    prepareSchedulePayload,
-    isAccommodationLimitReached
+    prepareSchedulePayload: prepareSchedulePayloadWithCandidates,
+    isAccommodationLimitReached,
+    updateRecommendedPlaceList,
+    recommendedPlacesByCategory
   };
 };

@@ -7,7 +7,7 @@ export const loadNaverMaps = (): Promise<void> => {
   return new Promise((resolve, reject) => {
     // 이미 로드되어 있고, Map 객체도 사용 가능하고 GeoJSON 서브모듈도 사용 가능한 경우 바로 resolve
     if (window.naver && window.naver.maps && window.naver.maps.Map && 
-        window.naver.maps.drawing && typeof window.naver.maps.drawing.JSONReader === 'function') {
+        window.naver.maps.drawing) {
       console.log("Naver Maps API와 drawing 서브모듈이 이미 완전히 로드되어 있습니다.");
       resolve();
       return;
@@ -18,7 +18,7 @@ export const loadNaverMaps = (): Promise<void> => {
       console.log("Naver Maps 스크립트는 로드되었으나 초기화 대기 중...");
       const checkInterval = setInterval(() => {
         if (window.naver?.maps?.Map) {
-          if (window.naver.maps.drawing && typeof window.naver.maps.drawing.JSONReader === 'function') {
+          if (window.naver.maps.drawing) {
             clearInterval(checkInterval);
             console.log("Naver Maps API와 drawing 서브모듈 초기화 완료");
             resolve();
@@ -38,7 +38,7 @@ export const loadNaverMaps = (): Promise<void> => {
           console.log("Naver Maps API 초기화 완료 (타임아웃 후)");
           
           // drawing 서브모듈이 없는 경우, 서브모듈만 다시 로드 시도
-          if (!(window.naver.maps.drawing && typeof window.naver.maps.drawing.JSONReader === 'function')) {
+          if (!window.naver.maps.drawing) {
             console.warn("drawing 서브모듈이 로드되지 않았습니다. 서브모듈만 추가로 로드합니다.");
             loadDrawingSubmodule();
           }
@@ -73,7 +73,7 @@ export const loadNaverMaps = (): Promise<void> => {
       // 네이버 지도 API가 로드된 후 초기화가 완료될 때까지 대기
       const checkInterval = setInterval(() => {
         if (window.naver?.maps?.Map) {
-          if (window.naver.maps.drawing && typeof window.naver.maps.drawing.JSONReader === 'function') {
+          if (window.naver.maps.drawing) {
             clearInterval(checkInterval);
             console.log("Naver Maps API와 drawing 서브모듈 초기화 완료");
             resolve();
@@ -89,7 +89,7 @@ export const loadNaverMaps = (): Promise<void> => {
         clearInterval(checkInterval);
         if (window.naver?.maps?.Map) {
           // drawing 서브모듈이 없는 경우, 서브모듈만 다시 로드 시도
-          if (!(window.naver.maps.drawing && typeof window.naver.maps.drawing.JSONReader === 'function')) {
+          if (!window.naver.maps.drawing) {
             console.warn("drawing 서브모듈이 로드되지 않았습니다. 서브모듈만 추가로 로드합니다.");
             loadDrawingSubmodule();
           }
