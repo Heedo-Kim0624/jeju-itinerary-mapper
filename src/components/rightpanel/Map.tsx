@@ -1,11 +1,12 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useMapContext } from './MapContext';
 import MapMarkers from './MapMarkers';
 import MapLoadingOverlay from './MapLoadingOverlay';
 import GeoJsonLayer from './GeoJsonLayer';
 import MapControls from './MapControls';
 import type { Place, ItineraryDay } from '@/types/supabase';
+import { toast } from 'sonner';
 
 interface MapProps {
   places: Place[];
@@ -30,8 +31,16 @@ const Map: React.FC<MapProps> = ({
     isMapError,
     showGeoJson,
     toggleGeoJsonVisibility,
-    handleGeoJsonLoaded
+    handleGeoJsonLoaded,
+    isGeoJsonLoaded
   } = useMapContext();
+
+  // GeoJSON이 로드되면 사용자에게 알림
+  useEffect(() => {
+    if (isGeoJsonLoaded && showGeoJson) {
+      toast.success('경로 데이터가 지도에 표시됩니다');
+    }
+  }, [isGeoJsonLoaded, showGeoJson]);
 
   // 장소 클릭 핸들러
   const handlePlaceClick = (place: Place, index: number) => {
@@ -64,6 +73,7 @@ const Map: React.FC<MapProps> = ({
         showGeoJson={showGeoJson}
         onToggleGeoJson={toggleGeoJsonVisibility}
         isMapInitialized={isMapInitialized}
+        isGeoJsonLoaded={isGeoJsonLoaded}
       />
       
       <MapLoadingOverlay
