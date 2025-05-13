@@ -103,8 +103,8 @@ export const useLeftPanel = () => {
       true // 기존 선택 초기화
     );
     
-    // 결과 패널 표시
-    uiVisibility.setShowCategoryResult(true);
+    // 결과 패널 표시 (수정: Boolean 타입으로 변경)
+    uiVisibility.setShowCategoryResult(category as any);
   };
 
   // 카테고리별 패널 뒤로가기 핸들러
@@ -117,8 +117,14 @@ export const useLeftPanel = () => {
       categorySelection.handlePanelBack();
     }
     
-    // 결과 패널 닫기
-    uiVisibility.setShowCategoryResult(false);
+    // 결과 패널 닫기 (수정: null로 변경)
+    uiVisibility.setShowCategoryResult(null as any);
+  };
+
+  // 결과 패널 닫기 핸들러 (추가)
+  const handleResultClose = () => {
+    categorySelection.handlePanelBack();
+    uiVisibility.setShowCategoryResult(null as any);
   };
 
   return {
@@ -128,7 +134,10 @@ export const useLeftPanel = () => {
     categorySelection,
     placesManagement,
     tripDetails,
-    uiVisibility,
+    uiVisibility: {
+      ...uiVisibility,
+      handleResultClose // 결과 패널 닫기 추가
+    },
     itineraryManagement,
     keywordsAndInputs: {
       directInputValues, 

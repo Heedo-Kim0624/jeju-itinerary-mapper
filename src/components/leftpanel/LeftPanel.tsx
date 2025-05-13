@@ -51,13 +51,7 @@ const LeftPanel: React.FC = () => {
           onViewOnMap={placesManagement.handleViewOnMap}
           allCategoriesSelected={placesManagement.allCategoriesSelected}
           dates={tripDetails.dates}
-          onCreateItinerary={(selected, dates) => 
-            itineraryManagement.handleCreateItinerary(
-              selected, 
-              dates, 
-              placesManagement.prepareSchedulePayload
-            )
-          }
+          onCreateItinerary={itineraryManagement.handleCreateItinerary}
           itinerary={itineraryManagement.itinerary}
           selectedItineraryDay={itineraryManagement.selectedItineraryDay}
           onSelectDay={itineraryManagement.handleSelectItineraryDay}
@@ -68,15 +62,35 @@ const LeftPanel: React.FC = () => {
             hasSelectedDates={!!tripDetails.dates}
             onCategoryClick={categorySelection.handleCategoryButtonClick}
             regionConfirmed={regionSelection.regionConfirmed}
-            categoryStepIndex={categorySelection.categoryStepIndex}
+            categoryStepIndex={categorySelection.categoryStepIndex || 0}
             activeMiddlePanelCategory={categorySelection.activeMiddlePanelCategory}
             confirmedCategories={categorySelection.confirmedCategories}
             selectedKeywordsByCategory={categorySelection.selectedKeywordsByCategory}
             toggleKeyword={categorySelection.toggleKeyword}
-            directInputValues={keywordsAndInputs.directInputValues}
-            onDirectInputChange={keywordsAndInputs.onDirectInputChange}
-            onConfirmCategory={keywordsAndInputs.handleConfirmByCategory}
-            handlePanelBack={categorySelection.handlePanelBackByCategory}
+            directInputValues={{
+              accomodation: keywordsAndInputs.directInputValues.숙소,
+              landmark: keywordsAndInputs.directInputValues.관광지,
+              restaurant: keywordsAndInputs.directInputValues.음식점,
+              cafe: keywordsAndInputs.directInputValues.카페
+            }}
+            onDirectInputChange={{
+              accomodation: (value) => keywordsAndInputs.onDirectInputChange('숙소', value),
+              landmark: (value) => keywordsAndInputs.onDirectInputChange('관광지', value),
+              restaurant: (value) => keywordsAndInputs.onDirectInputChange('음식점', value),
+              cafe: (value) => keywordsAndInputs.onDirectInputChange('카페', value)
+            }}
+            onConfirmCategory={{
+              accomodation: () => keywordsAndInputs.handleConfirmByCategory('숙소'),
+              landmark: () => keywordsAndInputs.handleConfirmByCategory('관광지'),
+              restaurant: () => keywordsAndInputs.handleConfirmByCategory('음식점'),
+              cafe: () => keywordsAndInputs.handleConfirmByCategory('카페')
+            }}
+            handlePanelBack={{
+              accomodation: () => keywordsAndInputs.handlePanelBackByCategory('숙소'),
+              landmark: () => keywordsAndInputs.handlePanelBackByCategory('관광지'),
+              restaurant: () => keywordsAndInputs.handlePanelBackByCategory('음식점'),
+              cafe: () => keywordsAndInputs.handlePanelBackByCategory('카페')
+            }}
             isCategoryButtonEnabled={categorySelection.isCategoryButtonEnabled}
           />
         </LeftPanelContainer>
@@ -101,7 +115,6 @@ const LeftPanel: React.FC = () => {
         onClose={uiVisibility.handleResultClose}
         onSelectPlace={placesManagement.handleSelectPlace}
         selectedPlaces={placesManagement.selectedPlaces}
-        onPlacesLoaded={itineraryManagement.updateAvailablePlaces}
       />
     </div>
   );
