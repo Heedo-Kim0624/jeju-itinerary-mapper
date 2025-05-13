@@ -18,7 +18,6 @@ interface CategoryResultPanelProps {
   onSelectPlace: (place: Place, checked: boolean) => void;
   isPlaceSelected: (id: string | number) => boolean;
   isOpen: boolean;
-  updateRecommendedPlaceList?: (category: string, places: Place[]) => void;
 }
 
 const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
@@ -28,8 +27,7 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
   onClose,
   onSelectPlace,
   isPlaceSelected,
-  isOpen,
-  updateRecommendedPlaceList
+  isOpen
 }) => {
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const { panTo, addMarkers, clearMarkersAndUiElements } = useMapContext();
@@ -58,14 +56,8 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
       
       // Log successful places loaded
       console.log(`장소 로딩 완료: 추천 장소 ${recommendedPlaces.length}개, 주변 장소 ${normalPlaces.length}개`);
-      
-      // 추천 장소 목록을 상위 컴포넌트에 공유 (후보 장소 보완 기능을 위해)
-      if (updateRecommendedPlaceList) {
-        const allPlaces = [...recommendedPlaces, ...normalPlaces];
-        updateRecommendedPlaceList(category, allPlaces);
-      }
     }
-  }, [recommendedPlaces, normalPlaces, safeRegions, clearMarkersAndUiElements, panTo, addMarkers, category, updateRecommendedPlaceList]);
+  }, [recommendedPlaces, normalPlaces, safeRegions, clearMarkersAndUiElements, panTo, addMarkers]);
 
   const handleViewDetails = (place: Place) => {
     setSelectedPlace(place);

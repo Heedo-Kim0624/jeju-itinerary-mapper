@@ -25,7 +25,7 @@ interface MapContextType {
   clearAllRoutes: () => void;
   handleGeoJsonLoaded: (nodes: any[], links: any[]) => void;
   highlightSegment: (fromIndex: number, toIndex: number, itineraryDay?: ItineraryDay) => void;
-  clearPreviousHighlightedPath: () => void;
+  clearPreviousHighlightedPath: () => void;  // 추가된 함수
   isGeoJsonLoaded: boolean;
   checkGeoJsonMapping: (places: Place[]) => {
     totalPlaces: number;
@@ -55,7 +55,7 @@ const defaultContext: MapContextType = {
   clearAllRoutes: () => {},
   handleGeoJsonLoaded: () => {},
   highlightSegment: () => {},
-  clearPreviousHighlightedPath: () => {},
+  clearPreviousHighlightedPath: () => {},  // 추가된 함수
   isGeoJsonLoaded: false,
   checkGeoJsonMapping: () => ({ 
     totalPlaces: 0, 

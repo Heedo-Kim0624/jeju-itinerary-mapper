@@ -63,7 +63,7 @@ const JejuOSMLayer: React.FC<JejuOSMLayerProps> = ({ map }) => {
       }
       
       console.error("JejuOSMLayer: drawing 모듈 로드 타임아웃 - 10초 초과");
-      toast.warning("지도 레이어 로드에 시간이 걸립니다. 대안 방식으로 시도합니다.");
+      toast.error("지도 레이어를 불러오는데 실패했습니다.");
       
       // 타임아웃 발생해도 일반 GeoJSON으로 시도
       tryFallbackMethod();
@@ -89,24 +89,13 @@ const JejuOSMLayer: React.FC<JejuOSMLayerProps> = ({ map }) => {
         nodeResponse.json()
       ]);
       
-      console.log("JejuOSMLayer: GeoJSON 파일 로드 완료, Data API 직접 처리 시도");
+      console.log("JejuOSMLayer: GeoJSON 파일 로드 완료, 직접 처리 시도");
       
-      // 네이버 지도의 Data API 사용 (drawing 대신 안전한 대안)
+      // 네이버 지도의 GeoJSON 처리 기능 사용
       if (window.naver?.maps?.Data) {
-        // 기존 레이어 클리어
-        if (layersRef.current.length > 0) {
-          layersRef.current.forEach(layer => {
-            if (layer && typeof layer.setMap === 'function') {
-              layer.setMap(null);
-            }
-          });
-          layersRef.current = [];
-        }
-        
         const linkLayer = new window.naver.maps.Data();
         const nodeLayer = new window.naver.maps.Data();
         
-        // GeoJSON 특성 추가
         linkData.features.forEach((feature: any) => {
           linkLayer.add(feature);
         });
@@ -115,16 +104,13 @@ const JejuOSMLayer: React.FC<JejuOSMLayerProps> = ({ map }) => {
           nodeLayer.add(feature);
         });
         
-        // 레이어 지도에 추가
         linkLayer.setMap(map);
-        nodeLayer.setMap(null); // 노드는 너무 많아서 숨김 (필요시 활성화)
+        nodeLayer.setMap(map);
         
-        // 스타일 설정
         linkLayer.setStyle({
-          strokeColor: '#aaaaaa', // 연한 회색
+          strokeColor: '#777',
           strokeWeight: 1.5,
-          strokeOpacity: 0.4,
-          clickable: false
+          strokeOpacity: 0.5
         });
         
         nodeLayer.setStyle({
@@ -132,13 +118,11 @@ const JejuOSMLayer: React.FC<JejuOSMLayerProps> = ({ map }) => {
           fillOpacity: 0.1,
           radius: 2,
           strokeWeight: 0,
-          strokeColor: 'transparent',
-          clickable: false
+          strokeColor: 'transparent'
         });
         
         layersRef.current.push(linkLayer, nodeLayer);
         setIsLoaded(true);
-        console.log("JejuOSMLayer: Data API를 통한 대안 방식 로드 성공");
       }
     } catch (error) {
       console.error("JejuOSMLayer: 대안 방법 실패", error);
@@ -183,7 +167,7 @@ const JejuOSMLayer: React.FC<JejuOSMLayerProps> = ({ map }) => {
         setIsLoaded(false);
       }
     };
-  }, [map, isLoaded]);
+  }, [map]);
   
   // drawing 모듈이 준비되면 GeoJSON 로드
   useEffect(() => {
@@ -208,8 +192,7 @@ const JejuOSMLayer: React.FC<JejuOSMLayerProps> = ({ map }) => {
         
         try {
           // 네이버 지도 drawing 기능 사용해 GeoJSON 렌더링
-          // 중요: JSONReader는 new로 생성하는 생성자가 아니라 함수임
-          const reader = window.naver.maps.drawing.JSONReader(geojson, style);
+          const reader = new window.naver.maps.drawing.JSONReader(geojson, style);
           const layer = reader.read();
           
           // 모든 객체를 지도에 추가
@@ -222,7 +205,7 @@ const JejuOSMLayer: React.FC<JejuOSMLayerProps> = ({ map }) => {
           
           console.log(`JejuOSMLayer: ${url}의 ${layer.length}개 요소를 지도에 추가함`);
         } catch (error) {
-          console.error(`JejuOSMLayer: JSONReader 처리 오류 (${url}):`, error);
+          console.error(`JejuOSMLayer: GeoJSON 처리 오류 (${url}):`, error);
           // 오류 발생 시 대안 방법 시도
           tryFallbackMethod();
         }
@@ -231,28 +214,28 @@ const JejuOSMLayer: React.FC<JejuOSMLayerProps> = ({ map }) => {
       }
     };
 
-    // 스타일 정의 - 훨씬 연하게 설정
+    // 스타일 정의
     const linkStyle = {
-      strokeColor: '#aaaaaa', // 더 연한 회색
-      strokeWeight: 1.2,      // 더 얇게
-      strokeOpacity: 0.4,     // 더 투명하게
-      clickable: false        // 클릭 이벤트 비활성화
+      strokeColor: '#777', // 더 연한 색상으로 변경
+      strokeWeight: 1.5,   // 더 얇게
+      strokeOpacity: 0.5,  // 더 투명하게
+      clickable: false     // 클릭 이벤트 비활성화
     };
 
     const nodeStyle = {
       fillColor: '#ff0000',
-      fillOpacity: 0.1,       // 매우 투명하게
-      radius: 2,              // 더 작게
-      strokeWeight: 0,        // 테두리 없애기
+      fillOpacity: 0.1,    // 매우 투명하게
+      radius: 2,           // 더 작게
+      strokeWeight: 0,     // 테두리 없애기
       strokeColor: 'transparent',
-      clickable: false        // 클릭 이벤트 비활성화
+      clickable: false     // 클릭 이벤트 비활성화
     };
 
     // GeoJSON 로드
     loadGeoJson('/data/LINK_JSON.geojson', linkStyle);
-    // 노드는 많아서 렌더링 안함
-    // loadGeoJson('/data/NODE_JSON.geojson', nodeStyle);
+    loadGeoJson('/data/NODE_JSON.geojson', nodeStyle);
     setIsLoaded(true);
+    
   }, [isDrawingModuleReady, map, isLoaded]);
 
   return null;
