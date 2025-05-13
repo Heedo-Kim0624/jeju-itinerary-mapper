@@ -1,49 +1,55 @@
 
-import React from 'react';
+import { useEffect } from 'react';
+import { useCategorySelection } from '@/hooks/use-category-selection';
+import { usePlaces } from '@/hooks/use-places';
+import { useMapContext } from '@/components/rightpanel/MapContext';
+import { useState } from 'react';
 import CategoryResultPanel from '../middlepanel/CategoryResultPanel';
 import { Place } from '@/types/supabase';
-import type { CategoryName } from '@/utils/categoryUtils';
 
 interface CategoryResultHandlerProps {
-  showCategoryResult: CategoryName | null;
   selectedRegions: string[];
   selectedKeywordsByCategory: Record<string, string[]>;
   onClose: () => void;
-  onSelectPlace: (place: Place, checked: boolean, category: string | null) => void;
-  selectedPlaces: Place[];
+  onSelectPlace: (place: any, checked: boolean, category: string) => void;
+  selectedPlaces: any[];
+  showCategoryResult: boolean;
+  onPlacesLoaded?: (category: string, places: Place[]) => void;
 }
 
 const CategoryResultHandler: React.FC<CategoryResultHandlerProps> = ({
-  showCategoryResult,
   selectedRegions,
   selectedKeywordsByCategory,
   onClose,
   onSelectPlace,
-  selectedPlaces
+  selectedPlaces,
+  showCategoryResult,
+  onPlacesLoaded
 }) => {
-  if (!showCategoryResult) return null;
+  const { activeMiddlePanelCategory, handlePanelBack } = useCategorySelection();
   
-  const currentCategory = showCategoryResult;
-  const selectedKeywords = selectedKeywordsByCategory[currentCategory] || [];
-  const isPlaceSelected = (id: string | number) => 
-    selectedPlaces.some(p => p.id === id);
-
-  const handlePlaceSelection = (place: Place, checked: boolean) => {
-    // 카테고리 정보를 함께 전달하여 장소 선택 처리
-    onSelectPlace(place, checked, currentCategory);
+  // 선택된 장소의 ID 매핑
+  const isPlaceSelected = (placeId: string | number) => {
+    return selectedPlaces.some(place => place.id === placeId);
   };
 
-  return (
+  return showCategoryResult && activeMiddlePanelCategory ? (
     <CategoryResultPanel
-      isOpen={!!showCategoryResult}
-      onClose={onClose}
-      category={currentCategory}
+      category={activeMiddlePanelCategory as '숙소' | '관광지' | '음식점' | '카페'}
       regions={selectedRegions}
-      keywords={selectedKeywords}
-      onSelectPlace={handlePlaceSelection}
+      keywords={selectedKeywordsByCategory[activeMiddlePanelCategory] || []}
+      onClose={() => {
+        handlePanelBack();
+        onClose();
+      }}
+      onSelectPlace={(place, checked) => 
+        onSelectPlace(place, checked, activeMiddlePanelCategory)
+      }
       isPlaceSelected={isPlaceSelected}
+      isOpen={showCategoryResult}
+      onDataLoaded={onPlacesLoaded}
     />
-  );
+  ) : null;
 };
 
 export default CategoryResultHandler;

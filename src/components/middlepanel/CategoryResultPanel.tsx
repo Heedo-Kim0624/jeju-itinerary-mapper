@@ -18,6 +18,7 @@ interface CategoryResultPanelProps {
   onSelectPlace: (place: Place, checked: boolean) => void;
   isPlaceSelected: (id: string | number) => boolean;
   isOpen: boolean;
+  onDataLoaded?: (category: string, places: Place[]) => void;
 }
 
 const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
@@ -27,7 +28,8 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
   onClose,
   onSelectPlace,
   isPlaceSelected,
-  isOpen
+  isOpen,
+  onDataLoaded
 }) => {
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const { panTo, addMarkers, clearMarkersAndUiElements } = useMapContext();
@@ -35,8 +37,13 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
   // 안전하게 regions 배열을 처리 - regions가 undefined일 경우 빈 배열 사용
   const safeRegions = Array.isArray(regions) ? regions : [];
   
-  // useCategoryResults에 regions 대신 safeRegions 전달
-  const { isLoading, error, recommendedPlaces, normalPlaces } = useCategoryResults(category, keywords, safeRegions);
+  // useCategoryResults에 onDataLoaded 콜백 추가
+  const { isLoading, error, recommendedPlaces, normalPlaces, allPlaces } = useCategoryResults(
+    category, 
+    keywords, 
+    safeRegions,
+    onDataLoaded
+  );
 
   useEffect(() => {
     clearMarkersAndUiElements();

@@ -51,7 +51,13 @@ const LeftPanel: React.FC = () => {
           onViewOnMap={placesManagement.handleViewOnMap}
           allCategoriesSelected={placesManagement.allCategoriesSelected}
           dates={tripDetails.dates}
-          onCreateItinerary={itineraryManagement.handleCreateItinerary}
+          onCreateItinerary={(selected, dates) => 
+            itineraryManagement.handleCreateItinerary(
+              selected, 
+              dates, 
+              placesManagement.prepareSchedulePayload
+            )
+          }
           itinerary={itineraryManagement.itinerary}
           selectedItineraryDay={itineraryManagement.selectedItineraryDay}
           onSelectDay={itineraryManagement.handleSelectItineraryDay}
@@ -71,7 +77,7 @@ const LeftPanel: React.FC = () => {
             onDirectInputChange={keywordsAndInputs.onDirectInputChange}
             onConfirmCategory={keywordsAndInputs.handleConfirmByCategory}
             handlePanelBack={categorySelection.handlePanelBackByCategory}
-            isCategoryButtonEnabled={() => true}
+            isCategoryButtonEnabled={categorySelection.isCategoryButtonEnabled}
           />
         </LeftPanelContainer>
       )}
@@ -89,12 +95,13 @@ const LeftPanel: React.FC = () => {
       />
 
       <CategoryResultHandler
-        showCategoryResult={uiVisibility.showCategoryResult}
+        showCategoryResult={!!uiVisibility.showCategoryResult}
         selectedRegions={regionSelection.selectedRegions}
         selectedKeywordsByCategory={categorySelection.selectedKeywordsByCategory}
         onClose={uiVisibility.handleResultClose}
         onSelectPlace={placesManagement.handleSelectPlace}
         selectedPlaces={placesManagement.selectedPlaces}
+        onPlacesLoaded={itineraryManagement.updateAvailablePlaces}
       />
     </div>
   );
