@@ -7,7 +7,7 @@ import { useMapNavigation } from '@/hooks/map/useMapNavigation';
 import { useMapItineraryRouting } from '@/hooks/map/useMapItineraryRouting';
 import { ItineraryDay } from '@/types/supabase';
 import { toast } from 'sonner';
-import { mapPlacesToNodes, findPathBetweenNodes, getLinksForPath } from '@/utils/map/geoJsonMapper';
+import { mapPlacesToNodes, findPathBetweenNodes, getLinksForPath, createPathStyle } from '@/utils/map/geoJsonMapper';
 
 export const useMapCore = () => {
   const mapContainer = useRef<HTMLDivElement>(null);
@@ -16,6 +16,7 @@ export const useMapCore = () => {
   const geoJsonNodes = useRef<any[]>([]);
   const geoJsonLinks = useRef<any[]>([]);
   const geoJsonRetryCount = useRef<number>(0);
+  const highlightedFeatures = useRef<any[]>([]);  // 하이라이트된 경로 추적용
   
   const {
     map,
@@ -103,7 +104,20 @@ export const useMapCore = () => {
     }
   }, [renderDayRoute, clearAllRoutes, mapPlacesWithGeoNodes]);
 
-  // 특정 장소 간의 경로만 하이라이트하는 기능
+  // 기존 하이라이트 경로 제거
+  const clearPreviousHighlightedPath = useCallback(() => {
+    if (highlightedFeatures.current.length > 0) {
+      console.log(`${highlightedFeatures.current.length}개의 하이라이트된 경로 제거`);
+      highlightedFeatures.current.forEach(feature => {
+        if (feature && typeof feature.setMap === 'function') {
+          feature.setMap(null);
+        }
+      });
+      highlightedFeatures.current = [];
+    }
+  }, []);
+
+  // 특정 장소 간의 경로만 하이라이트하는 기능 개선
   const highlightSegment = useCallback((fromIndex: number, toIndex: number, itineraryDay?: ItineraryDay) => {
     if (!map || !isGeoJsonLoaded) {
       console.warn(`지도나 GeoJSON이 준비되지 않았습니다. 지도: ${!!map}, GeoJSON: ${isGeoJsonLoaded}`);
@@ -111,9 +125,12 @@ export const useMapCore = () => {
     }
     
     try {
+      // 기존 하이라이트 경로 제거
+      clearPreviousHighlightedPath();
+      
       // 현재 일정이 있으면 해당 장소들 사이의 경로만 하이라이트
       if (itineraryDay && itineraryDay.places) {
-        const places = mapPlacesWithGeoNodes(itineraryDay.places);
+        const places = mapPlacesToNodes(itineraryDay.places);
         
         if (fromIndex >= 0 && fromIndex < places.length && 
             toIndex >= 0 && toIndex < places.length) {
@@ -143,20 +160,66 @@ export const useMapCore = () => {
             if (pathLinks.length > 0) {
               console.log(`${pathLinks.length}개 링크로 경로 시각화`);
               
-              // 경로를 지도에 시각화
-              visualizePathLinks(pathLinks);
+              // 경로를 지도에 시각화 - 네이버 지도 API 활용
+              if (window.naver && window.naver.maps && window.naver.maps.Polyline) {
+                pathLinks.forEach(link => {
+                  try {
+                    if (link.geometry && link.geometry.coordinates) {
+                      // 링크의 좌표를 네이버 지도 LatLng 객체로 변환
+                      const pathCoords = link.geometry.coordinates.map((coord: number[]) => 
+                        new window.naver.maps.LatLng(coord[1], coord[0])
+                      );
+                      
+                      // 폴리라인 생성 및 지도에 표시
+                      const polyline = new window.naver.maps.Polyline({
+                        map: map,
+                        path: pathCoords,
+                        strokeColor: '#FF3B30', // 붉은색 강조
+                        strokeWeight: 5,
+                        strokeOpacity: 0.8,
+                        strokeLineCap: 'round',
+                        strokeLineJoin: 'round',
+                        zIndex: 100 // 기존 경로보다 상위에 표시
+                      });
+                      
+                      highlightedFeatures.current.push(polyline);
+                    }
+                  } catch (err) {
+                    console.error("링크 폴리라인 생성 오류:", err);
+                  }
+                });
+                
+                // 성공 메시지
+                toast.success(`경로가 지도에 표시되었습니다`);
+                
+                // 경로를 포함하도록 지도 뷰 조정
+                try {
+                  const bounds = new window.naver.maps.LatLngBounds(
+                    new window.naver.maps.LatLng(fromPlace.y, fromPlace.x),
+                    new window.naver.maps.LatLng(toPlace.y, toPlace.x)
+                  );
+                  map.fitBounds(bounds, { top: 100, right: 100, bottom: 100, left: 100 });
+                } catch (e) {
+                  console.error("지도 뷰 조정 오류:", e);
+                }
+              } else {
+                console.error("네이버 지도 폴리라인 API를 사용할 수 없습니다.");
+              }
             } else {
               console.warn(`경로를 구성하는 링크를 찾을 수 없습니다.`);
+              toast.warning("경로를 표시할 수 없습니다");
             }
           } else {
             console.log(`장소의 GeoJSON 노드 ID가 없습니다: ${fromPlace.name}(${fromPlace.geoNodeId}), ${toPlace.name}(${toPlace.geoNodeId})`);
+            toast.warning("장소와 도로 네트워크의 매핑 정보가 없습니다");
           }
         }
       }
     } catch (error) {
       console.error("경로 하이라이트 오류:", error);
+      toast.error("경로 표시 중 오류가 발생했습니다");
     }
-  }, [map, isGeoJsonLoaded, mapPlacesWithGeoNodes]);
+  }, [map, isGeoJsonLoaded, mapPlacesToNodes, clearPreviousHighlightedPath]);
   
   // Special route visualization for a specific place (fixed toast.warn issue)
   const showRouteForPlaceIndex = useCallback((placeIndex: number, itineraryDay: ItineraryDay) => {
@@ -166,6 +229,9 @@ export const useMapCore = () => {
     }
     
     try {
+      // 기존 하이라이트 경로 제거
+      clearPreviousHighlightedPath();
+      
       const places = mapPlacesWithGeoNodes(itineraryDay.places);
       
       // 유효한 인덱스인지 확인
@@ -175,57 +241,23 @@ export const useMapCore = () => {
       }
       
       // 숙소가 첫 번째 장소라고 가정 (인덱스 0)
-      const accommodation = places[0];
+      const accommodation = places[0]; 
       const selectedPlace = places[placeIndex];
       
       console.log(`숙소 ${accommodation.name}에서 ${selectedPlace.name}까지의 경로 시각화`);
       
-      // GeoJSON 노드 ID가 있는지 확인
-      if (accommodation.geoNodeId && selectedPlace.geoNodeId) {
-        // 경로 찾기
-        const path = findPathBetweenNodes(
-          accommodation.geoNodeId,
-          selectedPlace.geoNodeId,
-          geoJsonNodes.current,
-          geoJsonLinks.current
-        );
-        
-        // 경로 정보 로깅
-        console.log(`경로 노드: ${path.join(' -> ')}`);
-        
-        // 경로상의 링크 찾기
-        const pathLinks = getLinksForPath(path, geoJsonLinks.current);
-        
-        // 경로 시각화
-        if (pathLinks.length > 0) {
-          console.log(`선택한 장소까지의 경로 (${pathLinks.length}개 링크) 시각화`);
-          
-          // 지도에 GeoJSON을 표시하도록 설정
-          setShowGeoJson(true);
-          
-          // 경로를 선명하게 표시 (직접 구현 필요)
-          visualizePathLinks(pathLinks);
-          
-          // 해당 장소로 지도 중심 이동
-          panTo({ lat: selectedPlace.y, lng: selectedPlace.x });
-          
-          toast.success(`${selectedPlace.name}까지의 경로가 표시되었습니다`);
-        } else {
-          toast.error("경로를 표시할 수 없습니다");
-        }
-      } else {
-        // Fix: toast.warn -> toast.warning
-        toast.warning("장소와 도로 네트워크의 매핑 정보가 없습니다");
-        console.warn(`장소의 GeoJSON 노드 ID가 없습니다: 
-          숙소(${accommodation.name}): ${accommodation.geoNodeId}, 
-          선택 장소(${selectedPlace.name}): ${selectedPlace.geoNodeId}`);
-      }
+      // 숙소부터 선택한 장소까지 경로 하이라이트
+      highlightSegment(0, placeIndex, itineraryDay);
+      
+      // 선택한 장소로 지도 중심 이동
+      panTo({ lat: selectedPlace.y, lng: selectedPlace.x });
+      
     } catch (error) {
       console.error("경로 시각화 오류:", error);
       toast.error("경로 시각화 중 오류가 발생했습니다");
     }
-  }, [map, isGeoJsonLoaded, mapPlacesWithGeoNodes, panTo]);
-  
+  }, [map, isGeoJsonLoaded, mapPlacesWithGeoNodes, panTo, highlightSegment, clearPreviousHighlightedPath]);
+
   // 경로를 시각화하는 내부 함수 (구현해야 함)
   const visualizePathLinks = (pathLinks: any[]) => {
     // 구현 필요: GeoJSON 링크를 지도에 시각적으로 강조
@@ -289,6 +321,7 @@ export const useMapCore = () => {
     renderItineraryRoute,
     clearAllRoutes,
     highlightSegment,
+    clearPreviousHighlightedPath,
     handleGeoJsonLoaded,
     isGeoJsonLoaded,
     checkGeoJsonMapping,

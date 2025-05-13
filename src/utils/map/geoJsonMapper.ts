@@ -1,4 +1,3 @@
-
 /**
  * GeoJSON 노드와 장소 간의 매핑을 처리하는 유틸리티 함수들
  */
@@ -215,9 +214,19 @@ export const getLinksForPath = (path: string[], links: any[]): any[] => {
       (l.properties?.from_node === toNode && l.properties?.to_node === fromNode)
     );
     
-    if (link) pathLinks.push(link);
+    if (link) {
+      // 중복 방지를 위해 이미 추가된 링크인지 확인
+      const isDuplicate = pathLinks.some(existingLink => 
+        existingLink.properties?.link_id === link.properties?.link_id
+      );
+      
+      if (!isDuplicate) {
+        pathLinks.push(link);
+      }
+    }
   }
   
+  console.log(`경로용 링크 ${pathLinks.length}개 찾음, 노드 경로 길이: ${path.length}`);
   return pathLinks;
 };
 
