@@ -32,7 +32,8 @@ const Map: React.FC<MapProps> = ({
     showGeoJson,
     toggleGeoJsonVisibility,
     handleGeoJsonLoaded,
-    isGeoJsonLoaded
+    isGeoJsonLoaded,
+    checkGeoJsonMapping
   } = useMapContext();
 
   // GeoJSON이 로드되면 사용자에게 알림
@@ -41,6 +42,25 @@ const Map: React.FC<MapProps> = ({
       toast.success('경로 데이터가 지도에 표시됩니다');
     }
   }, [isGeoJsonLoaded, showGeoJson]);
+
+  // 장소와 GeoJSON 매핑 검사
+  useEffect(() => {
+    if (isGeoJsonLoaded && places.length > 0 && isMapInitialized) {
+      // 지연 실행으로 UI 블로킹 방지
+      const timer = setTimeout(() => {
+        const mappingResult = checkGeoJsonMapping(places);
+        console.log('GeoJSON 매핑 결과:', mappingResult);
+        
+        if (mappingResult.success) {
+          console.log(`✅ 장소-GeoJSON 매핑 성공: ${mappingResult.mappedPlaces}/${mappingResult.totalPlaces} 장소, 평균 거리: ${mappingResult.averageDistance}m`);
+        } else {
+          console.warn(`⚠️ 장소-GeoJSON 매핑 부족: ${mappingResult.mappingRate} 매핑됨, 평균 거리: ${mappingResult.averageDistance}m`);
+        }
+      }, 1000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isGeoJsonLoaded, places, isMapInitialized, checkGeoJsonMapping]);
 
   // 장소 클릭 핸들러
   const handlePlaceClick = (place: Place, index: number) => {

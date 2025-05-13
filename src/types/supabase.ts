@@ -1,5 +1,4 @@
 
-
 export interface User {
   id: string;
   email: string;
@@ -39,6 +38,10 @@ export interface Place {
   operatingHours?: string;
   isSelected?: boolean;
   isRecommended?: boolean;
+  
+  // GeoJSON 관련 필드 (매핑 시 추가됨)
+  geoNodeId?: string;
+  geoNodeDistance?: number;
 }
 
 export interface ItineraryDay {
@@ -65,3 +68,40 @@ export interface SchedulePayload {
   end_datetime: string;
 }
 
+// GeoJSON 관련 인터페이스
+export interface GeoJsonNode {
+  type: string;
+  geometry: {
+    type: string;
+    coordinates: [number, number]; // [경도, 위도]
+  };
+  properties: {
+    node_id: string;
+    node_type?: string;
+    node_name?: string;
+  };
+}
+
+export interface GeoJsonLink {
+  type: string;
+  geometry: {
+    type: string;
+    coordinates: [number, number][]; // 선을 구성하는 좌표 배열
+  };
+  properties: {
+    link_id: string;
+    from_node: string;
+    to_node: string;
+    length?: number;
+    road_type?: string;
+  };
+}
+
+export interface GeoJsonMappingResult {
+  totalPlaces: number;
+  mappedPlaces: number;
+  mappingRate: string;
+  averageDistance: number | string;
+  success: boolean;
+  message: string;
+}

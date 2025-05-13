@@ -26,6 +26,15 @@ interface MapContextType {
   handleGeoJsonLoaded: (nodes: any[], links: any[]) => void;
   highlightSegment: (fromIndex: number, toIndex: number, itineraryDay?: ItineraryDay) => void;
   isGeoJsonLoaded: boolean;
+  checkGeoJsonMapping: (places: Place[]) => {
+    totalPlaces: number;
+    mappedPlaces: number;
+    mappingRate: string;
+    averageDistance: number | string;
+    success: boolean;
+    message: string;
+  };
+  mapPlacesWithGeoNodes: (places: Place[]) => Place[];
 }
 
 const defaultContext: MapContextType = {
@@ -44,7 +53,16 @@ const defaultContext: MapContextType = {
   clearAllRoutes: () => {},
   handleGeoJsonLoaded: () => {},
   highlightSegment: () => {},
-  isGeoJsonLoaded: false
+  isGeoJsonLoaded: false,
+  checkGeoJsonMapping: () => ({ 
+    totalPlaces: 0, 
+    mappedPlaces: 0, 
+    mappingRate: '0%', 
+    averageDistance: 0,
+    success: false,
+    message: '초기화되지 않음'
+  }),
+  mapPlacesWithGeoNodes: (places) => places
 };
 
 const MapContext = createContext<MapContextType>(defaultContext);
