@@ -1,5 +1,5 @@
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useCategorySelection } from './use-category-selection';
 import { useRegionSelection } from './use-region-selection';
 import { useTripDetails } from './use-trip-details';
@@ -8,6 +8,7 @@ import { useInputHandlers } from './left-panel/use-input-handlers';
 import { usePanelHandlers } from './left-panel/use-panel-handlers';
 import { useItineraryActions } from './left-panel/use-itinerary-actions';
 import { toast } from 'sonner';
+import { Place } from '@/types/supabase';
 
 /**
  * 메인 왼쪽 패널 로직을 관리하는 훅
@@ -20,7 +21,9 @@ export const useLeftPanel = () => {
     handleSelectPlace,
     handleRemovePlace,
     handleViewOnMap,
-    allCategoriesSelected
+    allCategoriesSelected,
+    prepareSchedulePayload,
+    autoCompleteWithCandidates
   } = useSelectedPlaces();
   
   // 카테고리 선택 기능
@@ -80,6 +83,17 @@ export const useLeftPanel = () => {
     });
   }, [allCategoriesSelected, selectedPlaces.length]);
 
+  // 추천 장소 목록을 관리하는 상태
+  const [recommendedPlacesByCategory, setRecommendedPlacesByCategory] = useState<Record<string, Place[]>>({});
+
+  // 추천 장소 정보 업데이트
+  const updateRecommendedPlaces = useCallback((category: string, places: Place[]) => {
+    setRecommendedPlacesByCategory(prev => ({
+      ...prev,
+      [category]: places
+    }));
+  }, []);
+
   // 일정 생성 함수에 대한 래퍼
   const createItinerary = () => {
     console.log("경로 생성 함수 호출됨", {
@@ -98,7 +112,18 @@ export const useLeftPanel = () => {
     }
     
     try {
-      const result = handleCreateItinerary(selectedPlaces, dates);
+      // 선택한 장소와 자동 추가된 후보 장소를 포함하여 payload 준비
+      const payload = prepareSchedulePayload(selectedPlaces, {
+        start_datetime: dates.startDate.toISOString(),
+        end_datetime: dates.endDate.toISOString()
+      }, recommendedPlacesByCategory);
+      
+      if (!payload) {
+        console.log("일정 생성 실패: payload 생성 실패");
+        return false;
+      }
+      
+      const result = handleCreateItinerary(selectedPlaces, dates, payload);
       
       if (result && result.length > 0) {
         // 일정 생성 성공 시 일정 보기로 전환
@@ -162,6 +187,7 @@ export const useLeftPanel = () => {
       handleRemovePlace,
       handleViewOnMap,
       allCategoriesSelected,
+      updateRecommendedPlaces,
     },
     
     // 여행 상세 정보
@@ -186,7 +212,8 @@ export const useLeftPanel = () => {
     selectedRegions, regionConfirmed, regionSlidePanelOpen, 
     categoryStepIndex, activeMiddlePanelCategory, confirmedCategories, selectedKeywordsByCategory,
     directInputValues, selectedPlaces, allCategoriesSelected, dates,
-    panelHandlers.uiVisibility, itinerary, selectedItineraryDay, showItinerary
+    panelHandlers.uiVisibility, itinerary, selectedItineraryDay, showItinerary,
+    updateRecommendedPlaces
   ]);
 
   return leftPanelState;

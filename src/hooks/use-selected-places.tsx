@@ -7,6 +7,7 @@ import { useTripDetails } from './use-trip-details';
 
 export const useSelectedPlaces = () => {
   const [selectedPlaces, setSelectedPlaces] = useState<Place[]>([]);
+  const [candidatePlaces, setCandidatePlaces] = useState<Place[]>([]);
   const [selectedPlacesByCategory, setSelectedPlacesByCategory] = useState<{
     '숙소': Place[],
     '관광지': Place[],
@@ -19,7 +20,7 @@ export const useSelectedPlaces = () => {
     '카페': [],
   });
 
-  // Get trip details to check accommodation limits
+  // Get trip details to check accommodation limits and trip duration
   const { tripDuration } = useTripDetails();
 
   // allCategoriesSelected 상태를 명확하게 계산
@@ -127,35 +128,127 @@ export const useSelectedPlaces = () => {
     panTo({ lat: place.y, lng: place.x });
   };
 
+  // 후보 장소 자동 보완 기능
+  const autoCompleteWithCandidates = (
+    selectedPlaces: Place[], 
+    recommendedPlacesByCategory: { [category: string]: Place[] },
+    tripDuration: number
+  ): Place[] => {
+    if (!tripDuration || tripDuration < 1) {
+      console.warn('여행 기간 정보가 없어 후보 장소를 자동 보완할 수 없습니다.');
+      return selectedPlaces;
+    }
+    
+    // 카테고리별 최소 필요 개수 계산
+    const minimumRequirements = {
+      '관광지': 4 * tripDuration,
+      '음식점': 3 * tripDuration,
+      '카페': 3 * tripDuration,
+      '숙소': Math.min(tripDuration, 1) // 숙소는 최대 여행일수만큼
+    };
+    
+    console.log('카테고리별 최소 필요 장소 수:', minimumRequirements);
+    
+    // 카테고리별 현재 선택된 장소 수 계산
+    const selectedCountsByCategory: Record<string, Place[]> = {
+      '관광지': [],
+      '음식점': [],
+      '카페': [],
+      '숙소': []
+    };
+    
+    // 선택된 장소들을 카테고리별로 분류
+    selectedPlaces.forEach(place => {
+      const category = place.category;
+      if (category && selectedCountsByCategory[category]) {
+        selectedCountsByCategory[category].push(place);
+      }
+    });
+    
+    // 최종 장소 목록 (선택된 장소 + 자동 보완된 후보 장소)
+    const finalPlaces: Place[] = [...selectedPlaces];
+    const autoCompletedPlaces: Place[] = [];
+    
+    // 각 카테고리별로 부족한 개수만큼 추천 장소에서 보완
+    Object.entries(minimumRequirements).forEach(([category, minCount]) => {
+      const currentCount = selectedCountsByCategory[category]?.length || 0;
+      const shortage = Math.max(0, minCount - currentCount);
+      
+      if (shortage > 0) {
+        console.log(`${category} 카테고리 부족 개수: ${shortage}개`);
+        
+        // 해당 카테고리의 추천 장소 목록에서 상위 N개 가져오기
+        const recommendedPlaces = recommendedPlacesByCategory[category] || [];
+        
+        // 이미 선택된 장소는 제외하고 필요한 만큼만 추가
+        const candidatesToAdd = recommendedPlaces
+          .filter(rp => !selectedPlaces.some(sp => sp.id === rp.id))
+          .slice(0, shortage);
+          
+        if (candidatesToAdd.length > 0) {
+          console.log(`${category} 카테고리에 ${candidatesToAdd.length}개 장소 자동 추가:`, 
+            candidatesToAdd.map(p => p.name).join(', '));
+          
+          // 후보 장소에 isCandidate 속성 추가
+          const markedCandidates = candidatesToAdd.map(p => ({
+            ...p,
+            isCandidate: true // 자동 추가된 후보 장소임을 표시
+          }));
+          
+          finalPlaces.push(...markedCandidates);
+          autoCompletedPlaces.push(...markedCandidates);
+        } else {
+          console.warn(`${category} 카테고리의 추천 장소가 부족합니다.`);
+        }
+      }
+    });
+    
+    // 자동 추가된 장소 정보 저장
+    setCandidatePlaces(autoCompletedPlaces);
+    
+    if (autoCompletedPlaces.length > 0) {
+      console.log(`총 ${autoCompletedPlaces.length}개의 장소가 자동으로 추가되었습니다.`);
+      toast.success(`${autoCompletedPlaces.length}개의 추천 장소가 자동으로 추가되었습니다.`);
+    }
+    
+    return finalPlaces;
+  };
+
   const prepareSchedulePayload = (
     places: Place[], 
-    dateTime: { start_datetime: string; end_datetime: string } | null
+    dateTime: { start_datetime: string; end_datetime: string } | null,
+    allAvailablePlaces: { [category: string]: Place[] } = {}
   ): SchedulePayload | null => {
     if (!dateTime) {
       toast.error('여행 날짜와 시간을 선택해주세요');
       return null;
     }
 
-    // 선택된 장소를 처리
-    const selected: SelectedPlace[] = places
-      .filter(p => p.isSelected)
-      .map(p => ({ id: parseInt(p.id, 10), name: p.name }));
+    // 여행 일수 계산
+    const startDate = new Date(dateTime.start_datetime);
+    const endDate = new Date(dateTime.end_datetime);
+    const tripDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    
+    // 선택한 장소에 후보 장소 자동 보완
+    const enrichedPlaces = autoCompleteWithCandidates(places, allAvailablePlaces, tripDays);
 
-    // 추천되었지만 선택되지 않은 장소를 후보 장소로 처리
-    const candidates: SelectedPlace[] = places
-      .filter(p => p.isRecommended && !p.isSelected)
-      .map(p => ({ id: parseInt(p.id, 10), name: p.name }));
+    // 사용자가 직접 선택한 장소
+    const selected: SelectedPlace[] = places
+      .filter(p => !p.isCandidate)
+      .map(p => ({ id: p.id, name: p.name }));
+
+    // 자동으로 추가된 후보 장소
+    const candidates: SelectedPlace[] = enrichedPlaces
+      .filter(p => p.isCandidate)
+      .map(p => ({ id: p.id, name: p.name }));
 
     // 후보 장소가 제대로 처리되는지 로깅
     console.log('일정 생성 데이터:', {
       선택된_장소: selected.length,
       후보_장소: candidates.length,
+      총_장소: selected.length + candidates.length,
       날짜: dateTime
     });
-
-    if (candidates.length > 0) {
-      console.log('후보 장소 목록:', candidates);
-    }
 
     return {
       selected_places: selected,
@@ -166,12 +259,14 @@ export const useSelectedPlaces = () => {
 
   return {
     selectedPlaces,
+    candidatePlaces,
     selectedPlacesByCategory,
     handleSelectPlace,
     handleRemovePlace,
     handleViewOnMap,
     allCategoriesSelected,
     prepareSchedulePayload,
-    isAccommodationLimitReached
+    isAccommodationLimitReached,
+    autoCompleteWithCandidates
   };
 };

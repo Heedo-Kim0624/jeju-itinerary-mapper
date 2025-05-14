@@ -25,7 +25,7 @@ interface MapContextType {
   clearAllRoutes: () => void;
   handleGeoJsonLoaded: (nodes: any[], links: any[]) => void;
   highlightSegment: (fromIndex: number, toIndex: number, itineraryDay?: ItineraryDay) => void;
-  clearPreviousHighlightedPath: () => void;  // 추가된 함수
+  clearPreviousHighlightedPath: () => void;
   isGeoJsonLoaded: boolean;
   checkGeoJsonMapping: (places: Place[]) => {
     totalPlaces: number;
@@ -37,6 +37,9 @@ interface MapContextType {
   };
   mapPlacesWithGeoNodes: (places: Place[]) => Place[];
   showRouteForPlaceIndex: (placeIndex: number, itineraryDay: ItineraryDay) => void;
+  renderGeoJsonRoute: (nodeIds: string[], linkIds: string[], style?: any) => any[];
+  geoJsonNodes: any[];
+  geoJsonLinks: any[];
 }
 
 const defaultContext: MapContextType = {
@@ -55,7 +58,7 @@ const defaultContext: MapContextType = {
   clearAllRoutes: () => {},
   handleGeoJsonLoaded: () => {},
   highlightSegment: () => {},
-  clearPreviousHighlightedPath: () => {},  // 추가된 함수
+  clearPreviousHighlightedPath: () => {},
   isGeoJsonLoaded: false,
   checkGeoJsonMapping: () => ({ 
     totalPlaces: 0, 
@@ -66,7 +69,10 @@ const defaultContext: MapContextType = {
     message: '초기화되지 않음'
   }),
   mapPlacesWithGeoNodes: (places) => places,
-  showRouteForPlaceIndex: () => {}
+  showRouteForPlaceIndex: () => {},
+  renderGeoJsonRoute: () => [],
+  geoJsonNodes: [],
+  geoJsonLinks: []
 };
 
 const MapContext = createContext<MapContextType>(defaultContext);

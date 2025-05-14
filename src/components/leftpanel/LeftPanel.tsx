@@ -31,6 +31,12 @@ const LeftPanel: React.FC = () => {
     itineraryManagement.selectedItineraryDay
   ]);
 
+  // 일정 생성 핸들러 래퍼
+  const handleCreateItinerary = () => {
+    // 기존의 createItinerary 메서드를 호출합니다
+    return itineraryManagement.handleCreateItinerary();
+  };
+
   return (
     <div className="relative h-full">
       {uiVisibility.showItinerary && itineraryManagement.itinerary ? (
@@ -51,7 +57,7 @@ const LeftPanel: React.FC = () => {
           onViewOnMap={placesManagement.handleViewOnMap}
           allCategoriesSelected={placesManagement.allCategoriesSelected}
           dates={tripDetails.dates}
-          onCreateItinerary={itineraryManagement.handleCreateItinerary}
+          onCreateItinerary={handleCreateItinerary}
           itinerary={itineraryManagement.itinerary}
           selectedItineraryDay={itineraryManagement.selectedItineraryDay}
           onSelectDay={itineraryManagement.handleSelectItineraryDay}
