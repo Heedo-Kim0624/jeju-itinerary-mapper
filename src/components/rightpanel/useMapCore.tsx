@@ -65,7 +65,7 @@ const useMapCore = () => {
     setIsGeoJsonLoaded(true);
     
     // GeoJSON Layer에 접근할 수 있는 ref 저장
-    if (window.geoJsonLayer && typeof window.geoJsonLayer.renderRoute === 'function') {
+    if (typeof window !== 'undefined' && window.geoJsonLayer && typeof window.geoJsonLayer.renderRoute === 'function') {
       geoJsonLayerRef.current = window.geoJsonLayer;
     }
   }, []);

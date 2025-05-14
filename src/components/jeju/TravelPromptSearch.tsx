@@ -17,6 +17,23 @@ interface TravelPromptSearchProps {
   onPlacesFound?: (places: Place[], category: string) => void;
 }
 
+// PlaceResult 인터페이스 추가
+interface PlaceResult {
+  id: string | number;
+  name?: string;
+  address?: string;
+  category?: string;
+  categoryDetail?: string;
+  x?: number;
+  y?: number;
+  rating?: number;
+  reviewCount?: number;
+  weight?: number;
+  naverLink?: string;
+  instaLink?: string;
+  operatingHours?: string;
+}
+
 const TravelPromptSearch: React.FC<TravelPromptSearchProps> = ({ onPlacesFound }) => {
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
@@ -66,7 +83,7 @@ const TravelPromptSearch: React.FC<TravelPromptSearchProps> = ({ onPlacesFound }
       );
       
       // 4. Convert to Place type with all required fields
-      const convertedPlaces = placeResults.map(result => ({
+      const convertedPlaces = placeResults.map((result: PlaceResult) => ({
         id: String(result.id),
         name: result.name || '',
         address: result.address || '',

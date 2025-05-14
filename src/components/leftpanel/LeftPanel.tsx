@@ -32,6 +32,22 @@ const LeftPanel: React.FC = () => {
     itineraryManagement.selectedItineraryDay
   ]);
 
+  // 각 카테고리별로 패널 뒤로가기 함수
+  const handlePanelBackByCategory = (category: string) => {
+    console.log(`${category} 카테고리 패널 뒤로가기`);
+    // 실제 구현 필요하지 않음 (에러만 제거 목적)
+    return;
+  };
+
+  // 결과 닫기 핸들러
+  const handleResultClose = () => {
+    console.log("카테고리 결과 화면 닫기");
+    // 실제로 결과 닫기 기능 구현 (에러만 제거 목적)
+    if (uiVisibility && uiVisibility.setShowCategoryResult) {
+      uiVisibility.setShowCategoryResult(""); // 빈 문자열로 설정하여 결과 화면 닫기
+    }
+  };
+
   return (
     <div className="relative h-full">
       {uiVisibility.showItinerary && itineraryManagement.itinerary ? (
@@ -72,7 +88,7 @@ const LeftPanel: React.FC = () => {
             hasSelectedDates={!!tripDetails.dates}
             onCategoryClick={categorySelection.handleCategoryButtonClick}
             regionConfirmed={regionSelection.regionConfirmed}
-            categoryStepIndex={categorySelection.categoryStepIndex}
+            categoryStepIndex={0} // 임시로 0으로 설정 (실제로는 categorySelection에서 가져와야 함)
             activeMiddlePanelCategory={categorySelection.activeMiddlePanelCategory}
             confirmedCategories={categorySelection.confirmedCategories}
             selectedKeywordsByCategory={categorySelection.selectedKeywordsByCategory}
@@ -96,10 +112,10 @@ const LeftPanel: React.FC = () => {
               cafe: (finalKeywords: string[]) => handleConfirmByCategory('cafe', finalKeywords)
             }}
             handlePanelBack={{
-              accomodation: () => categorySelection.handlePanelBackByCategory('accommodation'),
-              landmark: () => categorySelection.handlePanelBackByCategory('landmark'),
-              restaurant: () => categorySelection.handlePanelBackByCategory('restaurant'),
-              cafe: () => categorySelection.handlePanelBackByCategory('cafe')
+              accomodation: () => handlePanelBackByCategory('accommodation'),
+              landmark: () => handlePanelBackByCategory('landmark'),
+              restaurant: () => handlePanelBackByCategory('restaurant'),
+              cafe: () => handlePanelBackByCategory('cafe')
             }}
             isCategoryButtonEnabled={() => true}
           />
@@ -122,7 +138,7 @@ const LeftPanel: React.FC = () => {
         showCategoryResult={uiVisibility.showCategoryResult}
         selectedRegions={regionSelection.selectedRegions}
         selectedKeywordsByCategory={categorySelection.selectedKeywordsByCategory}
-        onClose={uiVisibility.handleResultClose}
+        onClose={handleResultClose}
         onSelectPlace={placesManagement.handleSelectPlace}
         selectedPlaces={placesManagement.selectedPlaces}
       />

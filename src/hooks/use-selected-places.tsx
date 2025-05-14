@@ -189,7 +189,7 @@ export const useSelectedPlaces = () => {
           console.log(`${category} 카테고리에 ${candidatesToAdd.length}개 장소 자동 추가:`, 
             candidatesToAdd.map(p => p.name).join(', '));
           
-          // 후보 장소에 isCandidate 속성 추가
+          // 후보 장소에 isCandidate 속성 추가 (Place 타입에 추가된 옵션 속성 활용)
           const markedCandidates = candidatesToAdd.map(p => ({
             ...p,
             isCandidate: true // 자동 추가된 후보 장소임을 표시

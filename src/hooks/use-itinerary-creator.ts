@@ -85,7 +85,7 @@ export const useItineraryCreator = () => {
           const placeWithTime: ItineraryPlaceWithTime = {
             ...accommodation,
             arriveTime: format(currentTime, 'HH:mm'),
-            time_block: getTimeBlock(day, currentTime.getHours())
+            timeBlock: getTimeBlock(day, currentTime.getHours())
           };
           
           dayPlaces.push(placeWithTime);
@@ -110,7 +110,7 @@ export const useItineraryCreator = () => {
             const placeWithTime: ItineraryPlaceWithTime = {
               ...attraction,
               arriveTime: format(currentTime, 'HH:mm'),
-              time_block: getTimeBlock(day, currentTime.getHours())
+              timeBlock: getTimeBlock(day, currentTime.getHours())
             };
             
             dayPlaces.push(placeWithTime);
@@ -143,7 +143,7 @@ export const useItineraryCreator = () => {
             const placeWithTime: ItineraryPlaceWithTime = {
               ...nearest,
               arriveTime: format(currentTime, 'HH:mm'),
-              time_block: getTimeBlock(day, currentTime.getHours())
+              timeBlock: getTimeBlock(day, currentTime.getHours())
             };
             
             dayPlaces.push(placeWithTime);
@@ -181,7 +181,7 @@ export const useItineraryCreator = () => {
           const placeWithTime: ItineraryPlaceWithTime = {
             ...nearest,
             arriveTime: format(currentTime, 'HH:mm'),
-            time_block: getTimeBlock(day, currentTime.getHours())
+            timeBlock: getTimeBlock(day, currentTime.getHours())
           };
           
           dayPlaces.push(placeWithTime);
@@ -218,7 +218,7 @@ export const useItineraryCreator = () => {
           const placeWithTime: ItineraryPlaceWithTime = {
             ...nearest,
             arriveTime: format(currentTime, 'HH:mm'),
-            time_block: getTimeBlock(day, currentTime.getHours())
+            timeBlock: getTimeBlock(day, currentTime.getHours())
           };
           
           dayPlaces.push(placeWithTime);

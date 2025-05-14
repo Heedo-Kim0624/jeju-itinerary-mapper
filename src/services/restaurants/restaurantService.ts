@@ -34,23 +34,29 @@ export async function fetchRestaurants(): Promise<Place[]> {
       const longitude = parseFloat(String(info.longitude || 0));
       const latitude = parseFloat(String(info.latitude || 0));
       
-      // Place 객체 생성
+      // Place 객체 생성 - 모든 필수 필드 포함
       return {
-        id: typeof info.id === 'string' ? parseInt(info.id, 10) : info.id,
+        id: typeof info.id === 'string' ? String(info.id) : String(info.id || ''),
         name: placeName,
         address: lotAddress || roadAddress || "",
         category: "restaurant",
         categoryDetail: processedData.categoryDetail,
         x: longitude,
         y: latitude,
-        naverLink: processedData.naverLink,
-        instaLink: processedData.instaLink,
-        rating: processedData.rating,
-        reviewCount: processedData.reviewCount,
-        weight: processedData.weight,
+        naverLink: processedData.naverLink || '',
+        instaLink: processedData.instaLink || '',
+        rating: processedData.rating || 0,
+        reviewCount: processedData.reviewCount || 0,
+        weight: processedData.weight || 0,
+        // 필수 필드 추가
+        phone: '',
+        description: '',
+        image_url: '',
+        road_address: roadAddress || '',
+        homepage: '',
         raw: {
           info,
-          processedData, // 전체 원본 데이터 보관
+          processedData
         }
       };
     });

@@ -36,21 +36,27 @@ export async function fetchCafes(): Promise<Place[]> {
       
       // Place 객체 생성
       return {
-        id: typeof info.id === 'string' ? parseInt(info.id, 10) : info.id,
+        id: typeof info.id === 'string' ? String(info.id) : String(info.id || ''),
         name: placeName,
         address: lotAddress || roadAddress || "",
         category: "cafe",
         categoryDetail: processedData.categoryDetail,
         x: longitude,
         y: latitude,
-        naverLink: processedData.naverLink,
-        instaLink: processedData.instaLink,
-        rating: processedData.rating,
-        reviewCount: processedData.reviewCount,
-        weight: processedData.weight,
+        naverLink: processedData.naverLink || '',
+        instaLink: processedData.instaLink || '',
+        rating: processedData.rating || 0,
+        reviewCount: processedData.reviewCount || 0,
+        weight: processedData.weight || 0,
+        // 필수 필드 추가
+        phone: '',
+        description: '',
+        image_url: '',
+        road_address: roadAddress || '',
+        homepage: '',
         raw: {
           info,
-          processedData, // 전체 원본 데이터 보관
+          processedData
         }
       };
     });

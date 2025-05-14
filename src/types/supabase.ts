@@ -1,3 +1,4 @@
+
 export interface Place {
   id: string;
   name: string;
@@ -24,6 +25,8 @@ export interface Place {
   instaLink?: string;
   operatingHours?: string;
   weight?: number;
+  isCandidate?: boolean;  // 후보 장소 여부 필드 추가
+  raw?: any; // 원본 데이터 저장을 위한 필드
 }
 
 export interface SelectedPlace {
@@ -44,12 +47,6 @@ export interface TripDateTime {
   endDate: Date;
   startTime: string;
   endTime: string;
-}
-
-// 새로운 타입 정의: 선택된 장소
-export interface SelectedPlace {
-  id: string;
-  name: string;
 }
 
 // 새로운 타입 정의: 일정 생성 API 요청 페이로드
@@ -88,4 +85,5 @@ export interface ItineraryPlaceWithTime extends Place {
   departTime?: string;
   stayDuration?: number;
   travelTimeToNext?: string;
+  timeBlock?: string; // time_block 대신 camelCase로 추가
 }
