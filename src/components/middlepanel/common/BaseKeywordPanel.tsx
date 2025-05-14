@@ -72,15 +72,17 @@ const BaseKeywordPanel: React.FC<KeywordPanelProps & { accommodationTypeUI?: Rea
       return;
     }
 
-    const groupFinalKeyword = `${categoryName}[${allKeywords.join(',')}]`;
-    console.log("키워드 확인:", groupFinalKeyword);
+    console.log("키워드 확인:", `${categoryName}[${allKeywords.join(',')}]`);
     
-    // 선택된 키워드 확인 및 결과 표시 처리
-    onConfirm([groupFinalKeyword], true);
+    // clearSelection을 true로 설정하여 패널을 닫고 결과를 표시하도록 합니다
+    onConfirm(allKeywords, true);
     
     // 우선순위 목록 초기화
     setRanking([]);
     onDirectInputChange('');
+    
+    // 성공 메시지 표시
+    toast.success(`${categoryName} 키워드가 적용되었습니다. 추천 결과를 확인하세요.`);
   };
 
   // 닫기 버튼 클릭 시 패널만 닫도록 수정

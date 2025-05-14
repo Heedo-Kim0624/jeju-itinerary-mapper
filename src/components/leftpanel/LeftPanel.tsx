@@ -42,10 +42,16 @@ const LeftPanel: React.FC = () => {
   // 결과 닫기 핸들러
   const handleResultClose = () => {
     console.log("카테고리 결과 화면 닫기");
-    // 빈 문자열 대신 null 사용
-    if (uiVisibility && uiVisibility.setShowCategoryResult) {
-      uiVisibility.setShowCategoryResult(null);
-    }
+    // null 사용
+    uiVisibility.setShowCategoryResult(null);
+  };
+
+  // 카테고리 확인 핸들러
+  const handleConfirmByCategory = (category: CategoryName, finalKeywords: string[]) => {
+    console.log(`카테고리 '${category}' 확인, 키워드: ${finalKeywords.join(', ')}`);
+    // 키워드 확인 후 카테고리 결과 화면 표시
+    keywordsAndInputs.handleConfirmCategory(category, finalKeywords, true);
+    return true;
   };
 
   return (
@@ -144,15 +150,6 @@ const LeftPanel: React.FC = () => {
       />
     </div>
   );
-};
-
-// 카테고리 확인 핸들러 구현
-const handleConfirmByCategory = (category: CategoryName, finalKeywords: string[]) => {
-  console.log(`카테고리 '${category}' 확인, 키워드: ${finalKeywords.join(', ')}`);
-  
-  // 여기서는 임시로 콘솔 로그만 출력
-  // 이 함수는 실제 카테고리 확인 로직을 연결해야 함
-  return true;
 };
 
 export default LeftPanel;

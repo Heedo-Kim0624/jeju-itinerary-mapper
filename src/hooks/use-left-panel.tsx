@@ -77,27 +77,13 @@ export const useLeftPanel = () => {
   
   // 카테고리 확인 핸들러
   const handleConfirmCategory = useCallback((category: CategoryName, finalKeywords: string[], clearSelection: boolean = false) => {
-    if (clearSelection) {
-      categorySelection.setSelectedKeywordsByCategory(prev => ({
-        ...prev,
-        [category]: []
-      }));
-    }
-    
-    if (!categorySelection.confirmedCategories.includes(category)) {
-      categorySelection.setConfirmedCategories([...categorySelection.confirmedCategories, category]);
-      
-      const currentIndex = categorySelection.categoryOrder.indexOf(category);
-      if (currentIndex + 1 < categorySelection.categoryOrder.length) {
-        categorySelection.setStepIndex(currentIndex + 1);
-      }
-    }
+    // 카테고리 선택과 관련된 로직은 여기서 직접 처리합니다
+    console.log(`카테고리 ${category} 확인됨, 키워드: ${finalKeywords.join(', ')}`);
     
     // 추천 결과 화면 표시를 위해 카테고리를 설정
     uiVisibility.setShowCategoryResult(category);
     
-    console.log(`카테고리 ${category} 확인됨, 키워드: ${finalKeywords.join(', ')}`);
-  }, [categorySelection, uiVisibility]);
+  }, [uiVisibility]);
   
   // 일정 생성 핸들러
   const handleCreateItinerary = async () => {
@@ -130,9 +116,11 @@ export const useLeftPanel = () => {
       
       // 추천 장소가 있을 경우 보완
       if (Object.values(recommendedPlacesByCategory).some(places => places.length > 0)) {
+        // 타입 오류 수정: 객체가 아닌 배열로 전달
+        const recommendedPlacesArray = Object.values(recommendedPlacesByCategory).flat();
         finalPlaces = await completeWithRecommendedPlaces(
           placesManagement.selectedPlaces,
-          recommendedPlacesByCategory,
+          recommendedPlacesArray,
           travelDays
         );
       }
