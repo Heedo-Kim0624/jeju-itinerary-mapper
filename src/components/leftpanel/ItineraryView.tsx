@@ -118,10 +118,10 @@ const ItineraryView: React.FC<ItineraryViewProps> = ({
                     </div>
                     
                     {/* 도착 시간 표시 */}
-                    {(place as ItineraryPlaceWithTime).arrival_time && (
+                    {(place as ItineraryPlaceWithTime).arriveTime && (
                       <div className="flex items-center text-xs text-muted-foreground mt-1 gap-1">
                         <Clock className="h-3 w-3" />
-                        <span>도착: {(place as ItineraryPlaceWithTime).arrival_time}</span>
+                        <span>도착: {(place as ItineraryPlaceWithTime).arriveTime}</span>
                       </div>
                     )}
                     
@@ -129,8 +129,8 @@ const ItineraryView: React.FC<ItineraryViewProps> = ({
                     {index < currentDayItinerary.places.length - 1 && (
                       <div className="flex items-center text-xs text-muted-foreground mt-1 gap-1">
                         <Navigation className="h-3 w-3" />
-                        {(place as ItineraryPlaceWithTime).travel_time_to_next && (place as ItineraryPlaceWithTime).travel_time_to_next !== "-" ? (
-                          <span>다음 장소까지: {(place as ItineraryPlaceWithTime).travel_time_to_next}</span>
+                        {(place as ItineraryPlaceWithTime).travelTimeToNext && (place as ItineraryPlaceWithTime).travelTimeToNext !== "-" ? (
+                          <span>다음 장소까지: {(place as ItineraryPlaceWithTime).travelTimeToNext}</span>
                         ) : (
                           <span>다음 장소로 이동</span>
                         )}

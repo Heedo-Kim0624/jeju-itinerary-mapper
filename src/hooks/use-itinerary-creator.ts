@@ -84,7 +84,7 @@ export const useItineraryCreator = () => {
           
           const placeWithTime: ItineraryPlaceWithTime = {
             ...accommodation,
-            arrival_time: format(currentTime, 'HH:mm'),
+            arriveTime: format(currentTime, 'HH:mm'),
             time_block: getTimeBlock(day, currentTime.getHours())
           };
           
@@ -109,7 +109,7 @@ export const useItineraryCreator = () => {
             
             const placeWithTime: ItineraryPlaceWithTime = {
               ...attraction,
-              arrival_time: format(currentTime, 'HH:mm'),
+              arriveTime: format(currentTime, 'HH:mm'),
               time_block: getTimeBlock(day, currentTime.getHours())
             };
             
@@ -134,7 +134,7 @@ export const useItineraryCreator = () => {
             // 이전 장소에 이동 시간 정보 추가
             if (dayPlaces.length > 0) {
               const lastPlace = dayPlaces[dayPlaces.length - 1];
-              lastPlace.travel_time_to_next = `${travelTime}분`;
+              lastPlace.travelTimeToNext = `${travelTime}분`;
             }
             
             // 이동 시간을 현재 시간에 추가
@@ -142,7 +142,7 @@ export const useItineraryCreator = () => {
             
             const placeWithTime: ItineraryPlaceWithTime = {
               ...nearest,
-              arrival_time: format(currentTime, 'HH:mm'),
+              arriveTime: format(currentTime, 'HH:mm'),
               time_block: getTimeBlock(day, currentTime.getHours())
             };
             
@@ -172,7 +172,7 @@ export const useItineraryCreator = () => {
           // 이전 장소에 이동 시간 정보 추가
           if (dayPlaces.length > 0) {
             const lastPlace = dayPlaces[dayPlaces.length - 1];
-            lastPlace.travel_time_to_next = `${travelTime}분`;
+            lastPlace.travelTimeToNext = `${travelTime}분`;
           }
           
           // 이동 시간을 현재 시간에 추가
@@ -180,7 +180,7 @@ export const useItineraryCreator = () => {
           
           const placeWithTime: ItineraryPlaceWithTime = {
             ...nearest,
-            arrival_time: format(currentTime, 'HH:mm'),
+            arriveTime: format(currentTime, 'HH:mm'),
             time_block: getTimeBlock(day, currentTime.getHours())
           };
           
@@ -209,7 +209,7 @@ export const useItineraryCreator = () => {
           // 이전 장소에 이동 시간 정보 추가
           if (dayPlaces.length > 0) {
             const lastPlace = dayPlaces[dayPlaces.length - 1];
-            lastPlace.travel_time_to_next = `${travelTime}분`;
+            lastPlace.travelTimeToNext = `${travelTime}분`;
           }
           
           // 이동 시간을 현재 시간에 추가
@@ -217,7 +217,7 @@ export const useItineraryCreator = () => {
           
           const placeWithTime: ItineraryPlaceWithTime = {
             ...nearest,
-            arrival_time: format(currentTime, 'HH:mm'),
+            arriveTime: format(currentTime, 'HH:mm'),
             time_block: getTimeBlock(day, currentTime.getHours())
           };
           
@@ -230,9 +230,9 @@ export const useItineraryCreator = () => {
         }
       }
       
-      // 마지막 장소는 travel_time_to_next가 없음
+      // 마지막 장소는 travelTimeToNext가 없음
       if (dayPlaces.length > 0) {
-        dayPlaces[dayPlaces.length - 1].travel_time_to_next = "-";
+        dayPlaces[dayPlaces.length - 1].travelTimeToNext = "-";
       }
       
       const totalDistance = calculateTotalDistance(dayPlaces);

@@ -1,4 +1,3 @@
-
 export interface Place {
   id: string;
   name: string;
@@ -83,9 +82,10 @@ export interface ItineraryDay {
   routeData?: RouteData;
 }
 
-// Add ItineraryPlaceWithTime interface
+// Update ItineraryPlaceWithTime interface with correct property names
 export interface ItineraryPlaceWithTime extends Place {
   arriveTime?: string;
   departTime?: string;
   stayDuration?: number;
+  travelTimeToNext?: string;
 }

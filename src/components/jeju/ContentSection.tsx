@@ -176,13 +176,18 @@ async function fetchPlaceDetails(category: string, id: number): Promise<Place | 
     
     // Construct the Place object with safe property access
     const place: Place = {
-      id: id.toString(), // 수정: id를 문자열로 변환
+      id: id.toString(),
       name: infoData?.place_name || '',
       address: infoData?.road_address || infoData?.lot_address || '',
+      phone: '',  // Fill required fields with defaults
       category: category, 
+      description: '',  // Fill required fields with defaults
       categoryDetail: categoryData?.categories_details || categoryData?.Categories_Details || '',
       x: infoData?.longitude || 0,
       y: infoData?.latitude || 0,
+      image_url: '',  // Fill required fields with defaults
+      road_address: infoData?.road_address || '',
+      homepage: '',  // Fill required fields with defaults
       rating: ratingData?.rating || 0,
       reviewCount: ratingData?.visitor_review_count || 0,
       naverLink: linkData?.link || '',

@@ -104,18 +104,18 @@ const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
                     </div>
                     
                     {/* 도착 시간 표시 */}
-                    {(place as ItineraryPlaceWithTime).arrival_time && (
+                    {(place as ItineraryPlaceWithTime).arriveTime && (
                       <div className="flex items-center mt-2 text-xs text-gray-600">
                         <Clock className="w-3 h-3 mr-1" />
-                        <span>도착: {(place as ItineraryPlaceWithTime).arrival_time}</span>
+                        <span>도착: {(place as ItineraryPlaceWithTime).arriveTime}</span>
                       </div>
                     )}
                     
                     {/* 다음 장소까지의 이동 시간 */}
-                    {(place as ItineraryPlaceWithTime).travel_time_to_next && (place as ItineraryPlaceWithTime).travel_time_to_next !== "-" && (
+                    {(place as ItineraryPlaceWithTime).travelTimeToNext && (place as ItineraryPlaceWithTime).travelTimeToNext !== "-" && (
                       <div className="flex items-center mt-1 text-xs text-gray-600">
                         <Navigation className="w-3 h-3 mr-1" />
-                        <span>다음 장소까지: {(place as ItineraryPlaceWithTime).travel_time_to_next}</span>
+                        <span>다음 장소까지: {(place as ItineraryPlaceWithTime).travelTimeToNext}</span>
                       </div>
                     )}
                   </div>

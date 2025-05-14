@@ -65,15 +65,35 @@ const TravelPromptSearch: React.FC<TravelPromptSearchProps> = ({ onPlacesFound }
         allKeywords
       );
       
-      // 4. Convert to Place type
-      const convertedPlaces = placeResults.map(convertToPlace);
-      setPlaces(convertedPlaces);
+      // 4. Convert to Place type with all required fields
+      const convertedPlaces = placeResults.map(result => ({
+        id: String(result.id),
+        name: result.name || '',
+        address: result.address || '',
+        phone: '',  // Set default values for required fields
+        category: result.category || '',
+        description: '',  // Set default values for required fields
+        rating: result.rating || 0,
+        x: result.x || 0,
+        y: result.y || 0,
+        image_url: '',  // Set default values for required fields
+        road_address: '',  // Set default values for required fields
+        homepage: '',  // Set default values for required fields
+        categoryDetail: result.categoryDetail || '',
+        reviewCount: result.reviewCount || 0,
+        weight: result.weight || 0,
+        naverLink: result.naverLink || '',
+        instaLink: result.instaLink || '',
+        operatingHours: result.operatingHours || ''
+      }));
+      
+      setPlaces(convertedPlaces as Place[]);
       setCurrentPage(1);
       
       // 5. Add markers to map
       if (convertedPlaces.length && mapCtx) {
-        const recommended = convertedPlaces.slice(0, 4);
-        const others = convertedPlaces.slice(4);
+        const recommended = convertedPlaces.slice(0, 4) as Place[];
+        const others = convertedPlaces.slice(4) as Place[];
         mapCtx.addMarkers(recommended, { highlight: true });
         mapCtx.addMarkers(others, { highlight: false });
         
@@ -86,7 +106,7 @@ const TravelPromptSearch: React.FC<TravelPromptSearchProps> = ({ onPlacesFound }
       
       // 6. Call callback if provided
       if (onPlacesFound && convertedPlaces.length > 0) {
-        onPlacesFound(convertedPlaces, parsed.category);
+        onPlacesFound(convertedPlaces as Place[], parsed.category);
       }
       
       if (placeResults.length === 0) {
