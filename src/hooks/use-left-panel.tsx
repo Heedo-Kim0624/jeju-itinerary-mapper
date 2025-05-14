@@ -8,6 +8,9 @@ import { useSelectedPlaces } from './use-selected-places';
 import { usePanelVisibility } from './use-panel-visibility';
 import { useItinerary } from './use-itinerary';
 import { toast } from 'sonner';
+import { usePanelHandlers } from './left-panel/use-panel-handlers';
+import { Place } from '@/types/supabase';
+import { CategoryName } from '@/utils/categoryUtils'; 
 
 export interface KeywordInputs {
   accomodation: string;
@@ -51,6 +54,18 @@ export const useLeftPanel = () => {
   
   // 일정 관리
   const itineraryManagement = useItinerary();
+
+  // 패널 핸들러
+  const panelHandlers = usePanelHandlers();
+  
+  // 초기화 시 패널 핸들러 setup
+  useEffect(() => {
+    panelHandlers.setup(
+      regionSelection.selectedRegions,
+      handleConfirmCategory,
+      categorySelection.handlePanelBack
+    );
+  }, [regionSelection.selectedRegions]);
   
   // 직접 입력값 변경 핸들러
   const onDirectInputChange = (category: string, value: string) => {
@@ -60,30 +75,29 @@ export const useLeftPanel = () => {
     }));
   };
   
-  // 카테고리별 확인 버튼 핸들러
-  const handleConfirmByCategory = useCallback((category: string) => {
-    const inputValue = directInputValues[category] || '';
-    const finalKeywords = inputValue
-      .split(',')
-      .map(keyword => keyword.trim())
-      .filter(Boolean);
-    
-    // 카테고리별 핸들러 매핑 - 실제 카테고리 선택 훅 메서드와 연결
-    if (category === 'accommodation') {
-      // 키워드 확인 헬퍼 함수 (해당 값이 없으면 무시)
-      console.log('숙소 키워드 확인:', finalKeywords);
-      // 기존 LeftPanel.tsx에 있는 handleConfirmByCategory 함수 기능 구현
-    } else if (category === 'landmark') {
-      console.log('관광지 키워드 확인:', finalKeywords);
-      // 기존 LeftPanel.tsx에 있는 handleConfirmByCategory 함수 기능 구현
-    } else if (category === 'restaurant') {
-      console.log('음식점 키워드 확인:', finalKeywords);
-      // 기존 LeftPanel.tsx에 있는 handleConfirmByCategory 함수 기능 구현
-    } else if (category === 'cafe') {
-      console.log('카페 키워드 확인:', finalKeywords);
-      // 기존 LeftPanel.tsx에 있는 handleConfirmByCategory 함수 기능 구현
+  // 카테고리 확인 핸들러
+  const handleConfirmCategory = useCallback((category: CategoryName, finalKeywords: string[], clearSelection: boolean = false) => {
+    if (clearSelection) {
+      categorySelection.setSelectedKeywordsByCategory(prev => ({
+        ...prev,
+        [category]: []
+      }));
     }
-  }, [directInputValues]);
+    
+    if (!categorySelection.confirmedCategories.includes(category)) {
+      categorySelection.setConfirmedCategories([...categorySelection.confirmedCategories, category]);
+      
+      const currentIndex = categorySelection.categoryOrder.indexOf(category);
+      if (currentIndex + 1 < categorySelection.categoryOrder.length) {
+        categorySelection.setStepIndex(currentIndex + 1);
+      }
+    }
+    
+    // 추천 결과 화면 표시를 위해 카테고리를 설정
+    uiVisibility.setShowCategoryResult(category);
+    
+    console.log(`카테고리 ${category} 확인됨, 키워드: ${finalKeywords.join(', ')}`);
+  }, [categorySelection, uiVisibility]);
   
   // 일정 생성 핸들러
   const handleCreateItinerary = async () => {
@@ -116,7 +130,7 @@ export const useLeftPanel = () => {
       
       // 추천 장소가 있을 경우 보완
       if (Object.values(recommendedPlacesByCategory).some(places => places.length > 0)) {
-        finalPlaces = placesManagement.autoCompleteWithCandidates(
+        finalPlaces = await completeWithRecommendedPlaces(
           placesManagement.selectedPlaces,
           recommendedPlacesByCategory,
           travelDays
@@ -124,7 +138,7 @@ export const useLeftPanel = () => {
       }
 
       // 일정 생성
-      const itinerary = itineraryManagement.generateItinerary(
+      const itinerary = await itineraryManagement.generateItinerary(
         finalPlaces,
         dates.startDate,
         dates.endDate,
@@ -151,7 +165,7 @@ export const useLeftPanel = () => {
   const keywordsAndInputs = {
     directInputValues,
     onDirectInputChange,
-    handleConfirmByCategory,
+    handleConfirmCategory,
   };
   
   const tripDetails = {
@@ -167,9 +181,7 @@ export const useLeftPanel = () => {
     tripDetails,
     uiVisibility,
     itineraryManagement,
-    handleCreateItinerary
+    handleCreateItinerary,
+    panelHandlers
   };
 };
-
-// Place 타입 가져오기
-import { Place } from '@/types/supabase';

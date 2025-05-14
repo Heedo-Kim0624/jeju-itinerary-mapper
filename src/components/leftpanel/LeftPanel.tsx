@@ -6,6 +6,7 @@ import RegionPanelHandler from './RegionPanelHandler';
 import CategoryResultHandler from './CategoryResultHandler';
 import LeftPanelContainer from './LeftPanelContainer';
 import ItineraryView from './ItineraryView';
+import type { CategoryName } from '@/utils/categoryUtils';
 
 const LeftPanel: React.FC = () => {
   const {
@@ -35,16 +36,15 @@ const LeftPanel: React.FC = () => {
   // 각 카테고리별로 패널 뒤로가기 함수
   const handlePanelBackByCategory = (category: string) => {
     console.log(`${category} 카테고리 패널 뒤로가기`);
-    // 실제 구현 필요하지 않음 (에러만 제거 목적)
-    return;
+    categorySelection.handlePanelBack();
   };
 
   // 결과 닫기 핸들러
   const handleResultClose = () => {
     console.log("카테고리 결과 화면 닫기");
-    // 실제로 결과 닫기 기능 구현 (에러만 제거 목적)
+    // 빈 문자열 대신 null 사용
     if (uiVisibility && uiVisibility.setShowCategoryResult) {
-      uiVisibility.setShowCategoryResult(""); // 빈 문자열로 설정하여 결과 화면 닫기
+      uiVisibility.setShowCategoryResult(null);
     }
   };
 
@@ -88,7 +88,7 @@ const LeftPanel: React.FC = () => {
             hasSelectedDates={!!tripDetails.dates}
             onCategoryClick={categorySelection.handleCategoryButtonClick}
             regionConfirmed={regionSelection.regionConfirmed}
-            categoryStepIndex={0} // 임시로 0으로 설정 (실제로는 categorySelection에서 가져와야 함)
+            categoryStepIndex={categorySelection.stepIndex}
             activeMiddlePanelCategory={categorySelection.activeMiddlePanelCategory}
             confirmedCategories={categorySelection.confirmedCategories}
             selectedKeywordsByCategory={categorySelection.selectedKeywordsByCategory}
@@ -106,10 +106,10 @@ const LeftPanel: React.FC = () => {
               cafe: (value: string) => keywordsAndInputs.onDirectInputChange('cafe', value)
             }}
             onConfirmCategory={{
-              accomodation: (finalKeywords: string[]) => handleConfirmByCategory('accommodation', finalKeywords),
-              landmark: (finalKeywords: string[]) => handleConfirmByCategory('landmark', finalKeywords),
-              restaurant: (finalKeywords: string[]) => handleConfirmByCategory('restaurant', finalKeywords),
-              cafe: (finalKeywords: string[]) => handleConfirmByCategory('cafe', finalKeywords)
+              accomodation: (finalKeywords: string[]) => handleConfirmByCategory('숙소', finalKeywords),
+              landmark: (finalKeywords: string[]) => handleConfirmByCategory('관광지', finalKeywords),
+              restaurant: (finalKeywords: string[]) => handleConfirmByCategory('음식점', finalKeywords),
+              cafe: (finalKeywords: string[]) => handleConfirmByCategory('카페', finalKeywords)
             }}
             handlePanelBack={{
               accomodation: () => handlePanelBackByCategory('accommodation'),
@@ -117,7 +117,7 @@ const LeftPanel: React.FC = () => {
               restaurant: () => handlePanelBackByCategory('restaurant'),
               cafe: () => handlePanelBackByCategory('cafe')
             }}
-            isCategoryButtonEnabled={() => true}
+            isCategoryButtonEnabled={categorySelection.isCategoryButtonEnabled}
           />
         </LeftPanelContainer>
       )}
@@ -146,10 +146,13 @@ const LeftPanel: React.FC = () => {
   );
 };
 
-// Helper function to handle category confirmation that was left undefined in the original code
-const handleConfirmByCategory = (category: string, finalKeywords: string[]) => {
-  // This is a placeholder for the actual implementation
-  console.log(`Confirming ${finalKeywords.length} keywords for category ${category}`);
+// 카테고리 확인 핸들러 구현
+const handleConfirmByCategory = (category: CategoryName, finalKeywords: string[]) => {
+  console.log(`카테고리 '${category}' 확인, 키워드: ${finalKeywords.join(', ')}`);
+  
+  // 여기서는 임시로 콘솔 로그만 출력
+  // 이 함수는 실제 카테고리 확인 로직을 연결해야 함
+  return true;
 };
 
 export default LeftPanel;

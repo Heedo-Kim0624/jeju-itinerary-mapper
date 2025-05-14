@@ -5,6 +5,7 @@ import { KeywordPanelProps } from '@/types/keyword';
 import KeywordSelector from './KeywordSelector';
 import KeywordInput from './KeywordInput';
 import KeywordRanking from './KeywordRanking';
+import { toast } from 'sonner';
 
 const BaseKeywordPanel: React.FC<KeywordPanelProps & { accommodationTypeUI?: React.ReactNode }> = ({
   selectedKeywords,
@@ -66,12 +67,20 @@ const BaseKeywordPanel: React.FC<KeywordPanelProps & { accommodationTypeUI?: Rea
       allKeywords.push(directInputValue.trim());
     }
 
+    if (allKeywords.length === 0) {
+      toast.warning("키워드를 최소 1개 이상 선택해주세요.");
+      return;
+    }
+
     const groupFinalKeyword = `${categoryName}[${allKeywords.join(',')}]`;
+    console.log("키워드 확인:", groupFinalKeyword);
+    
+    // 선택된 키워드 확인 및 결과 표시 처리
+    onConfirm([groupFinalKeyword], true);
+    
+    // 우선순위 목록 초기화
     setRanking([]);
     onDirectInputChange('');
-    
-    // Issue #5 fix - Clear selected keywords when confirming
-    onConfirm([groupFinalKeyword], true);
   };
 
   // 닫기 버튼 클릭 시 패널만 닫도록 수정

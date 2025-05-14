@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { usePanelVisibility } from '../use-panel-visibility';
 import { useMapContext } from '@/components/rightpanel/MapContext';
+import type { CategoryName } from '@/utils/categoryUtils';
 
 export const usePanelHandlers = () => {
   // Panel visibility functionality
@@ -64,13 +65,13 @@ export const usePanelHandlers = () => {
 
   // These functions will be provided by props from use-left-panel
   let selectedRegions: any[] = [];
-  let handleConfirmCategory = (category: string, keywords: string[], clear?: boolean) => {};
+  let handleConfirmCategory = (category: CategoryName, keywords: string[], clear?: boolean) => {};
   let handlePanelBack = () => {};
 
   // Setup function to inject dependencies from parent hook
   const setup = (
     regions: any[],
-    confirmCategoryFn: (category: string, keywords: string[], clear?: boolean) => void,
+    confirmCategoryFn: (category: CategoryName, keywords: string[], clear?: boolean) => void,
     panelBackFn: () => void
   ) => {
     selectedRegions = regions;
