@@ -15,7 +15,8 @@ const useMapCore = () => {
     mapContainer, 
     isMapInitialized, 
     isNaverLoaded,
-    isMapError 
+    isMapError,
+    isGeoJsonInitialized
   } = useMapInitialization();
   
   // 지도 마커 관리
@@ -302,7 +303,7 @@ const useMapCore = () => {
       return [];
     }
 
-    if (window.geoJsonLayer && typeof window.geoJsonLayer.renderRoute === 'function') {
+    if (typeof window !== 'undefined' && window.geoJsonLayer && typeof window.geoJsonLayer.renderRoute === 'function') {
       // 외부 GeoJsonLayer 컴포넌트의 렌더 함수 사용
       return window.geoJsonLayer.renderRoute(nodeIds, linkIds, style);
     }

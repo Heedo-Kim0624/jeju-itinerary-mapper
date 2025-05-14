@@ -1,3 +1,4 @@
+
 export interface Place {
   id: string;
   name: string;
@@ -18,6 +19,12 @@ export interface Place {
   isRecommended?: boolean;
   geoNodeId?: string;
   geoNodeDistance?: number;
+  categoryDetail?: string;
+  reviewCount?: number;
+  naverLink?: string;
+  instaLink?: string;
+  operatingHours?: string;
+  weight?: number;
 }
 
 export interface SelectedPlace {
@@ -74,4 +81,11 @@ export interface ItineraryDay {
   places: Place[];
   totalDistance: number;
   routeData?: RouteData;
+}
+
+// Add ItineraryPlaceWithTime interface
+export interface ItineraryPlaceWithTime extends Place {
+  arriveTime?: string;
+  departTime?: string;
+  stayDuration?: number;
 }

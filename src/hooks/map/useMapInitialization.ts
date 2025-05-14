@@ -1,10 +1,11 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { loadNaverMaps } from "@/utils/loadNaverMaps";
 import { initializeNaverMap } from '@/utils/map/mapInitializer';
 import { toast } from "sonner";
 
-export const useMapInitialization = (mapContainer: React.RefObject<HTMLDivElement>) => {
+export const useMapInitialization = () => {
+  const mapContainer = useRef<HTMLDivElement>(null);
   const [isMapInitialized, setIsMapInitialized] = useState<boolean>(false);
   const [isNaverLoaded, setIsNaverLoaded] = useState<boolean>(false);
   const [isMapError, setIsMapError] = useState<boolean>(false);
@@ -121,10 +122,11 @@ export const useMapInitialization = (mapContainer: React.RefObject<HTMLDivElemen
         window.clearTimeout(initTimeout);
       }
     };
-  }, [isNaverLoaded, mapContainer, isMapInitialized]);
+  }, [isNaverLoaded, isMapInitialized]);
 
   return {
     map,
+    mapContainer,
     isMapInitialized,
     isNaverLoaded,
     isMapError,
