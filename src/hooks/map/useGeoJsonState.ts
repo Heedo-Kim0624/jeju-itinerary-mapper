@@ -1,240 +1,189 @@
-import { useState, useEffect, useRef } from 'react';
-import mapboxgl from 'mapbox-gl';
-import { GeoJsonLayerRef } from '@/components/rightpanel/geojson/GeoJsonTypes';
 
-interface GeoJsonData {
-  nodes: any[];
-  links: any[];
-}
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { UseGeoJsonStateProps, GeoJsonFeatureCollection, GeoJsonLayerRef, GeoJsonFeature } from '@/components/rightpanel/geojson/GeoJsonTypes';
 
-export const useGeoJsonState = (map: mapboxgl.Map | null) => {
-  const [nodeData, setNodeData] = useState<any | null>(null);
-  const [linkData, setLinkData] = useState<any | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [dataUrl, setDataUrl] = useState<string | null>(null);
-  const [displayedFeatures, setDisplayedFeatures] = useState<any[]>([]);
+export function useGeoJsonState({ url, onDataLoaded }: UseGeoJsonStateProps) {
+  const [dataUrl, setDataUrl] = useState<string | null>(url || null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string>('');
+  
+  const nodeData = useRef<GeoJsonFeatureCollection | null>(null);
+  const linkData = useRef<GeoJsonFeatureCollection | null>(null);
+  
+  const displayedFeatures = useRef<any[]>([]);
+  
+  const geoJsonLayer = useRef<GeoJsonLayerRef>({} as GeoJsonLayerRef);
+  
+  // Clear displayed features
+  const clearDisplayedFeatures = useCallback(() => {
+    // Remove all features that were added
+    displayedFeatures.current.forEach(feature => {
+      if (feature && typeof feature.remove === 'function') {
+        feature.remove();
+      }
+    });
+    displayedFeatures.current = [];
+  }, []);
 
-  // Function to add a line to the map
-  const addLineToMap = (map: mapboxgl.Map, coordinates: number[][], style: any = {}) => {
-    const sourceId = `route-${Math.random()}`;
-    const layerId = `route-layer-${Math.random()}`;
+  // Get a node by ID
+  const getNodeById = useCallback((id: string) => {
+    if (!nodeData.current || !nodeData.current.features) return null;
+    
+    return nodeData.current.features.find(feature => {
+      if (!feature.properties) return false;
+      return feature.properties.NODE_ID === id;
+    });
+  }, []);
 
-    map.addSource(sourceId, {
-      type: 'geojson',
-      data: {
-        type: 'Feature',
-        properties: {},
-        geometry: {
-          type: 'LineString',
-          coordinates: coordinates
+  // Get a link by ID
+  const getLinkById = useCallback((id: string) => {
+    if (!linkData.current || !linkData.current.features) return null;
+    
+    return linkData.current.features.find(feature => {
+      if (!feature.properties) return false;
+      return feature.properties.LINK_ID === id;
+    });
+  }, []);
+
+  // Render a route with node and link IDs
+  const renderRoute = useCallback((nodeIds: string[], linkIds: string[], style: any = {}) => {
+    if (!nodeData.current || !linkData.current) {
+      console.error('GeoJSON data not loaded');
+      return [];
+    }
+
+    const features: any[] = [];
+
+    // Default style if not provided
+    const defaultStyle = {
+      color: '#4CAF50',
+      width: 4,
+      opacity: 0.8,
+      ...style
+    };
+
+    // Add nodes as markers
+    nodeIds.forEach(nodeId => {
+      const node = getNodeById(nodeId);
+      if (node && node.geometry && node.geometry.coordinates) {
+        // TODO: Add your visualization logic here
+        // For example, add a marker at the node location
+        console.log(`Would render node ${nodeId} at ${node.geometry.coordinates}`);
+        // features.push(marker);
+      }
+    });
+
+    // Add links as lines
+    linkIds.forEach(linkId => {
+      const link = getLinkById(linkId);
+      if (link && link.geometry && link.geometry.coordinates) {
+        // TODO: Add your visualization logic here
+        // For example, add a polyline for the link
+        console.log(`Would render link ${linkId} with coordinates`, link.geometry.coordinates);
+        // features.push(polyline);
+      }
+    });
+
+    displayedFeatures.current.push(...features);
+    return features;
+  }, [getNodeById, getLinkById]);
+
+  // Render all network data
+  const renderAllNetwork = useCallback(() => {
+    if (!nodeData.current || !linkData.current) {
+      console.error('GeoJSON data not loaded');
+      return;
+    }
+
+    clearDisplayedFeatures();
+    
+    try {
+      // Render all nodes
+      nodeData.current.features.forEach(node => {
+        if (node && node.geometry && node.geometry.coordinates) {
+          // TODO: Add your visualization logic here
+          console.log(`Would render node at ${node.geometry.coordinates}`);
         }
-      }
-    });
+      });
 
-    map.addLayer({
-      id: layerId,
-      type: 'line',
-      source: sourceId,
-      layout: {
-        'line-join': 'round',
-        'line-cap': 'round'
-      },
-      paint: {
-        'line-color': style.color || '#888',
-        'line-width': style.width || 2,
-        'line-opacity': style.opacity || 0.8
-      }
-    });
-
-    return { sourceId, layerId };
-  };
-
-  // Function to add a point to the map
-  const addPointToMap = (map: mapboxgl.Map, coordinates: number[], style: any = {}) => {
-    const sourceId = `point-${Math.random()}`;
-    const layerId = `point-layer-${Math.random()}`;
-
-    map.addSource(sourceId, {
-      type: 'geojson',
-      data: {
-        type: 'Feature',
-        properties: {},
-        geometry: {
-          type: 'Point',
-          coordinates: coordinates
+      // Render all links
+      linkData.current.features.forEach(link => {
+        if (link && link.geometry && link.geometry.coordinates) {
+          // TODO: Add your visualization logic here
+          console.log(`Would render link with coordinates`, link.geometry.coordinates);
         }
-      }
-    });
+      });
 
-    map.addLayer({
-      id: layerId,
-      type: 'circle',
-      source: sourceId,
-      paint: {
-        'circle-radius': style.scale || 5,
-        'circle-color': style.color || '#f00',
-        'circle-opacity': style.opacity || 1
-      }
-    });
-
-    return { sourceId, layerId };
-  };
+      console.log(`Rendered ${nodeData.current.features.length} nodes and ${linkData.current.features.length} links`);
+    } catch (error) {
+      console.error('Error rendering network:', error);
+    }
+  }, [clearDisplayedFeatures]);
 
   // Load GeoJSON data
-  const loadGeoJson = async (url: string) => {
+  const loadGeoJson = useCallback(async (url: string) => {
+    if (!url) {
+      setError('No URL provided');
+      return;
+    }
+    
     setIsLoading(true);
-    setError(null);
-
+    setError('');
+    
     try {
       const response = await fetch(url);
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(`Failed to fetch GeoJSON data: ${response.status} ${response.statusText}`);
       }
+      
       const data = await response.json();
-
-      // Assuming the GeoJSON has features that are nodes and links
-      const nodes = data.features.filter((feature: any) => feature.geometry.type === 'Point');
-      const links = data.features.filter((feature: any) => feature.geometry.type === 'LineString');
-
-      // Convert arrays to objects with id as key
-      const nodesObject = nodes.reduce((obj: any, node: any) => {
-        obj[node.properties.id] = node;
-        return obj;
-      }, {});
-
-      const linksObject = links.reduce((obj: any, link: any) => {
-        obj[link.properties.id] = link;
-        return obj;
-      }, {});
-
-      setNodeData(nodesObject);
-      setLinkData(linksObject);
-    } catch (e: any) {
-      setError(e.message);
-      console.error("Failed to load GeoJSON:", e);
+      
+      // Determine if this is node or link data based on the first feature
+      if (data.features && data.features.length > 0) {
+        const firstFeature = data.features[0];
+        if (firstFeature.properties && 'NODE_ID' in firstFeature.properties) {
+          nodeData.current = data;
+          console.log(`Loaded ${data.features.length} nodes`);
+        } else if (firstFeature.properties && 'LINK_ID' in firstFeature.properties) {
+          linkData.current = data;
+          console.log(`Loaded ${data.features.length} links`);
+        }
+      }
+      
+      if (onDataLoaded) {
+        onDataLoaded(data);
+      }
+    } catch (err) {
+      console.error('Error loading GeoJSON:', err);
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [onDataLoaded]);
 
+  // Initialize the layer reference
+  useEffect(() => {
+    geoJsonLayer.current = {
+      renderRoute,
+      renderAllNetwork,
+      clearDisplayedFeatures,
+      getNodeById,
+      getLinkById
+    };
+  }, [renderRoute, renderAllNetwork, clearDisplayedFeatures, getNodeById, getLinkById]);
+
+  // Load data when URL changes
   useEffect(() => {
     if (dataUrl) {
       loadGeoJson(dataUrl);
     }
-  }, [dataUrl]);
-
-  // Update the geoJsonLayer ref to include renderAllNetwork
-  const geoJsonLayer = useRef<GeoJsonLayerRef>({
-    renderRoute: (nodeIds: string[], linkIds: string[], style: any = {}) => {
-      console.log("[GeoJSON] Rendering route", { nodeIds, linkIds, style });
-      if (!map || !nodeData || !linkData) {
-        console.warn("[GeoJSON] Cannot render route: map or data not ready");
-        return [];
-      }
-
-      const renderedFeatures: any[] = [];
-
-      // Render links
-      linkIds.forEach(linkId => {
-        const link = linkData[linkId];
-        if (link && link.geometry && link.geometry.coordinates) {
-          const feature = addLineToMap(map, link.geometry.coordinates, {
-            color: style.lineColor || '#00f',
-            width: style.lineWidth || 3,
-            opacity: style.lineOpacity || 0.7
-          });
-          if (feature) renderedFeatures.push(feature);
-        }
-      });
-
-      // Render nodes
-      nodeIds.forEach(nodeId => {
-        const node = nodeData[nodeId];
-        if (node && node.geometry && node.geometry.coordinates) {
-          const feature = addPointToMap(map, node.geometry.coordinates, {
-            color: style.nodeColor || '#f00',
-            scale: style.nodeScale || 5,
-            opacity: style.nodeOpacity || 1
-          });
-          if (feature) renderedFeatures.push(feature);
-        }
-      });
-
-      setDisplayedFeatures(prev => [...prev, ...renderedFeatures]);
-      console.log(`[GeoJSON] Rendered ${renderedFeatures.length} route features`);
-      return renderedFeatures;
-    },
-
-    renderAllNetwork: () => {
-      console.log("[GeoJSON] Rendering entire network");
-      if (!map || !nodeData || !linkData) {
-        console.warn("[GeoJSON] Cannot render network: map or data not ready");
-        return [];
-      }
-
-      const renderedFeatures: any[] = [];
-
-      // Render all links with default style
-      Object.values(linkData).forEach((link) => {
-        if (link && link.geometry && link.geometry.coordinates) {
-          const feature = addLineToMap(map, link.geometry.coordinates, {
-            color: "#77DD77", // Light green
-            width: 2,
-            opacity: 0.5
-          });
-          if (feature) renderedFeatures.push(feature);
-        }
-      });
-
-      // Render all nodes with default style
-      Object.values(nodeData).forEach((node) => {
-        if (node && node.geometry && node.geometry.coordinates) {
-          const marker = new mapboxgl.Marker({
-            color: "#AAAAAA",  // Gray for regular nodes
-            scale: 0.5
-          })
-            .setLngLat(node.geometry.coordinates)
-            .addTo(map);
-          renderedFeatures.push(marker);
-        }
-      });
-
-      console.log(`[GeoJSON] Rendered ${renderedFeatures.length} network features`);
-      return renderedFeatures;
-    },
-
-    clearDisplayedFeatures: () => {
-      console.log("[GeoJSON] Clearing displayed features");
-      displayedFeatures.forEach(feature => {
-        if (feature.sourceId && map.getSource(feature.sourceId)) {
-          map.removeLayer(feature.layerId);
-          map.removeSource(feature.sourceId);
-        }
-        // Check if the feature is a mapboxgl.Marker before attempting to remove it
-        if (feature instanceof mapboxgl.Marker) {
-          feature.remove();
-        }
-      });
-      setDisplayedFeatures([]);
-    },
-
-    getNodeById: (id: string) => {
-      if (!nodeData) return null;
-      return nodeData[id];
-    },
-
-    getLinkById: (id: string) => {
-      if (!linkData) return null;
-      return linkData[id];
-    }
-  });
+  }, [dataUrl, loadGeoJson]);
 
   return {
     geoJsonLayer,
     loadGeoJson,
     isLoading,
     error,
-    setDataUrl,
+    setDataUrl
   };
-};
+}

@@ -1,179 +1,134 @@
-import { useCallback, useEffect, useState } from 'react';
-import { ExtractedRouteData } from '@/types/schedule';
-import { Place, ItineraryDay } from '@/types/supabase';
-import { useToast } from '@/components/ui/use-toast';
 
-export const useMapFeatures = (
-  map: mapboxgl.Map | null,
-  geoJsonLayer: any,
-  markers: mapboxgl.Marker[]
-) => {
-  const { toast } = useToast();
-  const [isNetworkRendered, setIsNetworkRendered] = useState(false);
+import { useCallback } from 'react';
+import { useMapContext } from '@/components/rightpanel/MapContext';
+import { Place } from '@/types/supabase';
+import { ItineraryDay } from '@/hooks/use-itinerary-creator';
+import * as mapboxgl from 'mapbox-gl';
 
-  const addMarkersToMap = useCallback((places: Place[], options: { highlight?: boolean; useRecommendedStyle?: boolean } = {}) => {
-    if (!map) {
-      console.warn('Cannot add markers: map is null');
-      return;
-    }
+export function useMapFeatures() {
+  const { map, removeAllMarkers, geojsonLayerRef } = useMapContext();
 
-    // Clear existing markers
-    markers.forEach(marker => marker.remove());
+  /**
+   * Add markers to map for the given places
+   */
+  const addMarkersToMap = useCallback((places: Place[], options = { highlight: false, useRecommendedStyle: false }) => {
+    if (!map.current || !places || places.length === 0) return;
 
-    // Add new markers
+    // 마커 스타일 설정 
+    const markerColor = options.highlight ? '#FF4500' : (options.useRecommendedStyle ? '#1E88E5' : '#FF0000');
+    const markerSize = options.highlight ? 40 : 30;
+
     places.forEach(place => {
-      if (place.x && place.y) {
-        const el = document.createElement('div');
-        el.className = 'marker';
-        el.style.backgroundImage = `url(/images/marker-${options.useRecommendedStyle ? 'recommended' : 'normal'}.png)`;
-        el.style.width = '24px';
-        el.style.height = '24px';
-        el.style.backgroundSize = '100%';
+      if (!place || typeof place.x !== 'number' || typeof place.y !== 'number') {
+        console.warn('Invalid place data:', place);
+        return;
+      }
 
-        if (options.highlight) {
-          el.style.border = '2px solid blue';
-        }
+      // 마커 엘리먼트 생성
+      const markerElement = document.createElement('div');
+      markerElement.style.width = `${markerSize}px`;
+      markerElement.style.height = `${markerSize}px`;
+      markerElement.style.borderRadius = '50%';
+      markerElement.style.background = markerColor;
+      markerElement.style.opacity = '0.8';
+      markerElement.style.border = '2px solid white';
+      markerElement.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)';
+      markerElement.style.cursor = 'pointer';
+      markerElement.style.zIndex = options.highlight ? '10' : '5';
 
-        el.addEventListener('click', () => {
-          toast({
-            title: place.name,
-            description: place.address,
-          });
-        });
+      // 마커 생성 및 지도에 추가
+      const marker = new mapboxgl.Marker({ 
+        element: markerElement 
+      })
+        .setLngLat([place.x, place.y])
+        .addTo(map.current);
 
-        const marker = new mapboxgl.Marker(el)
+      // 마커 클릭 이벤트 - 팝업 표시
+      markerElement.onclick = () => {
+        const popup = new mapboxgl.Popup({ 
+          closeButton: true,
+          closeOnClick: true,
+          maxWidth: '300px'
+        })
           .setLngLat([place.x, place.y])
-          .addTo(map);
-
-        markers.push(marker);
-      }
+          .setHTML(`
+            <div style="padding: 10px;">
+              <h3 style="margin: 0 0 8px; font-size: 16px; font-weight: bold;">${place.name}</h3>
+              <p style="margin: 0 0 5px; font-size: 14px;">${place.address || place.road_address || '주소 정보 없음'}</p>
+              <p style="margin: 0; font-size: 13px; color: #666;">${place.category || '카테고리 정보 없음'}</p>
+            </div>
+          `)
+          .addTo(map.current);
+      };
     });
-  }, [map, markers, toast]);
+  }, [map]);
 
-  // Handle rendering an itinerary day's route
-  const renderItineraryDay = useCallback((day: ItineraryDay | null) => {
-    if (!map || !geoJsonLayer || !day) {
-      console.warn('Cannot render itinerary: map, geoJsonLayer, or day is null');
+  /**
+   * Render a specific day's itinerary on the map
+   */
+  const renderItineraryDay = useCallback((day: ItineraryDay) => {
+    if (!map.current || !day || !day.places || !geojsonLayerRef.current) {
+      console.warn('Cannot render itinerary day, missing data or map reference');
       return;
     }
-
-    console.log(`[MapFeatures] Rendering itinerary for day ${day.day}`, day);
-
-    // Clear previous features
-    geoJsonLayer.clearDisplayedFeatures();
-
-    // Ensure day has routeData
-    if (!day.routeData) {
-      console.log('[MapFeatures] No route data available for this day');
-      
-      // Add markers for places anyway
-      if (day.places && day.places.length > 0) {
-        addMarkersToMap(day.places, { highlight: true });
-        
-        // Center map on first place
-        if (day.places[0] && day.places[0].x && day.places[0].y) {
-          map.flyTo({
-            center: [day.places[0].x, day.places[0].y],
-            zoom: 12
-          });
-        }
-      }
-      return;
-    }
-
-    // Extract nodeIds and linkIds
-    const { nodeIds = [], linkIds = [] } = day.routeData;
     
-    console.log(`[MapFeatures] Rendering route with ${nodeIds.length} nodes and ${linkIds.length} links`);
+    // Clear previous markers and routes
+    removeAllMarkers();
+    geojsonLayerRef.current.clearDisplayedFeatures();
     
-    // If we have valid node and link IDs, render the route
-    if (nodeIds.length > 0) {
-      const renderedFeatures = geoJsonLayer.renderRoute(nodeIds, linkIds, {
-        lineColor: '#00ff00',  // Green for route
-        lineWidth: 4,
-        lineOpacity: 0.8,
-        nodeColor: '#ff0000',  // Red for route nodes
-        nodeScale: 0.8
-      });
+    // Add markers for places in this day's itinerary
+    addMarkersToMap(day.places, { highlight: true });
+    
+    // If we have route data for this day, render it
+    if (day.routeData && day.routeData.nodeIds && day.routeData.linkIds) {
+      // Use a green color for the route
+      const routeStyle = {
+        color: '#4CAF50',
+        width: 4,
+        opacity: 0.8
+      };
       
-      console.log(`[MapFeatures] Rendered ${renderedFeatures.length} route features`);
-      
-      // Add all route nodes to fit bounds calculation
-      if (renderedFeatures.length > 0 && nodeIds.length > 0) {
-        try {
-          // Get all node coordinates to fit map bounds
-          const bounds = new mapboxgl.LngLatBounds();
-          
-          // Collect coordinates from nodes
-          nodeIds.forEach(nodeId => {
-            const node = geoJsonLayer.getNodeById(nodeId);
-            if (node && node.geometry && node.geometry.coordinates) {
-              bounds.extend(node.geometry.coordinates);
-            }
-          });
-          
-          // Ensure bounds are valid before fitting
-          if (!bounds.isEmpty()) {
-            map.fitBounds(bounds, { 
-              padding: 100,
-              maxZoom: 14
-            });
-          }
-        } catch (error) {
-          console.error('[MapFeatures] Error fitting bounds:', error);
-        }
+      try {
+        console.log(`Rendering route for day ${day.day} with ${day.routeData.nodeIds.length} nodes and ${day.routeData.linkIds.length} links`);
+        geojsonLayerRef.current.renderRoute(
+          day.routeData.nodeIds,
+          day.routeData.linkIds,
+          routeStyle
+        );
+      } catch (error) {
+        console.error('Error rendering route:', error);
       }
     } else {
-      console.warn('[MapFeatures] No nodeIds to render for this day');
-      
-      // Fallback: If we have places but no route, just show place markers
-      if (day.places && day.places.length > 0) {
-        addMarkersToMap(day.places, { highlight: true });
-        
-        // Center on first place
-        if (day.places[0] && day.places[0].x && day.places[0].y) {
-          map.flyTo({
-            center: [day.places[0].x, day.places[0].y],
-            zoom: 12
-          });
-        }
-      }
+      console.log(`No route data available for day ${day.day}`);
     }
-  }, [map, geoJsonLayer, addMarkersToMap]);
+  }, [map, addMarkersToMap, removeAllMarkers, geojsonLayerRef]);
 
-  // Render the entire network (all nodes and links)
+  /**
+   * Debug function to render the entire network
+   */
   const renderEntireNetwork = useCallback(() => {
-    if (!map || !geoJsonLayer) {
-      console.warn('[MapFeatures] Cannot render network: map or geoJsonLayer is null');
-      return;
-    }
-
-    console.log('[MapFeatures] Rendering entire network');
-    geoJsonLayer.clearDisplayedFeatures();
+    if (!geojsonLayerRef.current) return;
     
-    // Call the renderAllNetwork method we added
-    const features = geoJsonLayer.renderAllNetwork();
-    console.log(`[MapFeatures] Rendered ${features.length} network features`);
-  }, [map, geoJsonLayer]);
+    try {
+      console.log('Rendering entire network');
+      geojsonLayerRef.current.renderAllNetwork();
+    } catch (error) {
+      console.error('Error rendering entire network:', error);
+    }
+  }, [geojsonLayerRef]);
 
-  // Debug function to show all paths
+  /**
+   * Debug function to show all paths
+   */
   const debugShowAllPaths = useCallback(() => {
-    if (!map || !geoJsonLayer) {
-      console.warn('Cannot render network: map or geoJsonLayer is null');
-      return;
-    }
-
-    console.log('[MapFeatures] DEBUG: Showing all paths');
-    geoJsonLayer.clearDisplayedFeatures();
-    
-    // Call the renderAllNetwork method we added
-    geoJsonLayer.renderAllNetwork();
-  }, [map, geoJsonLayer]);
+    console.log('Debug: Showing all paths');
+    renderEntireNetwork();
+  }, [renderEntireNetwork]);
 
   return {
     addMarkersToMap,
     renderItineraryDay,
     renderEntireNetwork,
-    debugShowAllPaths,
+    debugShowAllPaths
   };
-};
+}

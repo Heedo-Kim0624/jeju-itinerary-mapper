@@ -1,11 +1,8 @@
 
-export interface ServerRouteResponse {
-  date?: string;
-  nodeIds: number[];
-  linkIds?: number[];
-}
+import { Place } from './supabase';
 
 export interface ExtractedRouteData {
   nodeIds: string[];
   linkIds: string[];
+  totalDistance: number;
 }

@@ -6,7 +6,7 @@ import RegionPanelHandler from './RegionPanelHandler';
 import CategoryResultHandler from './CategoryResultHandler';
 import LeftPanelContainer from './LeftPanelContainer';
 import ItineraryView from './ItineraryView';
-import type { CategoryName } from '@/utils/categoryUtils';
+import { CategoryName } from '@/utils/categoryUtils';
 
 const LeftPanel: React.FC = () => {
   const {
@@ -47,7 +47,7 @@ const LeftPanel: React.FC = () => {
   };
 
   // 카테고리 확인 핸들러
-  const handleConfirmByCategory = (category: CategoryName, finalKeywords: string[]) => {
+  const handleConfirmByCategory = (category: string, finalKeywords: string[]) => {
     console.log(`카테고리 '${category}' 확인, 키워드: ${finalKeywords.join(', ')}`);
     // 키워드 확인 후 카테고리 결과 화면 표시
     keywordsAndInputs.handleConfirmCategory(category, finalKeywords, true);
@@ -63,7 +63,6 @@ const LeftPanel: React.FC = () => {
             startDate={tripDetails.dates?.startDate || new Date()}
             onSelectDay={itineraryManagement.handleSelectItineraryDay}
             selectedDay={itineraryManagement.selectedItineraryDay}
-            onClose={() => uiVisibility.setShowItinerary(false)} // Add required onClose prop
           />
         </div>
       ) : (
@@ -88,7 +87,6 @@ const LeftPanel: React.FC = () => {
           itinerary={itineraryManagement.itinerary}
           selectedItineraryDay={itineraryManagement.selectedItineraryDay}
           onSelectDay={itineraryManagement.handleSelectItineraryDay}
-          onClose={() => {}} // Add required onClose prop
         >
           <LeftPanelContent
             onDateSelect={tripDetails.setDates}

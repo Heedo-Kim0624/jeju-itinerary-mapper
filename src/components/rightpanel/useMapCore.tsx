@@ -1,129 +1,97 @@
 
-import { useMapInitialization } from '@/hooks/map/useMapInitialization';
-import { useMapNavigation } from '@/hooks/map/useMapNavigation';
-import { useMapMarkers } from '@/hooks/map/useMapMarkers';
-import { useMapItineraryRouting } from '@/hooks/map/useMapItineraryRouting';
-import { useGeoJsonState } from '@/hooks/map/useGeoJsonState';
-import { useServerRoutes } from '@/hooks/map/useServerRoutes';
-import { useMapFeatures } from '@/hooks/map/useMapFeatures';
+import { useCallback, useState, useRef, MutableRefObject } from 'react';
 import { Place } from '@/types/supabase';
+import { useGeoJsonState } from '@/hooks/map/useGeoJsonState';
+import { useMapFeatures } from '@/hooks/map/useMapFeatures';
+import { GeoJsonLayerRef } from './geojson/GeoJsonTypes';
+import { ItineraryDay } from '@/hooks/use-itinerary-creator';
 
-/**
- * 지도 핵심 기능 통합 훅
- */
-const useMapCore = () => {
-  // 지도 초기화 및 상태 관리
-  const { 
-    map, 
-    mapContainer, 
-    isMapInitialized, 
-    isNaverLoaded,
-    isMapError
-  } = useMapInitialization();
+export function useMapCore() {
+  const map = useRef<mapboxgl.Map | null>(null);
+  const [mapLoaded, setMapLoaded] = useState<boolean>(false);
+  const markers = useRef<mapboxgl.Marker[]>([]);
   
-  // 지도 마커 관리
-  const { 
-    addMarkers, 
-    clearMarkersAndUiElements,
-    calculateRoutes
-  } = useMapMarkers(map);
+  // Layer references
+  const geojsonLayerRef = useRef<GeoJsonLayerRef>({} as GeoJsonLayerRef);
   
-  // 지도 네비게이션 기능
-  const { 
-    panTo 
-  } = useMapNavigation(map);
+  // GeoJSON state management
+  const geoJsonState = useGeoJsonState({
+    url: '',
+    onDataLoaded: () => console.log("GeoJSON data loaded")
+  });
   
-  // 경로 렌더링 기능
-  const {
-    renderDayRoute,
-    renderMultiDayRoutes, 
-    clearAllRoutes,
-    highlightSegment
-  } = useMapItineraryRouting(map);
+  // Map features
+  const mapFeatures = useMapFeatures();
+  
+  // Remove all markers from the map
+  const removeAllMarkers = useCallback(() => {
+    markers.current.forEach(marker => marker.remove());
+    markers.current = [];
+  }, []);
 
-  // GeoJSON 상태 관리
-  const {
-    showGeoJson,
-    isGeoJsonLoaded,
-    geoJsonNodes,
-    geoJsonLinks,
-    toggleGeoJsonVisibility,
-    handleGeoJsonLoaded,
-    checkGeoJsonMapping
-  } = useGeoJsonState();
+  // Add markers for places
+  const addMarkers = useCallback((places: Place[], options = { highlight: false, useRecommendedStyle: false }) => {
+    if (!map.current || !places) return;
+    
+    mapFeatures.addMarkersToMap(places, options);
+  }, [mapFeatures]);
 
-  // 서버 경로 데이터 관리
-  const {
-    serverRoutesData,
-    setServerRoutes: setServerRoutesBase
-  } = useServerRoutes();
+  // Pan to a specific location
+  const panTo = useCallback((location: { lat: number, lng: number }) => {
+    if (map.current) {
+      map.current.flyTo({
+        center: [location.lng, location.lat],
+        essential: true,
+        zoom: 14
+      });
+    }
+  }, []);
 
-  // 지도 특성(마커, 경로 등) 관리
-  const {
-    renderGeoJsonRoute,
-    renderItineraryRoute: renderItineraryRouteBase,
-    clearPreviousHighlightedPath,
-    showRouteForPlaceIndex: showRouteForPlaceIndexBase,
-    renderAllNetwork
-  } = useMapFeatures(map);
+  // Clear all markers and UI elements
+  const clearMarkersAndUiElements = useCallback(() => {
+    removeAllMarkers();
+    if (geojsonLayerRef.current && geojsonLayerRef.current.clearDisplayedFeatures) {
+      geojsonLayerRef.current.clearDisplayedFeatures();
+    }
+  }, [removeAllMarkers]);
 
-  // 서버 경로 데이터 설정 함수
-  const setServerRoutes = (dayRoutes: Record<number, any>) => {
-    setServerRoutesBase(dayRoutes, showGeoJson, toggleGeoJsonVisibility);
-  };
+  // Render the route for a specific itinerary day
+  const renderItineraryDay = useCallback((day: ItineraryDay) => {
+    mapFeatures.renderItineraryDay(day);
+  }, [mapFeatures]);
 
-  // 일정 경로 렌더링 함수
-  const renderItineraryRoute = (itineraryDay: any) => {
-    renderItineraryRouteBase(itineraryDay);
-  };
+  // Render the entire network
+  const renderEntireNetwork = useCallback(() => {
+    mapFeatures.renderEntireNetwork();
+  }, [mapFeatures]);
 
-  // 특정 장소 인덱스의 경로 하이라이트
-  const showRouteForPlaceIndex = (placeIndex: number, itineraryDay: any) => {
-    showRouteForPlaceIndexBase(placeIndex, itineraryDay);
-  };
-
-  // 간단화된 mapPlacesWithGeoNodes 함수
-  const mapPlacesWithGeoNodes = (places: Place[]) => places;
+  // Debug function to show all paths
+  const debugShowAllPaths = useCallback(() => {
+    mapFeatures.debugShowAllPaths();
+  }, [mapFeatures]);
 
   return {
-    // 지도 기본 속성
     map,
-    mapContainer,
-    isMapInitialized,
-    isNaverLoaded,
-    isMapError,
+    mapLoaded,
+    setMapLoaded,
+    markers,
+    geojsonLayerRef,
     
-    // 지도 마커 및 네비게이션
-    addMarkers,
-    calculateRoutes,
-    clearMarkersAndUiElements,
+    // Map actions
     panTo,
+    addMarkers,
+    removeAllMarkers,
+    clearMarkersAndUiElements,
     
-    // GeoJSON 관련
-    showGeoJson,
-    toggleGeoJsonVisibility,
-    isGeoJsonLoaded,
-    geoJsonNodes,
-    geoJsonLinks,
-    handleGeoJsonLoaded,
-    checkGeoJsonMapping,
+    // GeoJSON state
+    geoJsonState,
     
-    // 경로 렌더링
-    renderItineraryRoute,
-    clearAllRoutes,
-    highlightSegment,
-    clearPreviousHighlightedPath,
-    showRouteForPlaceIndex,
-    renderGeoJsonRoute,
-    renderAllNetwork,
-    
-    // 장소-노드 매핑
-    mapPlacesWithGeoNodes,
-    
-    // 서버 경로
-    serverRoutesData,
-    setServerRoutes
+    // Map features
+    mapFeatures: {
+      addMarkersToMap: mapFeatures.addMarkersToMap,
+      renderItineraryDay: mapFeatures.renderItineraryDay,
+      renderEntireNetwork: mapFeatures.renderEntireNetwork,
+      debugShowAllPaths: mapFeatures.debugShowAllPaths
+    }
   };
-};
-
-export default useMapCore;
+}
