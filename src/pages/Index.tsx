@@ -25,16 +25,8 @@ const Index: React.FC = () => {
     selectedItineraryDay,
     showItinerary,
     setShowItinerary,
-    handleCreateItinerary
+    generateItinerary
   } = useItinerary();
-
-  // Pass the handleCreateItinerary function to the LeftPanel
-  const handleCreateItineraryWrapper = () => {
-    if (handleCreateItinerary) {
-      return handleCreateItinerary(selectedPlaces, null);
-    }
-    return false;
-  };
 
   // selectedCategoriesCount 상태 추가하여 디버그
   console.log('모든 카테고리 선택 여부:', allCategoriesSelected);
@@ -42,7 +34,7 @@ const Index: React.FC = () => {
   return (
     <div className="flex h-screen overflow-hidden bg-jeju-light-gray relative">
       {/* 왼쪽 패널 */}
-      <LeftPanel onCreateItinerary={handleCreateItineraryWrapper} />
+      <LeftPanel />
 
       {/* 오른쪽 지도 패널 */}
       <RightPanel
