@@ -194,7 +194,7 @@ const GeoJsonRenderer: React.FC<GeoJsonRendererProps> = ({
     return () => {
       if (window.geoJsonLayer) {
         // @ts-ignore - 타입 에러 무시
-        window.geoJsonLayer.renderAllNetwork = undefined;
+        window.geoJsonLayer.renderAllNetwork = null;
       }
     };
   }, [map, nodes, links]);

@@ -97,7 +97,7 @@ const LeftPanel: React.FC = () => {
             categoryStepIndex={categorySelection.stepIndex}
             activeMiddlePanelCategory={categorySelection.activeMiddlePanelCategory}
             confirmedCategories={categorySelection.confirmedCategories}
-            selectedKeywordsByCategory={categorySelection.selectedKeywordsByCategory as Record<string, string[]>}
+            selectedKeywordsByCategory={categorySelection.selectedKeywordsByCategory}
             toggleKeyword={categorySelection.toggleKeyword}
             directInputValues={{
               accomodation: keywordsAndInputs.directInputValues['accommodation'] || '',
@@ -143,7 +143,7 @@ const LeftPanel: React.FC = () => {
       <CategoryResultHandler
         showCategoryResult={uiVisibility.showCategoryResult}
         selectedRegions={regionSelection.selectedRegions}
-        selectedKeywordsByCategory={categorySelection.selectedKeywordsByCategory as Record<string, string[]>}
+        selectedKeywordsByCategory={categorySelection.selectedKeywordsByCategory}
         onClose={handleResultClose}
         onSelectPlace={placesManagement.handleSelectPlace}
         selectedPlaces={placesManagement.selectedPlaces}
