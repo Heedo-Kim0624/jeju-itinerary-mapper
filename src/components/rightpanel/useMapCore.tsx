@@ -7,7 +7,7 @@ import { useGeoJsonState } from '@/hooks/map/useGeoJsonState';
 import { useServerRoutes } from '@/hooks/map/useServerRoutes';
 import { useMapFeatures } from '@/hooks/map/useMapFeatures';
 import { Place } from '@/types/supabase';
-import { ServerRouteResponse } from '@/components/rightpanel/geojson/GeoJsonTypes';
+import { ServerRouteResponse } from '@/types/schedule';
 
 /**
  * 지도 핵심 기능 통합 훅

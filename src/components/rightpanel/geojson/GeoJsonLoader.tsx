@@ -1,14 +1,15 @@
 
 import React, { useEffect } from 'react';
 import { toast } from 'sonner';
-import { GeoNode, GeoLink, GeoJsonGeometry, GeoCoordinates, GeoJsonNodeProperties, GeoJsonLinkProperties } from './GeoJsonTypes';
-
-interface GeoJsonLoaderProps {
-  isMapInitialized: boolean;
-  isNaverLoaded: boolean;
-  onLoadSuccess: (nodes: GeoNode[], links: GeoLink[]) => void;
-  onLoadError: (error: Error) => void;
-}
+import { 
+  GeoNode, 
+  GeoLink, 
+  GeoJsonGeometry, 
+  GeoCoordinates, 
+  NodeProperties, 
+  LinkProperties, 
+  GeoJsonLoaderProps 
+} from './GeoJsonTypes';
 
 const GeoJsonLoader: React.FC<GeoJsonLoaderProps> = ({
   isMapInitialized,
@@ -54,7 +55,7 @@ const GeoJsonLoader: React.FC<GeoJsonLoaderProps> = ({
             id,
             type: 'node',
             geometry: feature.geometry as GeoJsonGeometry,
-            properties: feature.properties as GeoJsonNodeProperties,
+            properties: feature.properties as NodeProperties,
             coordinates,
             adjacentLinks: [],
             adjacentNodes: [],
@@ -89,7 +90,7 @@ const GeoJsonLoader: React.FC<GeoJsonLoaderProps> = ({
             id,
             type: 'link',
             geometry: feature.geometry as GeoJsonGeometry,
-            properties: feature.properties as GeoJsonLinkProperties,
+            properties: feature.properties as LinkProperties,
             coordinates: feature.geometry.coordinates as GeoCoordinates[],
             fromNode: fromNodeId,
             toNode: toNodeId,

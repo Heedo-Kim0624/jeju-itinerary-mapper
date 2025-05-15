@@ -1,153 +1,251 @@
-
-import React, { useEffect } from 'react';
-import { useLeftPanel } from '@/hooks/use-left-panel';
-import LeftPanelContent from './LeftPanelContent';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Place } from '@/types/supabase';
+import { useSelectedPlaces } from '@/hooks/use-selected-places';
+import { useTripDetails } from '@/hooks/use-trip-details';
+import { useCategoryResults } from '@/hooks/use-category-results';
+import { useItinerary } from '@/hooks/use-itinerary';
+import { useRegionSelection } from '@/hooks/use-region-selection';
+import { useCategorySelection } from '@/hooks/use-category-selection';
+import { useCategoryHandlers } from '@/hooks/left-panel/use-category-handlers';
+import { useItineraryHandlers } from '@/hooks/left-panel/use-itinerary-handlers';
+import { useInputState } from '@/hooks/left-panel/use-input-state';
 import RegionPanelHandler from './RegionPanelHandler';
-import CategoryResultHandler from './CategoryResultHandler';
-import LeftPanelContainer from './LeftPanelContainer';
-import ItineraryView from './ItineraryView';
-import type { CategoryName } from '@/utils/categoryUtils';
+import CategorySelector from './CategorySelector';
+import CategoryResultsPanel from './CategoryResultsPanel';
+import ScheduleGenerator from './ScheduleGenerator';
+import ScheduleViewer from './ScheduleViewer';
+import ItineraryButton from './ItineraryButton';
+import { RegionDetails } from '@/types/region';
 
-const LeftPanel: React.FC = () => {
+interface LeftPanelProps {
+  onClose: () => void;
+}
+
+const LeftPanel: React.FC<LeftPanelProps> = ({
+  onClose
+}) => {
+  // 지역 및 카테고리 선택 기능
+  const regionSelection = useRegionSelection();
+  const categorySelection = useCategorySelection();
+  const tripDetails = useTripDetails();
+  
+  // 상태 관리
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [showCategoryResultScreen, setShowCategoryResultScreen] = useState(false);
+  const [currentPanel, setCurrentPanel] = useState<'region' | 'date' | 'category' | 'itinerary'>('region');
+  const [showCategoryResult, setShowCategoryResult] = useState<string | null>(null);
+  const [selectedRegions, setSelectedRegions] = useState<RegionDetails[]>([]);
+  
+  // 입력값 관리
+  const { directInputValues, onDirectInputChange } = useInputState();
+
+  // 키워드 및 입력 관련 기능
+  const keywordsAndInputs = {
+    directInputValues,
+    onDirectInputChange,
+    handleConfirmCategory: (category: string, finalKeywords: string[], clearSelection: boolean = false) => {
+      categorySelection.handleConfirmCategory(category as any, finalKeywords, clearSelection);
+      if (clearSelection) {
+        setShowCategoryResult(category);
+      }
+    }
+  };
+
+  // 장소 관리 기능
   const {
-    regionSelection,
-    categorySelection,
-    keywordsAndInputs,
-    placesManagement,
-    tripDetails,
-    uiVisibility,
-    itineraryManagement,
-    handleCreateItinerary
-  } = useLeftPanel();
+    selectedPlaces,
+    candidatePlaces,
+    selectedPlacesByCategory,
+    handleSelectPlace,
+    handleRemovePlace,
+    handleViewOnMap,
+    allCategoriesSelected,
+    prepareSchedulePayload,
+    isAccommodationLimitReached,
+  } = useSelectedPlaces();
 
-  // 일정 생성 후 UI 상태 변화를 디버깅
+  const placesManagement = {
+    selectedPlaces,
+    candidatePlaces,
+    selectedPlacesByCategory,
+    handleSelectPlace,
+    handleRemovePlace,
+    handleViewOnMap,
+    allCategoriesSelected,
+    isAccommodationLimitReached,
+    prepareSchedulePayload
+  };
+
+  // 일정 관리 기능
+  const { 
+    itinerary,
+    selectedItineraryDay,
+    showItinerary,
+    setItinerary,
+    setSelectedItineraryDay,
+    setShowItinerary,
+    handleSelectItineraryDay,
+    generateItinerary
+  } = useItinerary();
+
+  const itineraryManagement = {
+    itinerary,
+    selectedItineraryDay,
+    setSelectedItineraryDay,
+    handleSelectItineraryDay
+  };
+
+  // UI 가시성 관리
+  const uiVisibility = {
+    showItinerary,
+    setShowItinerary,
+    showCategoryResult,
+    setShowCategoryResult
+  };
+
+  // 카테고리 결과 관리
+  const { 
+    isLoading: isCategoryLoading,
+    error: categoryError,
+    recommendedPlaces,
+    normalPlaces,
+    refetch
+  } = useCategoryResults(showCategoryResult as any, 
+    showCategoryResult ? categorySelection.selectedKeywordsByCategory[showCategoryResult] || [] : [], 
+    regionSelection.selectedRegions);
+
+  const categoryResults = {
+    recommendedPlaces: recommendedPlaces || [],
+    normalPlaces: normalPlaces || []
+  };
+
+  // 카테고리 핸들러
+  const categoryHandlers = useCategoryHandlers();
+  const handleCategorySelect = (category: string) => categoryHandlers.handleCategorySelect(category, refetch);
+  const handleCloseCategoryResult = () => categoryHandlers.handleCloseCategoryResult(setShowCategoryResult);
+  const handleConfirmCategory = () => categoryHandlers.handleConfirmCategory(selectedCategory);
+
+  // 일정 핸들러
+  const itineraryHandlers = useItineraryHandlers();
+  const handleCreateItinerary = async () => {
+    return itineraryHandlers.handleCreateItinerary(
+      tripDetails,
+      selectedPlaces,
+      prepareSchedulePayload,
+      recommendedPlaces,
+      generateItinerary,
+      setShowItinerary,
+      setCurrentPanel
+    );
+  };
+  
+  const handleCloseItinerary = () => {
+    itineraryHandlers.handleCloseItinerary(setShowItinerary, setCurrentPanel);
+  };
+
+  // 일정이 생성되면 첫 번째 날짜 선택
   useEffect(() => {
-    console.log("LeftPanel - 일정 관련 상태 변화 감지:", {
-      일정생성됨: !!itineraryManagement.itinerary,
-      일정패널표시: uiVisibility.showItinerary,
-      선택된일자: itineraryManagement.selectedItineraryDay
-    });
-  }, [
-    itineraryManagement.itinerary, 
-    uiVisibility.showItinerary, 
-    itineraryManagement.selectedItineraryDay
-  ]);
+    if (itinerary && itinerary.length > 0 && showItinerary) {
+      setSelectedItineraryDay(itinerary[0]?.day || 1);
+    }
+  }, [itinerary, showItinerary, setSelectedItineraryDay]);
 
-  // 각 카테고리별로 패널 뒤로가기 함수
-  const handlePanelBackByCategory = (category: string) => {
-    console.log(`${category} 카테고리 패널 뒤로가기`);
-    categorySelection.handlePanelBack();
+  // 지역 선택 핸들러 수정
+  const handleRegionsSelected = (selectedRegions: RegionDetails[]) => {
+    setSelectedRegions(selectedRegions);
+    regionSelection.onRegionsChange(selectedRegions);
   };
 
-  // 결과 닫기 핸들러
-  const handleResultClose = () => {
-    console.log("카테고리 결과 화면 닫기");
-    // null 사용
-    uiVisibility.setShowCategoryResult(null);
+  // 지역 패널 핸들러
+  const regionPanelHandlers = {
+    selectedRegions,
+    onRegionsSelected: handleRegionsSelected,
+    onClose: () => setCurrentPanel('date')
   };
 
-  // 카테고리 확인 핸들러
-  const handleConfirmByCategory = (category: CategoryName, finalKeywords: string[]) => {
-    console.log(`카테고리 '${category}' 확인, 키워드: ${finalKeywords.join(', ')}`);
-    // 키워드 확인 후 카테고리 결과 화면 표시
-    keywordsAndInputs.handleConfirmCategory(category, finalKeywords, true);
-    return true;
+  // 카테고리 패널 핸들러
+  const categoryPanelHandlers = {
+    onCategorySelect: handleCategorySelect,
+    onClose: () => setCurrentPanel('region'),
+    onConfirmCategory: handleConfirmCategory,
+    selectedCategory,
+    setSelectedCategory
   };
 
   return (
-    <div className="relative h-full">
-      {uiVisibility.showItinerary && itineraryManagement.itinerary ? (
-        <div className="fixed top-0 left-0 w-[300px] h-full bg-white border-r border-gray-200 z-40 shadow-md">
-          <ItineraryView
-            itinerary={itineraryManagement.itinerary}
-            startDate={tripDetails.dates?.startDate || new Date()}
-            onSelectDay={itineraryManagement.handleSelectItineraryDay}
-            selectedDay={itineraryManagement.selectedItineraryDay}
-          />
-        </div>
-      ) : (
-        <LeftPanelContainer
-          showItinerary={uiVisibility.showItinerary}
-          onSetShowItinerary={uiVisibility.setShowItinerary}
-          selectedPlaces={placesManagement.selectedPlaces}
-          onRemovePlace={placesManagement.handleRemovePlace}
-          onViewOnMap={placesManagement.handleViewOnMap}
-          allCategoriesSelected={placesManagement.allCategoriesSelected}
-          dates={{
-            startDate: tripDetails.dates?.startDate || null,
-            endDate: tripDetails.dates?.endDate || null,
-            startTime: tripDetails.dates?.startTime || "09:00",
-            endTime: tripDetails.dates?.endTime || "21:00"
-          }}
-          onCreateItinerary={() => {
-            // For type compatibility, convert the Promise to a boolean
-            handleCreateItinerary().then(result => !!result);
-            return true;
-          }}
-          itinerary={itineraryManagement.itinerary}
-          selectedItineraryDay={itineraryManagement.selectedItineraryDay}
-          onSelectDay={itineraryManagement.handleSelectItineraryDay}
-        >
-          <LeftPanelContent
-            onDateSelect={tripDetails.setDates}
-            onOpenRegionPanel={() => regionSelection.setRegionSlidePanelOpen(true)}
-            hasSelectedDates={!!tripDetails.dates}
-            onCategoryClick={categorySelection.handleCategoryButtonClick}
-            regionConfirmed={regionSelection.regionConfirmed}
-            categoryStepIndex={categorySelection.stepIndex}
-            activeMiddlePanelCategory={categorySelection.activeMiddlePanelCategory}
-            confirmedCategories={categorySelection.confirmedCategories}
-            selectedKeywordsByCategory={categorySelection.selectedKeywordsByCategory}
-            toggleKeyword={categorySelection.toggleKeyword}
-            directInputValues={{
-              accomodation: keywordsAndInputs.directInputValues['accommodation'] || '',
-              landmark: keywordsAndInputs.directInputValues['landmark'] || '',
-              restaurant: keywordsAndInputs.directInputValues['restaurant'] || '',
-              cafe: keywordsAndInputs.directInputValues['cafe'] || ''
-            }}
-            onDirectInputChange={{
-              accomodation: (value: string) => keywordsAndInputs.onDirectInputChange('accommodation', value),
-              landmark: (value: string) => keywordsAndInputs.onDirectInputChange('landmark', value),
-              restaurant: (value: string) => keywordsAndInputs.onDirectInputChange('restaurant', value),
-              cafe: (value: string) => keywordsAndInputs.onDirectInputChange('cafe', value)
-            }}
-            onConfirmCategory={{
-              accomodation: (finalKeywords: string[]) => handleConfirmByCategory('숙소', finalKeywords),
-              landmark: (finalKeywords: string[]) => handleConfirmByCategory('관광지', finalKeywords),
-              restaurant: (finalKeywords: string[]) => handleConfirmByCategory('음식점', finalKeywords),
-              cafe: (finalKeywords: string[]) => handleConfirmByCategory('카페', finalKeywords)
-            }}
-            handlePanelBack={{
-              accomodation: () => handlePanelBackByCategory('accommodation'),
-              landmark: () => handlePanelBackByCategory('landmark'),
-              restaurant: () => handlePanelBackByCategory('restaurant'),
-              cafe: () => handlePanelBackByCategory('cafe')
-            }}
-            isCategoryButtonEnabled={categorySelection.isCategoryButtonEnabled}
-          />
-        </LeftPanelContainer>
+    <div className="fixed top-0 left-0 w-[300px] h-full bg-white border-r border-gray-200 z-50 shadow-md">
+      {/* 패널 내용 */}
+      {currentPanel === 'region' && (
+        <RegionPanelHandler
+          onClose={() => setCurrentPanel('date')}
+          onRegionsSelected={handleRegionsSelected}
+          selectedRegions={selectedRegions}
+        />
       )}
 
-      <RegionPanelHandler
-        open={regionSelection.regionSlidePanelOpen}
-        onClose={() => regionSelection.setRegionSlidePanelOpen(false)}
-        selectedRegions={regionSelection.selectedRegions}
-        onToggle={regionSelection.handleRegionToggle}
-        onConfirm={() => {
-          regionSelection.setRegionSlidePanelOpen(false);
-          if (regionSelection.selectedRegions.length > 0) regionSelection.setRegionConfirmed(true);
-          else alert('지역을 선택해주세요.');
-        }}
-      />
+      {currentPanel === 'date' && (
+        <div className="p-4">
+          <h2 className="text-lg font-semibold mb-4">여행 날짜 선택</h2>
+          <p>선택된 지역: {selectedRegions.map(r => r.name).join(', ') || '없음'}</p>
+          <button onClick={() => setCurrentPanel('category')}>다음: 카테고리 선택</button>
+        </div>
+      )}
 
-      <CategoryResultHandler
-        showCategoryResult={uiVisibility.showCategoryResult}
-        selectedRegions={regionSelection.selectedRegions}
-        selectedKeywordsByCategory={categorySelection.selectedKeywordsByCategory}
-        onClose={handleResultClose}
-        onSelectPlace={placesManagement.handleSelectPlace}
-        selectedPlaces={placesManagement.selectedPlaces}
-      />
+      {currentPanel === 'category' && (
+        <CategorySelector
+          selectedRegions={selectedRegions}
+          selectedCategory={selectedCategory}
+          onCategorySelect={handleCategorySelect}
+          onClose={() => setCurrentPanel('region')}
+          onConfirmCategory={handleConfirmCategory}
+          directInputValues={directInputValues}
+          onDirectInputChange={onDirectInputChange}
+          selectedKeywordsByCategory={categorySelection.selectedKeywordsByCategory}
+          toggleKeyword={categorySelection.toggleKeyword}
+          setKeywords={categorySelection.setKeywords}
+          clearKeywords={categorySelection.clearKeywords}
+        />
+      )}
+
+      {showCategoryResult && (
+        <CategoryResultsPanel
+          category={showCategoryResult}
+          regions={regionSelection.selectedRegions.map(region => region.name)}
+          keywords={categorySelection.selectedKeywordsByCategory[showCategoryResult] || []}
+          onClose={handleCloseCategoryResult}
+          isLoading={isCategoryLoading}
+          recommendedPlaces={categoryResults.recommendedPlaces}
+          normalPlaces={categoryResults.normalPlaces}
+          selectedPlaces={placesManagement.selectedPlaces}
+          onSelectPlace={handleSelectPlace}
+          isPlaceSelected={(id: string) => placesManagement.selectedPlaces.some(place => place.id === id)}
+        />
+      )}
+
+      {currentPanel === 'itinerary' && showItinerary && (
+        <ScheduleGenerator
+          selectedPlaces={selectedPlaces}
+          dates={tripDetails.dates}
+          onClose={handleCloseItinerary}
+        />
+      )}
+
+      {showItinerary && (
+        <ScheduleViewer
+          schedule={itinerary}
+          selectedDay={selectedItineraryDay}
+          onDaySelect={handleSelectItineraryDay}
+          onClose={handleCloseItinerary}
+          startDate={tripDetails.dates?.startDate || new Date()}
+        />
+      )}
+
+      {!showItinerary && currentPanel !== 'itinerary' && (
+        <ItineraryButton
+          allCategoriesSelected={allCategoriesSelected}
+          onCreateItinerary={handleCreateItinerary}
+        />
+      )}
     </div>
   );
 };
