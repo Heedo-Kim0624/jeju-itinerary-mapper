@@ -2,7 +2,7 @@
 import React from 'react';
 import { toast } from 'sonner';
 import { Place } from '@/types/supabase';
-import { ItineraryDay } from '@/hooks/use-itinerary-creator';
+import { ItineraryDay } from '@/types/itinerary';
 import PlaceCart from './PlaceCart';
 import ItineraryButton from './ItineraryButton';
 import ScheduleViewer from './ScheduleViewer';

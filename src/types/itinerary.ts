@@ -1,19 +1,15 @@
 import { Place } from '@/types/supabase';
 
 // Define ItineraryPlace for consistency across the application
-// Ensure ItineraryPlace includes all fields from Place, plus its own specific ones.
-// The properties 'id', 'name', 'category' are explicitly part of ItineraryPlace,
-// and it inherits others like address, phone, x, y, etc., from Place.
-export interface ItineraryPlace extends Place {
+// Making road_address and homepage optional to match usage in the application
+export interface ItineraryPlace extends Omit<Place, 'road_address' | 'homepage'> {
   id: string; 
   name: string; 
   category: string; 
-  // Making road_address and homepage optional here if they are not always present in Place
-  // Or ensure they are added to Place type in supabase.ts
-  // For now, assuming they might be optional or will be provided in dummy data.
+  // Making these optional since they are optional in actual usage
   road_address?: string; 
   homepage?: string;
-  // Other fields like x, y, address, description, etc., are inherited from Place.
+  // Other fields are inherited from Place
 }
 
 // Define the RouteData interface
@@ -83,8 +79,7 @@ export function convertToSupabaseItineraryDay(day: any): ItineraryDay {
     description: String(p.description || ''),
     rating: Number(p.rating || 0),
     review_count: Number(p.review_count || 0),
-    image_url: String(p.image_url || ''),
-    // Add any other mandatory fields from the original `Place` type in supabase.ts with defaults
+    image_url: String(p.image_url || '')
   }));
 
   return {

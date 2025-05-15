@@ -1,3 +1,4 @@
+
 import { ItineraryDay } from '@/types/itinerary';
 import { toast } from 'sonner';
 
@@ -84,17 +85,6 @@ export const highlightSegment = (fromIndex: number, toIndex: number, itineraryDa
   // might need adjustment if route.nodeIds doesn't directly correspond to place-to-place segments.
   // Assuming a simplified model where direct slicing of nodeIds/linkIds based on place indices is not straightforward.
   // For now, this function might need more context on how nodeIds/linkIds relate to 'fromIndex' and 'toIndex' of places.
-  // The original logic was:
-  // const startIdx = fromIndex * 2;
-  // const endIdx = toIndex * 2;
-  // if (startIdx >= nodeIds.length || endIdx >= nodeIds.length) { ... }
-  // const segmentNodeIds = nodeIds.slice(startIdx, endIdx + 1).filter((_, i) => i % 2 === 0);
-  // const segmentLinkIds = nodeIds.slice(startIdx, endIdx + 1).filter((_, i) => i % 2 === 1);
-  // This assumed nodeIds contained alternating node and link info, which is not what RouteData provides.
-  // RouteData provides separate nodeIds and linkIds.
-  // A proper implementation needs to map place indices to segments of nodeIds and linkIds.
-  // This is a complex task without knowing the exact structure of the graph and how places map to nodes.
-  // For now, logging a warning as this part needs robust logic.
   console.warn("highlightSegment logic needs to be properly implemented based on how places map to route nodes/links.");
 
   // Example: Render the entire day's route with highlight (simplistic, needs refinement)
@@ -146,5 +136,3 @@ export const renderAllNetwork = (style?: any) => {
   
   return window.geoJsonLayer.renderAllNetwork(style);
 };
-
-export { clearPreviousHighlightedPath, showRouteForPlaceIndex, renderAllNetwork };

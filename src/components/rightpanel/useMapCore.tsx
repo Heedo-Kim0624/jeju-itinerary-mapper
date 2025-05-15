@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ItineraryDay, RouteData, ItineraryPlace } from '@/types/itinerary'; // Added ItineraryPlace
+import { ItineraryDay, RouteData, ItineraryPlace } from '@/types/itinerary';
 import { Place } from '@/types/supabase';
 import { getCategoryColor, routeStyles } from '@/utils/map/mapStyles';
 import { ServerRouteResponse } from '@/types/schedule';
@@ -47,17 +47,19 @@ export const useMapCore = ({
 
   // Function to add markers for places
   const addMarkersInternal = useCallback((placesToMark: (Place | ItineraryPlace)[], isItineraryContext: boolean) => { // Allow ItineraryPlace array
-    if (!map) return;
+    if (!map) return [];
 
     markers.current.forEach(marker => marker.setMap(null));
     markers.current = [];
+
+    const createdMarkers: any[] = [];
 
     placesToMark.forEach(place => {
       if (typeof place.x === 'number' && typeof place.y === 'number') {
         const position = new window.naver.maps.LatLng(place.y, place.x);
         const isHighlighted = selectedPlace && selectedPlace.id === place.id;
-        // Ensure category exists for color lookup, default if not
-        const category = (place as ItineraryPlace).category || (place as Place).category_name || 'default';
+        // Use category property from place, fallback to a default
+        const category = place.category || 'default';
         const color = getCategoryColor(category);
         
         const marker = new window.naver.maps.Marker({
@@ -79,16 +81,19 @@ export const useMapCore = ({
         });
 
         markers.current.push(marker);
+        createdMarkers.push(marker);
         
         if (isHighlighted) {
           highlightedMarker.current = marker;
         }
       }
     });
+
+    return createdMarkers;
   }, [map, selectedPlace, setSelectedPlace, panTo]);
   
   const addMarkers = useCallback((placesToMark: Place[]) => {
-      addMarkersInternal(placesToMark, false);
+      return addMarkersInternal(placesToMark, false);
   }, [addMarkersInternal]);
 
   const addItineraryDayMarkers = useCallback((daySchedule: ItineraryDay | null) => {

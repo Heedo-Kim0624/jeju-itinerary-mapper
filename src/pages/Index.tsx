@@ -1,6 +1,5 @@
 
 import React, { useState, useEffect } from 'react';
-// ItineraryPlace and RouteData imported, added convertToSupabaseItineraryDay
 import { ItineraryDay, Itinerary, ItineraryPlace, RouteData, convertToSupabaseItineraryDay } from '@/types/itinerary'; 
 import { Place } from '@/types/supabase'; 
 import LeftPanel from '@/components/leftpanel/LeftPanel';
@@ -20,11 +19,10 @@ const Index: React.FC = () => {
     phone: 'Placeholder Phone',
     description: 'Placeholder Description',
     rating: 0,
-    review_count: 0,
+    reviewCount: 0,
     image_url: 'https://via.placeholder.com/150',
-    road_address: '', // Added
-    homepage: '', // Added
-    // x and y are part of Place, but ensure they are numbers or undefined
+    road_address: '', // Optional in ItineraryPlace
+    homepage: '', // Optional in ItineraryPlace
   };
   
 
@@ -68,12 +66,8 @@ const Index: React.FC = () => {
           dates: {}, // Should be { startDate: Date; endDate: Date } based on typical usage
           setDates: () => {} // Should match setDates in TripContext
         }}>
-          {/* Corrected setSelectedPlace prop type if LeftPanel expects Place | null */}
-          <LeftPanel 
-            places={places} 
-            setPlaces={setPlaces} 
-            setSelectedPlace={setSelectedPlace} // setSelectedPlace type is Dispatch<SetStateAction<Place | null>>
-          />
+          {/* Use appropriate props for LeftPanel */}
+          <LeftPanel />
         </TripContext.Provider>
       </div>
       <div className="flex-grow">
@@ -90,4 +84,3 @@ const Index: React.FC = () => {
 };
 
 export default Index;
-

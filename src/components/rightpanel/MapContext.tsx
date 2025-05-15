@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useRef } from 'react';
 import { Place } from '@/types/supabase';
 import { ItineraryDay } from '@/types/itinerary';
@@ -119,7 +118,7 @@ export const MapProvider: React.FC<{children: React.ReactNode}> = ({ children })
     // loadGeoJsonData: false,
   });
   
-  const extendedMapCore = {
+  const extendedMapCore: MapContextType = {
     ...defaultContextValue, // Start with defaults to ensure all keys are present
     ...mapCoreValues, // Spread values from the hook
     mapContainer: mapCoreValues.mapContainerRef, // mapContainerRef is the actual ref object from useMapCore
@@ -127,17 +126,17 @@ export const MapProvider: React.FC<{children: React.ReactNode}> = ({ children })
     // Add specific functions if they are not directly on mapCoreValues or need aliasing
     renderGeoJsonRoute,
     renderItineraryRoute: (itineraryDay: ItineraryDay | null) => {
-      // Potentially use mapCoreValues.drawItineraryRoute or custom logic here
-      // This example assumes mapCoreExtensions.renderItineraryRoute is preferred
       renderItineraryRoute(itineraryDay); 
     },
     clearPreviousHighlightedPath,
     showRouteForPlaceIndex,
     highlightSegment,
     renderAllNetwork,
-    // Assuming setServerRoutes and serverRoutesData are managed within useMapCore or context state not shown
-    // If they are part of useMapCore, they should be spread correctly.
-    // If not, they need to be managed here (e.g. with useState)
+    // Assuming these were spread correctly from mapCoreValues
+    addMarkers: mapCoreValues.addMarkers || defaultContextValue.addMarkers,
+    calculateRoutes: mapCoreValues.calculateRoutes || defaultContextValue.calculateRoutes,
+    setServerRoutes: mapCoreValues.setServerRoutes || defaultContextValue.setServerRoutes,
+    serverRoutesData: mapCoreValues.serverRoutesData || defaultContextValue.serverRoutesData,
   };
   
   return (
@@ -146,4 +145,3 @@ export const MapProvider: React.FC<{children: React.ReactNode}> = ({ children })
     </MapContext.Provider>
   );
 };
-
