@@ -7,6 +7,7 @@ import { useGeoJsonState } from '@/hooks/map/useGeoJsonState';
 import { useServerRoutes } from '@/hooks/map/useServerRoutes';
 import { useMapFeatures } from '@/hooks/map/useMapFeatures';
 import { Place } from '@/types/supabase';
+import { ServerRouteResponse } from '@/components/rightpanel/geojson/GeoJsonTypes';
 
 /**
  * 지도 핵심 기능 통합 훅
@@ -49,7 +50,9 @@ const useMapCore = () => {
     geoJsonLinks,
     toggleGeoJsonVisibility,
     handleGeoJsonLoaded,
-    checkGeoJsonMapping
+    checkGeoJsonMapping,
+    getNodeById,
+    getLinkById
   } = useGeoJsonState();
 
   // 서버 경로 데이터 관리

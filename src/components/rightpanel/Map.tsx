@@ -38,17 +38,21 @@ const Map: React.FC<MapProps> = ({
 
   // GeoJSON 로드 시 전체 네트워크 표시
   useEffect(() => {
-    if (isGeoJsonLoaded && showGeoJson && window.geoJsonLayer?.renderAllNetwork) {
+    if (isGeoJsonLoaded && showGeoJson && window.geoJsonLayer) {
       console.log('전체 GeoJSON 네트워크 렌더링 시작');
-      window.geoJsonLayer.renderAllNetwork();
-      toast.success('전체 경로 네트워크가 지도에 표시됩니다');
+      if (window.geoJsonLayer.renderAllNetwork) {
+        window.geoJsonLayer.renderAllNetwork();
+        toast.success('전체 경로 네트워크가 지도에 표시됩니다');
+      }
     }
   }, [isGeoJsonLoaded, showGeoJson]);
 
   // GeoJSON 토글 시 전체 네트워크 표시
   useEffect(() => {
-    if (showGeoJson && isGeoJsonLoaded && window.geoJsonLayer?.renderAllNetwork) {
-      window.geoJsonLayer.renderAllNetwork();
+    if (showGeoJson && isGeoJsonLoaded && window.geoJsonLayer) {
+      if (window.geoJsonLayer.renderAllNetwork) {
+        window.geoJsonLayer.renderAllNetwork();
+      }
     }
   }, [showGeoJson, isGeoJsonLoaded]);
 
@@ -56,7 +60,6 @@ const Map: React.FC<MapProps> = ({
   useEffect(() => {
     if (isGeoJsonLoaded && itinerary && selectedDay !== null) {
       console.log("일정이 선택되었습니다. GeoJSON 표시를 활성화합니다.");
-      // toggleGeoJsonVisibility를 직접 호출하면 상태가 토글되기 때문에
       // 이미 표시 중이라면 아무 작업도 하지 않도록 조건문 추가
       if (!showGeoJson) {
         toggleGeoJsonVisibility();
