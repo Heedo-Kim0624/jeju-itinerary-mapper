@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Itinerary } from '@/types/itinerary';
 import { toast } from 'sonner';
@@ -10,6 +11,8 @@ const generateRandomId = (): string => {
 export const useItinerary = () => {
   const [itinerary, setItinerary] = useState<Itinerary | null>(null);
   const [title, setTitle] = useState<string>("");
+  const [selectedItineraryDay, setSelectedItineraryDay] = useState<number | null>(null);
+  const [showItinerary, setShowItinerary] = useState(false);
 
   /**
    * 생성된 일정 처리 함수
@@ -46,6 +49,14 @@ export const useItinerary = () => {
 
   const clearItinerary = () => {
     setItinerary(null);
+    setSelectedItineraryDay(null);
+  };
+
+  // Add the generateItinerary function that's needed by Index.tsx
+  const generateItinerary = async () => {
+    // This is a placeholder - implement the actual functionality as needed
+    console.log("generateItinerary called");
+    setShowItinerary(true);
   };
 
   return {
@@ -53,6 +64,11 @@ export const useItinerary = () => {
     setItinerary: handleItineraryCreated,
     clearItinerary,
     title,
-    setTitle
+    setTitle,
+    selectedItineraryDay,
+    setSelectedItineraryDay,
+    showItinerary,
+    setShowItinerary,
+    generateItinerary
   };
 };

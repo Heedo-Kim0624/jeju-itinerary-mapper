@@ -8,12 +8,18 @@ export interface ItineraryPlace extends Place {
   category: string;
 }
 
+// Define the RouteData interface
+export interface RouteData {
+  nodeIds: string[];
+  linkIds: string[];
+}
+
 // Define the ItineraryDay interface with all required properties
 export interface ItineraryDay {
   day: number;
   places: ItineraryPlace[];
   routeNodeIds?: string[]; // Route node IDs for rendering on the map
-  routeData?: string[]; // Legacy support for old property name (to fix existing errors)
+  routeData?: string[]; // Legacy support for old property name (string array format)
   totalDistance: number;
   startTime?: string;
   endTime?: string;

@@ -10,12 +10,13 @@ interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
 
-// Extend window with Naver Maps
+// Naver Maps and GeoJSON global interfaces
 interface Window {
-  naver?: any;
+  naver: any;
   initMap?: () => void;
-  geoJsonLayer?: {
+  geoJsonLayer: {
     renderRoute: (nodeIds: string[], linkIds: string[], style?: any) => any[];
+    renderAllNetwork: (style?: any) => any[]; // Added missing renderAllNetwork
     clearDisplayedFeatures: () => void;
     getNodeById: (id: string) => any;
     getLinkById: (id: string) => any;

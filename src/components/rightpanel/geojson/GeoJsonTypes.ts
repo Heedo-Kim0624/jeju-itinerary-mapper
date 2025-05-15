@@ -48,9 +48,5 @@ export interface GeoJsonLayerRef {
   getLinkById: (id: string) => GeoLink | undefined;
 }
 
-// Extend the Window interface to include our global GeoJSON layer
-declare global {
-  interface Window {
-    geoJsonLayer: GeoJsonLayerRef;
-  }
-}
+// Removing the duplicate global declaration since it's now in vite-env.d.ts
+// The window.geoJsonLayer declaration is now unified in vite-env.d.ts

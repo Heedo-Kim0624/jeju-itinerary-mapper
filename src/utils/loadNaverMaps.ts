@@ -1,12 +1,6 @@
 
-/**
- * Naver maps global interface
- */
-declare global {
-  interface Window {
-    naver: any;
-  }
-}
+// We'll remove the global declaration here since it's now in vite-env.d.ts
+// and focus only on the loadNaverMaps implementation
 
 /**
  * 네이버 맵 스크립트를 비동기적으로 불러오는 함수

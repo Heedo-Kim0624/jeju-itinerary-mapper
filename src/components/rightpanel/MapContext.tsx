@@ -1,8 +1,16 @@
 
 import React, { createContext, useContext, useRef } from 'react';
-import { Place, ItineraryDay } from '@/types/supabase';
+import { Place, ItineraryDay } from '@/types/itinerary';
 import useMapCore from './useMapCore';
 import { ServerRouteResponse } from '@/types/schedule';
+import { 
+  renderGeoJsonRoute, 
+  renderItineraryRoute, 
+  clearPreviousHighlightedPath,
+  showRouteForPlaceIndex,
+  highlightSegment,
+  renderAllNetwork
+} from './mapCoreExtensions';
 
 interface MapContextType {
   map: any;
@@ -39,6 +47,7 @@ interface MapContextType {
   mapPlacesWithGeoNodes: (places: Place[]) => Place[];
   showRouteForPlaceIndex: (placeIndex: number, itineraryDay: ItineraryDay) => void;
   renderGeoJsonRoute: (nodeIds: string[], linkIds: string[], style?: any) => any[];
+  renderAllNetwork: (style?: any) => any[];
   geoJsonNodes: any[];
   geoJsonLinks: any[];
   // 서버 경로 관련 기능 추가
@@ -58,11 +67,11 @@ const defaultContext: MapContextType = {
   panTo: () => {},
   showGeoJson: false,
   toggleGeoJsonVisibility: () => {},
-  renderItineraryRoute: () => {},
+  renderItineraryRoute: renderItineraryRoute,
   clearAllRoutes: () => {},
   handleGeoJsonLoaded: () => {},
-  highlightSegment: () => {},
-  clearPreviousHighlightedPath: () => {},
+  highlightSegment: highlightSegment,
+  clearPreviousHighlightedPath: clearPreviousHighlightedPath,
   isGeoJsonLoaded: false,
   checkGeoJsonMapping: () => ({ 
     totalPlaces: 0, 
@@ -73,8 +82,9 @@ const defaultContext: MapContextType = {
     message: '초기화되지 않음'
   }),
   mapPlacesWithGeoNodes: (places) => places,
-  showRouteForPlaceIndex: () => {},
-  renderGeoJsonRoute: () => [],
+  showRouteForPlaceIndex: showRouteForPlaceIndex,
+  renderGeoJsonRoute: renderGeoJsonRoute,
+  renderAllNetwork: renderAllNetwork,
   geoJsonNodes: [],
   geoJsonLinks: [],
   setServerRoutes: () => {},
@@ -89,8 +99,19 @@ export const useMapContext = () => useContext(MapContext);
 export const MapProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
   const mapCore = useMapCore();
   
+  // Extend mapCore with our extension methods
+  const extendedMapCore = {
+    ...mapCore,
+    renderGeoJsonRoute,
+    renderItineraryRoute,
+    clearPreviousHighlightedPath,
+    showRouteForPlaceIndex,
+    highlightSegment,
+    renderAllNetwork
+  };
+  
   return (
-    <MapContext.Provider value={mapCore}>
+    <MapContext.Provider value={extendedMapCore}>
       {children}
     </MapContext.Provider>
   );
