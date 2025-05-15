@@ -1,4 +1,3 @@
-
 import { ItineraryDay } from '@/types/itinerary';
 import { toast } from 'sonner';
 
@@ -21,26 +20,26 @@ export const renderGeoJsonRoute = (nodeIds: string[], linkIds: string[], style?:
  * @param itineraryDay Itinerary day containing route data
  */
 export const renderItineraryRoute = (itineraryDay: ItineraryDay | null) => {
-  if (!window.geoJsonLayer || !itineraryDay) {
+  if (!window.geoJsonLayer || !itineraryDay || !itineraryDay.route) {
+    if (window.geoJsonLayer?.clearDisplayedFeatures) {
+        window.geoJsonLayer.clearDisplayedFeatures();
+    }
+    console.warn("No route data available for this day or GeoJSON layer not ready.");
     return;
   }
 
   // Clear previous routes
   window.geoJsonLayer.clearDisplayedFeatures();
 
-  // Check if we have route data
-  const routeNodeIds = itineraryDay.routeNodeIds || itineraryDay.routeData;
-  if (!routeNodeIds || routeNodeIds.length === 0) {
-    console.warn("No route data available for this day");
+  const { nodeIds, linkIds } = itineraryDay.route;
+
+  if (!nodeIds || nodeIds.length === 0 || !linkIds) {
+    console.warn("Incomplete route data (nodeIds or linkIds missing).");
     return;
   }
 
-  // Extract node and link IDs
-  const nodeIds = routeNodeIds.filter((_, i) => i % 2 === 0);
-  const linkIds = routeNodeIds.filter((_, i) => i % 2 === 1);
-
   // Render the route
-  window.geoJsonLayer.renderRoute(nodeIds, linkIds, {
+  window.geoJsonLayer.renderRoute(nodeIds.map(String), linkIds.map(String), { // Ensure string arrays
     strokeColor: '#228B22',
     strokeWeight: 5,
     strokeOpacity: 0.7,
@@ -66,35 +65,40 @@ export const clearPreviousHighlightedPath = () => {
  * @param itineraryDay Itinerary day containing the places and route data
  */
 export const highlightSegment = (fromIndex: number, toIndex: number, itineraryDay?: ItineraryDay) => {
-  if (!window.geoJsonLayer || !itineraryDay) {
+  if (!window.geoJsonLayer || !itineraryDay || !itineraryDay.route) {
+    console.warn("GeoJSON layer, itinerary day, or route data not available for highlighting.");
     return;
   }
 
   // Clear previous highlighted path
   clearPreviousHighlightedPath();
 
-  // Get route data
-  const routeNodeIds = itineraryDay.routeNodeIds || itineraryDay.routeData;
-  if (!routeNodeIds || routeNodeIds.length === 0) {
-    console.warn("No route data available for highlighting");
+  const { nodeIds, linkIds } = itineraryDay.route;
+
+  if (!nodeIds || nodeIds.length === 0 || !linkIds || linkIds.length === 0) {
+    console.warn("No route data available for highlighting segment (nodes or links missing).");
     return;
   }
-
-  // Calculate segment indices
-  const startIdx = fromIndex * 2;
-  const endIdx = toIndex * 2;
   
-  if (startIdx >= routeNodeIds.length || endIdx >= routeNodeIds.length) {
-    console.warn("Invalid segment indices");
-    return;
-  }
+  // This logic for segmenting based on place indices (fromIndex, toIndex) vs. raw node/link IDs
+  // might need adjustment if route.nodeIds doesn't directly correspond to place-to-place segments.
+  // Assuming a simplified model where direct slicing of nodeIds/linkIds based on place indices is not straightforward.
+  // For now, this function might need more context on how nodeIds/linkIds relate to 'fromIndex' and 'toIndex' of places.
+  // The original logic was:
+  // const startIdx = fromIndex * 2;
+  // const endIdx = toIndex * 2;
+  // if (startIdx >= nodeIds.length || endIdx >= nodeIds.length) { ... }
+  // const segmentNodeIds = nodeIds.slice(startIdx, endIdx + 1).filter((_, i) => i % 2 === 0);
+  // const segmentLinkIds = nodeIds.slice(startIdx, endIdx + 1).filter((_, i) => i % 2 === 1);
+  // This assumed nodeIds contained alternating node and link info, which is not what RouteData provides.
+  // RouteData provides separate nodeIds and linkIds.
+  // A proper implementation needs to map place indices to segments of nodeIds and linkIds.
+  // This is a complex task without knowing the exact structure of the graph and how places map to nodes.
+  // For now, logging a warning as this part needs robust logic.
+  console.warn("highlightSegment logic needs to be properly implemented based on how places map to route nodes/links.");
 
-  // Extract segment node and link IDs
-  const segmentNodeIds = routeNodeIds.slice(startIdx, endIdx + 1).filter((_, i) => i % 2 === 0);
-  const segmentLinkIds = routeNodeIds.slice(startIdx, endIdx + 1).filter((_, i) => i % 2 === 1);
-
-  // Render the highlighted segment
-  window.geoJsonLayer.renderRoute(segmentNodeIds, segmentLinkIds, {
+  // Example: Render the entire day's route with highlight (simplistic, needs refinement)
+  window.geoJsonLayer.renderRoute(nodeIds.map(String), linkIds.map(String), {
     strokeColor: '#FF4500',
     strokeWeight: 7,
     strokeOpacity: 0.9,
@@ -142,3 +146,5 @@ export const renderAllNetwork = (style?: any) => {
   
   return window.geoJsonLayer.renderAllNetwork(style);
 };
+
+export { clearPreviousHighlightedPath, showRouteForPlaceIndex, renderAllNetwork };

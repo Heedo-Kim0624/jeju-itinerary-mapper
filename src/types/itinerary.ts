@@ -5,9 +5,14 @@ import { Place } from '@/types/supabase';
 // The properties 'id', 'name', 'category' are explicitly part of ItineraryPlace,
 // and it inherits others like address, phone, x, y, etc., from Place.
 export interface ItineraryPlace extends Place {
-  id: string; // Overrides Place.id if it exists and has a different type, or adds it.
-  name: string; // Ditto for name.
-  category: string; // Ditto for category.
+  id: string; 
+  name: string; 
+  category: string; 
+  // Making road_address and homepage optional here if they are not always present in Place
+  // Or ensure they are added to Place type in supabase.ts
+  // For now, assuming they might be optional or will be provided in dummy data.
+  road_address?: string; 
+  homepage?: string;
   // Other fields like x, y, address, description, etc., are inherited from Place.
 }
 
@@ -51,25 +56,41 @@ export function isItineraryDay(obj: any): obj is ItineraryDay {
 // Utility function to convert to ItineraryDay, ensuring compatibility
 export function convertToSupabaseItineraryDay(day: any): ItineraryDay {
   let routeValue: RouteData | undefined = undefined;
-  if (day.route && typeof day.route === 'object' && Array.isArray(day.route.nodeIds) && Array.isArray(day.route.linkIds)) {
-    routeValue = day.route;
-  } else if (Array.isArray(day.routeNodeIds) && Array.isArray(day.routeLinkIds)) { // Example for handling old structure if needed
-    routeValue = { nodeIds: day.routeNodeIds, linkIds: day.routeLinkIds };
-  } else if (Array.isArray(day.routeData)) {
-    // Handle legacy routeData (string[]) if it represents nodeIds. This part is tricky without knowing its exact old meaning.
-    // Assuming for now legacy routeData might have been just nodeIds.
-    // If linkIds are also needed, this conversion might be insufficient or require more logic.
-    // For now, if it's a string array, let's assume it might be nodeIds for a RouteData object, leaving linkIds empty.
-    // This is a placeholder for potentially more complex legacy conversion.
-    // routeValue = { nodeIds: day.routeData, linkIds: [] };
-    // Better to log a warning or handle as undefined if structure is ambiguous
-    console.warn("Legacy routeData (string[]) found and cannot be directly converted to RouteData object. Route will be undefined.", day);
+  // Ensure day.route is an object and has the correct array properties before assigning
+  if (day.route && typeof day.route === 'object' && 
+      Array.isArray(day.route.nodeIds) && Array.isArray(day.route.linkIds)) {
+    routeValue = {
+        nodeIds: day.route.nodeIds.map(String), // Ensure string array
+        linkIds: day.route.linkIds.map(String)  // Ensure string array
+    };
+  } else {
+    // console.warn("Route data is missing or malformed for day:", day.day);
   }
 
+  // Ensure places are correctly typed as ItineraryPlace[]
+  const placesValue: ItineraryPlace[] = (day.places || []).map((p: any) => ({
+    ...p, // spread existing place properties
+    id: String(p.id || ''),
+    name: String(p.name || 'Unknown Place'),
+    category: String(p.category || 'default'),
+    x: Number(p.x || 0), // Ensure numeric coordinates
+    y: Number(p.y || 0),
+    road_address: String(p.road_address || ''),
+    homepage: String(p.homepage || ''),
+    // Ensure all other required Place properties are present or have defaults
+    address: String(p.address || ''),
+    phone: String(p.phone || ''),
+    description: String(p.description || ''),
+    rating: Number(p.rating || 0),
+    review_count: Number(p.review_count || 0),
+    image_url: String(p.image_url || ''),
+    // Add any other mandatory fields from the original `Place` type in supabase.ts with defaults
+  }));
+
   return {
-    day: day.day,
-    places: day.places,
-    totalDistance: day.totalDistance || 0,
+    day: Number(day.day),
+    places: placesValue,
+    totalDistance: Number(day.totalDistance || 0),
     route: routeValue,
     startTime: day.startTime,
     endTime: day.endTime

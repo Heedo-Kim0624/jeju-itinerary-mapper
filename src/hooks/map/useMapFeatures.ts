@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useCallback } from 'react';
 import { RouteStyle } from '@/components/rightpanel/geojson/GeoJsonTypes';
 import { ItineraryDay } from '@/types/itinerary';
@@ -62,11 +61,12 @@ export const useMapFeatures = ({
         return;
       }
       
-      // Check for route data - first try routeNodeIds (new property) then fallback to routeData (legacy)
-      const routeNodeIds = daySchedule.routeNodeIds || daySchedule.routeData;
-      
-      if (!routeNodeIds || routeNodeIds.length === 0) {
-        console.warn(`[useMapFeatures] No route data for day ${day}`);
+      if (!daySchedule.route || !daySchedule.route.nodeIds || daySchedule.route.nodeIds.length === 0 || !daySchedule.route.linkIds) {
+        console.warn(`[useMapFeatures] No or incomplete route data for day ${day}`);
+        if (window.geoJsonLayer?.clearDisplayedFeatures) {
+            window.geoJsonLayer.clearDisplayedFeatures();
+        }
+        setIsRouteDisplayed(false);
         return;
       }
       
@@ -74,14 +74,8 @@ export const useMapFeatures = ({
         // Clear any previously displayed features
         window.geoJsonLayer.clearDisplayedFeatures();
         
-        // Extract place node IDs and link IDs from the route data
-        const allNodeIdsFromServer: string[] = routeNodeIds.map(String);
-        
-        // The route data follows a pattern: node, link, node, link, ...
-        // So we extract nodes at even positions (0, 2, 4, ...)
-        // And links at odd positions (1, 3, 5, ...)
-        const placeNodeIds = allNodeIdsFromServer.filter((_, i) => i % 2 === 0);
-        const linkIds = allNodeIdsFromServer.filter((_, i) => i % 2 === 1);
+        const placeNodeIds = daySchedule.route.nodeIds.map(String); // Ensure string array
+        const linkIds = daySchedule.route.linkIds.map(String); // Ensure string array
         
         // Render the route using the GeoJSON layer
         const features = window.geoJsonLayer.renderRoute(
@@ -94,6 +88,7 @@ export const useMapFeatures = ({
         setIsRouteDisplayed(true);
       } catch (error) {
         console.error(`[useMapFeatures] Error rendering route for day ${day}:`, error);
+        setIsRouteDisplayed(false);
       }
     },
     [isGeoJsonAvailable, schedule]
@@ -103,7 +98,11 @@ export const useMapFeatures = ({
    * Display route for currently selected day
    */
   const displaySelectedDayRoute = useCallback(() => {
-    if (!selectedDay || !schedule || !isGeoJsonAvailable) {
+    if (selectedDay === null || !schedule || !isGeoJsonAvailable) { // Check selectedDay for null explicitly
+      if (isGeoJsonAvailable && window.geoJsonLayer?.clearDisplayedFeatures) {
+        window.geoJsonLayer.clearDisplayedFeatures();
+      }
+      setIsRouteDisplayed(false);
       return;
     }
 
@@ -111,21 +110,22 @@ export const useMapFeatures = ({
     
     if (!daySchedule) {
       console.warn(`[useMapFeatures] Selected day ${selectedDay} not found in schedule`);
+      if (isGeoJsonAvailable && window.geoJsonLayer?.clearDisplayedFeatures) {
+        window.geoJsonLayer.clearDisplayedFeatures();
+      }
+      setIsRouteDisplayed(false);
       return;
     }
 
-    // Check if we have route data available
-    const routeNodeIds = daySchedule.routeNodeIds || daySchedule.routeData;
-    
-    if (!routeNodeIds || routeNodeIds.length === 0) {
-      // If no route data is available, we can't render a route
-      console.warn(`[useMapFeatures] No route data available for day ${selectedDay}`);
-      
-      // Alternative: render places only or calculate a route
+    if (!daySchedule.route || !daySchedule.route.nodeIds || daySchedule.route.nodeIds.length === 0 || !daySchedule.route.linkIds) {
+      console.warn(`[useMapFeatures] No or incomplete route data available for day ${selectedDay}`);
+      if (isGeoJsonAvailable && window.geoJsonLayer?.clearDisplayedFeatures) {
+        window.geoJsonLayer.clearDisplayedFeatures();
+      }
+      setIsRouteDisplayed(false);
       return;
     }
 
-    // Render the route for the selected day
     renderDayRoute(selectedDay, HIGHLIGHTED_STYLE);
   }, [isGeoJsonAvailable, renderDayRoute, schedule, selectedDay]);
 
@@ -142,7 +142,7 @@ export const useMapFeatures = ({
         setNetworkDisplayed(false);
         
         // If a day was selected, re-render that day's route
-        if (selectedDay && schedule) {
+        if (selectedDay !== null && schedule) { // Check selectedDay for null
           displaySelectedDayRoute();
         }
       } else {
@@ -172,15 +172,19 @@ export const useMapFeatures = ({
 
   // Update route display whenever selected day changes
   useEffect(() => {
-    if (isGeoJsonAvailable && selectedDay && schedule) {
+    if (isGeoJsonAvailable && selectedDay !== null && schedule) { // Check selectedDay for null
       displaySelectedDayRoute();
+    } else if (isGeoJsonAvailable && window.geoJsonLayer?.clearDisplayedFeatures) {
+      // Clear route if no day is selected or schedule is unavailable
+      window.geoJsonLayer.clearDisplayedFeatures();
+      setIsRouteDisplayed(false);
     }
   }, [displaySelectedDayRoute, isGeoJsonAvailable, schedule, selectedDay]);
 
   // Clear displayed features on unmount
   useEffect(() => {
     return () => {
-      if (window.geoJsonLayer) {
+      if (window.geoJsonLayer?.clearDisplayedFeatures) {
         window.geoJsonLayer.clearDisplayedFeatures();
       }
     };
