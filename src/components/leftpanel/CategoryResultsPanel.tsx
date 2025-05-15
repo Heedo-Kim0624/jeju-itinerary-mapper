@@ -28,14 +28,6 @@ const CategoryResultsPanel: React.FC<CategoryResultsPanelProps> = ({
     return selectedPlaces.some(selected => selected.id === place.id);
   };
 
-  // Helper to safely access the address property
-  const getAddressDisplay = (place: Place) => {
-    if (typeof place.address === 'object' && place.address !== null) {
-      return place.address.roadAddress || place.address.lotAddress || '주소 정보 없음';
-    }
-    return typeof place.address === 'string' ? place.address : '주소 정보 없음';
-  };
-
   return (
     <div className="bg-white w-full max-w-xl rounded-lg shadow-xl flex flex-col h-[80vh]">
       {/* Header */}
@@ -63,7 +55,7 @@ const CategoryResultsPanel: React.FC<CategoryResultsPanelProps> = ({
                     <div key={place.id} className="border rounded-md p-3 flex items-center justify-between">
                       <div>
                         <p className="font-medium">{place.name}</p>
-                        <p className="text-sm text-gray-500">{getAddressDisplay(place)}</p>
+                        <p className="text-sm text-gray-500">{place.address?.roadAddress || place.address?.lotAddress || '주소 정보 없음'}</p>
                       </div>
                       <label className="inline-flex items-center">
                         <input
@@ -88,7 +80,7 @@ const CategoryResultsPanel: React.FC<CategoryResultsPanelProps> = ({
                     <div key={place.id} className="border rounded-md p-3 flex items-center justify-between">
                       <div>
                         <p className="font-medium">{place.name}</p>
-                        <p className="text-sm text-gray-500">{getAddressDisplay(place)}</p>
+                        <p className="text-sm text-gray-500">{place.address?.roadAddress || place.address?.lotAddress || '주소 정보 없음'}</p>
                       </div>
                       <label className="inline-flex items-center">
                         <input

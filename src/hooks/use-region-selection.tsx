@@ -1,23 +1,22 @@
 
 import { useState } from 'react';
-import { RegionDetails } from '@/utils/regionData';
 
 export const useRegionSelection = () => {
-  const [selectedRegions, setSelectedRegions] = useState<RegionDetails[]>([]);
+  const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
   const [regionConfirmed, setRegionConfirmed] = useState(false);
   const [regionSlidePanelOpen, setRegionSlidePanelOpen] = useState(false);
 
-  const handleRegionToggle = (region: RegionDetails) => {
+  const handleRegionToggle = (region: string) => {
     setSelectedRegions((prev) =>
-      prev.some(r => r.id === region.id)
-        ? prev.filter((r) => r.id !== region.id)
+      prev.includes(region)
+        ? prev.filter((r) => r !== region)
         : [...prev, region]
     );
   };
 
   const isRegionSelected = selectedRegions.length > 0;
 
-  const handleRegionChange = (regions: RegionDetails[]) => {
+  const handleRegionChange = (regions: string[]) => {
     setSelectedRegions(regions);
   };
 
@@ -34,8 +33,8 @@ export const useRegionSelection = () => {
 
   const getRegionDisplayName = () => {
     if (selectedRegions.length === 0) return '지역 선택';
-    if (selectedRegions.length === 1) return selectedRegions[0].name;
-    return `${selectedRegions[0].name} 외 ${selectedRegions.length - 1}개 지역`;
+    if (selectedRegions.length === 1) return selectedRegions[0];
+    return `${selectedRegions[0]} 외 ${selectedRegions.length - 1}개 지역`;
   };
 
   return {

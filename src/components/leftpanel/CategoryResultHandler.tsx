@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { Place } from '@/types/supabase';
 import { toast } from 'sonner';
 import { useCategoryResults } from '@/hooks/use-category-results';
-import { RegionDetails, getRegionNames } from '@/utils/regionData';
+import { RegionDetails } from '@/utils/regionData';
 import CategoryResultsPanel from './CategoryResultsPanel';
 
 // Updated to support CategoryName types
@@ -37,9 +37,6 @@ const CategoryResultHandler: React.FC<CategoryResultHandlerProps> = ({
     validCategory = showCategoryResult;
   }
 
-  // Convert RegionDetails[] to string[] for the hook call
-  const regionNames = getRegionNames(selectedRegions);
-
   const { 
     isLoading, 
     error, 
@@ -49,7 +46,7 @@ const CategoryResultHandler: React.FC<CategoryResultHandlerProps> = ({
   } = useCategoryResults(
     validCategory, 
     validCategory ? selectedKeywordsByCategory[validCategory] || [] : [],
-    regionNames // Pass region names instead of RegionDetails objects
+    selectedRegions
   );
 
   useEffect(() => {
