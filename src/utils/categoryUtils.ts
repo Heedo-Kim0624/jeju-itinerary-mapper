@@ -1,76 +1,91 @@
 
-export type CategoryName = '숙소' | '관광지' | '음식점' | '카페';
+// 카테고리 관련 유틸리티 함수 및 상수
 
-// 카테고리 별 키워드 타입 정의 추가
-export type CategoryKeywords = {
-  '숙소': string[];
-  '관광지': string[];
-  '음식점': string[];
-  '카페': string[];
+// 카테고리 이름 타입 정의
+export type CategoryName = '숙소' | '관광지' | '음식점' | '카페' | 'accommodation' | 'attraction' | 'restaurant' | 'cafe' | 'landmark';
+
+// 영문-한글 카테고리 매핑
+export const CATEGORY_ENG_TO_KOR: Record<string, string> = {
+  'accommodation': '숙소',
+  'attraction': '관광지',
+  'landmark': '관광지',
+  'restaurant': '음식점',
+  'cafe': '카페'
 };
 
-export const categoryKeywords = {
-  '숙소': ['ocean_view', 'breakfast', 'pool'],
-  '관광지': ['nature', 'culture', 'history'],
-  '음식점': ['seafood', 'korean', 'vegetarian'],
-  '카페': ['coffee', 'cake', 'view']
+// 한글-영문 카테고리 매핑
+export const CATEGORY_KOR_TO_ENG: Record<string, string> = {
+  '숙소': 'accommodation',
+  '관광지': 'attraction',
+  '음식점': 'restaurant',
+  '카페': 'cafe'
 };
 
-export const categoryToEnglish = (koreanName: CategoryName): string => {
-  const mapping: Record<CategoryName, string> = {
-    '숙소': 'accommodation',
-    '관광지': 'attraction',
-    '음식점': 'restaurant',
-    '카페': 'cafe'
-  };
+// 카테고리 아이콘 매핑
+export const CATEGORY_ICONS: Record<string, string> = {
+  '숙소': '🏠',
+  'accommodation': '🏠',
+  '관광지': '🏞️',
+  'attraction': '🏞️',
+  'landmark': '🏞️', 
+  '음식점': '🍽️',
+  'restaurant': '🍽️',
+  '카페': '☕',
+  'cafe': '☕'
+};
+
+// 카테고리 색상 매핑
+export const CATEGORY_COLORS: Record<string, string> = {
+  '숙소': '#4CAF50',   // 녹색
+  'accommodation': '#4CAF50',
+  '관광지': '#2196F3',  // 파란색
+  'attraction': '#2196F3',
+  'landmark': '#2196F3',
+  '음식점': '#FF5722',  // 주황색
+  'restaurant': '#FF5722',
+  '카페': '#9C27B0',   // 보라색
+  'cafe': '#9C27B0'
+};
+
+// 카테고리 이름 변환 함수 (영문 -> 한글)
+export const getCategoryKorean = (category?: string): string => {
+  if (!category) return '기타';
   
-  return mapping[koreanName] || 'other';
+  const normalizedCategory = category.toLowerCase();
+  return CATEGORY_ENG_TO_KOR[normalizedCategory] || '기타';
 };
 
-export const englishToKorean = (englishName: string): CategoryName | null => {
-  switch(englishName.toLowerCase()) {
-    case 'accommodation': return '숙소';
-    case 'attraction': return '관광지';
-    case 'restaurant': return '음식점';
-    case 'cafe': return '카페';
-    default: return null;
-  }
+// 카테고리 이름 변환 함수 (한글 -> 영문)
+export const getCategoryEnglish = (category?: string): string => {
+  if (!category) return 'etc';
+  
+  return CATEGORY_KOR_TO_ENG[category] || 'etc';
 };
 
 // 카테고리별 최소 추천 개수 계산 함수
-export const getMinimumRecommendationsByCategory = (days: number) => {
+export const getMinimumRecommendationCount = (nDays: number) => {
   return {
-    '숙소': days > 1 ? days - 1 : 1,
-    '관광지': Math.max(4, Math.ceil(4 * days)),
-    '음식점': Math.max(3, Math.ceil(3 * days)),
-    '카페': Math.max(3, Math.ceil(3 * days))
+    attraction: Math.ceil(nDays * 4),   // 관광지: 하루 4개
+    restaurant: Math.ceil(nDays * 3),   // 음식점: 하루 3개
+    cafe: Math.ceil(nDays * 3),         // 카페: 하루 3개
+    accommodation: Math.min(nDays, 3)   // 숙소: 여행일수와 3 중 작은 값
   };
 };
 
-// 카테고리별 시간대 추천 가중치
-export const timeOfDayWeights = {
-  '숙소': {
-    morning: 0.2,
-    afternoon: 0.3,
-    evening: 1.0,
-    night: 0.8
-  },
-  '관광지': {
-    morning: 1.0,
-    afternoon: 0.9,
-    evening: 0.5,
-    night: 0.2
-  },
-  '음식점': {
-    morning: 0.7,
-    afternoon: 0.3,
-    evening: 1.0,
-    night: 0.6
-  },
-  '카페': {
-    morning: 0.8,
-    afternoon: 1.0,
-    evening: 0.8,
-    night: 0.4
-  }
-};
+// 카테고리 관련 인터페이스
+export interface CategoryKeywords {
+  restaurant: string[];
+  cafe: string[];
+  attraction: string[];
+  accommodation: string[];
+  landmark: string[];
+}
+
+// 카테고리 정보 인터페이스
+export interface CategoryInfo {
+  name: CategoryName;
+  icon: string;
+  color: string;
+  description: string;
+  isCompleted: boolean;
+}

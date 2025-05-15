@@ -1,4 +1,7 @@
 
+// Import geojson types
+import type { Feature, Geometry } from 'geojson';
+
 // GeoJSON 노드/링크 타입 정의
 export interface GeoCoordinates {
   0: number; // 경도 (longitude)
@@ -25,15 +28,23 @@ export interface LinkProperties {
   [key: string]: any;
 }
 
-export interface GeoJsonFeature {
+// Node feature from GeoJSON
+export interface NodeFeature extends Feature {
   type: string;
-  properties: NodeProperties | LinkProperties;
-  geometry: GeoJsonGeometry;
+  properties: NodeProperties;
+  geometry: Geometry;
+}
+
+// Link feature from GeoJSON
+export interface LinkFeature extends Feature {
+  type: string;
+  properties: LinkProperties;
+  geometry: Geometry;
 }
 
 export interface GeoJsonCollection {
   type: string;
-  features: GeoJsonFeature[];
+  features: (NodeFeature | LinkFeature)[];
 }
 
 // 노드와 링크를 위한 기본 타입 정의
@@ -135,7 +146,7 @@ export interface ServerRouteResponse {
 // 글로벌 네임스페이스 선언
 declare global {
   interface Window {
-    geoJsonLayer: GeoJsonLayerRef;
+    geoJsonLayer?: GeoJsonLayerRef;
     naver?: any;
   }
 }

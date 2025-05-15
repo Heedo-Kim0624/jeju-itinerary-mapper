@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Place, SelectedPlace, SchedulePayload } from '@/types/supabase';
 import { useMapContext } from '@/components/rightpanel/MapContext';
@@ -145,7 +144,7 @@ export const useSelectedPlaces = () => {
     panTo({ lat: place.y, lng: place.x });
   };
 
-  // 후보 장소 자동 보완 기능 - 디버깅 로그 추가
+  // 후보 장소 자동 보완 기능 - 개선된 버전
   const autoCompleteWithCandidates = (
     currentSelectedPlaces: Place[], 
     recommendedPlacesByCategory: { [category: string]: Place[] }, 
@@ -183,6 +182,9 @@ export const useSelectedPlaces = () => {
       '숙소': 'accommodation'
     };
 
+    // 현재 선택된 장소 ID를 Set으로 빠른 조회를 위해 준비
+    const selectedPlaceIds = new Set(currentSelectedPlaces.map(place => place.id));
+    
     const currentSelectedCountsByKoreanCategory: Record<string, Place[]> = {
       '숙소': [], '관광지': [], '음식점': [], '카페': []
     };
@@ -205,6 +207,7 @@ export const useSelectedPlaces = () => {
     
     const finalPlaces: Place[] = [...currentSelectedPlaces];
     const autoCompletedCandidatePlaces: Place[] = [];
+    const missingCategoryWarnings: string[] = [];
     
     // Iterate using English category keys from minimumRequirements
     Object.entries(minimumRequirements).forEach(([categoryEng, minCount]) => {
@@ -221,7 +224,7 @@ export const useSelectedPlaces = () => {
 
       if (shortage > 0) {
         // 이 카테고리에 대한 추천 장소 배열 가져오기
-        const availableRecommended = recommendedPlacesByCategory[categoryKorean] || [];
+        let availableRecommended = recommendedPlacesByCategory[categoryKorean] || [];
         
         console.log(`[자동 보완] ${categoryKorean} 카테고리 추천 후보 풀:`, 
           availableRecommended.length > 0 
@@ -229,10 +232,17 @@ export const useSelectedPlaces = () => {
             : '없음'
         );
 
-        const candidatesToAdd = availableRecommended
-          .filter(rp => !currentSelectedPlaces.some(sp => sp.id === rp.id) && 
-                        !autoCompletedCandidatePlaces.some(acp => acp.id === rp.id))
-          .slice(0, shortage);
+        // 이미 선택된 장소 제외 (중복 방지)
+        availableRecommended = availableRecommended
+          .filter(rp => !selectedPlaceIds.has(rp.id) && 
+                        !autoCompletedCandidatePlaces.some(acp => acp.id === rp.id));
+        
+        // 후보가 부족하면 경고 추가
+        if (availableRecommended.length < shortage) {
+          missingCategoryWarnings.push(`${categoryKorean} 카테고리는 ${shortage}개가 부족하지만, 추가할 수 있는 추천 장소는 ${availableRecommended.length}개뿐입니다.`);
+        }
+          
+        const candidatesToAdd = availableRecommended.slice(0, shortage);
           
         if (candidatesToAdd.length > 0) {
           console.log(`[자동 보완] ${categoryKorean} 카테고리에 ${candidatesToAdd.length}개 장소 자동 추가:`, 
@@ -247,6 +257,9 @@ export const useSelectedPlaces = () => {
           autoCompletedCandidatePlaces.push(...markedCandidates);
         } else {
           console.warn(`[자동 보완] ${categoryKorean} 카테고리의 추천 장소가 부족하거나 이미 선택된 장소입니다. (부족분: ${shortage}, 사용가능 추천: ${availableRecommended.length})`);
+          
+          // 부족한 카테고리에 대한 경고 메시지
+          missingCategoryWarnings.push(`${categoryKorean} 카테고리에 ${shortage}개 장소가 부족합니다.`);
         }
       }
     });
@@ -277,8 +290,18 @@ export const useSelectedPlaces = () => {
       
       // 사용자에게 알림
       toast.info(`${autoCompletedCandidatePlaces.length}개의 추천 장소가 자동으로 추가되었습니다.`);
+      
+      // 부족한 장소 카테고리가 있다면 경고 메시지 표시
+      if (missingCategoryWarnings.length > 0) {
+        toast.warning(`일부 카테고리에 필요한 장소가 부족합니다. ${missingCategoryWarnings.join(' ')}`);
+      }
     } else {
       console.log('[자동 보완] 추가된 자동 추천 장소가 없습니다.');
+      
+      // 전체적으로 부족한 경우 경고 메시지 표시
+      if (missingCategoryWarnings.length > 0) {
+        toast.warning(`추천 장소가 부족합니다: ${missingCategoryWarnings.join(' ')}`);
+      }
     }
     
     return finalPlaces;
