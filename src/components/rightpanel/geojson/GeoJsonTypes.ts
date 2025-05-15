@@ -125,17 +125,18 @@ export interface GeoJsonLoaderProps {
 
 // 서버 경로 응답 타입
 export interface ServerRouteResponse {
-  status: string;
-  message: string;
-  nodeIds?: string[];
-  linkIds?: string[];
-  data?: any;
+  status?: string;
+  message?: string;
+  date: string;            // 요일 또는 날짜 정보
+  nodeIds: number[];       // 노드 ID 배열
+  linkIds?: number[];      // 링크 ID 배열 (선택적)
+  places?: any[];          // 장소 정보 배열 (선택적)
 }
 
 // 글로벌 네임스페이스 선언
 declare global {
   interface Window {
-    geoJsonLayer: GeoJsonLayerRef;
+    geoJsonLayer?: GeoJsonLayerRef;
     naver?: any;
   }
 }

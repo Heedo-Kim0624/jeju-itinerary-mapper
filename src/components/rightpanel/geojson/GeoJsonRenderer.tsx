@@ -91,12 +91,12 @@ const GeoJsonRenderer: React.FC<GeoJsonRendererProps> = ({
   useEffect(() => {
     if (!map || !window.geoJsonLayer) return;
     
-    // 전역 인터페이스에서 참조할 함수 정의
+    // 이전 설정을 저장하고 컴포넌트가 언마운트될 때 복원
     const originalRenderAllNetwork = window.geoJsonLayer.renderAllNetwork;
     
     // 이전 설정을 저장하고 컴포넌트가 언마운트될 때 복원
     return () => {
-      if (window.geoJsonLayer && originalRenderAllNetwork) {
+      if (window.geoJsonLayer && typeof originalRenderAllNetwork === 'function') {
         window.geoJsonLayer.renderAllNetwork = originalRenderAllNetwork;
       }
     };
