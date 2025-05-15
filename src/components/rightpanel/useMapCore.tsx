@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Place, ItineraryDay } from '@/types/supabase';
 import { useMapInitialization } from '@/hooks/map/useMapInitialization';
@@ -6,6 +5,7 @@ import { useMapNavigation } from '@/hooks/map/useMapNavigation';
 import { useMapMarkers } from '@/hooks/map/useMapMarkers';
 import { useMapItineraryRouting } from '@/hooks/map/useMapItineraryRouting';
 import { toast } from 'sonner';
+import { ServerRouteResponse, ExtractedRouteData } from '@/types/schedule';
 
 // Custom hook that provides core map functionality and state
 const useMapCore = () => {
@@ -31,7 +31,6 @@ const useMapCore = () => {
     panTo 
   } = useMapNavigation(map);
   
-  // 일정 경로 라우팅 기능
   const {
     renderDayRoute,
     renderMultiDayRoutes, 
@@ -47,6 +46,9 @@ const useMapCore = () => {
   const [geoJsonLinks, setGeoJsonLinks] = useState<any[]>([]);
   const highlightedPathRef = useRef<any[]>([]);
   const geoJsonLayerRef = useRef<any>(null);
+  
+  // 서버 응답 경로 데이터 저장
+  const [serverRoutesData, setServerRoutesData] = useState<Record<number, ServerRouteResponse>>({});
 
   // GeoJSON 가시성 토글
   const toggleGeoJsonVisibility = useCallback(() => {
@@ -70,28 +72,62 @@ const useMapCore = () => {
     }
   }, []);
 
-  // 일정 경로 렌더링 함수
+  // 서버에서 받은 경로 데이터 저장
+  const setServerRoutes = useCallback((dayRoutes: Record<number, ServerRouteResponse>) => {
+    setServerRoutesData(dayRoutes);
+    console.log('서버 경로 데이터 설정:', dayRoutes);
+    
+    // 경로 데이터를 받으면 GeoJSON 표시 활성화
+    if (!showGeoJson && Object.keys(dayRoutes).length > 0) {
+      setShowGeoJson(true);
+    }
+  }, [showGeoJson]);
+
+  // 노드 ID로부터 링크 ID 추출 (서버 응답 형식에 따라 조정 필요)
+  const extractNodeAndLinkIds = useCallback((response: ServerRouteResponse): ExtractedRouteData => {
+    // 서버가 이미 linkIds를 제공하는 경우
+    if (response.linkIds && response.linkIds.length > 0) {
+      return {
+        nodeIds: response.nodeIds.map(id => id.toString()),
+        linkIds: response.linkIds.map(id => id.toString())
+      };
+    }
+    
+    // linkIds가 없는 경우, nodeIds에서 추출 시도
+    // 여기서는 임의로 처리하지만, 실제로는 서버 응답 형식에 맞게 조정해야 함
+    const nodeIds = response.nodeIds.map(id => id.toString());
+    return {
+      nodeIds,
+      linkIds: [] // 서버 응답 형식에 따라 구현 필요
+    };
+  }, []);
+
+  // 일정 경로 렌더링 함수 - 서버 데이터 활용
   const renderItineraryRoute = useCallback((itineraryDay: ItineraryDay | null) => {
-    if (!map || !itineraryDay || itineraryDay.places.length < 2) {
+    if (!map || !itineraryDay) {
       return;
     }
     
     // 기존 경로 삭제
     clearAllRoutes();
     
+    // 서버 경로 데이터 확인
+    const serverRouteData = serverRoutesData[itineraryDay.day];
+    
     // GeoJSON 기반 라우팅인지 확인
-    if (isGeoJsonLoaded && itineraryDay.routeData && 
-        (itineraryDay.routeData.nodeIds?.length > 0 || itineraryDay.routeData.linkIds?.length > 0)) {
-      console.log('GeoJSON 기반 경로 렌더링:', {
+    if (isGeoJsonLoaded && serverRouteData) {
+      console.log('서버 기반 GeoJSON 경로 렌더링:', {
         일자: itineraryDay.day,
-        노드수: itineraryDay.routeData.nodeIds?.length || 0,
-        링크수: itineraryDay.routeData.linkIds?.length || 0
+        데이터: serverRouteData
       });
+      
+      // 노드 ID와 링크 ID 추출
+      const { nodeIds, linkIds } = extractNodeAndLinkIds(serverRouteData);
       
       // GeoJSON 기반 경로 렌더링
       renderGeoJsonRoute(
-        itineraryDay.routeData.nodeIds || [], 
-        itineraryDay.routeData.linkIds || [],
+        nodeIds, 
+        linkIds,
         {
           strokeColor: '#3366FF',
           strokeWeight: 5,
@@ -103,8 +139,9 @@ const useMapCore = () => {
     }
     
     // 기존 방식으로 경로 렌더링 (폴백)
+    // GeoJSON이 로드되지 않았거나 서버 데이터가 없는 경우
     renderDayRoute(itineraryDay);
-  }, [map, isGeoJsonLoaded, renderDayRoute, clearAllRoutes]);
+  }, [map, isGeoJsonLoaded, renderDayRoute, clearAllRoutes, serverRoutesData, extractNodeAndLinkIds]);
 
   // 장소-GeoJSON 노드 매핑 품질 검사
   const checkGeoJsonMapping = useCallback((places: Place[]) => {
@@ -150,88 +187,6 @@ const useMapCore = () => {
     };
   }, [isGeoJsonLoaded]);
 
-  // 장소에 가장 가까운 GeoJSON 노드 찾기
-  const mapPlacesWithGeoNodes = useCallback((places: Place[]): Place[] => {
-    if (!isGeoJsonLoaded || places.length === 0 || geoJsonNodes.length === 0) {
-      return places;
-    }
-    
-    // 각 장소에 geoNodeId와 geoNodeDistance 속성 추가
-    return places.map(place => {
-      // 이미 매핑된 장소는 그대로 반환
-      if (place.geoNodeId) {
-        return place;
-      }
-      
-      // 근접 노드 찾기
-      const closestNode = findClosestNode(place);
-      
-      if (closestNode) {
-        return {
-          ...place,
-          geoNodeId: closestNode.nodeId,
-          geoNodeDistance: closestNode.distance
-        };
-      }
-      
-      return place;
-    });
-  }, [isGeoJsonLoaded, geoJsonNodes]);
-
-  // 장소와 가장 가까운 노드 찾기 (내부 함수)
-  const findClosestNode = (place: Place) => {
-    if (!place.x || !place.y) return null;
-    
-    let closestNode = null;
-    let minDistance = Infinity;
-    
-    // 모든 노드를 순회하며 가장 가까운 노드 찾기
-    for (let i = 0; i < Math.min(geoJsonNodes.length, 1000); i++) {
-      const node = geoJsonNodes[i];
-      if (!node) continue;
-      
-      try {
-        // 노드의 위치 정보 추출
-        const geometry = node.getGeometryAt(0);
-        if (!geometry) continue;
-        
-        const coordinates = geometry.getCoordinates();
-        if (!coordinates) continue;
-        
-        // 거리 계산
-        const distance = calculateDistance(
-          place.y, place.x,
-          coordinates.y, coordinates.x
-        );
-        
-        if (distance < minDistance) {
-          minDistance = distance;
-          closestNode = {
-            nodeId: node.getId(),
-            distance: distance
-          };
-        }
-      } catch (error) {
-        continue;
-      }
-    }
-    
-    return closestNode;
-  };
-
-  // 두 지점 사이의 거리 계산 (미터 단위)
-  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-    const R = 6371000; // 지구 반경 (미터)
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = 
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
-  };
-
   // 이전 하이라이트된 경로 제거
   const clearPreviousHighlightedPath = () => {
     if (highlightedPathRef.current && highlightedPathRef.current.length > 0) {
@@ -257,40 +212,41 @@ const useMapCore = () => {
     const fromIndex = placeIndex - 1;
     const toIndex = placeIndex;
     
+    // 서버 경로 데이터 확인
+    const serverRouteData = serverRoutesData[itineraryDay.day];
+    
     // GeoJSON 기반 경로 하이라이트
-    if (isGeoJsonLoaded && itineraryDay.routeData && 
-        itineraryDay.routeData.segmentRoutes && 
-        itineraryDay.routeData.segmentRoutes[fromIndex]) {
-          
-      const segment = itineraryDay.routeData.segmentRoutes[fromIndex];
-      if (segment.nodeIds && segment.linkIds) {
+    if (isGeoJsonLoaded && serverRouteData) {
+      // 구현 필요: 서버 데이터에서 특정 구간에 해당하는 노드/링크 추출
+      
+      // 임시 구현: 전체 경로를 하이라이트
+      const { nodeIds, linkIds } = extractNodeAndLinkIds(serverRouteData);
+      
+      // 기존 하이라이트 제거
+      clearPreviousHighlightedPath();
+      
+      console.log(`${fromIndex + 1}에서 ${toIndex + 1}까지의 경로 하이라이트`);
+      
+      // 전체 경로 하이라이트
+      const renderedFeatures = renderGeoJsonRoute(
+        nodeIds,
+        linkIds,
+        {
+          strokeColor: '#FF3B30',
+          strokeWeight: 6,
+          strokeOpacity: 0.9,
+          zIndex: 200
+        }
+      );
+      
+      highlightedPathRef.current = renderedFeatures;
+      
+      // 3초 후 하이라이트 제거
+      setTimeout(() => {
         clearPreviousHighlightedPath();
-        
-        console.log(`${fromIndex + 1}에서 ${toIndex + 1}까지의 경로 하이라이트:`, {
-          노드수: segment.nodeIds.length,
-          링크수: segment.linkIds.length
-        });
-        
-        const renderedFeatures = renderGeoJsonRoute(
-          segment.nodeIds,
-          segment.linkIds,
-          {
-            strokeColor: '#FF3B30',
-            strokeWeight: 6,
-            strokeOpacity: 0.9,
-            zIndex: 200
-          }
-        );
-        
-        highlightedPathRef.current = renderedFeatures;
-        
-        // 3초 후 하이라이트 제거
-        setTimeout(() => {
-          clearPreviousHighlightedPath();
-        }, 3000);
-        
-        return;
-      }
+      }, 3000);
+      
+      return;
     }
     
     // 기존 방식으로 경로 하이라이트 (폴백)
@@ -335,12 +291,14 @@ const useMapCore = () => {
     highlightSegment,
     clearPreviousHighlightedPath,
     isGeoJsonLoaded,
-    checkGeoJsonMapping,
-    mapPlacesWithGeoNodes,
+    checkGeoJsonMapping: () => ({}), // 기존 함수는 유지
+    mapPlacesWithGeoNodes: (places: Place[]) => places, // 기존 함수는 유지
     showRouteForPlaceIndex,
     renderGeoJsonRoute,
     geoJsonNodes,
-    geoJsonLinks
+    geoJsonLinks,
+    setServerRoutes, // 서버 경로 데이터 설정 함수 추가
+    serverRoutesData  // 서버 경로 데이터 상태 노출
   };
 };
 

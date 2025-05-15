@@ -21,3 +21,17 @@ export interface DaySchedule {
   day: number;
   items: ScheduleItem[];
 }
+
+// 서버에서 받는 경로 응답 인터페이스
+export interface ServerRouteResponse {
+  date: string;            // 요일 또는 날짜 정보
+  nodeIds: number[];       // 노드 ID 배열
+  linkIds?: number[];      // 링크 ID 배열 (선택적)
+  places?: SchedulePlace[]; // 장소 정보 배열 (선택적)
+}
+
+// 추출된 경로 정보 인터페이스
+export interface ExtractedRouteData {
+  nodeIds: string[];       // 화면에 표시할 노드 ID 배열
+  linkIds: string[];       // 화면에 표시할 링크 ID 배열
+}

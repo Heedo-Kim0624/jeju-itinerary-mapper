@@ -43,10 +43,7 @@ const GeoJsonLayer: React.FC<GeoJsonLayerProps> = ({
       return;
     }
 
-    // drawing 모듈 존재 확인
-    const hasDrawingModule = window.naver?.maps?.drawing && typeof window.naver.maps.drawing.JSONReader === 'function';
-    
-    console.log('GeoJsonLayer: 데이터 로드 시작', { hasDrawingModule });
+    console.log('GeoJsonLayer: 데이터 로드 시작');
     setIsLoading(true);
     setError(false);
 
@@ -72,7 +69,7 @@ const GeoJsonLayer: React.FC<GeoJsonLayerProps> = ({
           링크: linkData.features.length
         });
 
-        // 가공된 GeoJSON 데이터를 메모리에 저장
+        // 데이터를 순수 JavaScript 객체로 처리
         processGeoJsonData(nodeData, linkData);
         
         // 가시성에 따라 지도에 표시
@@ -91,36 +88,42 @@ const GeoJsonLayer: React.FC<GeoJsonLayerProps> = ({
       }
     };
 
-    // GeoJSON 데이터 처리 함수
+    // GeoJSON 데이터 처리 함수 - 네이버 API 의존성 제거
     const processGeoJsonData = (nodeData: any, linkData: any) => {
-      const nodeFeatures: any[] = [];
-      const linkFeatures: any[] = [];
-      
       try {
-        if (hasDrawingModule) {
-          // naver.maps.drawing.JSONReader 사용
-          const nodeReader = new window.naver.maps.drawing.JSONReader(nodeData);
-          const linkReader = new window.naver.maps.drawing.JSONReader(linkData);
-          
-          // 지도에 바로 표시하지 않고 메모리에만 저장
-          nodeFeatures.push(...nodeReader.readGeoJson());
-          linkFeatures.push(...linkReader.readGeoJson());
-        } else {
-          // 대체 방식 - naver.maps.Data 사용
-          console.log('GeoJsonLayer: Drawing 모듈 없음, 대체 방식 사용');
-          
-          // 노드 처리
-          nodeData.features.forEach((feature: any) => {
-            const dataFeature = convertGeoJsonToDataFeature(feature);
-            if (dataFeature) nodeFeatures.push(dataFeature);
-          });
-          
-          // 링크 처리
-          linkData.features.forEach((feature: any) => {
-            const dataFeature = convertGeoJsonToDataFeature(feature);
-            if (dataFeature) linkFeatures.push(dataFeature);
-          });
-        }
+        // 노드 처리
+        const nodeFeatures = nodeData.features.map((feature: any) => ({
+          id: feature.id || feature.properties?.NODE_ID,
+          type: 'node',
+          geometry: feature.geometry,
+          properties: feature.properties,
+          coordinates: feature.geometry.coordinates,
+          // 메서드 추가
+          getId: function() { return this.id; },
+          getGeometryAt: function() { return { 
+            getCoordinates: function() { 
+              const [x, y] = feature.geometry.coordinates;
+              return { x, y };
+            }
+          }; },
+          clone: function() { return {...this}; },
+          setMap: function(m: any) { this.map = m; },
+          setStyles: function(styles: any) { this.styles = styles; }
+        }));
+        
+        // 링크 처리
+        const linkFeatures = linkData.features.map((feature: any) => ({
+          id: feature.id || feature.properties?.LINK_ID,
+          type: 'link',
+          geometry: feature.geometry,
+          properties: feature.properties,
+          coordinates: feature.geometry.coordinates,
+          // 메서드 추가
+          getId: function() { return this.id; },
+          clone: function() { return {...this}; },
+          setMap: function(m: any) { this.map = m; },
+          setStyles: function(styles: any) { this.styles = styles; }
+        }));
         
         // 참조에 저장
         nodesRef.current = nodeFeatures;
@@ -133,21 +136,6 @@ const GeoJsonLayer: React.FC<GeoJsonLayerProps> = ({
       } catch (error) {
         console.error('GeoJsonLayer: GeoJSON 처리 오류', error);
         setError(true);
-      }
-    };
-    
-    // GeoJSON Feature를 Naver Maps Data 객체로 변환 (대체 방식)
-    const convertGeoJsonToDataFeature = (feature: any) => {
-      try {
-        const dataFeature = new window.naver.maps.Data.Feature(
-          feature.id,
-          feature.geometry,
-          feature.properties
-        );
-        return dataFeature;
-      } catch (error) {
-        console.error('GeoJsonLayer: 데이터 변환 오류', error);
-        return null;
       }
     };
     
@@ -169,7 +157,7 @@ const GeoJsonLayer: React.FC<GeoJsonLayerProps> = ({
   const clearDisplayedFeatures = () => {
     if (displayedFeaturesRef.current.length > 0) {
       displayedFeaturesRef.current.forEach(feature => {
-        if (feature && typeof feature.setMap === 'function') {
+        if (feature && feature.map) {
           feature.setMap(null);
         }
       });
@@ -193,47 +181,68 @@ const GeoJsonLayer: React.FC<GeoJsonLayerProps> = ({
     try {
       console.log('GeoJsonLayer: GeoJSON 가시성 설정 - 표시');
       
-      // 스타일 정의
-      const nodeStyle = {
-        fillColor: '#ff0000',
-        fillOpacity: 0.1,
-        radius: 2,
-        strokeWeight: 0,
-        strokeColor: 'transparent',
-        clickable: false
-      };
-      
-      const linkStyle = {
-        strokeColor: '#777',
-        strokeWeight: 1,
-        strokeOpacity: 0.5,
-        clickable: false
-      };
-      
-      // 링크 추가 (노드보다 먼저 추가하여 노드가 위에 표시되도록)
-      const links = linksRef.current.slice(0, 100); // 성능을 위해 일부만 표시
-      links.forEach(link => {
-        if (typeof link.setMap === 'function') {
-          link.setStyles(linkStyle);
-          link.setMap(map);
-          displayedFeaturesRef.current.push(link);
-        }
+      // 네이버 맵에 표시하는 대신 자체 렌더링 로직 구현
+      renderCustomElements();
+    } catch (error) {
+      console.error('GeoJsonLayer: 가시성 업데이트 오류', error);
+      toast.error('경로 데이터 표시 중 오류가 발생했습니다.');
+    }
+  };
+
+  // 커스텀 요소 렌더링 (네이버 맵 의존성 제거 버전)
+  const renderCustomElements = () => {
+    // 링크와 노드를 표시하는 자체 로직 구현
+    if (!map || !window.naver) return;
+    
+    try {
+      // 링크 렌더링 (성능을 위해 일부만)
+      const sampleLinks = linksRef.current.slice(0, 100);
+      sampleLinks.forEach(link => {
+        if (!link.geometry || !link.geometry.coordinates) return;
+        
+        const path = link.geometry.coordinates.map((coord: number[]) => 
+          new window.naver.maps.LatLng(coord[1], coord[0])
+        );
+        
+        const polyline = new window.naver.maps.Polyline({
+          map: map,
+          path: path,
+          strokeColor: '#777',
+          strokeWeight: 1,
+          strokeOpacity: 0.5,
+          clickable: false
+        });
+        
+        // 참조에 저장하여 나중에 제거할 수 있도록 함
+        link.naverElement = polyline;
+        displayedFeaturesRef.current.push(polyline);
       });
       
-      // 노드 추가
-      const nodes = nodesRef.current.slice(0, 100); // 성능을 위해 일부만 표시
-      nodes.forEach(node => {
-        if (typeof node.setMap === 'function') {
-          node.setStyles(nodeStyle);
-          node.setMap(map);
-          displayedFeaturesRef.current.push(node);
-        }
+      // 노드 렌더링 (성능을 위해 일부만)
+      const sampleNodes = nodesRef.current.slice(0, 100);
+      sampleNodes.forEach(node => {
+        if (!node.geometry || !node.coordinates) return;
+        
+        const [lng, lat] = node.coordinates;
+        
+        const circle = new window.naver.maps.Circle({
+          map: map,
+          center: new window.naver.maps.LatLng(lat, lng),
+          radius: 50,
+          fillColor: '#ff0000',
+          fillOpacity: 0.1,
+          strokeWeight: 0,
+          clickable: false
+        });
+        
+        // 참조에 저장하여 나중에 제거할 수 있도록 함
+        node.naverElement = circle;
+        displayedFeaturesRef.current.push(circle);
       });
       
       console.log(`GeoJsonLayer: ${displayedFeaturesRef.current.length}개 요소 표시됨`);
     } catch (error) {
-      console.error('GeoJsonLayer: 가시성 업데이트 오류', error);
-      toast.error('경로 데이터 표시 중 오류가 발생했습니다.');
+      console.error('GeoJsonLayer: 커스텀 렌더링 오류', error);
     }
   };
   
@@ -259,16 +268,27 @@ const GeoJsonLayer: React.FC<GeoJsonLayerProps> = ({
       // 링크 추가
       linkIds.forEach(id => {
         const link = linksRef.current.find(l => l.getId() === id);
-        if (link && typeof link.setMap === 'function') {
-          const clonedLink = link.clone();
-          clonedLink.setStyles(routeStyle);
-          clonedLink.setMap(map);
-          renderedFeatures.push(clonedLink);
-          displayedFeaturesRef.current.push(clonedLink);
+        if (link && link.geometry && link.geometry.coordinates) {
+          const path = link.geometry.coordinates.map((coord: number[]) => 
+            new window.naver.maps.LatLng(coord[1], coord[0])
+          );
+          
+          const polyline = new window.naver.maps.Polyline({
+            map: map,
+            path: path,
+            strokeColor: routeStyle.strokeColor,
+            strokeWeight: routeStyle.strokeWeight,
+            strokeOpacity: routeStyle.strokeOpacity,
+            zIndex: routeStyle.zIndex,
+            clickable: routeStyle.clickable
+          });
+          
+          renderedFeatures.push(polyline);
+          displayedFeaturesRef.current.push(polyline);
         }
       });
       
-      // 노드 추가 (선택사항)
+      // 노드 추가 (장소 표시용)
       const nodeStyle = {
         fillColor: routeStyle.strokeColor,
         fillOpacity: 0.8,
@@ -280,12 +300,22 @@ const GeoJsonLayer: React.FC<GeoJsonLayerProps> = ({
       
       nodeIds.forEach(id => {
         const node = nodesRef.current.find(n => n.getId() === id);
-        if (node && typeof node.setMap === 'function') {
-          const clonedNode = node.clone();
-          clonedNode.setStyles(nodeStyle);
-          clonedNode.setMap(map);
-          renderedFeatures.push(clonedNode);
-          displayedFeaturesRef.current.push(clonedNode);
+        if (node && node.coordinates) {
+          const [lng, lat] = node.coordinates;
+          
+          const circle = new window.naver.maps.Circle({
+            map: map,
+            center: new window.naver.maps.LatLng(lat, lng),
+            radius: nodeStyle.radius * 10,
+            fillColor: nodeStyle.fillColor,
+            fillOpacity: nodeStyle.fillOpacity,
+            strokeWeight: nodeStyle.strokeWeight,
+            strokeColor: nodeStyle.strokeColor,
+            clickable: nodeStyle.clickable
+          });
+          
+          renderedFeatures.push(circle);
+          displayedFeaturesRef.current.push(circle);
         }
       });
       
@@ -297,15 +327,22 @@ const GeoJsonLayer: React.FC<GeoJsonLayerProps> = ({
     return renderedFeatures;
   };
   
-  // 외부에서 호출 가능한 함수를 객체로 반환
-  const layerInterface = {
-    renderRoute,
-    clearDisplayedFeatures,
-    getNodeById: (id: string) => nodesRef.current.find(n => n.getId() === id),
-    getLinkById: (id: string) => linksRef.current.find(l => l.getId() === id)
-  };
-  
-  // 부모 컴포넌트에서 접근할 수 있도록 ref에 함수들을 할당 (선택사항)
+  // 외부에서 호출 가능한 함수를 객체로 반환하고 window에 저장
+  useEffect(() => {
+    if (isMapInitialized && isNaverLoaded) {
+      // 외부에서 함수를 호출할 수 있도록 window 객체에 저장
+      window.geoJsonLayer = {
+        renderRoute,
+        clearDisplayedFeatures,
+        getNodeById: (id: string) => nodesRef.current.find(n => n.getId() === id),
+        getLinkById: (id: string) => linksRef.current.find(l => l.getId() === id)
+      };
+      
+      return () => {
+        window.geoJsonLayer = undefined;
+      };
+    }
+  }, [isMapInitialized, isNaverLoaded]);
   
   return (
     <>

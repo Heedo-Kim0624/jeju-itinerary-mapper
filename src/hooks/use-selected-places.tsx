@@ -4,6 +4,7 @@ import { Place, SelectedPlace, SchedulePayload } from '@/types/supabase';
 import { useMapContext } from '@/components/rightpanel/MapContext';
 import { toast } from 'sonner';
 import { useTripDetails } from './use-trip-details';
+import { getMinimumRecommendationCount } from '@/lib/itinerary/itinerary-utils';
 
 export const useSelectedPlaces = () => {
   const [selectedPlaces, setSelectedPlaces] = useState<Place[]>([]);
@@ -140,14 +141,17 @@ export const useSelectedPlaces = () => {
     }
     
     // 카테고리별 최소 필요 개수 계산
-    const minimumRequirements = {
-      '관광지': 4 * tripDuration,
-      '음식점': 3 * tripDuration,
-      '카페': 3 * tripDuration,
-      '숙소': Math.min(tripDuration, 1) // 숙소는 최대 여행일수만큼
-    };
+    const minimumRequirements = getMinimumRecommendationCount(tripDuration);
     
     console.log('카테고리별 최소 필요 장소 수:', minimumRequirements);
+    
+    // 카테고리 매핑: 한글 -> 영문
+    const categoryMapping: Record<string, string> = {
+      '관광지': 'attraction',
+      '음식점': 'restaurant',
+      '카페': 'cafe',
+      '숙소': 'accommodation'
+    };
     
     // 카테고리별 현재 선택된 장소 수 계산
     const selectedCountsByCategory: Record<string, Place[]> = {
@@ -159,7 +163,7 @@ export const useSelectedPlaces = () => {
     
     // 선택된 장소들을 카테고리별로 분류
     selectedPlaces.forEach(place => {
-      const category = place.category;
+      const category = place.category_korean || getCategoryKorean(place.category);
       if (category && selectedCountsByCategory[category]) {
         selectedCountsByCategory[category].push(place);
       }
@@ -170,15 +174,19 @@ export const useSelectedPlaces = () => {
     const autoCompletedPlaces: Place[] = [];
     
     // 각 카테고리별로 부족한 개수만큼 추천 장소에서 보완
-    Object.entries(minimumRequirements).forEach(([category, minCount]) => {
-      const currentCount = selectedCountsByCategory[category]?.length || 0;
+    Object.entries(selectedCountsByCategory).forEach(([categoryKorean, places]) => {
+      const categoryEng = categoryMapping[categoryKorean];
+      if (!categoryEng) return;
+      
+      const minCount = minimumRequirements[categoryEng as keyof typeof minimumRequirements] || 0;
+      const currentCount = places.length;
       const shortage = Math.max(0, minCount - currentCount);
       
       if (shortage > 0) {
-        console.log(`${category} 카테고리 부족 개수: ${shortage}개`);
+        console.log(`${categoryKorean} 카테고리 부족 개수: ${shortage}개`);
         
         // 해당 카테고리의 추천 장소 목록에서 상위 N개 가져오기
-        const recommendedPlaces = recommendedPlacesByCategory[category] || [];
+        const recommendedPlaces = recommendedPlacesByCategory[categoryKorean] || [];
         
         // 이미 선택된 장소는 제외하고 필요한 만큼만 추가
         const candidatesToAdd = recommendedPlaces
@@ -186,7 +194,7 @@ export const useSelectedPlaces = () => {
           .slice(0, shortage);
           
         if (candidatesToAdd.length > 0) {
-          console.log(`${category} 카테고리에 ${candidatesToAdd.length}개 장소 자동 추가:`, 
+          console.log(`${categoryKorean} 카테고리에 ${candidatesToAdd.length}개 장소 자동 추가:`, 
             candidatesToAdd.map(p => p.name).join(', '));
           
           // 후보 장소에 isCandidate 속성 추가 (Place 타입에 추가된 옵션 속성 활용)
@@ -198,7 +206,7 @@ export const useSelectedPlaces = () => {
           finalPlaces.push(...markedCandidates);
           autoCompletedPlaces.push(...markedCandidates);
         } else {
-          console.warn(`${category} 카테고리의 추천 장소가 부족합니다.`);
+          console.warn(`${categoryKorean} 카테고리의 추천 장소가 부족합니다.`);
         }
       }
     });
@@ -212,6 +220,19 @@ export const useSelectedPlaces = () => {
     }
     
     return finalPlaces;
+  };
+
+  // 영문 카테고리를 한글로 변환
+  const getCategoryKorean = (category?: string): string => {
+    if (!category) return '기타';
+    
+    switch (category.toLowerCase()) {
+      case 'accommodation': return '숙소';
+      case 'attraction': return '관광지';
+      case 'restaurant': return '음식점';
+      case 'cafe': return '카페';
+      default: return '기타';
+    }
   };
 
   const prepareSchedulePayload = (

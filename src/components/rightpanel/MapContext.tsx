@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useRef } from 'react';
 import { Place, ItineraryDay } from '@/types/supabase';
 import useMapCore from './useMapCore';
+import { ServerRouteResponse } from '@/types/schedule';
 
 interface MapContextType {
   map: any;
@@ -40,6 +41,9 @@ interface MapContextType {
   renderGeoJsonRoute: (nodeIds: string[], linkIds: string[], style?: any) => any[];
   geoJsonNodes: any[];
   geoJsonLinks: any[];
+  // 서버 경로 관련 기능 추가
+  setServerRoutes: (dayRoutes: Record<number, ServerRouteResponse>) => void;
+  serverRoutesData: Record<number, ServerRouteResponse>;
 }
 
 const defaultContext: MapContextType = {
@@ -72,7 +76,9 @@ const defaultContext: MapContextType = {
   showRouteForPlaceIndex: () => {},
   renderGeoJsonRoute: () => [],
   geoJsonNodes: [],
-  geoJsonLinks: []
+  geoJsonLinks: [],
+  setServerRoutes: () => {},
+  serverRoutesData: {}
 };
 
 const MapContext = createContext<MapContextType>(defaultContext);
