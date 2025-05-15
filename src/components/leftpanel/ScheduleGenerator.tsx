@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Place } from '@/types/supabase';
 import { toast } from 'sonner';
@@ -72,31 +73,52 @@ export const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({
 
       if (serverResponse && serverResponse.itinerary) {
         console.log("🔍 서버 응답 (parsed for itinerary):", serverResponse);
+        
         // Log nodeIds from server response if available
         if (serverResponse.routes) {
-            Object.values(serverResponse.routes).forEach((route: any, index: number) => {
-                if (route && route.nodeIds) {
-                    console.log(`📌 Day ${index + 1} nodeIds.length = ${route.nodeIds.length}`);
-                    console.log(`📌 Day ${index + 1} nodeIds (first 20) =`, route.nodeIds.slice(0, 20));
-                } else {
-                    console.log(`📌 Day ${index + 1} nodeIds not found in route data.`);
-                }
-            });
+          console.log("📊 서버 응답 경로 데이터 요약:");
+          Object.entries(serverResponse.routes).forEach(([day, route]: [string, any]) => {
+            if (route && route.nodeIds) {
+              console.log(`📌 ${day}일차 nodeIds.length = ${route.nodeIds.length}`);
+              console.log(`🔍 ${day}일차 nodeIds 샘플 =`, route.nodeIds.slice(0, 10), "...");
+              
+              // 분석: nodeId가 있는 요소의 타입 확인
+              const nodeTypes = new Set();
+              route.nodeIds.forEach((nodeId: any) => {
+                nodeTypes.add(typeof nodeId);
+              });
+              console.log(`📊 ${day}일차 nodeIds 타입:`, [...nodeTypes]);
+            } else {
+              console.log(`❌ ${day}일차 nodeIds 없음`);
+            }
+          });
         } else {
-            console.log("📌 serverResponse.routes not found.");
+          console.log("❌ serverResponse.routes 없음");
         }
         
         const parsedItinerary = parseServerResponse(serverResponse, selectedPlaces);
         setItinerary(parsedItinerary);
         
+        // 서버에서 받은 경로 데이터가 있으면 저장하고 로그 출력
         if (serverResponse.routes) {
           const routesData: Record<number, ServerRouteResponse> = {};
+          
           Object.entries(serverResponse.routes).forEach(([dayStr, routeData]) => {
             const day = parseInt(dayStr, 10);
             if (!isNaN(day)) {
+              // 서버 응답을 적절한 형태로 변환
               routesData[day] = routeData as ServerRouteResponse;
+              
+              // 경로 데이터 디버깅
+              const nodeIds = (routeData as ServerRouteResponse).nodeIds || [];
+              console.log(`📊 ${dayStr}일차 경로 정보 저장:`, {
+                노드수: nodeIds.length,
+                샘플: nodeIds.slice(0, 5).join(", ") + "..."
+              });
             }
           });
+          
+          console.log("📊 모든 일자 경로 데이터 저장 완료");
           setServerRoutes(routesData);
         }
         
@@ -145,12 +167,13 @@ export const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({
 
   // 서버 응답 파싱 함수 (서버 API 응답 형식에 맞게 수정 필요)
   const parseServerResponse = (response: any, places: Place[]): ItineraryDay[] => {
+    console.log("서버 응답 파싱 시작");
+    
     // 서버 응답 형식에 따라 구현 필요
-    // 임시 구현 (서버 응답 형식에 맞게 수정 필요)
     if (response.itinerary && Array.isArray(response.itinerary)) {
-      return response.itinerary.map((day: any) => ({
-        day: day.day,
-        places: day.places.map((placeInfo: any) => { // Assuming placeInfo could be an ID or an object
+      const parsedItinerary = response.itinerary.map((day: any) => {
+        // 장소 매핑
+        const mappedPlaces = day.places.map((placeInfo: any) => { 
           let placeId: string;
           let placeName: string | undefined;
 
@@ -160,24 +183,49 @@ export const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({
             placeId = placeInfo.id;
             placeName = placeInfo.name;
           } else {
-            // Fallback for unexpected format
-            return { id: 'unknown_id', name: '알 수 없는 장소 (형식 오류)', category: 'unknown', x: 0, y: 0 };
+            return { id: 'unknown_id', name: '알 수 없는 장소', category: 'unknown', x: 0, y: 0 };
           }
 
           const place = places.find(p => p.id === placeId);
-          return place || { id: placeId, name: placeName || '알 수 없는 장소 (ID로 못찾음)', category: 'unknown', x: 0, y: 0 };
-        }),
-        totalDistance: day.totalDistance || 0,
-        // GeoJSON 연동을 위한 경로 데이터
-        routeData: response.routes?.[day.day] ? {
-          nodeIds: response.routes[day.day].nodeIds,
-          linkIds: response.routes[day.day].linkIds
-        } : undefined
-      }));
+          return place || { 
+            id: placeId, 
+            name: placeName || '알 수 없는 장소', 
+            category: 'unknown', 
+            x: 0, 
+            y: 0 
+          };
+        });
+        
+        // 경로 데이터 추출
+        let routeData;
+        if (response.routes && response.routes[day.day]) {
+          const dayRoute = response.routes[day.day];
+          routeData = {
+            nodeIds: dayRoute.nodeIds || [],
+            linkIds: dayRoute.linkIds || []
+          };
+          
+          console.log(`${day.day}일차 경로 데이터:`, {
+            노드수: routeData.nodeIds.length,
+            링크수: routeData.linkIds ? routeData.linkIds.length : '없음'
+          });
+        }
+        
+        return {
+          day: day.day,
+          places: mappedPlaces,
+          totalDistance: day.totalDistance || 0,
+          routeData // GeoJSON 연동을 위한 경로 데이터
+        };
+      });
+      
+      console.log(`서버에서 ${parsedItinerary.length}일 일정 파싱 완료`);
+      return parsedItinerary;
     }
     
     // 기본 폴백: 클라이언트 측 일정 생성
     if (dates) {
+      console.log("유효한 서버 응답 없음 - 클라이언트 일정 생성 시작");
       return createItinerary(
         places,
         dates.startDate,
@@ -191,6 +239,7 @@ export const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({
   };
 
   const handleSelectDay = (day: number) => {
+    console.log(`${day}일차 선택됨`);
     setSelectedDay(day);
   };
 

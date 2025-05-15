@@ -139,24 +139,43 @@ const GeoJsonRenderer: React.FC<GeoJsonRendererProps> = ({
     // 기존에 표시된 피처 제거
     clearAllFeatures();
     
+    // 디버깅을 위한 로깅
+    console.log('GeoJsonRenderer 경로 렌더링 요청:', {
+      노드ID수: nodeIds.length,
+      링크ID수: linkIds.length,
+      스타일: `${style.strokeColor}, ${style.strokeWeight}px`
+    });
+    
     const renderedFeatures: any[] = [];
     
     // 지정된 노드 및 링크 렌더링
-    nodeIds.forEach(nodeId => {
-      const node = nodes.find(n => n.id === nodeId);
-      if (node) {
-        const marker = renderNode(node, style);
-        if (marker) renderedFeatures.push(marker);
-      }
-    });
+    if (nodeIds.length > 0) {
+      console.log(`노드 렌더링 시작 (${nodeIds.length}개)...`);
+      nodeIds.forEach(nodeId => {
+        const node = nodes.find(n => n.id === nodeId);
+        if (node) {
+          const marker = renderNode(node, style);
+          if (marker) renderedFeatures.push(marker);
+        } else {
+          console.warn(`노드 ID ${nodeId} 찾을 수 없음`);
+        }
+      });
+    }
     
-    linkIds.forEach(linkId => {
-      const link = links.find(l => l.id === linkId);
-      if (link) {
-        const polyline = renderLink(link, style);
-        if (polyline) renderedFeatures.push(polyline);
-      }
-    });
+    if (linkIds.length > 0) {
+      console.log(`링크 렌더링 시작 (${linkIds.length}개)...`);
+      linkIds.forEach(linkId => {
+        const link = links.find(l => l.id === linkId);
+        if (link) {
+          const polyline = renderLink(link, style);
+          if (polyline) renderedFeatures.push(polyline);
+        } else {
+          console.warn(`링크 ID ${linkId} 찾을 수 없음`);
+        }
+      });
+    }
+    
+    console.log(`경로 렌더링 완료: ${renderedFeatures.length}개 피처`);
     
     // 변경된 피처 알림
     if (onDisplayedFeaturesChange) {
@@ -179,11 +198,15 @@ const GeoJsonRenderer: React.FC<GeoJsonRendererProps> = ({
     const linkLimit = Math.min(500, links.length);
     const linkStep = Math.max(1, Math.floor(links.length / linkLimit));
     
+    console.log(`성능 최적화: 전체 ${links.length}개 중 약 ${linkLimit}개만 표시 (step=${linkStep})`);
+    
     for (let i = 0; i < links.length; i += linkStep) {
       const link = links[i];
       const polyline = renderLink(link, style);
       if (polyline) renderedFeatures.push(polyline);
     }
+    
+    console.log(`전체 네트워크 렌더링 완료: ${renderedFeatures.length}개 피처`);
     
     // 변경된 피처 알림
     if (onDisplayedFeaturesChange) {
@@ -215,29 +238,33 @@ const GeoJsonRenderer: React.FC<GeoJsonRendererProps> = ({
     if (!map) return;
     
     // 전역 인터페이스에 렌더링 메서드 등록
-    if (window.geoJsonLayer) {
-      const originalRenderRoute = window.geoJsonLayer.renderRoute;
-      window.geoJsonLayer.renderRoute = (nodeIds, linkIds, style) => {
-        return renderRoute(nodeIds, linkIds, style);
+    if (!window.geoJsonLayer) {
+      window.geoJsonLayer = {
+        renderRoute,
+        renderAllNetwork,
+        clearDisplayedFeatures: clearAllFeatures,
+        getNodeById: (id: string) => nodes.find(n => n.id === id),
+        getLinkById: (id: string) => links.find(l => l.id === id)
       };
-      
-      const originalRenderAllNetwork = window.geoJsonLayer.renderAllNetwork;
-      window.geoJsonLayer.renderAllNetwork = (style) => {
-        return renderAllNetwork(style);
-      };
-      
-      const originalClear = window.geoJsonLayer.clearDisplayedFeatures;
+      console.log("GeoJSON 전역 인터페이스 등록 완료");
+    } else {
+      // 기존 인터페이스가 있으면 메서드만 업데이트
+      window.geoJsonLayer.renderRoute = renderRoute;
+      window.geoJsonLayer.renderAllNetwork = renderAllNetwork;
       window.geoJsonLayer.clearDisplayedFeatures = clearAllFeatures;
-      
-      return () => {
-        if (window.geoJsonLayer) {
-          window.geoJsonLayer.renderRoute = originalRenderRoute;
-          window.geoJsonLayer.renderAllNetwork = originalRenderAllNetwork;
-          window.geoJsonLayer.clearDisplayedFeatures = originalClear;
-        }
-      };
+      window.geoJsonLayer.getNodeById = (id: string) => nodes.find(n => n.id === id);
+      window.geoJsonLayer.getLinkById = (id: string) => links.find(l => l.id === id);
+      console.log("GeoJSON 전역 인터페이스 업데이트 완료");
     }
-  }, [map]);
+    
+    return () => {
+      if (window.geoJsonLayer) {
+        // 언마운트 시 인터페이스 메서드 비우기
+        clearAllFeatures();
+        console.log("GeoJSON 전역 인터페이스 정리");
+      }
+    };
+  }, [map, nodes, links]);
   
   return null;
 };

@@ -75,7 +75,7 @@ export interface RouteStyle {
 // GeoJson 레이어 참조를 위한 타입
 export interface GeoJsonLayerRef {
   renderRoute: (nodeIds: string[], linkIds: string[], style?: RouteStyle) => any[];
-  renderAllNetwork: (styles?: RouteStyle) => any[]; // 전체 네트워크를 렌더링하는 함수 추가
+  renderAllNetwork: (style?: RouteStyle) => any[]; // 전체 네트워크를 렌더링하는 함수 추가
   clearDisplayedFeatures: () => void;
   getNodeById: (id: string) => GeoNode | undefined;
   getLinkById: (id: string) => GeoLink | undefined;
