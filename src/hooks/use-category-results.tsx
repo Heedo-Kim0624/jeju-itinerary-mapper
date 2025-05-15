@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Place } from '@/types/supabase';
@@ -8,9 +7,10 @@ import { fetchLandmarks } from '@/services/landmarks/landmarkService';
 import { fetchRestaurants } from '@/services/restaurants/restaurantService';
 import { fetchCafes } from '@/services/cafes/cafeService';
 import { useDebounceEffect } from './use-debounce-effect';
+import type { CategoryName } from '@/utils/categoryUtils'; // CategoryName 임포트
 
 export const useCategoryResults = (
-  category: '숙소' | '관광지' | '음식점' | '카페' | null,
+  category: CategoryName | null, // category 타입을 CategoryName | null 로 변경
   keywords: string[],
   regions: string[] = []
 ) => {
@@ -38,19 +38,16 @@ export const useCategoryResults = (
 
   // 키워드 기반 가중치 계산
   const calculateKeywordScore = (place: Place, keywords: string[]): number => {
-    if (!keywords || keywords.length === 0) return 0;
+    if (!keywords || keywords.length === 0) return place.weight || 0;
     
-    // 기본 점수는 place.weight 또는 0
     let score = place.weight || 0;
     
-    // 키워드 매칭 점수 계산 (최대 5점)
     const keywordBonus = keywords.reduce((bonus, keyword) => {
-      // 기본 검색 대상: 이름, 카테고리 상세, 주소
-      const matchesName = place.name.toLowerCase().includes(keyword.toLowerCase());
-      const matchesCategoryDetail = place.categoryDetail?.toLowerCase().includes(keyword.toLowerCase()) || false;
-      const matchesAddress = place.address.toLowerCase().includes(keyword.toLowerCase());
+      const lowerKeyword = keyword.toLowerCase();
+      const matchesName = place.name.toLowerCase().includes(lowerKeyword);
+      const matchesCategoryDetail = place.categoryDetail?.toLowerCase().includes(lowerKeyword) || false;
+      const matchesAddress = place.address.toLowerCase().includes(lowerKeyword);
       
-      // 가중치 부여: 이름(3점), 카테고리 상세(2점), 주소(1점)
       if (matchesName) bonus += 3;
       if (matchesCategoryDetail) bonus += 2;
       if (matchesAddress) bonus += 1;
@@ -58,10 +55,8 @@ export const useCategoryResults = (
       return bonus;
     }, 0);
     
-    // 최대 5점까지 키워드 보너스 제한
     const normalizedBonus = Math.min(5, keywordBonus);
     
-    // 최종 점수 = 기존 가중치 + 키워드 보너스
     return score + normalizedBonus;
   };
 
@@ -79,7 +74,6 @@ export const useCategoryResults = (
 
       let data: Place[] = [];
       
-      // 카테고리에 따라 적절한 서비스 함수 호출
       switch (category) {
         case '숙소':
           data = await fetchAccommodations();
@@ -94,15 +88,14 @@ export const useCategoryResults = (
           data = await fetchCafes();
           break;
         default:
-          throw new Error('지원하지 않는 카테고리입니다.');
+          const exhaustiveCheck: never = category; 
+          throw new Error(`지원하지 않는 카테고리입니다: ${exhaustiveCheck}`);
       }
 
-      // 지역으로 필터링
       data = filterByRegion(data, regions);
       
       console.log(`[useCategoryResults] ${data.length}개의 장소 로드됨. 지역 필터링 후.`);
       
-      // 키워드 매칭 점수 계산 및 할당
       if (keywords && keywords.length > 0) {
         data = data.map(place => ({
           ...place,
@@ -112,19 +105,16 @@ export const useCategoryResults = (
         console.log(`[useCategoryResults] 키워드 매칭 점수 적용 완료. 키워드: ${keywords.join(', ')}`);
       }
 
-      // weight 기준으로 정렬
       const sortedData = [...data].sort((a, b) => {
         const weightA = a.weight || 0;
         const weightB = b.weight || 0;
         return weightB - weightA;
       });
 
-      // 상위 20%는 추천 장소로, 나머지는 일반 장소로 분류
       const cutoff = Math.max(1, Math.floor(sortedData.length * 0.2));
       const recommendedData = sortedData.slice(0, cutoff);
       const normalData = sortedData.slice(cutoff);
       
-      // 결과 로깅
       console.log(`[useCategoryResults] 추천 장소: ${recommendedData.length}개, 일반 장소: ${normalData.length}개`);
       console.log(`[useCategoryResults] 샘플 추천 장소 (최대 3개):`, 
         recommendedData.slice(0, 3).map(p => ({ 
@@ -150,7 +140,6 @@ export const useCategoryResults = (
     }
   };
 
-  // 디바운스 효과로 검색 요청 최적화
   useDebounceEffect(() => {
     fetchCategoryData();
   }, [category, keywords.join(','), regions.join(',')], 300);
