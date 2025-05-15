@@ -30,10 +30,46 @@ export const initializeNaverMap = (mapContainer: HTMLDivElement | null) => {
     console.log("Creating new Naver Map instance");
     const map = new window.naver.maps.Map(mapContainer, mapOptions);
     
+    // Event listener for debugging map initialization
+    window.naver.maps.Event.once(map, 'init_stylemap', () => {
+      console.log("지도 초기화 완료 이벤트 발생");
+      toast.success("제주도 지도가 로드되었습니다");
+    });
+    
     return map;
   } catch (error) {
     console.error("Error initializing map:", error);
     toast.error("지도 초기화에 실패했습니다.");
     return null;
   }
+};
+
+// GeoJSON 노드 ID와 좌표 간 매핑 디버깅 함수
+export const debugGeoJsonMapping = (nodeIds: string[], nodes: any[]) => {
+  if (!nodeIds || nodeIds.length === 0) {
+    console.warn("디버깅: nodeIds가 비어 있습니다.");
+    return;
+  }
+  
+  if (!nodes || nodes.length === 0) {
+    console.warn("디버깅: GeoJSON 노드 데이터가 비어 있습니다.");
+    return;
+  }
+  
+  // 주요 정보 로깅
+  console.log(`디버깅: nodeIds 배열 길이 = ${nodeIds.length}, 노드 배열 길이 = ${nodes.length}`);
+  
+  // 첫 5개 nodeId에 대한 매핑 확인
+  const sampleNodeIds = nodeIds.slice(0, 5);
+  
+  console.log("디버깅: ID 매핑 샘플");
+  sampleNodeIds.forEach(id => {
+    const foundNode = nodes.find(node => node.id === id || node.getId() === id);
+    console.log(`ID ${id}: ${foundNode ? '매칭됨' : '매칭 실패'}`);
+    
+    if (foundNode) {
+      const coords = foundNode.coordinates || [];
+      console.log(`좌표: [${coords.join(', ')}]`);
+    }
+  });
 };

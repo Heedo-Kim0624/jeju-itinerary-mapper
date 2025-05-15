@@ -1,16 +1,23 @@
 
 /// <reference types="vite/client" />
 
-// Add global type declaration for geoJsonLayer
-declare global {
-  interface Window {
-    geoJsonLayer?: {
-      renderRoute: (nodeIds: string[], linkIds: string[], style?: any) => any[];
-      clearDisplayedFeatures: () => void;
-      getNodeById: (id: string) => any;
-      getLinkById: (id: string) => any;
-    };
-  }
+interface ImportMetaEnv {
+  readonly VITE_NAVER_CLIENT_ID: string;
+  readonly VITE_SERVER_URL: string;
 }
 
-export {};
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
+}
+
+// Extend window with Naver Maps
+interface Window {
+  naver?: any;
+  initMap?: () => void;
+  geoJsonLayer?: {
+    renderRoute: (nodeIds: string[], linkIds: string[], style?: any) => any[];
+    clearDisplayedFeatures: () => void;
+    getNodeById: (id: string) => any;
+    getLinkById: (id: string) => any;
+  };
+}

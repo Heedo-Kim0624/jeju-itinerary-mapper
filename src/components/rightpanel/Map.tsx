@@ -5,7 +5,6 @@ import MapMarkers from './MapMarkers';
 import MapLoadingOverlay from './MapLoadingOverlay';
 import GeoJsonLayer from './GeoJsonLayer';
 import MapControls from './MapControls';
-import JejuOSMLayer from './JejuOSMLayer';
 import type { Place, ItineraryDay } from '@/types/supabase';
 import { toast } from 'sonner';
 
@@ -93,19 +92,13 @@ const Map: React.FC<MapProps> = ({
       />
       
       {map && (
-        <>
-          {/* JejuOSMLayer 통합 - 기본 레이어로 추가 */}
-          <JejuOSMLayer map={map} />
-          
-          {/* GeoJsonLayer는 경로 표시를 위한 상호작용용 레이어로 유지 */}
-          <GeoJsonLayer 
-            map={map} 
-            visible={showGeoJson} 
-            isMapInitialized={isMapInitialized}
-            isNaverLoaded={isNaverLoaded}
-            onGeoJsonLoaded={handleGeoJsonLoaded}
-          />
-        </>
+        <GeoJsonLayer 
+          map={map} 
+          visible={showGeoJson} 
+          isMapInitialized={isMapInitialized}
+          isNaverLoaded={isNaverLoaded}
+          onGeoJsonLoaded={handleGeoJsonLoaded}
+        />
       )}
       
       <MapControls
