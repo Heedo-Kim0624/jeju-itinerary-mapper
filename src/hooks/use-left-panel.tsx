@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { Place, SchedulePayload } from '@/types/supabase';
 import { useSelectedPlaces } from './use-selected-places';
@@ -6,6 +7,8 @@ import { useCategoryResults } from './use-category-results';
 import { useItinerary } from './use-itinerary';
 import { toast } from 'sonner';
 import { useMapContext } from '@/components/rightpanel/MapContext';
+import { useRegionSelection } from './use-region-selection';
+import { useCategorySelection } from './use-category-selection';
 
 // Helper to convert English category to Korean
 const engToKorCategory = (engCategory?: string): string => {
@@ -20,10 +23,52 @@ const engToKorCategory = (engCategory?: string): string => {
 };
 
 export const useLeftPanel = () => {
+  // Create objects to group related functionality
+  const regionSelection = useRegionSelection();
+  const categorySelection = useCategorySelection();
+  const tripDetails = useTripDetails();
+  
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [showCategoryResultScreen, setShowCategoryResultScreen] = useState(false);
   const [currentPanel, setCurrentPanel] = useState<'region' | 'date' | 'category' | 'itinerary'>('region');
-  const [showItineraryPanel, setShowItineraryPanel] = useState(false);
+  const [showCategoryResult, setShowCategoryResult] = useState<string | null>(null);
+  
+  // Direct input state management
+  const [accommodationDirectInput, setAccommodationDirectInput] = useState('');
+  const [landmarkDirectInput, setLandmarkDirectInput] = useState('');
+  const [restaurantDirectInput, setRestaurantDirectInput] = useState('');
+  const [cafeDirectInput, setCafeDirectInput] = useState('');
+
+  const keywordsAndInputs = {
+    directInputValues: {
+      'accommodation': accommodationDirectInput,
+      'landmark': landmarkDirectInput,
+      'restaurant': restaurantDirectInput,
+      'cafe': cafeDirectInput
+    },
+    onDirectInputChange: (category: string, value: string) => {
+      switch (category) {
+        case 'accommodation':
+          setAccommodationDirectInput(value);
+          break;
+        case 'landmark':
+          setLandmarkDirectInput(value);
+          break;
+        case 'restaurant':
+          setRestaurantDirectInput(value);
+          break;
+        case 'cafe':
+          setCafeDirectInput(value);
+          break;
+      }
+    },
+    handleConfirmCategory: (category: string, finalKeywords: string[], showResults: boolean = false) => {
+      categorySelection.handleConfirmCategory(category as any, finalKeywords, true);
+      if (showResults) {
+        setShowCategoryResult(category);
+      }
+    }
+  };
 
   const {
     selectedPlaces,
@@ -37,63 +82,70 @@ export const useLeftPanel = () => {
     isAccommodationLimitReached,
   } = useSelectedPlaces();
 
-  const {
-    dates,
-    setDates,
-    tripDuration,
-    isDatePanelValid,
-    dateError,
-    setDateError,
-    handleDateChange,
-    handleTimeChange,
-  } = useTripDetails();
-
-  const {
-    isRegionSelected,
-    selectedRegions,
-    handleRegionChange,
-    confirmRegionSelection,
-    resetRegions,
-    getRegionDisplayName,
-  } = useRegionSelection();
+  const placesManagement = {
+    selectedPlaces,
+    candidatePlaces,
+    selectedPlacesByCategory,
+    handleSelectPlace,
+    handleRemovePlace,
+    handleViewOnMap,
+    allCategoriesSelected,
+    isAccommodationLimitReached,
+    prepareSchedulePayload
+  };
 
   const { 
-    itinerary, 
-    generateNewItinerary, 
-    isLoading: isItineraryLoading, 
-    error: itineraryError,
+    itinerary,
     selectedItineraryDay,
+    showItinerary,
+    setItinerary,
     setSelectedItineraryDay,
-    isItineraryGenerated,
-    setIsItineraryGenerated,
+    setShowItinerary,
+    handleSelectItineraryDay,
+    generateItinerary
   } = useItinerary();
 
-  const { 
-    fetchCategoryData, 
-    categoryResults, 
-    isLoading: isCategoryLoading, 
-    error: categoryError,
-    clearCategoryResults,
-    setCategoryResults,
-  } = useCategoryResults(selectedRegions);
-  
+  const itineraryManagement = {
+    itinerary,
+    selectedItineraryDay,
+    setSelectedItineraryDay,
+    handleSelectItineraryDay
+  };
+
+  const uiVisibility = {
+    showItinerary,
+    setShowItinerary,
+    showCategoryResult,
+    setShowCategoryResult
+  };
+
   const { clearMarkersAndUiElements } = useMapContext();
 
+  const { 
+    isLoading: isCategoryLoading,
+    error: categoryError,
+    recommendedPlaces,
+    normalPlaces,
+    refetch
+  } = useCategoryResults(showCategoryResult as any, 
+    showCategoryResult ? categorySelection.selectedKeywordsByCategory[showCategoryResult] || [] : [], 
+    regionSelection.selectedRegions);
+
+  const categoryResults = {
+    recommendedPlaces: recommendedPlaces || [],
+    normalPlaces: normalPlaces || []
+  };
 
   const handleCategorySelect = useCallback((category: string) => {
     console.log(`Category selected: ${category}`);
     setSelectedCategory(category);
     setShowCategoryResultScreen(true);
-    setCurrentPanel('category'); 
-    fetchCategoryData(category, selectedRegions);
-  }, [fetchCategoryData, selectedRegions]);
+    setCurrentPanel('category');
+    refetch(); // Use refetch instead of direct fetchCategoryData
+  }, [refetch]);
 
   const handleCloseCategoryResult = () => {
-    setShowCategoryResultScreen(false);
-    setSelectedCategory(null);
-    clearCategoryResults(); 
-    setCurrentPanel('category');
-    console.log('카테고리 결과 화면 닫기');
+    setShowCategoryResult(null);
   };
   
   const handleConfirmCategory = useCallback(() => {
@@ -103,62 +155,41 @@ export const useLeftPanel = () => {
       console.log(`${selectedCategory} 선택 완료`);
     }
     setShowCategoryResultScreen(false);
-    // setSelectedCategory(null); // Keep selectedCategory if needed for PlaceCart logic
     setCurrentPanel('category'); // Return to main category selection
   }, [selectedCategory]);
 
-  const handleNextPanel = (panel: 'region' | 'date' | 'category') => {
-    if (panel === 'region') {
-      if (isRegionSelected) {
-        confirmRegionSelection();
-        setCurrentPanel('date');
-      } else {
-        toast.error('지역을 선택해주세요.');
-      }
-    } else if (panel === 'date') {
-      if (isDatePanelValid) {
-        setCurrentPanel('category');
-      } else {
-        toast.error(dateError || '날짜와 시간을 올바르게 입력해주세요.');
-      }
-    }
-  };
-
-  const handlePrevPanel = (panel: 'date' | 'category') => {
-    if (panel === 'date') {
-      setCurrentPanel('region');
-    } else if (panel === 'category') {
-      setCurrentPanel('date');
-    }
-  };
-  
-  const handleShowItinerary = () => {
-    if (!isDatePanelValid) {
+  const handleCreateItinerary = async () => {
+    if (!tripDetails.dates) {
       toast.error("여행 날짜와 시간을 먼저 설정해주세요.");
-      return;
+      return false;
     }
-    if (selectedPlaces.length === 0 && !isItineraryGenerated) {
+    if (selectedPlaces.length === 0) {
       toast.error("선택된 장소가 없습니다. 장소를 선택해주세요.");
-      return;
+      return false;
     }
 
     // Group recommendedPlaces by Korean category name
     const recommendedPlacesGroupedByCategory: Record<string, Place[]> = {};
-    if (categoryResults.recommendedPlaces) {
-        categoryResults.recommendedPlaces.forEach(place => {
-            const koreanCategoryKey = engToKorCategory(place.category); // Use the helper
-            if (!recommendedPlacesGroupedByCategory[koreanCategoryKey]) {
-                recommendedPlacesGroupedByCategory[koreanCategoryKey] = [];
-            }
-            recommendedPlacesGroupedByCategory[koreanCategoryKey].push(place);
-        });
+    if (recommendedPlaces) {
+      recommendedPlaces.forEach(place => {
+        const koreanCategoryKey = engToKorCategory(place.category);
+        if (!recommendedPlacesGroupedByCategory[koreanCategoryKey]) {
+            recommendedPlacesGroupedByCategory[koreanCategoryKey] = [];
+        }
+        recommendedPlacesGroupedByCategory[koreanCategoryKey].push(place);
+      });
     }
     console.log("추천 장소 (카테고리별 그룹화):", recommendedPlacesGroupedByCategory);
 
-
-    const dateTimeInfo = dates ? {
-      start_datetime: new Date(dates.startDate.setHours(parseInt(dates.startTime.split(':')[0]), parseInt(dates.startTime.split(':')[1]))).toISOString(),
-      end_datetime: new Date(dates.endDate.setHours(parseInt(dates.endTime.split(':')[0]), parseInt(dates.endTime.split(':')[1]))).toISOString(),
+    const dateTimeInfo = tripDetails.dates ? {
+      start_datetime: new Date(tripDetails.dates.startDate.setHours(
+        parseInt(tripDetails.dates.startTime.split(':')[0]), 
+        parseInt(tripDetails.dates.startTime.split(':')[1])
+      )).toISOString(),
+      end_datetime: new Date(tripDetails.dates.endDate.setHours(
+        parseInt(tripDetails.dates.endTime.split(':')[0]), 
+        parseInt(tripDetails.dates.endTime.split(':')[1])
+      )).toISOString(),
     } : null;
 
     // Pass the grouped recommended places
@@ -166,83 +197,53 @@ export const useLeftPanel = () => {
 
     if (payload) {
       console.log("경로 생성 버튼 클릭됨, 경로 생성 함수 호출");
-      generateNewItinerary(payload); // This now triggers ScheduleGenerator via isItineraryGenerated
-      setShowItineraryPanel(true);
+      const result = generateItinerary(
+        selectedPlaces, 
+        tripDetails.dates.startDate, 
+        tripDetails.dates.endDate, 
+        tripDetails.dates.startTime, 
+        tripDetails.dates.endTime
+      );
+      setShowItinerary(true);
       setCurrentPanel('itinerary');
+      return !!result;
     } else {
       console.error("일정 생성에 필요한 정보가 부족합니다.");
-      // Toast error is handled within prepareSchedulePayload
+      return false;
     }
   };
 
-
   const handleCloseItinerary = () => {
-    setShowItineraryPanel(false);
-    setIsItineraryGenerated(false); // Reset generation flag
+    setShowItinerary(false);
     clearMarkersAndUiElements(); // Clear map markers and routes
     setCurrentPanel('category'); // Or to the last relevant panel
   };
-  
-  // Effect to show itinerary panel when itinerary is generated
-  useEffect(() => {
-    if (isItineraryGenerated && itinerary.length > 0) {
-      setShowItineraryPanel(true);
-      setCurrentPanel('itinerary');
-      // Set selected day to the first day of the itinerary
-      setSelectedItineraryDay(itinerary[0]?.day || 1);
-      console.log("LeftPanel - 일정 관련 상태 변화 감지:", {
-        일정생성됨: isItineraryGenerated,
-        일정패널표시: showItineraryPanel,
-        선택된일자: selectedItineraryDay
-      });
-    }
-  }, [isItineraryGenerated, itinerary, setSelectedItineraryDay]);
 
+  // Effect to select first day when itinerary is created
+  useEffect(() => {
+    if (itinerary && itinerary.length > 0 && showItinerary) {
+      setSelectedItineraryDay(itinerary[0]?.day || 1);
+    }
+  }, [itinerary, showItinerary, setSelectedItineraryDay]);
 
   return {
+    regionSelection,
+    categorySelection,
+    keywordsAndInputs,
+    placesManagement,
+    tripDetails,
+    uiVisibility,
+    itineraryManagement,
+    handleCreateItinerary,
     selectedCategory,
     showCategoryResultScreen,
     currentPanel,
-    selectedPlaces,
-    selectedPlacesByCategory,
-    candidatePlaces,
-    allCategoriesSelected,
-    dates,
-    tripDuration,
-    isDatePanelValid,
-    dateError,
-    isRegionSelected,
-    selectedRegions,
-    itinerary,
-    isItineraryLoading,
-    itineraryError,
-    showItineraryPanel,
-    selectedItineraryDay,
-    isItineraryGenerated,
-    categoryResults,
     isCategoryLoading,
     categoryError,
-    isAccommodationLimitReached,
+    categoryResults,
     handleCategorySelect,
     handleCloseCategoryResult,
     handleConfirmCategory,
-    handleNextPanel,
-    handlePrevPanel,
-    handleSelectPlace,
-    handleRemovePlace,
-    handleViewOnMap,
-    setDates, // from useTripDetails
-    handleDateChange, // from useTripDetails
-    handleTimeChange, // from useTripDetails
-    setDateError, // from useTripDetails
-    handleRegionChange, // from useRegionSelection
-    resetRegions, // from useRegionSelection
-    getRegionDisplayName, // from useRegionSelection
-    handleShowItinerary,
-    handleCloseItinerary,
-    setSelectedItineraryDay,
-    fetchCategoryData, // from useCategoryResults
-    clearCategoryResults, // from useCategoryResults
-    setCategoryResults, // from useCategoryResults
+    handleCloseItinerary
   };
 };
