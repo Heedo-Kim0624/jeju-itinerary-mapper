@@ -116,7 +116,7 @@ const useMapCore = () => {
     
     // GeoJSON 기반 라우팅인지 확인
     if (isGeoJsonLoaded && serverRouteData) {
-      console.log('서버 기반 GeoJSON 경로 렌더링:', {
+      console.log('서버 기반 GeoJSON 경로 렌더링 시도:', {
         일자: itineraryDay.day,
         데이터: serverRouteData
       });
@@ -124,6 +124,9 @@ const useMapCore = () => {
       // 노드 ID와 링크 ID 추출
       const { nodeIds, linkIds } = extractNodeAndLinkIds(serverRouteData);
       
+      // Log nodeIds/linkIds passed to visualization
+      console.log("🗺️ 시각화 대상 노드/링크 ID (useMapCore):", { nodeIds, linkIds });
+
       // GeoJSON 기반 경로 렌더링
       renderGeoJsonRoute(
         nodeIds, 
@@ -159,21 +162,20 @@ const useMapCore = () => {
     const totalPlaces = places.length;
     const placesWithGeoNodeId = places.filter(p => p.geoNodeId);
     const mappedPlaces = placesWithGeoNodeId.length;
-    const mappingRate = ((mappedPlaces / totalPlaces) * 100).toFixed(1);
+    const mappingRate = totalPlaces > 0 ? ((mappedPlaces / totalPlaces) * 100).toFixed(1) : '0.0';
     
     // 평균 거리 계산
     const distanceSum = placesWithGeoNodeId.reduce((sum, place) => {
       return sum + (place.geoNodeDistance || 0);
     }, 0);
     
-    const averageDistance = mappedPlaces > 0 ? 
-      (distanceSum / mappedPlaces).toFixed(1) : 
-      'N/A';
+    const averageDistanceFloat = mappedPlaces > 0 ? (distanceSum / mappedPlaces) : 0;
+    const averageDistance = mappedPlaces > 0 ? averageDistanceFloat.toFixed(1) : 'N/A';
     
     // 매핑 성공 여부 판단 (50% 이상이고 평균 거리 100m 이내)
     const success = 
-      mappedPlaces / totalPlaces >= 0.5 && 
-      (averageDistance === 'N/A' || parseFloat(averageDistance) < 100);
+      (mappedPlaces / totalPlaces >= 0.5 || totalPlaces === 0) && 
+      (averageDistance === 'N/A' || averageDistanceFloat < 100);
     
     return {
       totalPlaces,
@@ -260,11 +262,9 @@ const useMapCore = () => {
     }
 
     if (typeof window !== 'undefined' && window.geoJsonLayer && typeof window.geoJsonLayer.renderRoute === 'function') {
-      // 외부 GeoJsonLayer 컴포넌트의 렌더 함수 사용
       return window.geoJsonLayer.renderRoute(nodeIds, linkIds, style);
     }
     
-    // geoJsonLayerRef를 통한 렌더링 시도
     if (geoJsonLayerRef.current && typeof geoJsonLayerRef.current.renderRoute === 'function') {
       return geoJsonLayerRef.current.renderRoute(nodeIds, linkIds, style);
     }
@@ -291,8 +291,8 @@ const useMapCore = () => {
     highlightSegment,
     clearPreviousHighlightedPath,
     isGeoJsonLoaded,
-    checkGeoJsonMapping: () => ({}), // 기존 함수는 유지
-    mapPlacesWithGeoNodes: (places: Place[]) => places, // 기존 함수는 유지
+    checkGeoJsonMapping, // Updated to return correct structure
+    mapPlacesWithGeoNodes: (places: Place[]) => places, // Kept as is
     showRouteForPlaceIndex,
     renderGeoJsonRoute,
     geoJsonNodes,

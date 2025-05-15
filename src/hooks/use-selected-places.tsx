@@ -1,10 +1,23 @@
-
 import { useState, useEffect } from 'react';
 import { Place, SelectedPlace, SchedulePayload } from '@/types/supabase';
 import { useMapContext } from '@/components/rightpanel/MapContext';
 import { toast } from 'sonner';
 import { useTripDetails } from './use-trip-details';
 import { getMinimumRecommendationCount } from '@/lib/itinerary/itinerary-utils';
+
+// This function is used locally and also needed for grouping in use-left-panel.
+// Consider moving to a shared utility file e.g., src/utils/categoryUtils.ts
+const getCategoryKorean = (category?: string): string => {
+  if (!category) return '기타';
+  
+  switch (category.toLowerCase()) {
+    case 'accommodation': return '숙소';
+    case 'attraction': return '관광지';
+    case 'restaurant': return '음식점';
+    case 'cafe': return '카페';
+    default: return '기타';
+  }
+};
 
 export const useSelectedPlaces = () => {
   const [selectedPlaces, setSelectedPlaces] = useState<Place[]>([]);
@@ -60,16 +73,18 @@ export const useSelectedPlaces = () => {
 
   const handleSelectPlace = (place: Place, checked: boolean, category: string | null = null) => {
     // 카테고리가 제공되었는지 확인하고, 누락된 경우 콘솔 로그 추가
-    if (!category) {
-      console.warn('카테고리 값이 누락되었습니다:', place.name);
-    }
+    const providedCategory = category || getCategoryKorean(place.category); // Fallback if category prop is null
     
+    if (!providedCategory || !['숙소', '관광지', '음식점', '카페', '기타'].includes(providedCategory) ) {
+       console.warn('유효하지 않거나 알 수 없는 카테고리 값입니다:', providedCategory, '장소:', place.name);
+    }
+
     // 타입 호환성을 위해 place.id가 string인지 확인
     const normalizedPlace = { ...place };
     
     if (checked) {
       // If trying to add accommodation, check limit
-      if (category === '숙소') {
+      if (providedCategory === '숙소') {
         const currentAccommodationCount = selectedPlacesByCategory['숙소'].length;
         
         if (isAccommodationLimitReached(currentAccommodationCount)) {
@@ -85,19 +100,19 @@ export const useSelectedPlaces = () => {
         return [...prevPlaces, normalizedPlace];
       });
       
-      if (category) {
+      if (providedCategory && selectedPlacesByCategory[providedCategory as keyof typeof selectedPlacesByCategory]) {
         setSelectedPlacesByCategory(prev => ({
           ...prev,
-          [category]: [...prev[category as keyof typeof prev], normalizedPlace]
+          [providedCategory]: [...prev[providedCategory as keyof typeof prev], normalizedPlace]
         }));
       }
     } else {
       setSelectedPlaces(prevPlaces => prevPlaces.filter(p => p.id !== normalizedPlace.id));
       
-      if (category) {
+      if (providedCategory && selectedPlacesByCategory[providedCategory as keyof typeof selectedPlacesByCategory]) {
         setSelectedPlacesByCategory(prev => ({
           ...prev,
-          [category]: prev[category as keyof typeof prev].filter(p => p.id !== normalizedPlace.id)
+          [providedCategory]: prev[providedCategory as keyof typeof prev].filter(p => p.id !== normalizedPlace.id)
         }));
       }
     }
@@ -131,92 +146,98 @@ export const useSelectedPlaces = () => {
 
   // 후보 장소 자동 보완 기능
   const autoCompleteWithCandidates = (
-    selectedPlaces: Place[], 
-    recommendedPlacesByCategory: { [category: string]: Place[] },
-    tripDuration: number
+    currentSelectedPlaces: Place[], 
+    recommendedPlacesByCategory: { [category: string]: Place[] }, // Expects KOREAN category names as keys
+    currentTripDuration: number
   ): Place[] => {
-    if (!tripDuration || tripDuration < 1) {
+    // Log for Request 1.1
+    console.log("autoCompleteWithCandidates 호출됨", {
+      selectedCount: currentSelectedPlaces.length,
+      tripDuration: currentTripDuration,
+      recommendedCategories: Object.keys(recommendedPlacesByCategory)
+    });
+    console.log("추천 후보 장소 목록 (카테고리별, autoCompleteWithCandidates 입력):", recommendedPlacesByCategory);
+
+
+    if (!currentTripDuration || currentTripDuration < 1) {
       console.warn('여행 기간 정보가 없어 후보 장소를 자동 보완할 수 없습니다.');
-      return selectedPlaces;
+      return currentSelectedPlaces;
     }
     
-    // 카테고리별 최소 필요 개수 계산
-    const minimumRequirements = getMinimumRecommendationCount(tripDuration);
-    
+    const minimumRequirements = getMinimumRecommendationCount(currentTripDuration);
     console.log('카테고리별 최소 필요 장소 수:', minimumRequirements);
     
-    // 카테고리 매핑: 한글 -> 영문
-    const categoryMapping: Record<string, string> = {
+    const categoryEngToKorMapping: Record<string, string> = {
+      'attraction': '관광지',
+      'restaurant': '음식점',
+      'cafe': '카페',
+      'accommodation': '숙소'
+    };
+    const categoryKorToEngMapping: Record<string, string> = {
       '관광지': 'attraction',
       '음식점': 'restaurant',
       '카페': 'cafe',
       '숙소': 'accommodation'
     };
-    
-    // 카테고리별 현재 선택된 장소 수 계산
-    const selectedCountsByCategory: Record<string, Place[]> = {
-      '관광지': [],
-      '음식점': [],
-      '카페': [],
-      '숙소': []
+
+    const currentSelectedCountsByKoreanCategory: Record<string, Place[]> = {
+      '숙소': [], '관광지': [], '음식점': [], '카페': []
     };
     
-    // 선택된 장소들을 카테고리별로 분류
-    selectedPlaces.forEach(place => {
-      const category = place.category_korean || getCategoryKorean(place.category);
-      if (category && selectedCountsByCategory[category]) {
-        selectedCountsByCategory[category].push(place);
+    currentSelectedPlaces.forEach(place => {
+      // Use getCategoryKorean to ensure consistent Korean category names
+      const koreanCategory = getCategoryKorean(place.category);
+      if (koreanCategory && currentSelectedCountsByKoreanCategory[koreanCategory]) {
+        currentSelectedCountsByKoreanCategory[koreanCategory].push(place);
       }
     });
     
-    // 최종 장소 목록 (선택된 장소 + 자동 보완된 후보 장소)
-    const finalPlaces: Place[] = [...selectedPlaces];
-    const autoCompletedPlaces: Place[] = [];
+    const finalPlaces: Place[] = [...currentSelectedPlaces];
+    const autoCompletedCandidatePlaces: Place[] = [];
     
-    // 각 카테고리별로 부족한 개수만큼 추천 장소에서 보완
-    Object.entries(selectedCountsByCategory).forEach(([categoryKorean, places]) => {
-      const categoryEng = categoryMapping[categoryKorean];
-      if (!categoryEng) return;
-      
-      const minCount = minimumRequirements[categoryEng as keyof typeof minimumRequirements] || 0;
-      const currentCount = places.length;
+    // Iterate using English category keys from minimumRequirements
+    Object.entries(minimumRequirements).forEach(([categoryEng, minCount]) => {
+      const categoryKorean = categoryEngToKorMapping[categoryEng];
+      if (!categoryKorean) return; // Should not happen if mappings are correct
+
+      const currentCount = currentSelectedCountsByKoreanCategory[categoryKorean]?.length || 0;
       const shortage = Math.max(0, minCount - currentCount);
       
+      // Log for Request 1.2
+      console.log(`${categoryKorean} (eng: ${categoryEng}) 카테고리: 현재 ${currentCount}개, 최소 ${minCount}개, 부족 ${shortage}개`);
+
       if (shortage > 0) {
-        console.log(`${categoryKorean} 카테고리 부족 개수: ${shortage}개`);
-        
-        // 해당 카테고리의 추천 장소 목록에서 상위 N개 가져오기
-        const recommendedPlaces = recommendedPlacesByCategory[categoryKorean] || [];
-        
-        // 이미 선택된 장소는 제외하고 필요한 만큼만 추가
-        const candidatesToAdd = recommendedPlaces
-          .filter(rp => !selectedPlaces.some(sp => sp.id === rp.id))
-          .slice(0, shortage);
+        const availableRecommended = recommendedPlacesByCategory[categoryKorean] || [];
+        // Log for Request 1.3 (part 1: candidate pool for this category)
+        console.log(`추천 후보 (${categoryKorean}):`, availableRecommended.map(p => ({name: p.name, id: p.id})));
+
+        const candidatesToAdd = availableRecommended
+          .filter(rp => !currentSelectedPlaces.some(sp => sp.id === rp.id) && !autoCompletedCandidatePlaces.some(acp => acp.id === rp.id))
+          .slice(0, shortage); // Assuming recommendedPlacesByCategory are already sorted by score
           
         if (candidatesToAdd.length > 0) {
+          // Log for Request 1.3 (part 2: actual candidates added)
           console.log(`${categoryKorean} 카테고리에 ${candidatesToAdd.length}개 장소 자동 추가:`, 
-            candidatesToAdd.map(p => p.name).join(', '));
+            candidatesToAdd.map(p => ({name: p.name, id: p.id})));
           
-          // 후보 장소에 isCandidate 속성 추가 (Place 타입에 추가된 옵션 속성 활용)
           const markedCandidates = candidatesToAdd.map(p => ({
             ...p,
-            isCandidate: true // 자동 추가된 후보 장소임을 표시
+            isCandidate: true 
           }));
           
           finalPlaces.push(...markedCandidates);
-          autoCompletedPlaces.push(...markedCandidates);
+          autoCompletedCandidatePlaces.push(...markedCandidates);
         } else {
-          console.warn(`${categoryKorean} 카테고리의 추천 장소가 부족합니다.`);
+          console.warn(`${categoryKorean} 카테고리의 추천 장소가 부족하거나 이미 선택된 장소입니다. (부족분: ${shortage}, 사용가능 추천: ${availableRecommended.length})`);
         }
       }
     });
     
-    // 자동 추가된 장소 정보 저장
-    setCandidatePlaces(autoCompletedPlaces);
+    setCandidatePlaces(prev => [...prev, ...autoCompletedCandidatePlaces.filter(acp => !prev.some(p => p.id === acp.id))]);
     
-    if (autoCompletedPlaces.length > 0) {
-      console.log(`총 ${autoCompletedPlaces.length}개의 장소가 자동으로 추가되었습니다.`);
-      toast.success(`${autoCompletedPlaces.length}개의 추천 장소가 자동으로 추가되었습니다.`);
+    if (autoCompletedCandidatePlaces.length > 0) {
+      console.log(`총 ${autoCompletedCandidatePlaces.length}개의 장소가 자동으로 추가되었습니다.`);
+      toast.info(`${autoCompletedCandidatePlaces.length}개의 추천 장소가 자동으로 추가되었습니다.`);
     }
     
     return finalPlaces;
@@ -236,44 +257,43 @@ export const useSelectedPlaces = () => {
   };
 
   const prepareSchedulePayload = (
-    places: Place[], 
+    placesToSchedule: Place[], 
     dateTime: { start_datetime: string; end_datetime: string } | null,
-    allAvailablePlaces: { [category: string]: Place[] } = {}
+    // This is expected to be Record<KoreanCategoryName, Place[]>
+    availableRecommendedPlacesByCategory: { [category: string]: Place[] } = {} 
   ): SchedulePayload | null => {
     if (!dateTime) {
       toast.error('여행 날짜와 시간을 선택해주세요');
       return null;
     }
 
-    // 여행 일수 계산
     const startDate = new Date(dateTime.start_datetime);
     const endDate = new Date(dateTime.end_datetime);
     const tripDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
     
-    // 선택한 장소에 후보 장소 자동 보완
-    const enrichedPlaces = autoCompleteWithCandidates(places, allAvailablePlaces, tripDays);
+    // autoCompleteWithCandidates expects KOREAN category names as keys for availableRecommendedPlacesByCategory
+    const enrichedPlaces = autoCompleteWithCandidates(placesToSchedule, availableRecommendedPlacesByCategory, tripDays);
 
-    // 사용자가 직접 선택한 장소
-    const selected: SelectedPlace[] = places
+    const userSelected: SelectedPlace[] = enrichedPlaces
       .filter(p => !p.isCandidate)
       .map(p => ({ id: p.id, name: p.name }));
 
-    // 자동으로 추가된 후보 장소
-    const candidates: SelectedPlace[] = enrichedPlaces
+    const autoCandidates: SelectedPlace[] = enrichedPlaces
       .filter(p => p.isCandidate)
       .map(p => ({ id: p.id, name: p.name }));
 
-    // 후보 장소가 제대로 처리되는지 로깅
-    console.log('일정 생성 데이터:', {
-      선택된_장소: selected.length,
-      후보_장소: candidates.length,
-      총_장소: selected.length + candidates.length,
-      날짜: dateTime
+    console.log('일정 생성 데이터 (prepareSchedulePayload):', {
+      사용자선택_장소수: userSelected.length,
+      자동후보_장소수: autoCandidates.length,
+      총_장소수: enrichedPlaces.length,
+      날짜: dateTime,
+      payload_selected: userSelected.map(p=>p.name),
+      payload_candidates: autoCandidates.map(p=>p.name),
     });
 
     return {
-      selected_places: selected,
-      candidate_places: candidates,
+      selected_places: userSelected,
+      candidate_places: autoCandidates,
       ...dateTime
     };
   };
@@ -288,6 +308,6 @@ export const useSelectedPlaces = () => {
     allCategoriesSelected,
     prepareSchedulePayload,
     isAccommodationLimitReached,
-    autoCompleteWithCandidates
+    autoCompleteWithCandidates // Exposing it if needed elsewhere, though primarily used by prepareSchedulePayload
   };
 };
