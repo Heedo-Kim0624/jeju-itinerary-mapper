@@ -3,6 +3,7 @@ import { ItineraryDay, RouteData, ItineraryPlace } from '@/types/itinerary'; // 
 import { Place } from '@/types/supabase'; // Place now has optional fields
 import { getCategoryColor, routeStyles } from '@/utils/map/mapStyles';
 import { ServerRouteResponse } from '@/types/schedule';
+import { resolveLocationToCoordinates } from '@/utils/map/mapNavigation';
 
 interface UseMapCoreProps {
   places?: Place[]; 
@@ -50,19 +51,36 @@ export const useMapCore = ({
     // Actual route calculation logic would go here
   }, [map]);
 
-  const panTo = useCallback((placeOrCoords: Place | ItineraryPlace | { lat: number; lng: number }) => {
+  // Now panTo accepts string locations as well
+  const panTo = useCallback((placeOrCoords: Place | ItineraryPlace | { lat: number; lng: number } | string) => {
     if (!map) return;
 
     let position;
-    if ('x' in placeOrCoords && 'y' in placeOrCoords) { // It's Place or ItineraryPlace
-        if (typeof placeOrCoords.y !== 'number' || typeof placeOrCoords.x !== 'number') return;
-        position = new window.naver.maps.LatLng(placeOrCoords.y, placeOrCoords.x);
-    } else if ('lat' in placeOrCoords && 'lng' in placeOrCoords) { // It's {lat, lng}
-        position = new window.naver.maps.LatLng(placeOrCoords.lat, placeOrCoords.lng);
-    } else {
-        console.warn("panTo called with invalid arguments:", placeOrCoords);
+    
+    // Handle string location names
+    if (typeof placeOrCoords === 'string') {
+      const coords = resolveLocationToCoordinates(placeOrCoords);
+      if (coords) {
+        position = new window.naver.maps.LatLng(coords.lat, coords.lng);
+      } else {
+        console.warn("Could not resolve location name:", placeOrCoords);
         return;
+      }
     }
+    // Handle Place or ItineraryPlace objects
+    else if ('x' in placeOrCoords && 'y' in placeOrCoords) {
+      if (typeof placeOrCoords.y !== 'number' || typeof placeOrCoords.x !== 'number') return;
+      position = new window.naver.maps.LatLng(placeOrCoords.y, placeOrCoords.x);
+    }
+    // Handle {lat, lng} objects
+    else if ('lat' in placeOrCoords && 'lng' in placeOrCoords) {
+      position = new window.naver.maps.LatLng(placeOrCoords.lat, placeOrCoords.lng);
+    }
+    else {
+      console.warn("panTo called with invalid arguments:", placeOrCoords);
+      return;
+    }
+    
     map.panTo(position);
   }, [map]);
 

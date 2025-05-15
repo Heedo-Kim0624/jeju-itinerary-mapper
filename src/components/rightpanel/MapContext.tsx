@@ -29,7 +29,8 @@ interface MapContextType {
   }) => any[];
   calculateRoutes: (places: Place[]) => void; // Added
   clearMarkersAndUiElements: () => void;
-  panTo: (placeOrCoords: Place | ItineraryPlace | { lat: number; lng: number }) => void; // Updated signature
+  // Updated to support string location names
+  panTo: (placeOrCoords: Place | ItineraryPlace | { lat: number; lng: number } | string) => void;
   showGeoJson: boolean;
   toggleGeoJsonVisibility: () => void;
   renderItineraryRoute: (itineraryDay: ItineraryDay | null) => void;
@@ -141,4 +142,3 @@ export const MapProvider: React.FC<{children: React.ReactNode}> = ({ children })
     </MapContext.Provider>
   );
 };
-
