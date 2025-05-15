@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { useLeftPanel } from '@/hooks/use-left-panel';
 import LeftPanelContent from './LeftPanelContent';
@@ -17,7 +16,8 @@ const LeftPanel: React.FC = () => {
     tripDetails,
     uiVisibility,
     itineraryManagement,
-    handleCreateItinerary
+    handleCreateItinerary,
+    categoryResults 
   } = useLeftPanel();
 
   // 일정 생성 후 UI 상태 변화를 디버깅
@@ -42,14 +42,13 @@ const LeftPanel: React.FC = () => {
   // 결과 닫기 핸들러
   const handleResultClose = () => {
     console.log("카테고리 결과 화면 닫기");
-    // null 사용
     uiVisibility.setShowCategoryResult(null);
   };
 
   // 카테고리 확인 핸들러
   const handleConfirmByCategory = (category: CategoryName, finalKeywords: string[]) => {
     console.log(`카테고리 '${category}' 확인, 키워드: ${finalKeywords.join(', ')}`);
-    // 키워드 확인 후 카테고리 결과 화면 표시
+    // keywordsAndInputs.handleConfirmCategory의 category 타입을 CategoryName으로 수정했으므로 OK
     keywordsAndInputs.handleConfirmCategory(category, finalKeywords, true);
     return true;
   };
@@ -79,10 +78,11 @@ const LeftPanel: React.FC = () => {
             startTime: tripDetails.dates?.startTime || "09:00",
             endTime: tripDetails.dates?.endTime || "21:00"
           }}
-          onCreateItinerary={() => {
-            // For type compatibility, convert the Promise to a boolean
-            handleCreateItinerary().then(result => !!result);
-            return true;
+          onCreateItinerary={async () => { // async 추가
+            // handleCreateItinerary가 Promise<boolean>을 반환하도록 수정 필요
+            // 또는 여기서 반환값 처리. 현재는 boolean을 기대하므로, Promise 결과를 기다림.
+            const result = await handleCreateItinerary();
+            return result; // Promise의 결과를 boolean으로 반환
           }}
           itinerary={itineraryManagement.itinerary}
           selectedItineraryDay={itineraryManagement.selectedItineraryDay}
@@ -92,7 +92,9 @@ const LeftPanel: React.FC = () => {
             onDateSelect={tripDetails.setDates}
             onOpenRegionPanel={() => regionSelection.setRegionSlidePanelOpen(true)}
             hasSelectedDates={!!tripDetails.dates}
-            onCategoryClick={categorySelection.handleCategoryButtonClick}
+            onCategoryClick={(category) => { // category 타입을 CategoryName으로 명시적 캐스팅
+              categorySelection.handleCategoryButtonClick(category as CategoryName);
+            }}
             regionConfirmed={regionSelection.regionConfirmed}
             categoryStepIndex={categorySelection.stepIndex}
             activeMiddlePanelCategory={categorySelection.activeMiddlePanelCategory}
@@ -100,28 +102,28 @@ const LeftPanel: React.FC = () => {
             selectedKeywordsByCategory={categorySelection.selectedKeywordsByCategory}
             toggleKeyword={categorySelection.toggleKeyword}
             directInputValues={{
-              accomodation: keywordsAndInputs.directInputValues['accommodation'] || '',
-              landmark: keywordsAndInputs.directInputValues['landmark'] || '',
-              restaurant: keywordsAndInputs.directInputValues['restaurant'] || '',
-              cafe: keywordsAndInputs.directInputValues['cafe'] || ''
+              '숙소': keywordsAndInputs.directInputValues['accommodation'] || '',
+              '관광지': keywordsAndInputs.directInputValues['landmark'] || '',
+              '음식점': keywordsAndInputs.directInputValues['restaurant'] || '',
+              '카페': keywordsAndInputs.directInputValues['cafe'] || ''
             }}
             onDirectInputChange={{
-              accomodation: (value: string) => keywordsAndInputs.onDirectInputChange('accommodation', value),
-              landmark: (value: string) => keywordsAndInputs.onDirectInputChange('landmark', value),
-              restaurant: (value: string) => keywordsAndInputs.onDirectInputChange('restaurant', value),
-              cafe: (value: string) => keywordsAndInputs.onDirectInputChange('cafe', value)
+              '숙소': (value: string) => keywordsAndInputs.onDirectInputChange('accommodation', value),
+              '관광지': (value: string) => keywordsAndInputs.onDirectInputChange('landmark', value),
+              '음식점': (value: string) => keywordsAndInputs.onDirectInputChange('restaurant', value),
+              '카페': (value: string) => keywordsAndInputs.onDirectInputChange('cafe', value)
             }}
-            onConfirmCategory={{
-              accomodation: (finalKeywords: string[]) => handleConfirmByCategory('숙소', finalKeywords),
-              landmark: (finalKeywords: string[]) => handleConfirmByCategory('관광지', finalKeywords),
-              restaurant: (finalKeywords: string[]) => handleConfirmByCategory('음식점', finalKeywords),
-              cafe: (finalKeywords: string[]) => handleConfirmByCategory('카페', finalKeywords)
+            onConfirmCategory={{ // 키를 CategoryName으로
+              '숙소': (finalKeywords: string[]) => handleConfirmByCategory('숙소', finalKeywords),
+              '관광지': (finalKeywords: string[]) => handleConfirmByCategory('관광지', finalKeywords),
+              '음식점': (finalKeywords: string[]) => handleConfirmByCategory('음식점', finalKeywords),
+              '카페': (finalKeywords: string[]) => handleConfirmByCategory('카페', finalKeywords)
             }}
-            handlePanelBack={{
-              accomodation: () => handlePanelBackByCategory('accommodation'),
-              landmark: () => handlePanelBackByCategory('landmark'),
-              restaurant: () => handlePanelBackByCategory('restaurant'),
-              cafe: () => handlePanelBackByCategory('cafe')
+            handlePanelBack={{ // 키를 CategoryName으로
+              '숙소': () => handlePanelBackByCategory('숙소'),
+              '관광지': () => handlePanelBackByCategory('관광지'),
+              '음식점': () => handlePanelBackByCategory('음식점'),
+              '카페': () => handlePanelBackByCategory('카페')
             }}
             isCategoryButtonEnabled={categorySelection.isCategoryButtonEnabled}
           />
@@ -136,12 +138,12 @@ const LeftPanel: React.FC = () => {
         onConfirm={() => {
           regionSelection.setRegionSlidePanelOpen(false);
           if (regionSelection.selectedRegions.length > 0) regionSelection.setRegionConfirmed(true);
-          else alert('지역을 선택해주세요.');
+          else alert('지역을 선택해주세요.'); // toast.info 등으로 변경 고려
         }}
       />
 
       <CategoryResultHandler
-        showCategoryResult={uiVisibility.showCategoryResult}
+        showCategoryResult={uiVisibility.showCategoryResult} // CategoryName | null 타입
         selectedRegions={regionSelection.selectedRegions}
         selectedKeywordsByCategory={categorySelection.selectedKeywordsByCategory}
         onClose={handleResultClose}
