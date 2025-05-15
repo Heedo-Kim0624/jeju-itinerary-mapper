@@ -7,9 +7,9 @@ import {
   GeoJsonLoaderProps, 
   GeoCoordinates, 
   GeoJsonGeometry, 
-  GeoJsonNodeProperties, 
-  GeoJsonLinkProperties 
-} from './GeoJsonTypes';
+  NodeProperties, // Use NodeProperties
+  LinkProperties  // Use LinkProperties
+} from './GeoJsonTypes'; // Ensure these are exported from GeoJsonTypes
 
 const GeoJsonLoader: React.FC<GeoJsonLoaderProps> = ({
   isMapInitialized,
@@ -24,7 +24,6 @@ const GeoJsonLoader: React.FC<GeoJsonLoaderProps> = ({
       }
       
       try {
-        // 노드와 링크 데이터를 동시에 가져옴
         console.log('GeoJsonLoader: 데이터 파일 로드 시작');
         const [nodeRes, linkRes] = await Promise.all([
           fetch('/data/NODE_JSON.geojson'),
@@ -35,40 +34,34 @@ const GeoJsonLoader: React.FC<GeoJsonLoaderProps> = ({
           throw new Error('GeoJSON 데이터를 가져오는데 실패했습니다.');
         }
         
-        // JSON으로 변환
-        const [nodeJson, linkJson] = await Promise.all([
-          nodeRes.json(),
-          linkRes.json()
-        ]);
+        const nodeJson = await nodeRes.json();
+        const linkJson = await linkRes.json();
         
         console.log('GeoJsonLoader: GeoJSON 데이터 로드 완료', {
           노드: nodeJson.features.length,
           링크: linkJson.features.length
         });
         
-        // 노드 객체 생성
-        const nodes = nodeJson.features.map((feature: any): GeoNode => {
-          const id = String(feature.properties.NODE_ID);
-          const coordinates = feature.geometry.coordinates as [number, number];
+        const nodes: GeoNode[] = nodeJson.features.map((feature: any): GeoNode => {
+          const id = String(feature.properties.NODE_ID); // Ensure NODE_ID exists
+          const coordinates = feature.geometry.coordinates as GeoCoordinates; // [lng, lat]
           
           return {
             id,
             type: 'node',
             coordinates,
-            properties: feature.properties,
+            properties: feature.properties as NodeProperties, // Cast to NodeProperties
             adjacentLinks: [],
             adjacentNodes: []
           };
         });
         
-        // 링크 객체 생성 및 노드 인접 링크/노드 설정
-        const links = linkJson.features.map((feature: any): GeoLink => {
-          const id = String(feature.properties.LINK_ID);
-          const fromNodeId = String(feature.properties.F_NODE);
-          const toNodeId = String(feature.properties.T_NODE);
+        const links: GeoLink[] = linkJson.features.map((feature: any): GeoLink => {
+          const id = String(feature.properties.LINK_ID); // Ensure LINK_ID exists
+          const fromNodeId = String(feature.properties.F_NODE); // Ensure F_NODE exists
+          const toNodeId = String(feature.properties.T_NODE);   // Ensure T_NODE exists
           const length = feature.properties.LENGTH || 0;
           
-          // 노드 인접 링크 및 노드 업데이트
           const fromNode = nodes.find(node => node.id === fromNodeId);
           const toNode = nodes.find(node => node.id === toNodeId);
           
@@ -85,8 +78,8 @@ const GeoJsonLoader: React.FC<GeoJsonLoaderProps> = ({
           return {
             id,
             type: 'link',
-            coordinates: feature.geometry.coordinates as [number, number][],
-            properties: feature.properties,
+            coordinates: feature.geometry.coordinates as GeoCoordinates[],
+            properties: feature.properties as LinkProperties, // Cast to LinkProperties
             fromNode: fromNodeId,
             toNode: toNodeId,
             length
@@ -98,7 +91,6 @@ const GeoJsonLoader: React.FC<GeoJsonLoaderProps> = ({
           링크객체: links.length
         });
         
-        // 성공 콜백 호출
         onLoadSuccess(nodes, links);
         
       } catch (error) {

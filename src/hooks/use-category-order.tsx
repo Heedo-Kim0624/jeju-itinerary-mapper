@@ -1,27 +1,24 @@
 
 import { useState } from 'react';
-import { CategoryName } from '@/utils/categoryUtils';
+import { CategoryName } from '@/utils/categoryUtils'; // Ensure CategoryName is exported
 
 export const useCategoryOrder = () => {
   const [stepIndex, setStepIndex] = useState<number>(0);
-  // Add the missing properties
-  const categoryOrder: CategoryName[] = ["숙소", "관광지", "음식점", "카페"];
-  const [categorySelectionConfirmed, setCategorySelectionConfirmed] = useState<boolean>(true);
+  const categoryOrder: CategoryName[] = ["accommodation", "landmark", "restaurant", "cafe"]; // Use CategoryName values
+  const [categorySelectionConfirmed, setCategorySelectionConfirmed] = useState<boolean>(true); // Default to true?
   
   const handleCategoryClick = (categoryName: CategoryName) => {
-    // No-op since we no longer need category ordering
+    // No-op logic seems to be intended
   };
   
-  // Add the getRecommendedWeight method
-  const getRecommendedWeight = (category: string): number => {
-    // Default weight is 1.0
-    const weights: Record<string, number> = {
-      "숙소": 1.0,
-      "관광지": 1.0,
-      "음식점": 1.0, 
-      "카페": 1.0
+  const getRecommendedWeight = (category: CategoryName): number => { // Use CategoryName
+    const weights: Record<CategoryName, number> = {
+      "accommodation": 1.0,
+      "landmark": 1.0,
+      "restaurant": 1.0, 
+      "cafe": 1.0,
+      "attraction": 1.0, // if attraction is a key
     };
-    
     return weights[category] || 1.0;
   };
 
@@ -29,10 +26,10 @@ export const useCategoryOrder = () => {
     stepIndex,
     setStepIndex,
     handleCategoryClick,
-    // Return the new properties
     categoryOrder,
     categorySelectionConfirmed,
     setCategorySelectionConfirmed,
     getRecommendedWeight
   };
 };
+

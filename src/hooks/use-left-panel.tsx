@@ -7,16 +7,18 @@ import {
   setCafeKeywords,
   setCategoryPanelOpen,
 } from '@/store/slices/keywordSlice';
-import { CategoryName } from '@/types/category';
+import { CategoryName } from '@/utils/categoryUtils';
 import { SchedulePayload } from '@/types/schedule';
-import { ItineraryDay } from '@/types/itinerary';
+import { ItineraryDay, Place, SelectedPlace } from '@/types/supabase';
 import { useScheduleGenerator } from './use-schedule-generator';
-import { createItinerary } from '@/api/itinerary';
+import { createItinerary as apiCreateItinerary } from '@/api/itinerary';
 
 export const useLeftPanel = ({ onItineraryCreated }: { onItineraryCreated: (itinerary: ItineraryDay[]) => void }) => {
   const dispatch = useAppDispatch();
-  const selectedPlaces = useAppSelector((state) => state.place.selectedPlaces);
-  const candidatePlaces = useAppSelector((state) => state.place.candidatePlaces);
+  const selectedPlacesFromStore = useAppSelector((state) => state.place.selectedPlaces as Place[]);
+  const candidatePlacesFromStore = useAppSelector((state) => state.place.candidatePlaces as Place[]);
+  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [endDate, setEndDate] = useState<Date | null>(null);
 
   const [accommodationDirectInputValue, setAccommodationDirectInputValue] = useState('');
   const [landmarkDirectInputValue, setLandmarkDirectInputValue] = useState('');
@@ -69,33 +71,46 @@ export const useLeftPanel = ({ onItineraryCreated }: { onItineraryCreated: (itin
 
   const setCategoryKeyword = (category: CategoryName) => (value: string) => {
     if (category === 'accommodation') {
-      setAccommodationDirectInputValue(value as any);
-    } else if (category === 'landmark') {
-      setLandmarkDirectInputValue(value as any);
+      setAccommodationDirectInputValue(value);
+    } else if (category === 'landmark' || category === 'attraction') {
+      setLandmarkDirectInputValue(value);
     } else if (category === 'restaurant') {
-      setRestaurantDirectInputValue(value as any);
+      setRestaurantDirectInputValue(value);
     } else if (category === 'cafe') {
-      setCafeDirectInputValue(value as any);
+      setCafeDirectInputValue(value);
     }
   };
 
-  const createItineraryWrapper = (payload: SchedulePayload): Promise<ItineraryDay[]> => {
-    const { selectedPlaces, candidatePlaces, startDate, endDate } = payload;
-    const placesToUse = [...selectedPlaces, ...candidatePlaces];
-    const startTime = "09:00";
-    const endTime = "21:00";
+  const createItineraryWrapper = useCallback(async (payload: SchedulePayload): Promise<ItineraryDay[]> => {
+    if (!payload.start_datetime || !payload.end_datetime) {
+      toast.error("Date information is missing in payload for itinerary generation.");
+      return Promise.reject(new Error("Date information is missing"));
+    }
+    const sDate = new Date(payload.start_datetime);
+    const eDate = new Date(payload.end_datetime);
     
-    // Convert to Promise to match expected type
-    return Promise.resolve(
-      createItinerary(placesToUse, startDate, endDate, startTime, endTime)
-    );
-  };
+    const localItineraryDays: ItineraryDay[] = [];
+    let currentDate = new Date(sDate);
+    while (currentDate <= eDate) {
+      localItineraryDays.push({
+        id: currentDate.toISOString().split('T')[0], 
+        date: currentDate.toISOString(), 
+        places: [], 
+        user_id: '', 
+        trip_id: '', 
+      });
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    return Promise.resolve(localItineraryDays);
+  }, []);
 
   useScheduleGenerator({
-    selectedPlaces,
-    candidatePlaces,
+    selectedPlaces: selectedPlacesFromStore,
+    candidatePlaces: candidatePlacesFromStore,
     createItinerary: createItineraryWrapper,
     onItineraryCreated,
+    startDate,
+    endDate,
   });
 
   return {
@@ -116,5 +131,7 @@ export const useLeftPanel = ({ onItineraryCreated }: { onItineraryCreated: (itin
     closeRestaurantPanel,
     closeCafePanel,
     setCategoryKeyword,
+    setStartDate,
+    setEndDate,
   };
 };

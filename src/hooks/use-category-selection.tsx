@@ -2,7 +2,7 @@
 import { useCategoryOrder } from './use-category-order';
 import { useCategoryPanel } from './use-category-panel';
 import { useCategoryKeywords } from './use-category-keywords';
-import type { CategoryName } from '@/utils/categoryUtils';
+import type { CategoryName } from '@/utils/categoryUtils'; // Ensure CategoryName is exported
 
 export const useCategorySelection = () => {
   const {
@@ -11,32 +11,39 @@ export const useCategorySelection = () => {
     setCategorySelectionConfirmed,
     stepIndex,
     setStepIndex,
-    handleCategoryClick,
+    handleCategoryClick, // This is CategoryName from useCategoryOrder
   } = useCategoryOrder();
 
   const {
     activeMiddlePanelCategory,
     confirmedCategories,
     setConfirmedCategories,
-    handleCategoryButtonClick,
+    handleCategoryButtonClick, // This is CategoryName from useCategoryPanel
     handlePanelBack,
   } = useCategoryPanel();
 
   const {
     selectedKeywordsByCategory,
     setSelectedKeywordsByCategory,
-    toggleKeyword,
+    toggleKeyword, // This is CategoryName from useCategoryKeywords
   } = useCategoryKeywords();
 
   const handleConfirmCategory = (
     categoryName: CategoryName, 
-    finalKeywords: string[],
+    finalKeywords: string[], // This seems to be unused currently
     clearSelection: boolean = false
   ) => {
+    // setSelectedKeywordsByCategory might need to use finalKeywords if that's the intent
     if (clearSelection) {
       setSelectedKeywordsByCategory(prev => ({
         ...prev,
         [categoryName]: []
+      }));
+    } else {
+       // If finalKeywords are provided, they should probably be set for the category
+       setSelectedKeywordsByCategory(prev => ({
+        ...prev,
+        [categoryName]: finalKeywords 
       }));
     }
     
@@ -44,7 +51,7 @@ export const useCategorySelection = () => {
       setConfirmedCategories([...confirmedCategories, categoryName]);
       
       const currentIndex = categoryOrder.indexOf(categoryName);
-      if (currentIndex + 1 < categoryOrder.length) {
+      if (currentIndex !== -1 && currentIndex + 1 < categoryOrder.length) { // Check if found
         setStepIndex(currentIndex + 1);
       }
     }
@@ -53,7 +60,8 @@ export const useCategorySelection = () => {
   };
 
   const isCategoryButtonEnabled = (category: CategoryName) => {
-    return confirmedCategories.includes(category) || categoryOrder[stepIndex] === category;
+    // Ensure categoryOrder[stepIndex] is a valid comparison
+    return confirmedCategories.includes(category) || (categoryOrder[stepIndex] === category && stepIndex < categoryOrder.length);
   };
 
   return {

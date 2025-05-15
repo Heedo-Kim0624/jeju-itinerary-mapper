@@ -1,11 +1,11 @@
 import React, { useState, useCallback } from 'react';
-import { useMap } from '@/components/rightpanel/map/MapContext';
+import { useMapContext } from '@/components/rightpanel/MapContext';
 import { SchedulePayload } from '@/types/schedule';
-import { ItineraryDay } from '@/types/itinerary';
+import { ItineraryDay, Place } from '@/types/supabase';
 import { useScheduleGenerator } from '@/hooks/use-schedule-generator';
-import { CategoryName } from '@/types/category';
+import { CategoryName } from '@/utils/categoryUtils';
 import { KeywordPanel } from '@/components/middlepanel/KeywordPanel';
-import { getCategoryKorean } from '@/utils/categoryUtils';
+import { getCategoryKorean, mapCategoryNameToKey } from '@/utils/categoryUtils';
 import { toast } from 'sonner';
 
 interface LeftPanelProps {
@@ -13,19 +13,22 @@ interface LeftPanelProps {
 }
 
 const LeftPanel: React.FC<LeftPanelProps> = ({ onCreateItinerary }) => {
-  const { centerMapToMarkers } = useMap();
+  const { centerMapToMarkers } = useMapContext();
   const [isAccommodationPanelOpen, setIsAccommodationPanelOpen] = useState(false);
   const [isLandmarkPanelOpen, setIsLandmarkPanelOpen] = useState(false);
   const [isRestaurantPanelOpen, setIsRestaurantPanelOpen] = useState(false);
   const [isCafePanelOpen, setIsCafePanelOpen] = useState(false);
-  const [selectedPlaces, setSelectedPlaces] = useState<any[]>([]);
-  const [candidatePlaces, setCandidatePlaces] = useState<any[]>([]);
+  
+  const [selectedPlaces, setSelectedPlaces] = useState<Place[]>([]);
+  const [candidatePlaces, setCandidatePlaces] = useState<Place[]>([]);
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
+  
   const [accommodationDirectInputValue, setAccommodationDirectInputValue] = useState('');
   const [landmarkDirectInputValue, setLandmarkDirectInputValue] = useState('');
   const [restaurantDirectInputValue, setRestaurantDirectInputValue] = useState('');
   const [cafeDirectInputValue, setCafeDirectInputValue] = useState('');
+  
   const [accommodationKeywords, setAccommodationKeywords] = useState<string[]>([]);
   const [landmarkKeywords, setLandmarkKeywords] = useState<string[]>([]);
   const [restaurantKeywords, setRestaurantKeywords] = useState<string[]>([]);
@@ -55,27 +58,23 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onCreateItinerary }) => {
     { eng: 'brunch', kr: '브런치' },
   ];
 
-  const togglePlaceSelection = (place: any) => {
+  const togglePlaceSelection = (place: Place) => {
     setSelectedPlaces((prevSelectedPlaces) => {
       const isPlaceSelected = prevSelectedPlaces.some((selectedPlace) => selectedPlace.id === place.id);
       if (isPlaceSelected) {
-        // 이미 선택된 장소인 경우, 선택 해제
         return prevSelectedPlaces.filter((selectedPlace) => selectedPlace.id !== place.id);
       } else {
-        // 선택되지 않은 장소인 경우, 선택
         return [...prevSelectedPlaces, place];
       }
     });
   };
 
-  const toggleCandidatePlace = (place: any) => {
+  const toggleCandidatePlace = (place: Place) => {
     setCandidatePlaces((prevCandidatePlaces) => {
       const isCandidate = prevCandidatePlaces.some((candidatePlace) => candidatePlace.id === place.id);
       if (isCandidate) {
-        // 이미 후보 장소인 경우, 후보에서 제거
         return prevCandidatePlaces.filter((candidatePlace) => candidatePlace.id !== place.id);
       } else {
-        // 후보 장소가 아닌 경우, 후보에 추가
         return [...prevCandidatePlaces, place];
       }
     });
@@ -152,37 +151,50 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onCreateItinerary }) => {
       return false;
     }
 
-    centerMapToMarkers();
+    const formattedSelectedPlaces = selectedPlaces.map(p => ({ id: String(p.id), name: p.name || "" }));
+    const formattedCandidatePlaces = candidatePlaces.map(p => ({ id: String(p.id), name: p.name || "" }));
 
+    const payload: SchedulePayload = {
+        selected_places: formattedSelectedPlaces,
+        candidate_places: formattedCandidatePlaces,
+        start_datetime: startDate.toISOString(),
+        end_datetime: endDate.toISOString(),
+    };
+    
+    centerMapToMarkers();
     return true;
   };
 
-  const categoryDirectInputValue = {
+  const categoryDirectInputValue: Record<CategoryName, string> = {
     accommodation: accommodationDirectInputValue,
     landmark: landmarkDirectInputValue,
     restaurant: restaurantDirectInputValue,
     cafe: cafeDirectInputValue,
+    attraction: landmarkDirectInputValue,
   };
 
-  const setCategoryDirectInputValue = {
+  const setCategoryDirectInputValue: Record<CategoryName, React.Dispatch<React.SetStateAction<string>>> = {
     accommodation: setAccommodationDirectInputValue,
     landmark: setLandmarkDirectInputValue,
     restaurant: setRestaurantDirectInputValue,
     cafe: setCafeDirectInputValue,
+    attraction: setLandmarkDirectInputValue,
   };
 
-  const confirmCategoryKeywords = {
+  const confirmCategoryKeywords: Record<CategoryName, (keywords: string[], clearSelection?: boolean) => void> = {
     accommodation: confirmAccommodationKeywords,
     landmark: confirmLandmarkKeywords,
     restaurant: confirmRestaurantKeywords,
     cafe: confirmCafeKeywords,
+    attraction: confirmLandmarkKeywords,
   };
 
-  const closeCategoryPanel = {
+  const closeCategoryPanel: Record<CategoryName, () => void> = {
     accommodation: closeAccommodationPanel,
     landmark: closeLandmarkPanel,
     restaurant: closeRestaurantPanel,
     cafe: closeCafePanel,
+    attraction: closeLandmarkPanel,
   };
 
   const useCategoryPanel = (category: CategoryName) => {
@@ -191,6 +203,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onCreateItinerary }) => {
       landmark: isLandmarkPanelOpen,
       restaurant: isRestaurantPanelOpen,
       cafe: isCafePanelOpen,
+      attraction: isLandmarkPanelOpen,
     }[category];
 
     const openPanel = {
@@ -198,29 +211,37 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onCreateItinerary }) => {
       landmark: openLandmarkPanel,
       restaurant: openRestaurantPanel,
       cafe: openCafePanel,
+      attraction: openLandmarkPanel,
     }[category];
 
     const closePanel = closeCategoryPanel[category];
     const directInputValue = categoryDirectInputValue[category];
-    const setDirectInputValue = setCategoryDirectInputValue[category];
+    const setDirectInputValueFn = setCategoryDirectInputValue[category];
+    
     const selectedKeywords = {
       accommodation: accommodationKeywords,
       landmark: landmarkKeywords,
       restaurant: restaurantKeywords,
       cafe: cafeKeywords,
+      attraction: landmarkKeywords,
     }[category];
+    
     const toggleKeyword = {
       accommodation: toggleAccommodationKeyword,
       landmark: toggleLandmarkKeyword,
       restaurant: toggleRestaurantKeyword,
       cafe: toggleCafeKeyword,
+      attraction: toggleLandmarkKeyword,
     }[category];
+    
     const confirmKeywords = confirmCategoryKeywords[category];
+    
     const defaultKeywords = {
       accommodation: defaultAccommodationKeywords,
       landmark: defaultLandmarkKeywords,
       restaurant: defaultRestaurantKeywords,
       cafe: defaultCafeKeywords,
+      attraction: defaultLandmarkKeywords,
     }[category];
 
     return {
@@ -228,7 +249,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onCreateItinerary }) => {
       openPanel,
       closePanel,
       directInputValue,
-      setDirectInputValue,
+      setDirectInputValue: setDirectInputValueFn,
       selectedKeywords,
       toggleKeyword,
       confirmKeywords,
@@ -267,36 +288,40 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onCreateItinerary }) => {
     </div>
   );
 
-  const payload: SchedulePayload = {
-    selectedPlaces,
-    candidatePlaces,
-    startDate: startDate!,
-    endDate: endDate!,
-  };
-
-  const onItineraryCreated = (itinerary: ItineraryDay[]) => {
-    onCreateItinerary(itinerary);
-  };
-
-  const createItineraryWrapper = (payload: SchedulePayload): Promise<ItineraryDay[]> => {
-    const { selectedPlaces, candidatePlaces, startDate, endDate } = payload;
-    const placesToUse = [...selectedPlaces, ...candidatePlaces];
-    const startTime = '09:00';
-    const endTime = '21:00';
-
-    // Convert to Promise to match expected type
-    return Promise.resolve(createItinerary(placesToUse, startDate, endDate, startTime, endTime));
-  };
+  const createItineraryWrapper = useCallback(async (payload: SchedulePayload): Promise<ItineraryDay[]> => {
+    if (!payload.start_datetime || !payload.end_datetime) {
+        toast.error("Date information is missing in payload for itinerary generation.");
+        return Promise.reject(new Error("Date information is missing"));
+    }
+    const sDate = new Date(payload.start_datetime);
+    const eDate = new Date(payload.end_datetime);
+    
+    const localItineraryDays: ItineraryDay[] = [];
+    let currentDate = new Date(sDate);
+    while (currentDate <= eDate) {
+        localItineraryDays.push({
+            id: currentDate.toISOString().split('T')[0],
+            date: currentDate.toISOString(), 
+            places: [],
+            user_id: '',
+            trip_id: '',
+        });
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
+    return Promise.resolve(localItineraryDays);
+  }, []);
 
   useScheduleGenerator({
     selectedPlaces,
     candidatePlaces,
     createItinerary: createItineraryWrapper,
     onItineraryCreated,
+    startDate,
+    endDate,
   });
 
   return (
-    <div className="w-[300px] h-full bg-gray-100 border-r border-gray-200 p-4">
+    <div className="w-[300px] h-full bg-gray-100 border-r border-gray-200 p-4 overflow-y-auto">
       <h2 className="text-lg font-semibold mb-4">여행 계획 설정</h2>
 
       {/* 날짜 선택 */}
@@ -348,9 +373,9 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onCreateItinerary }) => {
 
       {/* 선택된 장소 및 후보 장소 목록 */}
       <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-1">선택된 장소</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">선택된 장소 ({selectedPlaces.length})</label>
         {selectedPlaces.map((place) => (
-          <div key={place.id} className="flex items-center justify-between px-3 py-2 bg-white rounded shadow-sm text-sm">
+          <div key={place.id} className="flex items-center justify-between px-3 py-2 bg-white rounded shadow-sm text-sm mb-1">
             <span>{place.name}</span>
             <button
               onClick={() => togglePlaceSelection(place)}
@@ -360,12 +385,13 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onCreateItinerary }) => {
             </button>
           </div>
         ))}
+        {selectedPlaces.length === 0 && <p className="text-xs text-gray-500">선택된 장소가 없습니다.</p>}
       </div>
 
       <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-1">후보 장소</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">후보 장소 ({candidatePlaces.length})</label>
         {candidatePlaces.map((place) => (
-          <div key={place.id} className="flex items-center justify-between px-3 py-2 bg-white rounded shadow-sm text-sm">
+          <div key={place.id} className="flex items-center justify-between px-3 py-2 bg-white rounded shadow-sm text-sm mb-1">
             <span>{place.name}</span>
             <button
               onClick={() => toggleCandidatePlace(place)}
@@ -375,6 +401,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onCreateItinerary }) => {
             </button>
           </div>
         ))}
+        {candidatePlaces.length === 0 && <p className="text-xs text-gray-500">후보 장소가 없습니다.</p>}
       </div>
 
       {/* 여행 생성 버튼 */}
@@ -388,11 +415,11 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onCreateItinerary }) => {
       {/* 키워드 선택 패널 */}
       {isAccommodationPanelOpen && (
         <KeywordPanel
-          categoryName="숙소"
+          categoryName={getCategoryKorean('accommodation') as CategoryName}
           selectedKeywords={accommodationKeywords}
           onToggleKeyword={toggleAccommodationKeyword}
           directInputValue={accommodationDirectInputValue}
-          onDirectInputChange={setAccommodationDirectInputValue}
+          onDirectInputChange={(val) => setAccommodationDirectInputValue(val)}
           onConfirm={confirmAccommodationKeywords}
           onClose={closeAccommodationPanel}
           defaultKeywords={defaultAccommodationKeywords}
@@ -401,11 +428,11 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onCreateItinerary }) => {
       )}
       {isLandmarkPanelOpen && (
         <KeywordPanel
-          categoryName="관광지"
+          categoryName={getCategoryKorean('landmark') as CategoryName}
           selectedKeywords={landmarkKeywords}
           onToggleKeyword={toggleLandmarkKeyword}
           directInputValue={landmarkDirectInputValue}
-          onDirectInputChange={setLandmarkDirectInputValue}
+          onDirectInputChange={(val) => setLandmarkDirectInputValue(val)}
           onConfirm={confirmLandmarkKeywords}
           onClose={closeLandmarkPanel}
           defaultKeywords={defaultLandmarkKeywords}
@@ -413,11 +440,11 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onCreateItinerary }) => {
       )}
       {isRestaurantPanelOpen && (
         <KeywordPanel
-          categoryName="음식점"
+          categoryName={getCategoryKorean('restaurant') as CategoryName}
           selectedKeywords={restaurantKeywords}
           onToggleKeyword={toggleRestaurantKeyword}
           directInputValue={restaurantDirectInputValue}
-          onDirectInputChange={setRestaurantDirectInputValue}
+          onDirectInputChange={(val) => setRestaurantDirectInputValue(val)}
           onConfirm={confirmRestaurantKeywords}
           onClose={closeRestaurantPanel}
           defaultKeywords={defaultRestaurantKeywords}
@@ -425,11 +452,11 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onCreateItinerary }) => {
       )}
       {isCafePanelOpen && (
         <KeywordPanel
-          categoryName="카페"
+          categoryName={getCategoryKorean('cafe') as CategoryName}
           selectedKeywords={cafeKeywords}
           onToggleKeyword={toggleCafeKeyword}
           directInputValue={cafeDirectInputValue}
-          onDirectInputChange={setCafeDirectInputValue}
+          onDirectInputChange={(val) => setCafeDirectInputValue(val)}
           onConfirm={confirmCafeKeywords}
           onClose={closeCafePanel}
           defaultKeywords={defaultCafeKeywords}
@@ -441,24 +468,30 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onCreateItinerary }) => {
 
 export default LeftPanel;
 
-const createItinerary = (
-  placesToUse: any[],
-  startDate: Date,
-  endDate: Date,
-  startTime: string,
-  endTime: string,
-): ItineraryDay[] => {
-  const itinerary: ItineraryDay[] = [];
-  let currentDate = new Date(startDate);
+// This local createItinerary function is likely superseded by the one in useScheduleGenerator or an API call.
+// If it's still needed locally for some reason, it should be typed correctly.
+// const createItinerary = (
+//   placesToUse: Place[],
+//   startDate: Date,
+//   endDate: Date,
+//   startTime: string,
+//   endTime: string
+// ): ItineraryDay[] => {
+//   const itinerary: ItineraryDay[] = [];
+//   let currentDate = new Date(startDate);
 
-  while (currentDate <= endDate) {
-    const day: ItineraryDay = {
-      date: new Date(currentDate),
-      activities: [],
-    };
-    itinerary.push(day);
-    currentDate.setDate(currentDate.getDate() + 1);
-  }
+//   while (currentDate <= endDate) {
+//     const day: ItineraryDay = {
+//       // Fill according to ItineraryDay structure
+//       id: currentDate.toISOString().split('T')[0], // Example
+//       date: currentDate.toISOString(),
+//       places: [], // Populate based on placesToUse for this day
+//       user_id: '', // if required
+//       trip_id: '', // if required
+//     };
+//     itinerary.push(day);
+//     currentDate.setDate(currentDate.getDate() + 1);
+//   }
 
-  return itinerary;
-};
+//   return itinerary;
+// };

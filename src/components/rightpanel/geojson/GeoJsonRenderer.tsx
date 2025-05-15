@@ -1,6 +1,5 @@
-
 import React, { useEffect, useRef, useState } from 'react';
-import { GeoNode, GeoLink, RouteStyle, GeoJsonRendererProps } from './GeoJsonTypes'; // GeoJsonRendererProps 임포트
+import { GeoNode, GeoLink, RouteStyle, GeoJsonRendererProps } from './GeoJsonTypes'; // Ensure these are exported
 
 const DEFAULT_NODE_STYLE: RouteStyle = {
   fillColor: '#4CAF50', // 기본 노드 색상
@@ -115,9 +114,7 @@ const GeoJsonRenderer: React.FC<GeoJsonRendererProps> = ({
 
   // visible 상태 변경 시 피처 표시/숨김 처리
   useEffect(() => {
-    if (!map || !isFeaturesRendered) { // 피처가 아직 렌더링되지 않았으면 아무것도 안함
-        // 만약 visible이 true인데 isFeaturesRendered가 false이면, 위의 useEffect에서 렌더링 할 것임.
-        // 만약 visible이 false이면, 어차피 숨겨야 하므로 OK.
+    if (!map || !isFeaturesRendered) { 
         return;
     }
 
@@ -131,13 +128,9 @@ const GeoJsonRenderer: React.FC<GeoJsonRendererProps> = ({
       if (polyline && typeof polyline.setMap === 'function') polyline.setMap(visible ? map : null);
     });
 
-  }, [map, visible, isFeaturesRendered]); // isFeaturesRendered를 추가하여, 렌더링된 후에만 가시성 제어
+  }, [map, visible, isFeaturesRendered]); 
 
-
-  // 전역 인터페이스에 메서드 등록은 useGeoJsonState에서 하므로 여기서는 제거
-  // GeoJsonRenderer는 순수하게 받은 데이터와 상태에 따라 렌더링만 담당
-
-  return null; // 이 컴포넌트는 시각적 UI를 직접 반환하지 않음
+  return null;
 };
 
 export default GeoJsonRenderer;
