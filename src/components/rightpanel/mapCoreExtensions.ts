@@ -1,12 +1,12 @@
 
 import { ItineraryDay } from '@/types/itinerary';
-import { Place } from '@/types/supabase';
-import { RouteStyle } from './geojson/GeoJsonTypes';
-
-// This file adds extensions to useMapCore functionality
+import { toast } from 'sonner';
 
 /**
- * Renders a GeoJSON route using node and link IDs
+ * Renders a GeoJSON route on the map
+ * @param nodeIds Node IDs to render
+ * @param linkIds Link IDs to render
+ * @param style Style options for the route
  */
 export const renderGeoJsonRoute = (nodeIds: string[], linkIds: string[], style?: any) => {
   if (!window.geoJsonLayer) {
@@ -17,32 +17,30 @@ export const renderGeoJsonRoute = (nodeIds: string[], linkIds: string[], style?:
 };
 
 /**
- * Renders an itinerary route for a specific day
+ * Renders an itinerary route on the map
+ * @param itineraryDay Itinerary day containing route data
  */
 export const renderItineraryRoute = (itineraryDay: ItineraryDay | null) => {
-  if (!window.geoJsonLayer) {
-    console.warn("GeoJSON layer is not available");
+  if (!window.geoJsonLayer || !itineraryDay) {
     return;
   }
-  
-  if (!itineraryDay || !itineraryDay.routeNodeIds) {
+
+  // Clear previous routes
+  window.geoJsonLayer.clearDisplayedFeatures();
+
+  // Check if we have route data
+  const routeNodeIds = itineraryDay.routeNodeIds || itineraryDay.routeData;
+  if (!routeNodeIds || routeNodeIds.length === 0) {
     console.warn("No route data available for this day");
     return;
   }
-  
-  // For compatibility with both routeNodeIds and routeData
-  const nodeIds = itineraryDay.routeNodeIds || itineraryDay.routeData;
-  
-  if (!nodeIds || nodeIds.length === 0) {
-    console.warn("Empty route data for this day");
-    return;
-  }
-  
-  // Assuming routeNodeIds contains alternating node and link IDs
-  const placeNodeIds = nodeIds.filter((_, i) => i % 2 === 0);
-  const linkIds = nodeIds.filter((_, i) => i % 2 === 1);
-  
-  renderGeoJsonRoute(placeNodeIds, linkIds, {
+
+  // Extract node and link IDs
+  const nodeIds = routeNodeIds.filter((_, i) => i % 2 === 0);
+  const linkIds = routeNodeIds.filter((_, i) => i % 2 === 1);
+
+  // Render the route
+  window.geoJsonLayer.renderRoute(nodeIds, linkIds, {
     strokeColor: '#228B22',
     strokeWeight: 5,
     strokeOpacity: 0.7,
@@ -51,38 +49,92 @@ export const renderItineraryRoute = (itineraryDay: ItineraryDay | null) => {
 };
 
 /**
- * Clears any previously highlighted paths
+ * Clears any previously highlighted path on the map
  */
 export const clearPreviousHighlightedPath = () => {
-  if (!window.geoJsonLayer) {
-    console.warn("GeoJSON layer is not available");
-    return;
-  }
+  if (!window.geoJsonLayer) return;
+
+  // This function should ideally be implemented with access to the highlightedPath ref
+  // For now, we'll clear all displayed features as a fallback
   window.geoJsonLayer.clearDisplayedFeatures();
 };
 
 /**
- * Shows a route for a specific place index in an itinerary day
- */
-export const showRouteForPlaceIndex = (placeIndex: number, itineraryDay: ItineraryDay) => {
-  console.log(`Showing route for place index ${placeIndex} in day ${itineraryDay.day}`);
-  // Implementation would depend on the specific requirements
-  // This is a placeholder
-};
-
-/**
- * Highlights a segment of a route between two indexes
+ * Highlights a specific segment of the route between two places
+ * @param fromIndex Starting place index
+ * @param toIndex Ending place index
+ * @param itineraryDay Itinerary day containing the places and route data
  */
 export const highlightSegment = (fromIndex: number, toIndex: number, itineraryDay?: ItineraryDay) => {
-  console.log(`Highlighting segment from index ${fromIndex} to ${toIndex}`);
-  // Implementation would depend on the specific requirements
-  // This is a placeholder
+  if (!window.geoJsonLayer || !itineraryDay) {
+    return;
+  }
+
+  // Clear previous highlighted path
+  clearPreviousHighlightedPath();
+
+  // Get route data
+  const routeNodeIds = itineraryDay.routeNodeIds || itineraryDay.routeData;
+  if (!routeNodeIds || routeNodeIds.length === 0) {
+    console.warn("No route data available for highlighting");
+    return;
+  }
+
+  // Calculate segment indices
+  const startIdx = fromIndex * 2;
+  const endIdx = toIndex * 2;
+  
+  if (startIdx >= routeNodeIds.length || endIdx >= routeNodeIds.length) {
+    console.warn("Invalid segment indices");
+    return;
+  }
+
+  // Extract segment node and link IDs
+  const segmentNodeIds = routeNodeIds.slice(startIdx, endIdx + 1).filter((_, i) => i % 2 === 0);
+  const segmentLinkIds = routeNodeIds.slice(startIdx, endIdx + 1).filter((_, i) => i % 2 === 1);
+
+  // Render the highlighted segment
+  window.geoJsonLayer.renderRoute(segmentNodeIds, segmentLinkIds, {
+    strokeColor: '#FF4500',
+    strokeWeight: 7,
+    strokeOpacity: 0.9,
+    zIndex: 200
+  });
 };
 
 /**
- * Renders the entire network on the map
+ * Shows the route from a specific place to the next place
+ * @param placeIndex Index of the place in the itinerary day
+ * @param itineraryDay Itinerary day containing the places and route data
  */
-export const renderAllNetwork = (style?: RouteStyle) => {
+export const showRouteForPlaceIndex = (placeIndex: number, itineraryDay: ItineraryDay) => {
+  if (!window.geoJsonLayer || !itineraryDay) {
+    return;
+  }
+
+  const places = itineraryDay.places;
+  if (!places || places.length <= placeIndex) {
+    console.warn("Invalid place index");
+    return;
+  }
+
+  // If this is the last place, there's no next segment
+  if (placeIndex >= places.length - 1) {
+    toast.info("마지막 장소입니다");
+    return;
+  }
+
+  // Highlight the segment from this place to the next
+  highlightSegment(placeIndex, placeIndex + 1, itineraryDay);
+  
+  toast.info(`${places[placeIndex].name}에서 ${places[placeIndex + 1].name}까지의 경로`);
+};
+
+/**
+ * Renders all network nodes and links on the map
+ * @param style Style options for rendering
+ */
+export const renderAllNetwork = (style?: any) => {
   if (!window.geoJsonLayer) {
     console.warn("GeoJSON layer is not available");
     return [];

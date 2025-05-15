@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { usePanelVisibility } from '../use-panel-visibility';
 import { useMapContext } from '@/components/rightpanel/MapContext';
@@ -25,22 +24,22 @@ export const usePanelHandlers = () => {
   const handleConfirmByCategory = {
     accomodation: (finalKeywords: string[], clearSelection: boolean = false) => {
       handleConfirmCategory('숙소', finalKeywords, clearSelection);
-      setShowCategoryResult('숙소');
+      setShowCategoryResult("명소");
       if (selectedRegions.length > 0) panTo(selectedRegions[0]);
     },
     landmark: (finalKeywords: string[], clearSelection: boolean = false) => {
       handleConfirmCategory('관광지', finalKeywords, clearSelection);
-      setShowCategoryResult('관광지');
+      setShowCategoryResult("명소");
       if (selectedRegions.length > 0) panTo(selectedRegions[0]);
     },
     restaurant: (finalKeywords: string[], clearSelection: boolean = false) => {
       handleConfirmCategory('음식점', finalKeywords, clearSelection);
-      setShowCategoryResult('음식점');
+      setShowCategoryResult("명소");
       if (selectedRegions.length > 0) panTo(selectedRegions[0]);
     },
     cafe: (finalKeywords: string[], clearSelection: boolean = false) => {
       handleConfirmCategory('카페', finalKeywords, clearSelection);
-      setShowCategoryResult('카페');
+      setShowCategoryResult("명소");
       if (selectedRegions.length > 0) panTo(selectedRegions[0]);
     }
   };

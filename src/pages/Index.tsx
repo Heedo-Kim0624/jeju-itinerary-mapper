@@ -1,57 +1,70 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { ItineraryDay, Itinerary } from '@/types/itinerary';
+import { Place } from '@/types/supabase';
 import LeftPanel from '@/components/leftpanel/LeftPanel';
 import RightPanel from '@/components/rightpanel/RightPanel';
-import RegionSlidePanel from '@/components/middlepanel/RegionSlidePanel';
-import { useItinerary } from '@/hooks/use-itinerary';
-import { useSelectedPlaces } from '@/hooks/use-selected-places';
+import { usePanelVisibility } from '@/hooks/use-panel-visibility';
+import TripContext from '@/components/leftpanel/TripContext';
 
 const Index: React.FC = () => {
-  const [showRegionPanel, setShowRegionPanel] = useState(false);
-  const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
+  const [places, setPlaces] = useState<Place[]>([]);
+  const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
+  const [itinerary, setItinerary] = useState<ItineraryDay[] | null>(null);
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
+  const { showItinerary } = usePanelVisibility();
 
-  const toggleRegion = (region: string) => {
-    setSelectedRegions((prev) =>
-      prev.includes(region)
-        ? prev.filter((r) => r !== region)
-        : [...prev, region]
-    );
+  // Dummy itinerary data (replace with actual data fetching)
+  const itineraryData: Itinerary = {
+    id: '1',
+    title: 'My Trip',
+    schedule: [
+      {
+        day: 1,
+        places: [
+          { id: '1', name: 'Place 1', category: 'attraction', x: 126.97797, y: 37.56635 },
+          { id: '2', name: 'Place 2', category: 'restaurant', x: 126.986, y: 37.561 },
+        ],
+        totalDistance: 10,
+      },
+      {
+        day: 2,
+        places: [
+          { id: '3', name: 'Place 3', category: 'cafe', x: 127.001, y: 37.568 },
+          { id: '4', name: 'Place 4', category: 'accommodation', x: 127.01, y: 37.55 },
+        ],
+        totalDistance: 15,
+      },
+    ],
+    totalDays: 2,
   };
 
-  const { selectedPlaces, allCategoriesSelected } = useSelectedPlaces();
-  
-  const {
-    itinerary,
-    selectedItineraryDay,
-    showItinerary,
-    setShowItinerary,
-    generateItinerary
-  } = useItinerary();
-
-  // selectedCategoriesCount 상태 추가하여 디버그
-  console.log('모든 카테고리 선택 여부:', allCategoriesSelected);
+  useEffect(() => {
+    // Simulate fetching itinerary data
+    const days: ItineraryDay[] = itineraryData?.schedule || [];
+    setItinerary(days);
+  }, []);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-jeju-light-gray relative">
-      {/* 왼쪽 패널 */}
-      <LeftPanel />
-
-      {/* 오른쪽 지도 패널 */}
-      <RightPanel
-        places={selectedPlaces}
-        selectedPlace={null}
-        itinerary={itinerary}
-        selectedDay={selectedItineraryDay}
-      />
-
-      {/* 오른쪽에 붙는 지역 슬라이드 패널 */}
-      <RegionSlidePanel
-        open={showRegionPanel}
-        onClose={() => setShowRegionPanel(false)}
-        selectedRegions={selectedRegions}
-        onToggle={toggleRegion}
-        onConfirm={() => setShowRegionPanel(false)}
-      />
+    <div className="flex h-screen w-screen">
+      <div className="w-80 flex-none">
+        <TripContext.Provider value={{
+          selectedPlaces: [],
+          setSelectedPlaces: () => {},
+          dates: {},
+          setDates: () => {}
+        }}>
+          <LeftPanel places={places} setPlaces={setPlaces} setSelectedPlace={setSelectedPlace} />
+        </TripContext.Provider>
+      </div>
+      <div className="flex-grow">
+        <RightPanel
+          places={places}
+          selectedPlace={selectedPlace}
+          itinerary={showItinerary ? itinerary : null}
+          selectedDay={selectedDay}
+          selectedPlaces={[]}
+        />
+      </div>
     </div>
   );
 };

@@ -57,3 +57,6 @@ export function convertToSupabaseItineraryDay(day: any): ItineraryDay {
     endTime: day.endTime
   };
 }
+
+// Export Place from itinerary types
+export { Place };

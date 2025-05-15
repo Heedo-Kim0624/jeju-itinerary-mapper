@@ -1,7 +1,7 @@
-
 import { useEffect, useState, useCallback } from 'react';
 import { useMapContext } from './MapContext';
-import { Place, ItineraryDay } from '@/types/supabase';
+import { Place } from '@/types/supabase';
+import { ItineraryDay } from '@/types/itinerary';
 import { toast } from 'sonner';
 
 interface MapMarkersProps {

@@ -1,6 +1,7 @@
 
 import React, { createContext, useContext, useRef } from 'react';
-import { Place, ItineraryDay } from '@/types/itinerary';
+import { Place } from '@/types/supabase';
+import { ItineraryDay } from '@/types/itinerary';
 import useMapCore from './useMapCore';
 import { ServerRouteResponse } from '@/types/schedule';
 import { 

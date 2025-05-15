@@ -16,7 +16,7 @@ interface Window {
   initMap?: () => void;
   geoJsonLayer: {
     renderRoute: (nodeIds: string[], linkIds: string[], style?: any) => any[];
-    renderAllNetwork: (style?: any) => any[]; // Added missing renderAllNetwork
+    renderAllNetwork: (style?: any) => any[]; // Ensure this method is present
     clearDisplayedFeatures: () => void;
     getNodeById: (id: string) => any;
     getLinkById: (id: string) => any;
