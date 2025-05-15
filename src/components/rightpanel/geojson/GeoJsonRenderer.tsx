@@ -1,5 +1,5 @@
 
-import { useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { GeoNode, GeoLink, RouteStyle } from './GeoJsonTypes';
 
 interface GeoJsonRendererProps {
@@ -7,8 +7,14 @@ interface GeoJsonRendererProps {
   visible: boolean;
   nodes: GeoNode[];
   links: GeoLink[];
-  onDisplayedFeaturesChange: (features: any[]) => void;
+  onDisplayedFeaturesChange?: (markers: any[], polylines: any[]) => void;
 }
+
+const DEFAULT_STYLE: RouteStyle = {
+  strokeColor: '#2196F3',
+  strokeWeight: 3,
+  strokeOpacity: 0.6,
+};
 
 const GeoJsonRenderer: React.FC<GeoJsonRendererProps> = ({
   map,
@@ -17,164 +23,190 @@ const GeoJsonRenderer: React.FC<GeoJsonRendererProps> = ({
   links,
   onDisplayedFeaturesChange
 }) => {
-  // 가시성 변경 시 호출되는 effect
+  // 렌더링된 피처 추적
+  const markersRef = useRef<any[]>([]);
+  const polylinesRef = useRef<any[]>([]);
+  
+  // 피처 가시성 상태
+  const [isVisible, setIsVisible] = useState(visible);
+  
+  // 가시성 변경 시 피처 표시/숨김
   useEffect(() => {
-    if (!map) return;
+    if (visible !== isVisible) {
+      setIsVisible(visible);
+      
+      markersRef.current.forEach(marker => {
+        if (marker && typeof marker.setMap === 'function') {
+          marker.setMap(visible ? map : null);
+        }
+      });
+      
+      polylinesRef.current.forEach(polyline => {
+        if (polyline && typeof polyline.setMap === 'function') {
+          polyline.setMap(visible ? map : null);
+        }
+      });
+    }
+  }, [visible, isVisible, map]);
+  
+  // 맵이 변경되면 모든 피처를 다시 렌더링
+  useEffect(() => {
+    if (!map || !window.naver || !window.naver.maps) return;
     
-    if (visible) {
-      renderCustomElements();
-    } else {
-      clearDisplayedFeatures();
+    // 이전 피처 제거
+    clearAllFeatures();
+    
+    if (!visible) return;
+    
+    // 피처 렌더링 함수
+    // 이 예제에서는 성능 상의 이유로 모든 노드와 링크를 렌더링하지 않습니다.
+    // 필요에 따라 특정 피처를 렌더링하는 로직 구현
+    
+    // 변경된 피처 알림
+    if (onDisplayedFeaturesChange) {
+      onDisplayedFeaturesChange(markersRef.current, polylinesRef.current);
     }
     
+    // 컴포넌트 언마운트 시 정리
     return () => {
-      clearDisplayedFeatures();
+      clearAllFeatures();
     };
-  }, [visible, map, nodes, links]);
-
-  // 표시 중인 GeoJSON 요소들 제거
-  const clearDisplayedFeatures = () => {
-    onDisplayedFeaturesChange([]);
-  };
-
-  // 커스텀 요소 렌더링 (네이버 맵 의존성 제거 버전)
-  const renderCustomElements = () => {
-    if (!map || !window.naver) return;
-    
-    const newDisplayedFeatures: any[] = [];
+  }, [map, visible, onDisplayedFeaturesChange]);
+  
+  // 노드를 지도에 렌더링하는 함수
+  const renderNode = (node: GeoNode, style: RouteStyle) => {
+    if (!map || !window.naver || !window.naver.maps) return null;
     
     try {
-      // 링크 렌더링 (성능을 위해 일부만)
-      const sampleLinks = links.slice(0, 100);
-      sampleLinks.forEach(link => {
-        if (!link.geometry || !link.coordinates) return;
-        
-        const path = link.coordinates.map((coord: number[]) => 
-          new window.naver.maps.LatLng(coord[1], coord[0])
-        );
-        
-        const polyline = new window.naver.maps.Polyline({
-          map: map,
-          path: path,
-          strokeColor: '#777',
-          strokeWeight: 1,
-          strokeOpacity: 0.5,
-          clickable: false
-        });
-        
-        link.naverElement = polyline;
-        newDisplayedFeatures.push(polyline);
+      const position = new window.naver.maps.LatLng(
+        node.coordinates[1], 
+        node.coordinates[0]
+      );
+      
+      const marker = new window.naver.maps.Marker({
+        map: visible ? map : null,
+        position,
+        icon: {
+          content: `<div style="
+            width: 6px;
+            height: 6px;
+            background-color: ${style.fillColor || '#4CAF50'};
+            border-radius: 50%;
+            border: 1px solid white;
+            box-shadow: 0 0 3px rgba(0, 0, 0, 0.2);
+          "></div>`,
+          anchor: new window.naver.maps.Point(3, 3)
+        },
+        zIndex: style.zIndex || 100
       });
       
-      // 노드 렌더링 (성능을 위해 일부만)
-      const sampleNodes = nodes.slice(0, 100);
-      sampleNodes.forEach(node => {
-        if (!node.geometry || !node.coordinates) return;
-        
-        const [lng, lat] = node.coordinates;
-        
-        const circle = new window.naver.maps.Circle({
-          map: map,
-          center: new window.naver.maps.LatLng(lat, lng),
-          radius: 50,
-          fillColor: '#ff0000',
-          fillOpacity: 0.1,
-          strokeWeight: 0,
-          clickable: false
-        });
-        
-        node.naverElement = circle;
-        newDisplayedFeatures.push(circle);
-      });
-      
-      console.log(`GeoJsonRenderer: ${newDisplayedFeatures.length}개 요소 표시됨`);
-      onDisplayedFeaturesChange(newDisplayedFeatures);
-    } catch (error) {
-      console.error('GeoJsonRenderer: 커스텀 렌더링 오류', error);
-      onDisplayedFeaturesChange([]);
+      markersRef.current.push(marker);
+      return marker;
+    } catch (e) {
+      console.error(`노드 ${node.id} 렌더링 중 오류:`, e);
+      return null;
     }
   };
-
-  // 특정 노드/링크 ID 배열을 사용하여 경로 렌더링
-  const renderRoute = (nodeIds: string[], linkIds: string[], style: RouteStyle = {}) => {
-    if (!map || nodeIds.length === 0 || linkIds.length === 0) {
-      return [];
+  
+  // 링크를 지도에 렌더링하는 함수
+  const renderLink = (link: GeoLink, style: RouteStyle) => {
+    if (!map || !window.naver || !window.naver.maps) return null;
+    
+    try {
+      const path = link.coordinates.map(coord => 
+        new window.naver.maps.LatLng(coord[1], coord[0])
+      );
+      
+      const polyline = new window.naver.maps.Polyline({
+        map: visible ? map : null,
+        path,
+        strokeColor: style.strokeColor,
+        strokeWeight: style.strokeWeight,
+        strokeOpacity: style.strokeOpacity,
+        zIndex: style.zIndex || 100
+      });
+      
+      polylinesRef.current.push(polyline);
+      return polyline;
+    } catch (e) {
+      console.error(`링크 ${link.id} 렌더링 중 오류:`, e);
+      return null;
     }
+  };
+  
+  // 경로 렌더링 함수
+  const renderRoute = (nodeIds: string[], linkIds: string[], style: RouteStyle = DEFAULT_STYLE) => {
+    // 기존에 표시된 피처 제거
+    clearAllFeatures();
     
     const renderedFeatures: any[] = [];
     
-    try {
-      // 스타일 정의 (기본값 + 전달받은 스타일)
-      const routeStyle = {
-        strokeColor: '#3366FF',
-        strokeWeight: 4,
-        strokeOpacity: 0.8,
-        zIndex: 100,
-        clickable: false,
-        ...style
-      };
-      
-      // 링크 추가
-      linkIds.forEach(id => {
-        const link = links.find(l => l.getId() === id);
-        if (link && link.geometry && link.coordinates) {
-          const path = link.coordinates.map((coord: number[]) => 
-            new window.naver.maps.LatLng(coord[1], coord[0])
-          );
-          
-          const polyline = new window.naver.maps.Polyline({
-            map: map,
-            path: path,
-            strokeColor: routeStyle.strokeColor,
-            strokeWeight: routeStyle.strokeWeight,
-            strokeOpacity: routeStyle.strokeOpacity,
-            zIndex: routeStyle.zIndex,
-            clickable: routeStyle.clickable
-          });
-          
-          renderedFeatures.push(polyline);
-        }
-      });
-      
-      // 노드 추가 (장소 표시용)
-      const nodeStyle = {
-        fillColor: routeStyle.strokeColor,
-        fillOpacity: 0.8,
-        radius: 4,
-        strokeWeight: 2,
-        strokeColor: '#FFFFFF',
-        clickable: false
-      };
-      
-      nodeIds.forEach(id => {
-        const node = nodes.find(n => n.getId() === id);
-        if (node && node.coordinates) {
-          const [lng, lat] = node.coordinates;
-          
-          const circle = new window.naver.maps.Circle({
-            map: map,
-            center: new window.naver.maps.LatLng(lat, lng),
-            radius: nodeStyle.radius * 10,
-            fillColor: nodeStyle.fillColor,
-            fillOpacity: nodeStyle.fillOpacity,
-            strokeWeight: nodeStyle.strokeWeight,
-            strokeColor: nodeStyle.strokeColor,
-            clickable: nodeStyle.clickable
-          });
-          
-          renderedFeatures.push(circle);
-        }
-      });
-      
-      console.log(`GeoJsonRenderer: ${renderedFeatures.length}개 경로 요소 렌더링됨`);
-    } catch (error) {
-      console.error('GeoJsonRenderer: 경로 렌더링 오류', error);
+    // 지정된 노드 및 링크 렌더링
+    nodeIds.forEach(nodeId => {
+      const node = nodes.find(n => n.id === nodeId);
+      if (node) {
+        const marker = renderNode(node, style);
+        if (marker) renderedFeatures.push(marker);
+      }
+    });
+    
+    linkIds.forEach(linkId => {
+      const link = links.find(l => l.id === linkId);
+      if (link) {
+        const polyline = renderLink(link, style);
+        if (polyline) renderedFeatures.push(polyline);
+      }
+    });
+    
+    // 변경된 피처 알림
+    if (onDisplayedFeaturesChange) {
+      onDisplayedFeaturesChange(markersRef.current, polylinesRef.current);
     }
     
     return renderedFeatures;
   };
-
-  return null; // 이 컴포넌트는 UI를 렌더링하지 않음
+  
+  // 모든 피처 제거
+  const clearAllFeatures = () => {
+    markersRef.current.forEach(marker => {
+      if (marker && typeof marker.setMap === 'function') {
+        marker.setMap(null);
+      }
+    });
+    markersRef.current = [];
+    
+    polylinesRef.current.forEach(polyline => {
+      if (polyline && typeof polyline.setMap === 'function') {
+        polyline.setMap(null);
+      }
+    });
+    polylinesRef.current = [];
+  };
+  
+  // 피처 렌더링 인터페이스를 전역으로 등록
+  useEffect(() => {
+    if (!map) return;
+    
+    // 전역 인터페이스에 렌더링 메서드 등록
+    if (window.geoJsonLayer) {
+      const originalRenderRoute = window.geoJsonLayer.renderRoute;
+      window.geoJsonLayer.renderRoute = (nodeIds, linkIds, style) => {
+        return renderRoute(nodeIds, linkIds, style);
+      };
+      
+      const originalClear = window.geoJsonLayer.clearDisplayedFeatures;
+      window.geoJsonLayer.clearDisplayedFeatures = clearAllFeatures;
+      
+      return () => {
+        if (window.geoJsonLayer) {
+          window.geoJsonLayer.renderRoute = originalRenderRoute;
+          window.geoJsonLayer.clearDisplayedFeatures = originalClear;
+        }
+      };
+    }
+  }, [map]);
+  
+  return null;
 };
 
 export default GeoJsonRenderer;

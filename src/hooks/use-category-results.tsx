@@ -36,8 +36,40 @@ export const useCategoryResults = (
     });
   };
 
+  // 키워드 기반 가중치 계산
+  const calculateKeywordScore = (place: Place, keywords: string[]): number => {
+    if (!keywords || keywords.length === 0) return 0;
+    
+    // 기본 점수는 place.weight 또는 0
+    let score = place.weight || 0;
+    
+    // 키워드 매칭 점수 계산 (최대 5점)
+    const keywordBonus = keywords.reduce((bonus, keyword) => {
+      // 기본 검색 대상: 이름, 카테고리 상세, 주소
+      const matchesName = place.name.toLowerCase().includes(keyword.toLowerCase());
+      const matchesCategoryDetail = place.categoryDetail?.toLowerCase().includes(keyword.toLowerCase()) || false;
+      const matchesAddress = place.address.toLowerCase().includes(keyword.toLowerCase());
+      
+      // 가중치 부여: 이름(3점), 카테고리 상세(2점), 주소(1점)
+      if (matchesName) bonus += 3;
+      if (matchesCategoryDetail) bonus += 2;
+      if (matchesAddress) bonus += 1;
+      
+      return bonus;
+    }, 0);
+    
+    // 최대 5점까지 키워드 보너스 제한
+    const normalizedBonus = Math.min(5, keywordBonus);
+    
+    // 최종 점수 = 기존 가중치 + 키워드 보너스
+    return score + normalizedBonus;
+  };
+
   const fetchCategoryData = async () => {
-    if (!category || keywords.length === 0) return;
+    if (!category) {
+      console.log('[useCategoryResults] 카테고리가 지정되지 않았습니다.');
+      return;
+    }
 
     setIsLoading(true);
     setError(null);
@@ -69,6 +101,16 @@ export const useCategoryResults = (
       data = filterByRegion(data, regions);
       
       console.log(`[useCategoryResults] ${data.length}개의 장소 로드됨. 지역 필터링 후.`);
+      
+      // 키워드 매칭 점수 계산 및 할당
+      if (keywords && keywords.length > 0) {
+        data = data.map(place => ({
+          ...place,
+          weight: calculateKeywordScore(place, keywords)
+        }));
+        
+        console.log(`[useCategoryResults] 키워드 매칭 점수 적용 완료. 키워드: ${keywords.join(', ')}`);
+      }
 
       // weight 기준으로 정렬
       const sortedData = [...data].sort((a, b) => {
@@ -79,10 +121,25 @@ export const useCategoryResults = (
 
       // 상위 20%는 추천 장소로, 나머지는 일반 장소로 분류
       const cutoff = Math.max(1, Math.floor(sortedData.length * 0.2));
-      setRecommendedPlaces(sortedData.slice(0, cutoff));
-      setNormalPlaces(sortedData.slice(cutoff));
+      const recommendedData = sortedData.slice(0, cutoff);
+      const normalData = sortedData.slice(cutoff);
       
-      console.log(`[useCategoryResults] 추천 장소: ${cutoff}개, 일반 장소: ${sortedData.length - cutoff}개`);
+      // 결과 로깅
+      console.log(`[useCategoryResults] 추천 장소: ${recommendedData.length}개, 일반 장소: ${normalData.length}개`);
+      console.log(`[useCategoryResults] 샘플 추천 장소 (최대 3개):`, 
+        recommendedData.slice(0, 3).map(p => ({ 
+          이름: p.name, 
+          가중치: p.weight, 
+          매칭키워드: keywords.filter(k => 
+            p.name.toLowerCase().includes(k.toLowerCase()) || 
+            p.categoryDetail?.toLowerCase().includes(k.toLowerCase()) || 
+            p.address.toLowerCase().includes(k.toLowerCase())
+          ) 
+        }))
+      );
+
+      setRecommendedPlaces(recommendedData);
+      setNormalPlaces(normalData);
 
     } catch (err) {
       console.error('장소 데이터 로드 중 오류 발생:', err);

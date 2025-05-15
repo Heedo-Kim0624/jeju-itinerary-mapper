@@ -1,7 +1,7 @@
 
-import { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { toast } from 'sonner';
-import { GeoJsonCollection, GeoNode, GeoLink } from './GeoJsonTypes';
+import { GeoNode, GeoLink, GeoJsonGeometry, GeoCoordinates, GeoJsonNodeProperties, GeoJsonLinkProperties } from './GeoJsonTypes';
 
 interface GeoJsonLoaderProps {
   isMapInitialized: boolean;
@@ -16,106 +16,108 @@ const GeoJsonLoader: React.FC<GeoJsonLoaderProps> = ({
   onLoadSuccess,
   onLoadError
 }) => {
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-
   useEffect(() => {
-    // 맵 초기화와 네이버 맵 API 로드 상태 확인
-    if (!isMapInitialized || !isNaverLoaded || !window.naver) {
-      return;
-    }
-
-    console.log('GeoJsonLoader: 데이터 로드 시작');
-    setIsLoading(true);
-    
-    // GeoJSON 파일 로드 함수
     const loadGeoJsonData = async () => {
+      if (!isMapInitialized || !isNaverLoaded) {
+        return;
+      }
+      
       try {
-        const [nodeResponse, linkResponse] = await Promise.all([
+        // 노드와 링크 데이터를 동시에 가져옴
+        console.log('GeoJsonLoader: 데이터 파일 로드 시작');
+        const [nodeRes, linkRes] = await Promise.all([
           fetch('/data/NODE_JSON.geojson'),
           fetch('/data/LINK_JSON.geojson')
         ]);
-
-        if (!nodeResponse.ok || !linkResponse.ok) {
-          throw new Error('GeoJSON 파일을 불러오는데 실패했습니다.');
-        }
-
-        const [nodeData, linkData] = await Promise.all<GeoJsonCollection>([
-          nodeResponse.json(),
-          linkResponse.json()
-        ]);
-
-        console.log('GeoJsonLoader: GeoJSON 데이터 로드 완료', {
-          노드: nodeData.features.length,
-          링크: linkData.features.length
-        });
-
-        // 데이터를 순수 JavaScript 객체로 처리
-        const { nodeFeatures, linkFeatures } = processGeoJsonData(nodeData, linkData);
         
-        // 로드 성공 콜백 호출
-        onLoadSuccess(nodeFeatures, linkFeatures);
+        if (!nodeRes.ok || !linkRes.ok) {
+          throw new Error('GeoJSON 데이터를 가져오는데 실패했습니다.');
+        }
+        
+        // JSON으로 변환
+        const [nodeJson, linkJson] = await Promise.all([
+          nodeRes.json(),
+          linkRes.json()
+        ]);
+        
+        console.log('GeoJsonLoader: GeoJSON 데이터 로드 완료', {
+          노드: nodeJson.features.length,
+          링크: linkJson.features.length
+        });
+        
+        // 노드 객체 생성
+        const nodes = nodeJson.features.map((feature: any): GeoNode => {
+          const id = String(feature.properties.NODE_ID);
+          const coordinates = feature.geometry.coordinates as GeoCoordinates;
+          
+          return {
+            id,
+            type: 'node',
+            geometry: feature.geometry as GeoJsonGeometry,
+            properties: feature.properties as GeoJsonNodeProperties,
+            coordinates,
+            adjacentLinks: [],
+            adjacentNodes: [],
+            setStyles: (styles: any) => {
+              // 스타일 설정 로직 (마커 생성 시 구현)
+            }
+          };
+        });
+        
+        // 링크 객체 생성 및 노드 인접 링크/노드 설정
+        const links = linkJson.features.map((feature: any): GeoLink => {
+          const id = String(feature.properties.LINK_ID);
+          const fromNodeId = String(feature.properties.F_NODE);
+          const toNodeId = String(feature.properties.T_NODE);
+          const length = feature.properties.LENGTH || 0;
+          
+          // 노드 인접 링크 및 노드 업데이트
+          const fromNode = nodes.find(node => node.id === fromNodeId);
+          const toNode = nodes.find(node => node.id === toNodeId);
+          
+          if (fromNode) {
+            fromNode.adjacentLinks.push(id);
+            if (toNodeId) fromNode.adjacentNodes.push(toNodeId);
+          }
+          
+          if (toNode) {
+            toNode.adjacentLinks.push(id);
+            if (fromNodeId) toNode.adjacentNodes.push(fromNodeId);
+          }
+          
+          return {
+            id,
+            type: 'link',
+            geometry: feature.geometry as GeoJsonGeometry,
+            properties: feature.properties as GeoJsonLinkProperties,
+            coordinates: feature.geometry.coordinates as GeoCoordinates[],
+            fromNode: fromNodeId,
+            toNode: toNodeId,
+            length,
+            setStyles: (styles: any) => {
+              // 스타일 설정 로직 (폴리라인 생성 시 구현)
+            }
+          };
+        });
+        
+        console.log('GeoJsonLoader: GeoJSON 데이터 처리 완료', {
+          노드객체: nodes.length,
+          링크객체: links.length
+        });
+        
+        // 성공 콜백 호출
+        onLoadSuccess(nodes as GeoNode[], links);
+        
       } catch (error) {
-        console.error('GeoJsonLoader: GeoJSON 데이터 로드 오류', error);
-        onLoadError(error instanceof Error ? error : new Error('알 수 없는 오류가 발생했습니다.'));
-        toast.error('경로 데이터를 불러오는데 실패했습니다.');
-      } finally {
-        setIsLoading(false);
+        console.error('GeoJSON 데이터 로드 중 오류:', error);
+        onLoadError(error instanceof Error ? error : new Error('GeoJSON 데이터 로드 실패'));
       }
     };
-
-    // 데이터 로드 시작
+    
     loadGeoJsonData();
   }, [isMapInitialized, isNaverLoaded, onLoadSuccess, onLoadError]);
-
-  return isLoading ? (
-    <div className="absolute bottom-16 left-4 bg-background/80 backdrop-blur-sm p-2 rounded-md text-sm">
-      경로 데이터 로드 중...
-    </div>
-  ) : null;
-};
-
-// GeoJSON 데이터 처리 함수 - 네이버 API 의존성 제거
-const processGeoJsonData = (nodeData: GeoJsonCollection, linkData: GeoJsonCollection) => {
-  // 노드 처리
-  const nodeFeatures = nodeData.features.map((feature) => ({
-    id: feature.id || feature.properties?.NODE_ID || '',
-    type: 'node' as const,
-    geometry: feature.geometry,
-    properties: feature.properties,
-    coordinates: feature.geometry.coordinates,
-    // 메서드 추가
-    getId: function() { return this.id; },
-    getGeometryAt: function() { return { 
-      getCoordinates: function() { 
-        const [x, y] = feature.geometry.coordinates;
-        return { x, y };
-      }
-    }; },
-    clone: function() { return {...this}; },
-    setMap: function(m: any) { this.map = m; },
-    setStyles: function(styles: any) { this.styles = styles; }
-  }));
   
-  // 링크 처리
-  const linkFeatures = linkData.features.map((feature) => ({
-    id: feature.id || feature.properties?.LINK_ID || '',
-    type: 'link' as const,
-    geometry: feature.geometry,
-    properties: feature.properties,
-    coordinates: feature.geometry.coordinates,
-    // 메서드 추가
-    getId: function() { return this.id; },
-    clone: function() { return {...this}; },
-    setMap: function(m: any) { this.map = m; },
-    setStyles: function(styles: any) { this.styles = styles; }
-  }));
-  
-  console.log('GeoJsonLoader: GeoJSON 데이터 처리 완료', {
-    노드객체: nodeFeatures.length,
-    링크객체: linkFeatures.length
-  });
-  
-  return { nodeFeatures, linkFeatures };
+  return null;
 };
 
 export default GeoJsonLoader;

@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useMapContext } from '@/components/rightpanel/MapContext';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/components/ui/use-toast';
+import { toast } from 'sonner';
 import PlaceList from '@/components/middlepanel/PlaceList';
 import PlaceDetailDialog from '@/components/places/PlaceDetailDialog';
 import { Place } from '@/types/supabase';
@@ -41,7 +41,6 @@ const TravelPromptSearch: React.FC<TravelPromptSearchProps> = ({ onPlacesFound }
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [sortOption, setSortOption] = useState("recommendation");
-  const { toast } = useToast();
   const mapCtx = useMapContext();
   
   const totalPages = Math.ceil(places.length / 10); // 10 items per page
@@ -56,24 +55,17 @@ const TravelPromptSearch: React.FC<TravelPromptSearchProps> = ({ onPlacesFound }
       // 1. Parse the prompt
       const parsed = parsePrompt(prompt);
       if (!parsed) {
-        toast({
-          title: "입력 형식 오류",
-          description: "올바른 형식으로 입력해주세요.",
-          variant: "destructive",
-        });
+        toast.error("입력 형식 오류: 올바른 형식으로 입력해주세요.");
         setLoading(false);
         return;
       }
       
       // 2. Show toast with keywords
       const allKeywords = [...parsed.rankedKeywords, ...parsed.unrankedKeywords];
-      toast({
-        title: `${parsed.category} 키워드`,
-        description: `${parsed.rankedKeywords.length > 0 ? 
+      toast(`${parsed.category} 키워드: ${parsed.rankedKeywords.length > 0 ? 
           `순위: ${parsed.rankedKeywords.join(', ')}` : ''}
           ${parsed.unrankedKeywords.length > 0 ? 
-          `추가: ${parsed.unrankedKeywords.join(', ')}` : ''}`,
-      });
+          `추가: ${parsed.unrankedKeywords.join(', ')}` : ''}`);
       
       // 3. Fetch places
       const placeResults = await fetchWeightedResults(
@@ -127,24 +119,13 @@ const TravelPromptSearch: React.FC<TravelPromptSearchProps> = ({ onPlacesFound }
       }
       
       if (placeResults.length === 0) {
-        toast({
-          title: "검색 결과 없음",
-          description: "검색 조건에 맞는 장소를 찾을 수 없습니다.",
-          variant: "destructive",
-        });
+        toast.error("검색 결과 없음: 검색 조건에 맞는 장소를 찾을 수 없습니다.");
       } else {
-        toast({
-          title: "검색 완료",
-          description: `${placeResults.length}개의 장소를 찾았습니다.`,
-        });
+        toast.success(`검색 완료: ${placeResults.length}개의 장소를 찾았습니다.`);
       }
     } catch (error) {
       console.error('Search error:', error);
-      toast({
-        title: "검색 오류",
-        description: "검색 중 오류가 발생했습니다.",
-        variant: "destructive",
-      });
+      toast.error("검색 오류: 검색 중 오류가 발생했습니다.");
     } finally {
       setLoading(false);
     }

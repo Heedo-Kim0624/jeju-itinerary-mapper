@@ -1,6 +1,14 @@
 
 export type CategoryName = '숙소' | '관광지' | '음식점' | '카페';
 
+// 카테고리 별 키워드 타입 정의 추가
+export type CategoryKeywords = {
+  '숙소': string[];
+  '관광지': string[];
+  '음식점': string[];
+  '카페': string[];
+};
+
 export const categoryKeywords = {
   '숙소': ['ocean_view', 'breakfast', 'pool'],
   '관광지': ['nature', 'culture', 'history'],

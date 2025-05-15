@@ -1,142 +1,120 @@
 
 /**
- * 네이버 지도 API를 동적으로 로드하는 함수
- * @returns Promise that resolves when the Naver Maps API is loaded
+ * Naver Maps API를 동적으로 로드하는 유틸리티 함수
  */
-export const loadNaverMaps = (): Promise<void> => {
-  return new Promise((resolve, reject) => {
-    // 이미 로드되어 있고, Map 객체도 사용 가능하고 GeoJSON 서브모듈도 사용 가능한 경우 바로 resolve
-    if (window.naver && window.naver.maps && window.naver.maps.Map && 
-        window.naver.maps.drawing && typeof window.naver.maps.drawing.JSONReader === 'function') {
-      console.log("Naver Maps API와 drawing 서브모듈이 이미 완전히 로드되어 있습니다.");
-      resolve();
-      return;
-    }
-    
-    // 스크립트는 있지만 아직 완전히 초기화되지 않은 경우
-    if (window.naver) {
-      console.log("Naver Maps 스크립트는 로드되었으나 초기화 대기 중...");
-      const checkInterval = setInterval(() => {
-        if (window.naver?.maps?.Map) {
-          if (window.naver.maps.drawing && typeof window.naver.maps.drawing.JSONReader === 'function') {
-            clearInterval(checkInterval);
-            console.log("Naver Maps API와 drawing 서브모듈 초기화 완료");
-            resolve();
-          } else {
-            // drawing 서브모듈만 로드되지 않음
-            console.log("기본 지도는 로드됨, drawing 서브모듈 대기 중...");
-            // 서브모듈만 추가로 로드 시도
-            loadDrawingSubmodule();
-          }
-        }
-      }, 100);
-      
-      // 최대 20초 대기 후 타임아웃
-      setTimeout(() => {
-        clearInterval(checkInterval);
-        if (window.naver?.maps?.Map) {
-          console.log("Naver Maps API 초기화 완료 (타임아웃 후)");
-          
-          // drawing 서브모듈이 없는 경우, 서브모듈만 다시 로드 시도
-          if (!(window.naver.maps.drawing && typeof window.naver.maps.drawing.JSONReader === 'function')) {
-            console.warn("drawing 서브모듈이 로드되지 않았습니다. 서브모듈만 추가로 로드합니다.");
-            loadDrawingSubmodule();
-          }
-          
-          // 그래도 기본 지도는 사용 가능하므로 resolve
-          resolve();
-        } else {
-          console.error("Naver Maps API 초기화 타임아웃");
-          reject(new Error("Naver Maps API 초기화 타임아웃"));
-        }
-      }, 20000);
-      return;
-    }
 
-    const clientId = import.meta.env.VITE_NAVER_CLIENT_ID;
+// 네이버 API 키를 환경 변수에서 가져오기
+const NAVER_CLIENT_ID = import.meta.env.VITE_NAVER_CLIENT_ID || '';
 
-    if (!clientId) {
-      console.error("VITE_NAVER_CLIENT_ID가 정의되지 않았습니다");
-      reject(new Error("네이버 클라이언트 ID가 없습니다"));
-      return;
-    }
-
-    console.log("Naver Maps 스크립트 로드 중...");
-    const script = document.createElement('script');
-    script.async = true;
-    // 명시적으로 geojson과 drawing 서브모듈을 함께 로드하도록 설정
-    script.src = `https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${clientId}&submodules=geojson,drawing,geocoder,visualization`;
-
-    script.onload = () => {
-      console.log("Naver Maps 스크립트 로드 완료. 초기화 대기 중...");
-      
-      // 네이버 지도 API가 로드된 후 초기화가 완료될 때까지 대기
-      const checkInterval = setInterval(() => {
-        if (window.naver?.maps?.Map) {
-          if (window.naver.maps.drawing && typeof window.naver.maps.drawing.JSONReader === 'function') {
-            clearInterval(checkInterval);
-            console.log("Naver Maps API와 drawing 서브모듈 초기화 완료");
-            resolve();
-          } else {
-            // drawing 서브모듈만 로드되지 않음
-            console.log("기본 지도는 로드됨, drawing 서브모듈 대기 중...");
-          }
-        }
-      }, 100);
-
-      // 최대 15초 대기 후 타임아웃
-      setTimeout(() => {
-        clearInterval(checkInterval);
-        if (window.naver?.maps?.Map) {
-          // drawing 서브모듈이 없는 경우, 서브모듈만 다시 로드 시도
-          if (!(window.naver.maps.drawing && typeof window.naver.maps.drawing.JSONReader === 'function')) {
-            console.warn("drawing 서브모듈이 로드되지 않았습니다. 서브모듈만 추가로 로드합니다.");
-            loadDrawingSubmodule();
-          }
-          
-          console.log("Naver Maps API 초기화 완료 (타임아웃 후)");
-          resolve();
-        } else {
-          console.error("Naver Maps API 초기화 타임아웃");
-          reject(new Error("Naver Maps API 초기화 타임아웃"));
-        }
-      }, 15000);
-    };
-
-    script.onerror = (error) => {
-      console.error("Naver Maps 스크립트 로드 실패:", error);
-      reject(error);
-    };
-
-    document.head.appendChild(script);
-  });
-};
-
-// drawing 서브모듈만 별도로 로드하는 헬퍼 함수
-function loadDrawingSubmodule() {
-  const clientId = import.meta.env.VITE_NAVER_CLIENT_ID;
-  if (!clientId) return;
-  
-  console.log("drawing 서브모듈만 별도로 로드 시도...");
-  const drawingScript = document.createElement('script');
-  // geojson과 drawing 서브모듈을 함께 로드하도록 수정
-  drawingScript.src = `https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${clientId}&submodules=geojson,drawing`;
-  drawingScript.async = true;
-  
-  drawingScript.onload = () => {
-    console.log("drawing 서브모듈 스크립트 로드 완료");
-  };
-  
-  drawingScript.onerror = (err) => {
-    console.error("drawing 서브모듈 로드 실패:", err);
-  };
-  
-  document.head.appendChild(drawingScript);
-}
-
-// naver 객체를 위한 전역 타입 선언 추가
+// 네이버 지도 타입 정의
+// 전역 window 객체에 naver 프로퍼티 추가
 declare global {
   interface Window {
     naver: any;
+    N: any;
   }
 }
+
+// 로드 상태 추적
+let isLoading = false;
+let isLoaded = false;
+let loadPromise: Promise<void> | null = null;
+
+/**
+ * Naver Maps API 로드 함수
+ * 
+ * @returns Promise<void> - API 로드 완료 시 resolve
+ */
+export const loadNaverMaps = (): Promise<void> => {
+  // 이미 로드되었으면 바로 resolve
+  if (isLoaded && window.naver && window.naver.maps) {
+    return Promise.resolve();
+  }
+
+  // 로딩 중이면 기존 promise 반환
+  if (isLoading && loadPromise) {
+    return loadPromise;
+  }
+
+  // 네이버 API 키가 없으면 오류
+  if (!NAVER_CLIENT_ID) {
+    console.error('Naver Client ID is missing');
+    return Promise.reject(new Error('Naver Client ID is missing'));
+  }
+
+  // 로딩 상태로 변경
+  isLoading = true;
+
+  // 로드 Promise 생성
+  loadPromise = new Promise<void>((resolve, reject) => {
+    try {
+      // Script 태그 생성
+      const script = document.createElement('script');
+      script.type = 'text/javascript';
+      script.src = `https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${NAVER_CLIENT_ID}&submodules=drawing`;
+      script.async = true;
+
+      // 로드 완료 핸들러
+      script.onload = () => {
+        // API가 있는지 확인
+        if (window.naver && window.naver.maps) {
+          console.log('Naver Maps API loaded successfully');
+          isLoaded = true;
+          isLoading = false;
+          resolve();
+        } else {
+          console.error('Naver Maps API failed to initialize');
+          isLoading = false;
+          reject(new Error('Naver Maps API failed to initialize'));
+        }
+      };
+
+      // 로드 오류 핸들러
+      script.onerror = () => {
+        console.error('Failed to load Naver Maps API');
+        isLoading = false;
+        reject(new Error('Failed to load Naver Maps API'));
+      };
+
+      // 스크립트 삽입
+      document.head.appendChild(script);
+
+      // 타임아웃 설정 (10초)
+      setTimeout(() => {
+        if (!isLoaded) {
+          console.error('Naver Maps API load timeout');
+          isLoading = false;
+          reject(new Error('Naver Maps API load timeout'));
+        }
+      }, 10000);
+    } catch (error) {
+      console.error('Error loading Naver Maps:', error);
+      isLoading = false;
+      reject(error);
+    }
+  });
+
+  return loadPromise;
+};
+
+/**
+ * 네이버 지도 API가 로드되었는지 확인하는 함수
+ * 
+ * @returns boolean - 로드 여부
+ */
+export const isNaverMapsLoaded = (): boolean => {
+  return isLoaded && !!window.naver && !!window.naver.maps;
+};
+
+/**
+ * 네이버 지도 API 로드 상태 확인 함수
+ * 
+ * @returns {Object} - 로드 상태 객체
+ */
+export const getNaverMapsLoadState = () => {
+  return {
+    isLoading,
+    isLoaded,
+    hasAPI: !!window.naver && !!window.naver.maps
+  };
+};
