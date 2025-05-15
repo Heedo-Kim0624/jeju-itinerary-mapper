@@ -1,9 +1,8 @@
 
-import React, { createContext, useContext, useRef, MutableRefObject } from 'react';
+import React, { createContext, useContext, useRef } from 'react';
 import { Place, ItineraryDay } from '@/types/supabase';
-import { useMapCore } from './useMapCore'; // Corrected import
-import { ServerRouteResponse, EnrichedItineraryDay, ExtractedRouteData } from '@/types/schedule';
-import { GeoJsonLayerRef, GeoNode, GeoLink } from './geojson/GeoJsonTypes';
+import useMapCore from './useMapCore';
+import { ServerRouteResponse } from '@/types/schedule';
 
 interface MapContextType {
   map: any;
@@ -20,14 +19,13 @@ interface MapContextType {
   }) => any[];
   calculateRoutes: (places: Place[]) => void;
   clearMarkersAndUiElements: () => void;
-  removeAllMarkers: () => void; // Added
   panTo: (locationOrCoords: string | {lat: number, lng: number}) => void;
   showGeoJson: boolean;
   toggleGeoJsonVisibility: () => void;
-  renderItineraryRoute: (itineraryDay: EnrichedItineraryDay | null) => void; // Updated type
+  renderItineraryRoute: (itineraryDay: ItineraryDay | null) => void;
   clearAllRoutes: () => void;
-  handleGeoJsonLoaded: (nodes: GeoNode[], links: GeoLink[]) => void; // Updated types
-  highlightSegment: (fromIndex: number, toIndex: number, itineraryDay?: EnrichedItineraryDay) => void; // Updated type
+  handleGeoJsonLoaded: (nodes: any[], links: any[]) => void;
+  highlightSegment: (fromIndex: number, toIndex: number, itineraryDay?: ItineraryDay) => void;
   clearPreviousHighlightedPath: () => void;
   isGeoJsonLoaded: boolean;
   checkGeoJsonMapping: (places: Place[]) => {
@@ -39,13 +37,13 @@ interface MapContextType {
     message: string;
   };
   mapPlacesWithGeoNodes: (places: Place[]) => Place[];
-  showRouteForPlaceIndex: (placeIndex: number, itineraryDay: EnrichedItineraryDay) => void; // Updated type
+  showRouteForPlaceIndex: (placeIndex: number, itineraryDay: ItineraryDay) => void;
   renderGeoJsonRoute: (nodeIds: string[], linkIds: string[], style?: any) => any[];
-  geoJsonNodes: GeoNode[]; // Updated type
-  geoJsonLinks: GeoLink[]; // Updated type
+  geoJsonNodes: any[];
+  geoJsonLinks: any[];
+  // 서버 경로 관련 기능 추가
   setServerRoutes: (dayRoutes: Record<number, ServerRouteResponse>) => void;
   serverRoutesData: Record<number, ServerRouteResponse>;
-  geojsonLayerRef: MutableRefObject<GeoJsonLayerRef | null>; // Added
 }
 
 const defaultContext: MapContextType = {
@@ -57,7 +55,6 @@ const defaultContext: MapContextType = {
   addMarkers: () => [],
   calculateRoutes: () => {},
   clearMarkersAndUiElements: () => {},
-  removeAllMarkers: () => {}, // Added
   panTo: () => {},
   showGeoJson: false,
   toggleGeoJsonVisibility: () => {},
@@ -81,8 +78,7 @@ const defaultContext: MapContextType = {
   geoJsonNodes: [],
   geoJsonLinks: [],
   setServerRoutes: () => {},
-  serverRoutesData: {},
-  geojsonLayerRef: { current: null } // Added
+  serverRoutesData: {}
 };
 
 const MapContext = createContext<MapContextType>(defaultContext);

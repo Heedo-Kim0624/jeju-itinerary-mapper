@@ -1,189 +1,91 @@
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { UseGeoJsonStateProps, GeoJsonFeatureCollection, GeoJsonLayerRef, GeoJsonFeature } from '@/components/rightpanel/geojson/GeoJsonTypes';
+import { useState, useCallback } from 'react';
+import { Place } from '@/types/supabase';
+import { toast } from 'sonner';
 
-export function useGeoJsonState({ url, onDataLoaded }: UseGeoJsonStateProps) {
-  const [dataUrl, setDataUrl] = useState<string | null>(url || null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string>('');
+/**
+ * GeoJson 상태 관리 훅
+ */
+export const useGeoJsonState = () => {
+  // GeoJSON 관련 상태
+  const [showGeoJson, setShowGeoJson] = useState(false);
+  const [isGeoJsonLoaded, setIsGeoJsonLoaded] = useState(false);
+  const [geoJsonNodes, setGeoJsonNodes] = useState<any[]>([]);
+  const [geoJsonLinks, setGeoJsonLinks] = useState<any[]>([]);
   
-  const nodeData = useRef<GeoJsonFeatureCollection | null>(null);
-  const linkData = useRef<GeoJsonFeatureCollection | null>(null);
-  
-  const displayedFeatures = useRef<any[]>([]);
-  
-  const geoJsonLayer = useRef<GeoJsonLayerRef>({} as GeoJsonLayerRef);
-  
-  // Clear displayed features
-  const clearDisplayedFeatures = useCallback(() => {
-    // Remove all features that were added
-    displayedFeatures.current.forEach(feature => {
-      if (feature && typeof feature.remove === 'function') {
-        feature.remove();
-      }
+  // GeoJSON 가시성 토글
+  const toggleGeoJsonVisibility = useCallback(() => {
+    setShowGeoJson(prev => {
+      const newValue = !prev;
+      console.log(`GeoJSON 시각화 ${newValue ? '활성화' : '비활성화'}`);
+      return newValue;
     });
-    displayedFeatures.current = [];
   }, []);
 
-  // Get a node by ID
-  const getNodeById = useCallback((id: string) => {
-    if (!nodeData.current || !nodeData.current.features) return null;
+  // GeoJSON 데이터 로드 완료 핸들러
+  const handleGeoJsonLoaded = useCallback((nodes: any[], links: any[]) => {
+    console.log('GeoJSON 데이터 로드 완료:', { 
+      노드수: nodes.length,
+      링크수: links.length,
+      첫번째노드: nodes.length > 0 ? nodes[0].id : 'N/A',
+      첫번째링크: links.length > 0 ? links[0].id : 'N/A'
+    });
     
-    return nodeData.current.features.find(feature => {
-      if (!feature.properties) return false;
-      return feature.properties.NODE_ID === id;
-    });
+    setGeoJsonNodes(nodes);
+    setGeoJsonLinks(links);
+    setIsGeoJsonLoaded(true);
   }, []);
 
-  // Get a link by ID
-  const getLinkById = useCallback((id: string) => {
-    if (!linkData.current || !linkData.current.features) return null;
-    
-    return linkData.current.features.find(feature => {
-      if (!feature.properties) return false;
-      return feature.properties.LINK_ID === id;
-    });
-  }, []);
-
-  // Render a route with node and link IDs
-  const renderRoute = useCallback((nodeIds: string[], linkIds: string[], style: any = {}) => {
-    if (!nodeData.current || !linkData.current) {
-      console.error('GeoJSON data not loaded');
-      return [];
+  // 장소-GeoJSON 노드 매핑 품질 검사
+  const checkGeoJsonMapping = useCallback((places: Place[]) => {
+    if (!isGeoJsonLoaded || places.length === 0) {
+      return {
+        totalPlaces: places.length,
+        mappedPlaces: 0,
+        mappingRate: '0%',
+        averageDistance: 'N/A',
+        success: false,
+        message: 'GeoJSON 데이터가 로드되지 않았거나 장소가 없습니다.'
+      };
     }
-
-    const features: any[] = [];
-
-    // Default style if not provided
-    const defaultStyle = {
-      color: '#4CAF50',
-      width: 4,
-      opacity: 0.8,
-      ...style
+    
+    const totalPlaces = places.length;
+    const placesWithGeoNodeId = places.filter(p => p.geoNodeId);
+    const mappedPlaces = placesWithGeoNodeId.length;
+    const mappingRate = totalPlaces > 0 ? ((mappedPlaces / totalPlaces) * 100).toFixed(1) : '0.0';
+    
+    // 평균 거리 계산
+    const distanceSum = placesWithGeoNodeId.reduce((sum, place) => {
+      return sum + (place.geoNodeDistance || 0);
+    }, 0);
+    
+    const averageDistanceFloat = mappedPlaces > 0 ? (distanceSum / mappedPlaces) : 0;
+    const averageDistance = mappedPlaces > 0 ? averageDistanceFloat.toFixed(1) : 'N/A';
+    
+    // 매핑 성공 여부 판단 (50% 이상이고 평균 거리 100m 이내)
+    const success = 
+      (mappedPlaces / totalPlaces >= 0.5 || totalPlaces === 0) && 
+      (averageDistance === 'N/A' || averageDistanceFloat < 100);
+    
+    return {
+      totalPlaces,
+      mappedPlaces,
+      mappingRate: `${mappingRate}%`,
+      averageDistance: averageDistance === 'N/A' ? averageDistance : parseFloat(averageDistance),
+      success,
+      message: success ? 
+        `매핑 성공: ${mappedPlaces}/${totalPlaces} 장소 매핑됨 (${mappingRate}%), 평균 거리: ${averageDistance}m` :
+        `매핑 부족: ${mappedPlaces}/${totalPlaces} 장소만 매핑됨 (${mappingRate}%), 평균 거리: ${averageDistance}m`
     };
-
-    // Add nodes as markers
-    nodeIds.forEach(nodeId => {
-      const node = getNodeById(nodeId);
-      if (node && node.geometry && node.geometry.coordinates) {
-        // TODO: Add your visualization logic here
-        // For example, add a marker at the node location
-        console.log(`Would render node ${nodeId} at ${node.geometry.coordinates}`);
-        // features.push(marker);
-      }
-    });
-
-    // Add links as lines
-    linkIds.forEach(linkId => {
-      const link = getLinkById(linkId);
-      if (link && link.geometry && link.geometry.coordinates) {
-        // TODO: Add your visualization logic here
-        // For example, add a polyline for the link
-        console.log(`Would render link ${linkId} with coordinates`, link.geometry.coordinates);
-        // features.push(polyline);
-      }
-    });
-
-    displayedFeatures.current.push(...features);
-    return features;
-  }, [getNodeById, getLinkById]);
-
-  // Render all network data
-  const renderAllNetwork = useCallback(() => {
-    if (!nodeData.current || !linkData.current) {
-      console.error('GeoJSON data not loaded');
-      return;
-    }
-
-    clearDisplayedFeatures();
-    
-    try {
-      // Render all nodes
-      nodeData.current.features.forEach(node => {
-        if (node && node.geometry && node.geometry.coordinates) {
-          // TODO: Add your visualization logic here
-          console.log(`Would render node at ${node.geometry.coordinates}`);
-        }
-      });
-
-      // Render all links
-      linkData.current.features.forEach(link => {
-        if (link && link.geometry && link.geometry.coordinates) {
-          // TODO: Add your visualization logic here
-          console.log(`Would render link with coordinates`, link.geometry.coordinates);
-        }
-      });
-
-      console.log(`Rendered ${nodeData.current.features.length} nodes and ${linkData.current.features.length} links`);
-    } catch (error) {
-      console.error('Error rendering network:', error);
-    }
-  }, [clearDisplayedFeatures]);
-
-  // Load GeoJSON data
-  const loadGeoJson = useCallback(async (url: string) => {
-    if (!url) {
-      setError('No URL provided');
-      return;
-    }
-    
-    setIsLoading(true);
-    setError('');
-    
-    try {
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch GeoJSON data: ${response.status} ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      
-      // Determine if this is node or link data based on the first feature
-      if (data.features && data.features.length > 0) {
-        const firstFeature = data.features[0];
-        if (firstFeature.properties && 'NODE_ID' in firstFeature.properties) {
-          nodeData.current = data;
-          console.log(`Loaded ${data.features.length} nodes`);
-        } else if (firstFeature.properties && 'LINK_ID' in firstFeature.properties) {
-          linkData.current = data;
-          console.log(`Loaded ${data.features.length} links`);
-        }
-      }
-      
-      if (onDataLoaded) {
-        onDataLoaded(data);
-      }
-    } catch (err) {
-      console.error('Error loading GeoJSON:', err);
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setIsLoading(false);
-    }
-  }, [onDataLoaded]);
-
-  // Initialize the layer reference
-  useEffect(() => {
-    geoJsonLayer.current = {
-      renderRoute,
-      renderAllNetwork,
-      clearDisplayedFeatures,
-      getNodeById,
-      getLinkById
-    };
-  }, [renderRoute, renderAllNetwork, clearDisplayedFeatures, getNodeById, getLinkById]);
-
-  // Load data when URL changes
-  useEffect(() => {
-    if (dataUrl) {
-      loadGeoJson(dataUrl);
-    }
-  }, [dataUrl, loadGeoJson]);
+  }, [isGeoJsonLoaded]);
 
   return {
-    geoJsonLayer,
-    loadGeoJson,
-    isLoading,
-    error,
-    setDataUrl
+    showGeoJson,
+    isGeoJsonLoaded,
+    geoJsonNodes,
+    geoJsonLinks,
+    toggleGeoJsonVisibility,
+    handleGeoJsonLoaded,
+    checkGeoJsonMapping
   };
-}
+};

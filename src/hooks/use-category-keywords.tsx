@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { CategoryName, CategoryKeywords } from '@/utils/categoryUtils';
 
@@ -7,7 +8,6 @@ export const useCategoryKeywords = () => {
     '관광지': [],
     '음식점': [],
     '카페': [],
-    '기타': []
   });
 
   const toggleKeyword = (category: CategoryName, keyword: string) => {

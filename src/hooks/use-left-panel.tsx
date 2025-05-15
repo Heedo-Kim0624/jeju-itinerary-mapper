@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useSelectedPlaces } from './use-selected-places';
 import { useTripDetails } from './use-trip-details';
@@ -115,12 +116,6 @@ export const useLeftPanel = () => {
 
   // 일정 핸들러
   const itineraryHandlers = useItineraryHandlers();
-  
-  // Fix type issues by creating wrapper functions with proper types
-  const setPanelType = (panel: "region" | "date" | "category" | "itinerary") => {
-    setCurrentPanel(panel);
-  };
-
   const handleCreateItinerary = async () => {
     return itineraryHandlers.handleCreateItinerary(
       tripDetails,
@@ -129,12 +124,12 @@ export const useLeftPanel = () => {
       recommendedPlaces,
       generateItinerary,
       setShowItinerary,
-      setPanelType // Use the properly typed function
+      setCurrentPanel
     );
   };
   
   const handleCloseItinerary = () => {
-    itineraryHandlers.handleCloseItinerary(setShowItinerary, setPanelType); // Use the properly typed function
+    itineraryHandlers.handleCloseItinerary(setShowItinerary, setCurrentPanel);
   };
 
   // 일정이 생성되면 첫 번째 날짜 선택

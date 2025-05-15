@@ -1,11 +1,12 @@
+
 import React, { useEffect } from 'react';
 import { useLeftPanel } from '@/hooks/use-left-panel';
 import LeftPanelContent from './LeftPanelContent';
 import RegionPanelHandler from './RegionPanelHandler';
-import CategoryResultsPanelComponent from './CategoryResultsPanel';
+import CategoryResultHandler from './CategoryResultHandler';
 import LeftPanelContainer from './LeftPanelContainer';
 import ItineraryView from './ItineraryView';
-import { CategoryName, MainCategoryName } from '@/utils/categoryUtils';
+import type { CategoryName } from '@/utils/categoryUtils';
 
 const LeftPanel: React.FC = () => {
   const {
@@ -41,12 +42,14 @@ const LeftPanel: React.FC = () => {
   // 결과 닫기 핸들러
   const handleResultClose = () => {
     console.log("카테고리 결과 화면 닫기");
+    // null 사용
     uiVisibility.setShowCategoryResult(null);
   };
 
   // 카테고리 확인 핸들러
   const handleConfirmByCategory = (category: CategoryName, finalKeywords: string[]) => {
     console.log(`카테고리 '${category}' 확인, 키워드: ${finalKeywords.join(', ')}`);
+    // 키워드 확인 후 카테고리 결과 화면 표시
     keywordsAndInputs.handleConfirmCategory(category, finalKeywords, true);
     return true;
   };
@@ -77,6 +80,7 @@ const LeftPanel: React.FC = () => {
             endTime: tripDetails.dates?.endTime || "21:00"
           }}
           onCreateItinerary={() => {
+            // For type compatibility, convert the Promise to a boolean
             handleCreateItinerary().then(result => !!result);
             return true;
           }}
@@ -96,16 +100,16 @@ const LeftPanel: React.FC = () => {
             selectedKeywordsByCategory={categorySelection.selectedKeywordsByCategory}
             toggleKeyword={categorySelection.toggleKeyword}
             directInputValues={{
-              accomodation: keywordsAndInputs.directInputValues['숙소'] || '',
-              landmark: keywordsAndInputs.directInputValues['관광지'] || '',
-              restaurant: keywordsAndInputs.directInputValues['음식점'] || '',
-              cafe: keywordsAndInputs.directInputValues['카페'] || ''
+              accomodation: keywordsAndInputs.directInputValues['accommodation'] || '',
+              landmark: keywordsAndInputs.directInputValues['landmark'] || '',
+              restaurant: keywordsAndInputs.directInputValues['restaurant'] || '',
+              cafe: keywordsAndInputs.directInputValues['cafe'] || ''
             }}
             onDirectInputChange={{
-              accomodation: (value: string) => keywordsAndInputs.onDirectInputChange('숙소', value),
-              landmark: (value: string) => keywordsAndInputs.onDirectInputChange('관광지', value),
-              restaurant: (value: string) => keywordsAndInputs.onDirectInputChange('음식점', value),
-              cafe: (value: string) => keywordsAndInputs.onDirectInputChange('카페', value)
+              accomodation: (value: string) => keywordsAndInputs.onDirectInputChange('accommodation', value),
+              landmark: (value: string) => keywordsAndInputs.onDirectInputChange('landmark', value),
+              restaurant: (value: string) => keywordsAndInputs.onDirectInputChange('restaurant', value),
+              cafe: (value: string) => keywordsAndInputs.onDirectInputChange('cafe', value)
             }}
             onConfirmCategory={{
               accomodation: (finalKeywords: string[]) => handleConfirmByCategory('숙소', finalKeywords),
@@ -114,10 +118,10 @@ const LeftPanel: React.FC = () => {
               cafe: (finalKeywords: string[]) => handleConfirmByCategory('카페', finalKeywords)
             }}
             handlePanelBack={{
-              accomodation: () => handlePanelBackByCategory('숙소'),
-              landmark: () => handlePanelBackByCategory('관광지'),
-              restaurant: () => handlePanelBackByCategory('음식점'),
-              cafe: () => handlePanelBackByCategory('카페')
+              accomodation: () => handlePanelBackByCategory('accommodation'),
+              landmark: () => handlePanelBackByCategory('landmark'),
+              restaurant: () => handlePanelBackByCategory('restaurant'),
+              cafe: () => handlePanelBackByCategory('cafe')
             }}
             isCategoryButtonEnabled={categorySelection.isCategoryButtonEnabled}
           />
@@ -136,9 +140,8 @@ const LeftPanel: React.FC = () => {
         }}
       />
 
-      {/* Assuming CategoryResultsPanelComponent is the correct one to use here */}
-      <CategoryResultsPanelComponent
-        showCategoryResult={uiVisibility.showCategoryResult as CategoryName | null} // Cast if showCategoryResult is string
+      <CategoryResultHandler
+        showCategoryResult={uiVisibility.showCategoryResult}
         selectedRegions={regionSelection.selectedRegions}
         selectedKeywordsByCategory={categorySelection.selectedKeywordsByCategory}
         onClose={handleResultClose}

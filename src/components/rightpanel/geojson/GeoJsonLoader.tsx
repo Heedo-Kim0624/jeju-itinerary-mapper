@@ -1,6 +1,7 @@
+
 import React, { useEffect } from 'react';
 import { toast } from 'sonner';
-import { GeoNode, GeoLink, GeoJsonGeometry, GeoCoordinates, NodeProperties, LinkProperties } from './GeoJsonTypes';
+import { GeoNode, GeoLink, GeoJsonGeometry, GeoCoordinates, GeoJsonNodeProperties, GeoJsonLinkProperties } from './GeoJsonTypes';
 
 interface GeoJsonLoaderProps {
   isMapInitialized: boolean;
@@ -22,6 +23,7 @@ const GeoJsonLoader: React.FC<GeoJsonLoaderProps> = ({
       }
       
       try {
+        // 노드와 링크 데이터를 동시에 가져옴
         console.log('GeoJsonLoader: 데이터 파일 로드 시작');
         const [nodeRes, linkRes] = await Promise.all([
           fetch('/data/NODE_JSON.geojson'),
@@ -32,6 +34,7 @@ const GeoJsonLoader: React.FC<GeoJsonLoaderProps> = ({
           throw new Error('GeoJSON 데이터를 가져오는데 실패했습니다.');
         }
         
+        // JSON으로 변환
         const [nodeJson, linkJson] = await Promise.all([
           nodeRes.json(),
           linkRes.json()
@@ -42,30 +45,35 @@ const GeoJsonLoader: React.FC<GeoJsonLoaderProps> = ({
           링크: linkJson.features.length
         });
         
-        const tempNodes: GeoNode[] = nodeJson.features.map((feature: any): GeoNode => {
+        // 노드 객체 생성
+        const nodes = nodeJson.features.map((feature: any): GeoNode => {
           const id = String(feature.properties.NODE_ID);
           const coordinates = feature.geometry.coordinates as GeoCoordinates;
           
           return {
             id,
             type: 'node',
-            geometry: { type: 'Point', coordinates },
-            properties: feature.properties as NodeProperties,
+            geometry: feature.geometry as GeoJsonGeometry,
+            properties: feature.properties as GeoJsonNodeProperties,
             coordinates,
             adjacentLinks: [],
             adjacentNodes: [],
-            setStyles: (styles: any) => {}
+            setStyles: (styles: any) => {
+              // 스타일 설정 로직 (마커 생성 시 구현)
+            }
           };
         });
         
-        const tempLinks: GeoLink[] = linkJson.features.map((feature: any): GeoLink => {
+        // 링크 객체 생성 및 노드 인접 링크/노드 설정
+        const links = linkJson.features.map((feature: any): GeoLink => {
           const id = String(feature.properties.LINK_ID);
           const fromNodeId = String(feature.properties.F_NODE);
           const toNodeId = String(feature.properties.T_NODE);
           const length = feature.properties.LENGTH || 0;
           
-          const fromNode = tempNodes.find(node => node.id === fromNodeId);
-          const toNode = tempNodes.find(node => node.id === toNodeId);
+          // 노드 인접 링크 및 노드 업데이트
+          const fromNode = nodes.find(node => node.id === fromNodeId);
+          const toNode = nodes.find(node => node.id === toNodeId);
           
           if (fromNode) {
             fromNode.adjacentLinks.push(id);
@@ -80,22 +88,25 @@ const GeoJsonLoader: React.FC<GeoJsonLoaderProps> = ({
           return {
             id,
             type: 'link',
-            geometry: { type: 'LineString', coordinates: feature.geometry.coordinates as GeoCoordinates[] },
-            properties: feature.properties as LinkProperties,
+            geometry: feature.geometry as GeoJsonGeometry,
+            properties: feature.properties as GeoJsonLinkProperties,
             coordinates: feature.geometry.coordinates as GeoCoordinates[],
             fromNode: fromNodeId,
             toNode: toNodeId,
             length,
-            setStyles: (styles: any) => {}
+            setStyles: (styles: any) => {
+              // 스타일 설정 로직 (폴리라인 생성 시 구현)
+            }
           };
         });
         
         console.log('GeoJsonLoader: GeoJSON 데이터 처리 완료', {
-          노드객체: tempNodes.length,
-          링크객체: tempLinks.length
+          노드객체: nodes.length,
+          링크객체: links.length
         });
         
-        onLoadSuccess(tempNodes, tempLinks);
+        // 성공 콜백 호출
+        onLoadSuccess(nodes as GeoNode[], links);
         
       } catch (error) {
         console.error('GeoJSON 데이터 로드 중 오류:', error);
