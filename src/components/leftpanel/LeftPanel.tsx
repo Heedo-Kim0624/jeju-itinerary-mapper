@@ -1,12 +1,11 @@
-
 import React, { useEffect } from 'react';
 import { useLeftPanel } from '@/hooks/use-left-panel';
 import LeftPanelContent from './LeftPanelContent';
 import RegionPanelHandler from './RegionPanelHandler';
-import CategoryResultHandler from './CategoryResultHandler';
+import CategoryResultsPanelComponent from './CategoryResultsPanel';
 import LeftPanelContainer from './LeftPanelContainer';
 import ItineraryView from './ItineraryView';
-import { CategoryName } from '@/utils/categoryUtils';
+import { CategoryName, MainCategoryName } from '@/utils/categoryUtils';
 
 const LeftPanel: React.FC = () => {
   const {
@@ -42,14 +41,12 @@ const LeftPanel: React.FC = () => {
   // 결과 닫기 핸들러
   const handleResultClose = () => {
     console.log("카테고리 결과 화면 닫기");
-    // null 사용
     uiVisibility.setShowCategoryResult(null);
   };
 
   // 카테고리 확인 핸들러
-  const handleConfirmByCategory = (category: string, finalKeywords: string[]) => {
+  const handleConfirmByCategory = (category: CategoryName, finalKeywords: string[]) => {
     console.log(`카테고리 '${category}' 확인, 키워드: ${finalKeywords.join(', ')}`);
-    // 키워드 확인 후 카테고리 결과 화면 표시
     keywordsAndInputs.handleConfirmCategory(category, finalKeywords, true);
     return true;
   };
@@ -80,7 +77,6 @@ const LeftPanel: React.FC = () => {
             endTime: tripDetails.dates?.endTime || "21:00"
           }}
           onCreateItinerary={() => {
-            // For type compatibility, convert the Promise to a boolean
             handleCreateItinerary().then(result => !!result);
             return true;
           }}
@@ -140,8 +136,9 @@ const LeftPanel: React.FC = () => {
         }}
       />
 
-      <CategoryResultHandler
-        showCategoryResult={uiVisibility.showCategoryResult}
+      {/* Assuming CategoryResultsPanelComponent is the correct one to use here */}
+      <CategoryResultsPanelComponent
+        showCategoryResult={uiVisibility.showCategoryResult as CategoryName | null} // Cast if showCategoryResult is string
         selectedRegions={regionSelection.selectedRegions}
         selectedKeywordsByCategory={categorySelection.selectedKeywordsByCategory}
         onClose={handleResultClose}

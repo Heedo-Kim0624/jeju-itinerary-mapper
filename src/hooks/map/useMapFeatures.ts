@@ -1,8 +1,7 @@
-
 import { useCallback } from 'react';
 import { useMapContext } from '@/components/rightpanel/MapContext';
 import { Place } from '@/types/supabase';
-import { ItineraryDay } from '@/hooks/use-itinerary-creator';
+import { EnrichedItineraryDay, ExtractedRouteData } from '@/types/schedule';
 import * as mapboxgl from 'mapbox-gl';
 
 export function useMapFeatures() {
@@ -14,7 +13,6 @@ export function useMapFeatures() {
   const addMarkersToMap = useCallback((places: Place[], options = { highlight: false, useRecommendedStyle: false }) => {
     if (!map.current || !places || places.length === 0) return;
 
-    // 마커 스타일 설정 
     const markerColor = options.highlight ? '#FF4500' : (options.useRecommendedStyle ? '#1E88E5' : '#FF0000');
     const markerSize = options.highlight ? 40 : 30;
 
@@ -23,8 +21,7 @@ export function useMapFeatures() {
         console.warn('Invalid place data:', place);
         return;
       }
-
-      // 마커 엘리먼트 생성
+      
       const markerElement = document.createElement('div');
       markerElement.style.width = `${markerSize}px`;
       markerElement.style.height = `${markerSize}px`;
@@ -36,14 +33,12 @@ export function useMapFeatures() {
       markerElement.style.cursor = 'pointer';
       markerElement.style.zIndex = options.highlight ? '10' : '5';
 
-      // 마커 생성 및 지도에 추가
       const marker = new mapboxgl.Marker({ 
         element: markerElement 
       })
         .setLngLat([place.x, place.y])
         .addTo(map.current);
 
-      // 마커 클릭 이벤트 - 팝업 표시
       markerElement.onclick = () => {
         const popup = new mapboxgl.Popup({ 
           closeButton: true,
@@ -66,22 +61,18 @@ export function useMapFeatures() {
   /**
    * Render a specific day's itinerary on the map
    */
-  const renderItineraryDay = useCallback((day: ItineraryDay) => {
+  const renderItineraryDay = useCallback((day: EnrichedItineraryDay) => {
     if (!map.current || !day || !day.places || !geojsonLayerRef.current) {
       console.warn('Cannot render itinerary day, missing data or map reference');
       return;
     }
     
-    // Clear previous markers and routes
     removeAllMarkers();
     geojsonLayerRef.current.clearDisplayedFeatures();
     
-    // Add markers for places in this day's itinerary
-    addMarkersToMap(day.places, { highlight: true });
+    addMarkersToMap(day.places, { highlight: true, useRecommendedStyle: true });
     
-    // If we have route data for this day, render it
     if (day.routeData && day.routeData.nodeIds && day.routeData.linkIds) {
-      // Use a green color for the route
       const routeStyle = {
         color: '#4CAF50',
         width: 4,

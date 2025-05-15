@@ -1,4 +1,3 @@
-
 import { Place, SelectedPlace, SchedulePayload } from '@/types/supabase'; 
 import { toast } from 'sonner';
 import { useAutoComplete } from './use-auto-complete';
@@ -16,7 +15,13 @@ export const useSchedulePayload = () => {
   const prepareSchedulePayload = (
     placesToSchedule: Place[], 
     dateTime: { start_datetime: string; end_datetime: string } | null,
-    availableRecommendedPlacesByCategory: Record<CategoryName, Place[]> = {} 
+    availableRecommendedPlacesByCategory: Record<CategoryName, Place[]> = { // Provide full default
+      '숙소': [],
+      '관광지': [],
+      '음식점': [],
+      '카페': [],
+      '기타': []
+    }
   ): SchedulePayload | null => {
     if (!dateTime) {
       toast.error('여행 날짜와 시간을 선택해주세요');

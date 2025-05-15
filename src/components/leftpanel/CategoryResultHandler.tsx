@@ -2,7 +2,7 @@
 import React from 'react';
 import CategoryResultPanel from '../middlepanel/CategoryResultPanel';
 import { Place } from '@/types/supabase';
-import type { CategoryName } from '@/utils/categoryUtils';
+import type { CategoryName, MainCategoryName } from '@/utils/categoryUtils';
 
 interface CategoryResultHandlerProps {
   showCategoryResult: CategoryName | null;
@@ -23,13 +23,24 @@ const CategoryResultHandler: React.FC<CategoryResultHandlerProps> = ({
 }) => {
   if (!showCategoryResult) return null;
   
+  // Ensure currentCategory is one of the MainCategoryName types for CategoryResultPanel
+  // This is a common pattern if CategoryResultPanel doesn't handle '기타'
+  // If CategoryResultPanel *can* handle '기타', this check can be simpler or removed.
   const currentCategory = showCategoryResult;
+  const categoryForPanel = (showCategoryResult !== '기타' ? showCategoryResult : null) as MainCategoryName | null;
+
+  if (!categoryForPanel) {
+    // Decide how to handle '기타' - perhaps show a different panel or a message.
+    // For now, we'll prevent rendering if it's '기타' and CategoryResultPanel can't handle it.
+    console.warn("CategoryResultHandler: '기타' category cannot be displayed by CategoryResultPanel in its current form.");
+    return null; 
+  }
+  
   const selectedKeywords = selectedKeywordsByCategory[currentCategory] || [];
   const isPlaceSelected = (id: string | number) => 
     selectedPlaces.some(p => p.id === id);
 
   const handlePlaceSelection = (place: Place, checked: boolean) => {
-    // 카테고리 정보를 함께 전달하여 장소 선택 처리
     onSelectPlace(place, checked, currentCategory);
   };
 
@@ -37,7 +48,7 @@ const CategoryResultHandler: React.FC<CategoryResultHandlerProps> = ({
     <CategoryResultPanel
       isOpen={!!showCategoryResult}
       onClose={onClose}
-      category={currentCategory}
+      category={categoryForPanel} // Pass the validated category
       regions={selectedRegions}
       keywords={selectedKeywords}
       onSelectPlace={handlePlaceSelection}

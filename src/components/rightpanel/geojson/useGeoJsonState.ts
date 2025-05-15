@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useRef } from 'react';
 import { GeoNode, GeoLink, RouteStyle, GeoJsonLayerRef } from './GeoJsonTypes';
 
@@ -88,7 +87,7 @@ const useGeoJsonState = (map: any) => {
     strokeWeight: 5,
     strokeOpacity: 0.8
   }): any[] => {
-    if (!map) return [];
+    if (!map || !window.naver || !window.naver.maps) return [];
     
     // 기존에 표시된 피처 제거
     clearDisplayedFeatures();
@@ -172,14 +171,14 @@ const useGeoJsonState = (map: any) => {
     
     return renderedFeatures;
   }, [map, clearDisplayedFeatures, getLinkById, getNodeById]);
-
+  
   // 전체 네트워크 렌더링 함수 추가
   const renderAllNetwork = useCallback((style: RouteStyle = {
     strokeColor: '#2196F3',
     strokeWeight: 3,
     strokeOpacity: 0.6
   }): any[] => {
-    if (!map) return [];
+    if (!map || !window.naver || !window.naver.maps) return [];
     
     // 기존에 표시된 피처 제거
     clearDisplayedFeatures();
@@ -190,10 +189,8 @@ const useGeoJsonState = (map: any) => {
     });
     
     const renderedFeatures: any[] = [];
-    
-    // 링크 렌더링 (모든 링크의 일부만 렌더링 - 성능 고려)
     const linkLimit = Math.min(500, links.length);
-    const linkStep = Math.max(1, Math.floor(links.length / linkLimit));
+    const linkStep = links.length > 0 ? Math.max(1, Math.floor(links.length / linkLimit)) : 1;
     
     for (let i = 0; i < links.length; i += linkStep) {
       const link = links[i];
@@ -235,7 +232,7 @@ const useGeoJsonState = (map: any) => {
       clearDisplayedFeatures,
       getNodeById,
       getLinkById,
-      renderAllNetwork  // 전체 네트워크 렌더링 함수 추가
+      renderAllNetwork
     };
     
     window.geoJsonLayer = layerInterface;
@@ -262,7 +259,7 @@ const useGeoJsonState = (map: any) => {
     getNodeById,
     getLinkById,
     renderRoute,
-    renderAllNetwork, // 전체 네트워크 렌더링 함수 추가
+    renderAllNetwork,
     registerGlobalInterface
   };
 };

@@ -1,7 +1,7 @@
 
 import { MutableRefObject } from 'react';
 
-export interface GeoJsonProps {
+export interface GeoJsonProps { // General props for GeoJSON display, might be used by GeoJsonLayer if no specific props
   dataUrl?: string;
   center?: [number, number];
   zoom?: number;
@@ -41,12 +41,27 @@ export interface LinkProperties {
   TURN_TYPE?: string;
 }
 
+export type GeoCoordinates = [number, number]; // [longitude, latitude]
+
+export interface GeoJsonPointGeometry {
+  type: 'Point';
+  coordinates: GeoCoordinates;
+}
+
+export interface GeoJsonLineStringGeometry {
+  type: 'LineString';
+  coordinates: GeoCoordinates[];
+}
+
+export type GeoJsonGeometry = GeoJsonPointGeometry | GeoJsonLineStringGeometry | GeoJsonFeature['geometry'];
+
+
 export interface GeoJsonFeature {
   type: 'Feature';
   properties: NodeProperties | LinkProperties | any;
   geometry: {
     type: 'Point' | 'LineString' | 'Polygon' | 'MultiPoint' | 'MultiLineString' | 'MultiPolygon';
-    coordinates: number[][];
+    coordinates: any; // Was number[][], making it more general for now
   };
 }
 
@@ -55,13 +70,56 @@ export interface GeoJsonFeatureCollection {
   features: GeoJsonFeature[];
 }
 
-export interface GeoJsonLayerRef {
-  renderRoute: (nodeIds: string[], linkIds: string[], style?: any) => any[];
-  renderAllNetwork: () => void;
-  clearDisplayedFeatures: () => void;
-  getNodeById: (id: string) => any;
-  getLinkById: (id: string) => any;
+export interface GeoNode {
+  id: string;
+  type: 'node';
+  geometry: GeoJsonPointGeometry;
+  properties: NodeProperties;
+  coordinates: GeoCoordinates;
+  adjacentLinks: string[];
+  adjacentNodes: string[];
+  naverMarker?: any;
+  setStyles?: (styles: any) => void;
 }
+
+export interface GeoLink {
+  id: string;
+  type: 'link';
+  geometry: GeoJsonLineStringGeometry;
+  properties: LinkProperties;
+  coordinates: GeoCoordinates[];
+  fromNode: string;
+  toNode: string;
+  length: number;
+  naverPolyline?: any;
+  setStyles?: (styles: any) => void;
+}
+
+export interface RouteStyle {
+  strokeColor?: string;
+  strokeWeight?: number;
+  strokeOpacity?: number;
+  fillColor?: string;
+  zIndex?: number;
+}
+
+export interface GeoJsonLayerRef {
+  renderRoute: (nodeIds: string[], linkIds: string[], style?: RouteStyle) => any[];
+  renderAllNetwork: (style?: RouteStyle) => any[];
+  clearDisplayedFeatures: () => void;
+  getNodeById: (id: string) => GeoNode | undefined;
+  getLinkById: (id: string) => GeoLink | undefined;
+}
+
+// Props for the GeoJsonLayer component itself
+export interface GeoJsonLayerComponentProps { // Renamed to avoid conflict if GeoJsonLayerProps was a typo for GeoJsonProps
+  map: any; // Naver Map instance
+  visible: boolean;
+  isMapInitialized: boolean;
+  isNaverLoaded: boolean;
+  onGeoJsonLoaded: (nodes: GeoNode[], links: GeoLink[]) => void;
+}
+
 
 export interface UseGeoJsonStateProps {
   url: string;
@@ -69,9 +127,9 @@ export interface UseGeoJsonStateProps {
 }
 
 export interface UseGeoJsonStateReturn {
-  geoJsonLayer: MutableRefObject<GeoJsonLayerRef>;
+  geoJsonLayer: MutableRefObject<GeoJsonLayerRef | null>; // Allow null initially
   loadGeoJson: (url: string) => Promise<void>;
   isLoading: boolean;
-  error: string;
+  error: string | null; // Allow null
   setDataUrl: React.Dispatch<React.SetStateAction<string | null>>;
 }

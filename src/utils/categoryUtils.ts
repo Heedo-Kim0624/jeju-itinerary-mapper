@@ -1,7 +1,10 @@
-
 import { Place } from '@/types/supabase';
 
 export type CategoryName = '숙소' | '관광지' | '음식점' | '카페' | '기타';
+export type MainCategoryName = '숙소' | '관광지' | '음식점' | '카페'; // For components that don't handle '기타'
+
+export type CategoryKeywords = Record<CategoryName, string[]>;
+
 
 /**
  * Converts an English category to its Korean equivalent

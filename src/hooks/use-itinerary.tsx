@@ -1,13 +1,14 @@
-
 import { useState } from 'react';
-import { useToast } from './use-toast';
+import { useToast } from '@/components/ui/use-toast';
 import { useSchedulePayload } from './places/use-schedule-payload';
-import { ItineraryDay } from './use-itinerary-creator';
 import { Place, SchedulePayload } from '@/types/supabase';
 import { CategoryName } from '@/utils/categoryUtils';
+import { ExtractedRouteData, EnrichedItineraryDay } from '@/types/schedule';
+
+export interface ItineraryDayState extends EnrichedItineraryDay {}
 
 export const useItinerary = () => {
-  const [itinerary, setItinerary] = useState<ItineraryDay[] | null>(null);
+  const [itinerary, setItinerary] = useState<ItineraryDayState[] | null>(null);
   const [selectedItineraryDay, setSelectedItineraryDay] = useState<number | null>(null);
   const [showItinerary, setShowItinerary] = useState<boolean>(false);
   const { toast } = useToast();
@@ -29,8 +30,8 @@ export const useItinerary = () => {
     try {
       console.log('[일정 생성] API 호출 시작', schedulePayload);
       
-      // Mock API call for now - TODO: Replace with actual API
-      const mockResponse = await new Promise<ItineraryDay[]>(resolve => {
+      // Mock API call
+      const mockResponse = await new Promise<ItineraryDayState[]>(resolve => {
         setTimeout(() => {
           resolve([
             {
@@ -54,7 +55,8 @@ export const useItinerary = () => {
               totalDistance: 15000,
               routeData: {
                 nodeIds: ['1', '2', '3'],
-                linkIds: ['101', '102']
+                linkIds: ['101', '102'],
+                totalDistance: 15000
               }
             },
             {
@@ -78,7 +80,8 @@ export const useItinerary = () => {
               totalDistance: 12000,
               routeData: {
                 nodeIds: ['4', '5', '6'],
-                linkIds: ['103', '104']
+                linkIds: ['103', '104'],
+                totalDistance: 12000
               }
             }
           ]);

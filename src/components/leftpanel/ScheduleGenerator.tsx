@@ -1,12 +1,11 @@
-
 import React, { useState, useEffect } from 'react';
 import { Place } from '@/types/supabase';
 import { toast } from 'sonner';
-import { useItineraryCreator, ItineraryDay } from '@/hooks/use-itinerary-creator';
+import { useItineraryCreator, ItineraryDay as BaseItineraryDay } from '@/hooks/use-itinerary-creator';
 import ItineraryPanel from './ItineraryPanel';
 import { useScheduleGenerator } from '@/hooks/use-schedule-generator';
 import { useMapContext } from '@/components/rightpanel/MapContext';
-import { ServerRouteResponse } from '@/types/schedule';
+import { ServerRouteResponse, ExtractedRouteData, EnrichedItineraryDay } from '@/types/schedule';
 
 interface ScheduleGeneratorProps {
   selectedPlaces: Place[];
@@ -24,7 +23,7 @@ export const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({
   dates,
   onClose
 }) => {
-  const [itinerary, setItinerary] = useState<ItineraryDay[]>([]);
+  const [itinerary, setItinerary] = useState<EnrichedItineraryDay[]>([]);
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const { createItinerary } = useItineraryCreator();
@@ -44,11 +43,9 @@ export const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({
       return;
     }
 
-    // Call the local async function that handles the generation process
     runScheduleGenerationProcess();
-  }, []); // Removed dependencies to ensure it runs once on mount after checks
+  }, []); // Ensure this runs once
 
-  // Renamed local async function
   const runScheduleGenerationProcess = async () => {
     if (!dates) return;
     
@@ -57,24 +54,20 @@ export const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({
       
       const payload = {
         selected_places: selectedPlaces.map(p => ({ id: p.id, name: p.name })),
-        candidate_places: [], // This might be populated by prepareSchedulePayload if used earlier
+        candidate_places: [], 
         start_datetime: dates.startDate.toISOString(),
         end_datetime: dates.endDate.toISOString()
       };
       
-      // Log the payload being sent to the server
       console.log("📤 서버 요청 payload:", JSON.stringify(payload, null, 2));
       
-      // Call the hook's renamed function
       const serverResponse = await generateScheduleViaHook(payload);
       
-      // Log the full server response
       console.log("🔍 서버 응답 (raw):", serverResponse);
 
       if (serverResponse && serverResponse.itinerary) {
         console.log("🔍 서버 응답 (parsed for itinerary):", serverResponse);
         
-        // Log nodeIds from server response if available
         if (serverResponse.routes) {
           console.log("📊 서버 응답 경로 데이터 요약:");
           Object.entries(serverResponse.routes).forEach(([day, route]: [string, any]) => {
@@ -82,7 +75,6 @@ export const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({
               console.log(`📌 ${day}일차 nodeIds.length = ${route.nodeIds.length}`);
               console.log(`🔍 ${day}일차 nodeIds 샘플 =`, route.nodeIds.slice(0, 10), "...");
               
-              // 분석: nodeId가 있는 요소의 타입 확인
               const nodeTypes = new Set();
               route.nodeIds.forEach((nodeId: any) => {
                 nodeTypes.add(typeof nodeId);
@@ -99,17 +91,14 @@ export const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({
         const parsedItinerary = parseServerResponse(serverResponse, selectedPlaces);
         setItinerary(parsedItinerary);
         
-        // 서버에서 받은 경로 데이터가 있으면 저장하고 로그 출력
         if (serverResponse.routes) {
           const routesData: Record<number, ServerRouteResponse> = {};
           
           Object.entries(serverResponse.routes).forEach(([dayStr, routeData]) => {
             const day = parseInt(dayStr, 10);
             if (!isNaN(day)) {
-              // 서버 응답을 적절한 형태로 변환
               routesData[day] = routeData as ServerRouteResponse;
               
-              // 경로 데이터 디버깅
               const nodeIds = (routeData as ServerRouteResponse).nodeIds || [];
               console.log(`📊 ${dayStr}일차 경로 정보 저장:`, {
                 노드수: nodeIds.length,
@@ -127,37 +116,38 @@ export const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({
         }
         toast.success("서버로부터 일정을 성공적으로 생성했습니다!");
       } else {
-        // Fallback to client-side generation if server response is not as expected
         console.warn("서버 응답이 없거나 형식이 맞지 않아 클라이언트 측 일정을 생성합니다.");
-        const generatedItinerary = createItinerary(
+        const baseItinerary = createItinerary(
           selectedPlaces,
           dates.startDate,
           dates.endDate,
           dates.startTime,
           dates.endTime
         );
-        setItinerary(generatedItinerary);
-        if (generatedItinerary.length > 0) {
-          setSelectedDay(generatedItinerary[0].day);
+        const enrichedFallbackItinerary = baseItinerary.map(day => ({...day, routeData: undefined}));
+        setItinerary(enrichedFallbackItinerary);
+
+        if (enrichedFallbackItinerary.length > 0) {
+          setSelectedDay(enrichedFallbackItinerary[0].day);
         }
         toast.success("클라이언트에서 일정이 성공적으로 생성되었습니다!");
       }
     } catch (error) {
       console.error("일정 생성 오류:", error);
       toast.error("일정 생성 중 오류가 발생했습니다.");
-      // Fallback to client-side generation on error
       if (dates) {
         console.warn("오류 발생으로 클라이언트 측 일정을 생성합니다.");
-        const generatedItinerary = createItinerary(
+        const baseItinerary = createItinerary(
           selectedPlaces,
           dates.startDate,
           dates.endDate,
           dates.startTime,
           dates.endTime
         );
-        setItinerary(generatedItinerary);
-        if (generatedItinerary.length > 0) {
-          setSelectedDay(generatedItinerary[0].day);
+        const enrichedFallbackItinerary = baseItinerary.map(day => ({...day, routeData: undefined}));
+        setItinerary(enrichedFallbackItinerary);
+        if (enrichedFallbackItinerary.length > 0) {
+          setSelectedDay(enrichedFallbackItinerary[0].day);
         }
       }
     } finally {
@@ -165,14 +155,11 @@ export const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({
     }
   };
 
-  // 서버 응답 파싱 함수 (서버 API 응답 형식에 맞게 수정 필요)
-  const parseServerResponse = (response: any, places: Place[]): ItineraryDay[] => {
+  const parseServerResponse = (response: any, places: Place[]): EnrichedItineraryDay[] => {
     console.log("서버 응답 파싱 시작");
     
-    // 서버 응답 형식에 따라 구현 필요
     if (response.itinerary && Array.isArray(response.itinerary)) {
-      const parsedItinerary = response.itinerary.map((day: any) => {
-        // 장소 매핑
+      const parsedItinerary: EnrichedItineraryDay[] = response.itinerary.map((day: any) => {
         const mappedPlaces = day.places.map((placeInfo: any) => { 
           let placeId: string;
           let placeName: string | undefined;
@@ -183,7 +170,7 @@ export const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({
             placeId = placeInfo.id;
             placeName = placeInfo.name;
           } else {
-            return { id: 'unknown_id', name: '알 수 없는 장소', category: 'unknown', x: 0, y: 0 };
+            return { id: 'unknown_id', name: '알 수 없는 장소', category: 'unknown', x: 0, y: 0 } as Place;
           }
 
           const place = places.find(p => p.id === placeId);
@@ -193,16 +180,16 @@ export const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({
             category: 'unknown', 
             x: 0, 
             y: 0 
-          };
+          } as Place;
         });
         
-        // 경로 데이터 추출
-        let routeData;
+        let routeData: ExtractedRouteData | undefined = undefined;
         if (response.routes && response.routes[day.day]) {
           const dayRoute = response.routes[day.day];
           routeData = {
             nodeIds: dayRoute.nodeIds || [],
-            linkIds: dayRoute.linkIds || []
+            linkIds: dayRoute.linkIds || [],
+            totalDistance: dayRoute.totalDistance || 0, // Assuming totalDistance is part of routeData from server
           };
           
           console.log(`${day.day}일차 경로 데이터:`, {
@@ -215,7 +202,7 @@ export const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({
           day: day.day,
           places: mappedPlaces,
           totalDistance: day.totalDistance || 0,
-          routeData // GeoJSON 연동을 위한 경로 데이터
+          routeData 
         };
       });
       
@@ -223,16 +210,16 @@ export const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({
       return parsedItinerary;
     }
     
-    // 기본 폴백: 클라이언트 측 일정 생성
     if (dates) {
       console.log("유효한 서버 응답 없음 - 클라이언트 일정 생성 시작");
-      return createItinerary(
+      const baseItinerary = createItinerary(
         places,
         dates.startDate,
         dates.endDate,
         dates.startTime,
         dates.endTime
       );
+      return baseItinerary.map(day => ({...day, routeData: undefined}));
     }
     
     return [];
