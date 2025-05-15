@@ -1,162 +1,127 @@
 
-import { useState, useEffect } from 'react';
-import { useSelectedPlaces } from './use-selected-places';
-import { useTripDetails } from './use-trip-details';
-import { useCategoryResults } from './use-category-results';
-import { useItinerary } from './use-itinerary';
-import { useRegionSelection } from './use-region-selection';
-import { useCategorySelection } from './use-category-selection';
-import { useCategoryHandlers } from './left-panel/use-category-handlers';
-import { useItineraryHandlers } from './left-panel/use-itinerary-handlers';
-import { useInputState } from './left-panel/use-input-state';
+import { useState, useCallback } from 'react';
+import { ItineraryDay } from './use-itinerary-creator';
+import { CategoryName } from '@/types/travel';
+
+export type LeftPanelTab = 'region' | 'date' | 'category' | 'itinerary';
+
+interface UseLeftPanelProps {
+  defaultTab?: LeftPanelTab;
+}
+
+interface UseLeftPanelReturn {
+  // 현재 선택된 탭
+  activePanel: LeftPanelTab;
+  
+  // 각 탭 선택 상태
+  isRegionPanelActive: boolean;
+  isDatePanelActive: boolean;
+  isCategoryPanelActive: boolean;
+  isItineraryPanelActive: boolean;
+  
+  // 일정 관련 상태
+  itineraryCreated: boolean;
+  itineraryPanelDisplayed: boolean;
+  selectedDay: number | null;
+  
+  // 액션 함수
+  setActivePanel: (panel: LeftPanelTab) => void;
+  openRegionPanel: () => void;
+  openDatePanel: () => void;
+  openCategoryPanel: () => void;
+  openItineraryPanel: () => void;
+  
+  // 일정 액션 함수
+  setItineraryCreated: (created: boolean) => void;
+  setItineraryPanelDisplayed: (displayed: boolean) => void;
+  setSelectedDay: (day: number | null) => void;
+
+  // 특정 일자의 장소 목록 반환
+  getDayPlaces: (day: number, itinerarySchedule: ItineraryDay[]) => any[] | null;
+  findDayByPlaceId: (placeId: string, itinerarySchedule: ItineraryDay[]) => number | null;
+  
+  // 패널 유틸리티 함수들
+  setPanelCategoryWithCategoryName: (categoryName: CategoryName) => void;
+}
 
 /**
- * 왼쪽 패널 기능 통합 훅
+ * 좌측 패널 상태 및 제어 로직을 제공하는 훅
+ * @param defaultTab 초기 활성화할 탭
  */
-export const useLeftPanel = () => {
-  // 지역 및 카테고리 선택 기능
-  const regionSelection = useRegionSelection();
-  const categorySelection = useCategorySelection();
-  const tripDetails = useTripDetails();
+export const useLeftPanel = ({ defaultTab = 'region' }: UseLeftPanelProps = {}): UseLeftPanelReturn => {
+  // 현재 활성화된 탭
+  const [activePanel, setActivePanel] = useState<LeftPanelTab>(defaultTab);
   
-  // 상태 관리
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [showCategoryResultScreen, setShowCategoryResultScreen] = useState(false);
-  const [currentPanel, setCurrentPanel] = useState<'region' | 'date' | 'category' | 'itinerary'>('region');
-  const [showCategoryResult, setShowCategoryResult] = useState<string | null>(null);
-  
-  // 입력값 관리
-  const { directInputValues, onDirectInputChange } = useInputState();
+  // 일정 관련 상태
+  const [itineraryCreated, setItineraryCreated] = useState(false);
+  const [itineraryPanelDisplayed, setItineraryPanelDisplayed] = useState(false);
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
 
-  // 키워드 및 입력 관련 기능
-  const keywordsAndInputs = {
-    directInputValues,
-    onDirectInputChange,
-    handleConfirmCategory: (category: string, finalKeywords: string[], clearSelection: boolean = false) => {
-      categorySelection.handleConfirmCategory(category as any, finalKeywords, clearSelection);
-      if (clearSelection) {
-        setShowCategoryResult(category);
+  // 패널 선택 함수들
+  const openRegionPanel = useCallback(() => setActivePanel('region'), []);
+  const openDatePanel = useCallback(() => setActivePanel('date'), []);
+  const openCategoryPanel = useCallback(() => setActivePanel('category'), []);
+  const openItineraryPanel = useCallback(() => setActivePanel('itinerary'), []);
+
+  // 특정 일자의 장소 목록 반환
+  const getDayPlaces = useCallback((day: number, itinerarySchedule: ItineraryDay[]): any[] | null => {
+    if (!itinerarySchedule || itinerarySchedule.length === 0) return null;
+    
+    const daySchedule = itinerarySchedule.find(d => d.day === day);
+    return daySchedule ? daySchedule.places : null;
+  }, []);
+
+  // 특정 장소 ID가 포함된 일자 탐색
+  const findDayByPlaceId = useCallback((placeId: string, itinerarySchedule: ItineraryDay[]): number | null => {
+    if (!itinerarySchedule || itinerarySchedule.length === 0) return null;
+    
+    for (const day of itinerarySchedule) {
+      if (day.places && day.places.some(place => place.id === placeId)) {
+        return day.day;
       }
     }
-  };
+    return null;
+  }, []);
 
-  // 장소 관리 기능
-  const {
-    selectedPlaces,
-    candidatePlaces,
-    selectedPlacesByCategory,
-    handleSelectPlace,
-    handleRemovePlace,
-    handleViewOnMap,
-    allCategoriesSelected,
-    prepareSchedulePayload,
-    isAccommodationLimitReached,
-  } = useSelectedPlaces();
-
-  const placesManagement = {
-    selectedPlaces,
-    candidatePlaces,
-    selectedPlacesByCategory,
-    handleSelectPlace,
-    handleRemovePlace,
-    handleViewOnMap,
-    allCategoriesSelected,
-    isAccommodationLimitReached,
-    prepareSchedulePayload
-  };
-
-  // 일정 관리 기능
-  const { 
-    itinerary,
-    selectedItineraryDay,
-    showItinerary,
-    setItinerary,
-    setSelectedItineraryDay,
-    setShowItinerary,
-    handleSelectItineraryDay,
-    generateItinerary
-  } = useItinerary();
-
-  const itineraryManagement = {
-    itinerary,
-    selectedItineraryDay,
-    setSelectedItineraryDay,
-    handleSelectItineraryDay
-  };
-
-  // UI 가시성 관리
-  const uiVisibility = {
-    showItinerary,
-    setShowItinerary,
-    showCategoryResult,
-    setShowCategoryResult
-  };
-
-  // 카테고리 결과 관리
-  const { 
-    isLoading: isCategoryLoading,
-    error: categoryError,
-    recommendedPlaces,
-    normalPlaces,
-    refetch
-  } = useCategoryResults(showCategoryResult as any, 
-    showCategoryResult ? categorySelection.selectedKeywordsByCategory[showCategoryResult] || [] : [], 
-    regionSelection.selectedRegions);
-
-  const categoryResults = {
-    recommendedPlaces: recommendedPlaces || [],
-    normalPlaces: normalPlaces || []
-  };
-
-  // 카테고리 핸들러
-  const categoryHandlers = useCategoryHandlers();
-  const handleCategorySelect = (category: string) => categoryHandlers.handleCategorySelect(category, refetch);
-  const handleCloseCategoryResult = () => categoryHandlers.handleCloseCategoryResult(setShowCategoryResult);
-  const handleConfirmCategory = () => categoryHandlers.handleConfirmCategory(selectedCategory);
-
-  // 일정 핸들러
-  const itineraryHandlers = useItineraryHandlers();
-  const handleCreateItinerary = async () => {
-    return itineraryHandlers.handleCreateItinerary(
-      tripDetails,
-      selectedPlaces,
-      prepareSchedulePayload,
-      recommendedPlaces,
-      generateItinerary,
-      setShowItinerary,
-      setCurrentPanel
-    );
-  };
-  
-  const handleCloseItinerary = () => {
-    itineraryHandlers.handleCloseItinerary(setShowItinerary, setCurrentPanel);
-  };
-
-  // 일정이 생성되면 첫 번째 날짜 선택
-  useEffect(() => {
-    if (itinerary && itinerary.length > 0 && showItinerary) {
-      setSelectedItineraryDay(itinerary[0]?.day || 1);
-    }
-  }, [itinerary, showItinerary, setSelectedItineraryDay]);
+  // 카테고리 탭으로 전환하고 특정 카테고리 선택
+  const setPanelCategoryWithCategoryName = useCallback((categoryName: CategoryName) => {
+    setActivePanel('category');
+    // 여기서 categoryName을 활용해 추가 작업을 할 수 있습니다.
+    // 예: setCategorySelection(categoryName);
+  }, []);
 
   return {
-    regionSelection,
-    categorySelection,
-    keywordsAndInputs,
-    placesManagement,
-    tripDetails,
-    uiVisibility,
-    itineraryManagement,
-    handleCreateItinerary,
-    selectedCategory,
-    showCategoryResultScreen,
-    currentPanel,
-    isCategoryLoading,
-    categoryError,
-    categoryResults,
-    handleCategorySelect,
-    handleCloseCategoryResult,
-    handleConfirmCategory,
-    handleCloseItinerary
+    // 현재 선택된 탭
+    activePanel,
+    
+    // 각 탭 선택 상태
+    isRegionPanelActive: activePanel === 'region',
+    isDatePanelActive: activePanel === 'date',
+    isCategoryPanelActive: activePanel === 'category',
+    isItineraryPanelActive: activePanel === 'itinerary',
+    
+    // 일정 관련 상태
+    itineraryCreated,
+    itineraryPanelDisplayed,
+    selectedDay,
+    
+    // 액션 함수
+    setActivePanel,
+    openRegionPanel,
+    openDatePanel,
+    openCategoryPanel,
+    openItineraryPanel,
+    
+    // 일정 액션 함수
+    setItineraryCreated,
+    setItineraryPanelDisplayed,
+    setSelectedDay,
+    
+    // 일정 유틸리티 함수
+    getDayPlaces,
+    findDayByPlaceId,
+    
+    // 패널 유틸리티 함수
+    setPanelCategoryWithCategoryName
   };
 };

@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { useLeftPanel } from '@/hooks/use-left-panel';
 import LeftPanelContent from './LeftPanelContent';
@@ -52,6 +51,11 @@ const LeftPanel: React.FC = () => {
     // 키워드 확인 후 카테고리 결과 화면 표시
     keywordsAndInputs.handleConfirmCategory(category, finalKeywords, true);
     return true;
+  };
+
+  // Fix the type error by ensuring categoryName is of type CategoryName
+  const handleCategorySelect = (categoryName: CategoryName) => {
+    setPanelCategoryWithCategoryName(categoryName);
   };
 
   return (

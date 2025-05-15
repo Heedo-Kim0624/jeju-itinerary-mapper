@@ -1,6 +1,6 @@
 
 import React, { useEffect, useRef, useState } from 'react';
-import { GeoNode, GeoLink, RouteStyle } from './GeoJsonTypes';
+import { GeoNode, GeoLink, RouteStyle, GeoJsonLayerRef } from './GeoJsonTypes';
 
 interface GeoJsonRendererProps {
   map: any;
@@ -241,7 +241,7 @@ const GeoJsonRenderer: React.FC<GeoJsonRendererProps> = ({
     if (!window.geoJsonLayer) {
       window.geoJsonLayer = {
         renderRoute,
-        renderAllNetwork,
+        renderAllNetwork, // Ensuring renderAllNetwork is properly exposed
         clearDisplayedFeatures: clearAllFeatures,
         getNodeById: (id: string) => nodes.find(n => String(n.id) === String(id)),
         getLinkById: (id: string) => links.find(l => String(l.id) === String(id))
@@ -250,7 +250,7 @@ const GeoJsonRenderer: React.FC<GeoJsonRendererProps> = ({
     } else {
       // 기존 인터페이스가 있으면 메서드만 업데이트
       window.geoJsonLayer.renderRoute = renderRoute;
-      window.geoJsonLayer.renderAllNetwork = renderAllNetwork;
+      window.geoJsonLayer.renderAllNetwork = renderAllNetwork; // Ensuring renderAllNetwork is properly exposed
       window.geoJsonLayer.clearDisplayedFeatures = clearAllFeatures;
       window.geoJsonLayer.getNodeById = (id: string) => nodes.find(n => String(n.id) === String(id));
       window.geoJsonLayer.getLinkById = (id: string) => links.find(l => String(l.id) === String(id));

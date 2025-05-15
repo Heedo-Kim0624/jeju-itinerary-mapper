@@ -1,5 +1,5 @@
 
-// Naver Maps 전역 선언
+// Don't need to see the whole file, just fix the declaration issue
 declare global {
   interface Window {
     naver: any;

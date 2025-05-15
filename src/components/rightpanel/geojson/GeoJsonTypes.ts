@@ -1,3 +1,4 @@
+
 // Type definitions for GeoJSON rendering components
 import { GeoNode as OriginalGeoNode, GeoLink as OriginalGeoLink } from './GeoJsonTypes'; // Self-import for type alias if needed, or adjust if structure changes
 
@@ -57,26 +58,4 @@ declare global {
   }
 }
 
-// Specific GeoJSON property types (if deeply needed and defined)
-// These were causing import errors, so only define if they are truly distinct and used.
-// For now, assuming 'properties: any' on GeoNode/GeoLink is sufficient.
-/*
-export interface GeoJsonGeometry {
-  type: string;
-  coordinates: GeoCoordinates | GeoCoordinates[];
-}
-export type GeoCoordinates = [number, number] | [number, number][];
-
-export interface GeoJsonNodeProperties {
-  NODE_ID: string | number;
-  // ... other node properties
-}
-
-export interface GeoJsonLinkProperties {
-  LINK_ID: string | number;
-  F_NODE: string | number;
-  T_NODE: string | number;
-  LENGTH?: number;
-  // ... other link properties
-}
-*/
+// Removing the commented-out interfaces that were causing import errors
