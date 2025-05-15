@@ -1,16 +1,4 @@
 
-import { toast } from "sonner";
+import { useToast, toast } from "@/hooks/use-toast";
 
-export { toast };
-
-// Reexport a dummy useToast to avoid circular dependencies
-export const useToast = () => {
-  return {
-    toast,
-    dismiss: (toastId?: string) => {
-      if (toastId) {
-        toast.dismiss(toastId);
-      }
-    }
-  };
-};
+export { useToast, toast };
