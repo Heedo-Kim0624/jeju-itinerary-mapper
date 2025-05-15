@@ -1,12 +1,13 @@
-import React, { createContext, useContext, useRef } from 'react';
+
+import React, { createContext, useContext, useRef, Dispatch, SetStateAction } from 'react';
 import { Place } from '@/types/supabase';
-import { ItineraryDay } from '@/types/itinerary';
+import { ItineraryDay, ItineraryPlace } from '@/types/itinerary'; // ItineraryDay here has ItineraryPlace[]
 // Changed import from default to named
 import { useMapCore } from './useMapCore'; 
 import { ServerRouteResponse } from '@/types/schedule';
 import { 
   renderGeoJsonRoute, 
-  renderItineraryRoute, 
+  renderItineraryRoute as renderItineraryRouteExtension, // Renamed to avoid conflict
   clearPreviousHighlightedPath,
   showRouteForPlaceIndex,
   highlightSegment,
@@ -26,9 +27,9 @@ interface MapContextType {
     useColorByCategory?: boolean;
     onClick?: (place: Place, index: number) => void;
   }) => any[];
-  calculateRoutes: (places: Place[]) => void;
+  calculateRoutes: (places: Place[]) => void; // Added
   clearMarkersAndUiElements: () => void;
-  panTo: (locationOrCoords: string | {lat: number, lng: number}) => void;
+  panTo: (placeOrCoords: Place | ItineraryPlace | { lat: number; lng: number }) => void; // Updated signature
   showGeoJson: boolean;
   toggleGeoJsonVisibility: () => void;
   renderItineraryRoute: (itineraryDay: ItineraryDay | null) => void;
@@ -51,10 +52,8 @@ interface MapContextType {
   renderAllNetwork: (style?: any) => any[];
   geoJsonNodes: any[];
   geoJsonLinks: any[];
-  // 서버 경로 관련 기능 추가
-  setServerRoutes: (dayRoutes: Record<number, ServerRouteResponse>) => void;
-  serverRoutesData: Record<number, ServerRouteResponse>;
-  // Properties from useMapCore
+  setServerRoutes: (dayRoutes: Record<number, ServerRouteResponse>) => void; // Added
+  serverRoutesData: Record<number, ServerRouteResponse>; // Added
   setMapScriptLoaded: (loaded: boolean) => void;
   drawItineraryRoute: (daySchedule: ItineraryDay | null) => void;
   addItineraryDayMarkers: (daySchedule: ItineraryDay | null) => void;
@@ -67,16 +66,16 @@ const defaultContextValue: MapContextType = {
   isNaverLoaded: false,
   isMapError: false,
   addMarkers: () => [],
-  calculateRoutes: () => {},
+  calculateRoutes: () => { console.warn("calculateRoutes not implemented in default context"); }, // Added default
   clearMarkersAndUiElements: () => {},
-  panTo: () => {},
+  panTo: () => { console.warn("panTo not implemented in default context"); }, // Updated default
   showGeoJson: false,
   toggleGeoJsonVisibility: () => {},
-  renderItineraryRoute: () => {}, // Placeholder, will be overridden
+  renderItineraryRoute: () => {}, 
   clearAllRoutes: () => {},
   handleGeoJsonLoaded: () => {},
-  highlightSegment: () => {}, // Placeholder
-  clearPreviousHighlightedPath: () => {}, // Placeholder
+  highlightSegment: () => {}, 
+  clearPreviousHighlightedPath: () => {}, 
   isGeoJsonLoaded: false,
   checkGeoJsonMapping: () => ({ 
     totalPlaces: 0, 
@@ -87,14 +86,13 @@ const defaultContextValue: MapContextType = {
     message: '초기화되지 않음'
   }),
   mapPlacesWithGeoNodes: (places) => places,
-  showRouteForPlaceIndex: () => {}, // Placeholder
-  renderGeoJsonRoute: () => [], // Placeholder
-  renderAllNetwork: () => [], // Placeholder
+  showRouteForPlaceIndex: () => {}, 
+  renderGeoJsonRoute: () => [], 
+  renderAllNetwork: () => [], 
   geoJsonNodes: [],
   geoJsonLinks: [],
-  setServerRoutes: () => {},
-  serverRoutesData: {},
-  // from useMapCore
+  setServerRoutes: () => { console.warn("setServerRoutes not implemented in default context"); }, // Added default
+  serverRoutesData: {}, // Added default
   setMapScriptLoaded: () => {},
   drawItineraryRoute: () => {},
   addItineraryDayMarkers: () => {},
@@ -105,38 +103,36 @@ const MapContext = createContext<MapContextType>(defaultContextValue);
 
 export const useMapContext = () => useContext(MapContext);
 
-// Create a provider component that uses the useMapCore hook
 export const MapProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
-  // useMapCore returns an object with specific properties.
-  // We need to ensure MapContextType matches what useMapCore provides + extensions.
   const mapCoreValues = useMapCore({ 
-    // Provide default or actual props for useMapCore if needed
-    // For example:
-    // places: [],
-    // setSelectedPlace: () => {},
-    // serverRoutesData: {}, 
-    // loadGeoJsonData: false,
+    // Props for useMapCore, if any, go here
   });
   
   const extendedMapCore: MapContextType = {
-    ...defaultContextValue, // Start with defaults to ensure all keys are present
-    ...mapCoreValues, // Spread values from the hook
-    mapContainer: mapCoreValues.mapContainerRef, // mapContainerRef is the actual ref object from useMapCore
-    isMapInitialized: !!mapCoreValues.map, // A simple way to check if map is initialized
-    // Add specific functions if they are not directly on mapCoreValues or need aliasing
-    renderGeoJsonRoute,
+    ...defaultContextValue, 
+    ...mapCoreValues, 
+    mapContainer: mapCoreValues.mapContainerRef, 
+    isMapInitialized: !!mapCoreValues.map,
+    panTo: mapCoreValues.panTo, // Ensure panTo from useMapCore is used
+    renderGeoJsonRoute, // This is the extension
     renderItineraryRoute: (itineraryDay: ItineraryDay | null) => {
-      renderItineraryRoute(itineraryDay); 
+      // Assuming this should call the extension or a method from useMapCore
+      // If useMapCore has drawItineraryRoute, that might be what's intended here
+      // For now, using the extension:
+      renderItineraryRouteExtension(itineraryDay); 
     },
     clearPreviousHighlightedPath,
     showRouteForPlaceIndex,
     highlightSegment,
     renderAllNetwork,
-    // Assuming these were spread correctly from mapCoreValues
+    // Explicitly assign properties that might be missing or need defaults from mapCoreValues
     addMarkers: mapCoreValues.addMarkers || defaultContextValue.addMarkers,
     calculateRoutes: mapCoreValues.calculateRoutes || defaultContextValue.calculateRoutes,
     setServerRoutes: mapCoreValues.setServerRoutes || defaultContextValue.setServerRoutes,
     serverRoutesData: mapCoreValues.serverRoutesData || defaultContextValue.serverRoutesData,
+    drawItineraryRoute: mapCoreValues.drawItineraryRoute || defaultContextValue.drawItineraryRoute,
+    addItineraryDayMarkers: mapCoreValues.addItineraryDayMarkers || defaultContextValue.addItineraryDayMarkers,
+
   };
   
   return (
@@ -145,3 +141,4 @@ export const MapProvider: React.FC<{children: React.ReactNode}> = ({ children })
     </MapContext.Provider>
   );
 };
+

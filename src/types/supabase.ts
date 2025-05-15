@@ -1,4 +1,3 @@
-
 export interface Place {
   id: string;
   name: string;
@@ -10,8 +9,8 @@ export interface Place {
   x: number;
   y: number;
   image_url: string;
-  road_address: string;
-  homepage: string;
+  road_address?: string;
+  homepage?: string;
   operationTimeData?: {
     [key: string]: number;
   };
@@ -25,8 +24,8 @@ export interface Place {
   instaLink?: string;
   operatingHours?: string;
   weight?: number;
-  isCandidate?: boolean;  // 후보 장소 여부 필드 추가
-  raw?: any; // 원본 데이터 저장을 위한 필드
+  isCandidate?: boolean;
+  raw?: any;
 }
 
 export interface SelectedPlace {
@@ -49,15 +48,9 @@ export interface TripDateTime {
   endTime: string;
 }
 
-// 새로운 타입 정의: 일정 생성 API 요청 페이로드
-export interface SchedulePayload {
-  selected_places: SelectedPlace[];
-  candidate_places: SelectedPlace[];
-  start_datetime: string;
-  end_datetime: string;
-}
-
-// 경로 데이터 인터페이스 추가
+// 경로 데이터 인터페이스 추가 - This was duplicated, ensure only one definition if identical or merge if different.
+// Assuming RouteData from itinerary.ts is the primary one, or they need to be reconciled.
+// For now, keeping the existing one here if it's used locally, but it might be a source of confusion.
 export interface RouteData {
   nodeIds?: string[];
   linkIds?: string[];

@@ -1,15 +1,22 @@
 import { Place } from '@/types/supabase';
 
-// Define ItineraryPlace for consistency across the application
-// Making road_address and homepage optional to match usage in the application
-export interface ItineraryPlace extends Omit<Place, 'road_address' | 'homepage'> {
+// Define ItineraryPlace. Since Place now has optional road_address and homepage,
+// ItineraryPlace can be simpler. If ItineraryPlace has no other unique properties,
+// it could even be an alias: export type ItineraryPlace = Place;
+// For now, let's ensure it's at least compatible.
+export interface ItineraryPlace extends Place {
+  // ItineraryPlace specific fields, if any, can be added here.
+  // If 'id', 'name', 'category' were Omit'ted to redefine them,
+  // ensure they are compatible with Place or serve a specific purpose.
+  // Based on the original Omit, it seems they were redefined, so let's keep that structure
+  // but ensure it aligns with the now more flexible Place type.
   id: string; 
   name: string; 
   category: string; 
-  // Making these optional since they are optional in actual usage
+  // road_address and homepage are now optional in the base Place type,
+  // so explicitly making them optional here is consistent.
   road_address?: string; 
   homepage?: string;
-  // Other fields are inherited from Place
 }
 
 // Define the RouteData interface
@@ -26,6 +33,7 @@ export interface ItineraryDay {
   totalDistance: number;
   startTime?: string;
   endTime?: string;
+  routeNodeIds?: string[]; // Or string[] | number[] if mixed types are possible
 }
 
 // Define the Itinerary interface
@@ -93,4 +101,4 @@ export function convertToSupabaseItineraryDay(day: any): ItineraryDay {
 }
 
 // Export Place from itinerary types using 'export type'
-export type { Place };
+export type { Place as SupabasePlace } from '@/types/supabase'; // Alias to avoid naming conflict if needed locally

@@ -1,19 +1,19 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { ItineraryDay, RouteData, ItineraryPlace } from '@/types/itinerary';
-import { Place } from '@/types/supabase';
+import { useCallback, useEffect, useRef, useState, Dispatch, SetStateAction } from 'react';
+import { ItineraryDay, RouteData, ItineraryPlace } from '@/types/itinerary'; // ItineraryDay uses ItineraryPlace
+import { Place } from '@/types/supabase'; // Place now has optional fields
 import { getCategoryColor, routeStyles } from '@/utils/map/mapStyles';
 import { ServerRouteResponse } from '@/types/schedule';
 
 interface UseMapCoreProps {
-  places?: Place[]; // General places, could be ItineraryPlace[] if more specific data is needed
-  selectedPlace?: Place | null; // Could be ItineraryPlace | null
+  places?: Place[]; 
+  selectedPlace?: Place | null; 
   itinerary?: ItineraryDay[] | null;
   selectedDay?: number | null;
   initialCenter?: { lat: number; lng: number };
   initialZoom?: number;
   onMapLoad?: (map: any) => void;
-  setSelectedPlace?: (place: Place | ItineraryPlace | null) => void; // Allow ItineraryPlace
-  serverRoutesData?: Record<number, ServerRouteResponse>;
+  setSelectedPlace?: (place: Place | ItineraryPlace | null) => void; 
+  serverRoutesDataInput?: Record<number, ServerRouteResponse>; // Renamed to avoid conflict with state
   loadGeoJsonData?: boolean;
 }
 
@@ -26,7 +26,7 @@ export const useMapCore = ({
   initialZoom = 10,
   onMapLoad,
   setSelectedPlace,
-  serverRoutesData = {},
+  serverRoutesDataInput = {}, // Use the renamed prop
   loadGeoJsonData = false,
 }: UseMapCoreProps) => {
   const [map, setMap] = useState<any>(null);
@@ -35,13 +35,34 @@ export const useMapCore = ({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const markers = useRef<any[]>([]);
   const highlightedMarker = useRef<any | null>(null);
-  const polylines = useRef<any[]>([]); // To keep track of drawn routes
+  const polylines = useRef<any[]>([]);
+  
+  // State for serverRoutesData and its setter
+  const [serverRoutesData, setServerRoutesDataState] = useState<Record<number, ServerRouteResponse>>(serverRoutesDataInput);
 
-  // Function to pan the map to a specific location
-  const panTo = useCallback((place: Place | ItineraryPlace) => { // Allow ItineraryPlace
-    if (!map || typeof place.y !== 'number' || typeof place.x !== 'number') return;
-    
-    const position = new window.naver.maps.LatLng(place.y, place.x);
+  const setServerRoutes = useCallback((dayRoutes: Record<number, ServerRouteResponse>) => {
+    setServerRoutesDataState(dayRoutes);
+  }, []);
+
+  // Placeholder for calculateRoutes
+  const calculateRoutes = useCallback((routePlaces: Place[]) => {
+    console.log("Calculating routes for:", routePlaces);
+    // Actual route calculation logic would go here
+  }, [map]);
+
+  const panTo = useCallback((placeOrCoords: Place | ItineraryPlace | { lat: number; lng: number }) => {
+    if (!map) return;
+
+    let position;
+    if ('x' in placeOrCoords && 'y' in placeOrCoords) { // It's Place or ItineraryPlace
+        if (typeof placeOrCoords.y !== 'number' || typeof placeOrCoords.x !== 'number') return;
+        position = new window.naver.maps.LatLng(placeOrCoords.y, placeOrCoords.x);
+    } else if ('lat' in placeOrCoords && 'lng' in placeOrCoords) { // It's {lat, lng}
+        position = new window.naver.maps.LatLng(placeOrCoords.lat, placeOrCoords.lng);
+    } else {
+        console.warn("panTo called with invalid arguments:", placeOrCoords);
+        return;
+    }
     map.panTo(position);
   }, [map]);
 
@@ -77,7 +98,7 @@ export const useMapCore = ({
           if (setSelectedPlace) {
             setSelectedPlace(place);
           }
-          panTo(place);
+          panTo(place); // panTo now accepts Place | ItineraryPlace
         });
 
         markers.current.push(marker);
@@ -97,7 +118,7 @@ export const useMapCore = ({
   }, [addMarkersInternal]);
 
   const addItineraryDayMarkers = useCallback((daySchedule: ItineraryDay | null) => {
-      if (daySchedule && daySchedule.places) {
+      if (daySchedule && daySchedule.places) { // daySchedule.places is ItineraryPlace[]
           addMarkersInternal(daySchedule.places, true);
       } else {
           // Clear markers if no day schedule or no places
@@ -127,11 +148,10 @@ export const useMapCore = ({
       console.log(`[MapCore] Drawing route for Day ${daySchedule.day} with ${daySchedule.route.nodeIds.length} nodes.`);
       try {
         const renderedFeatures = window.geoJsonLayer.renderRoute(
-          daySchedule.route.nodeIds.map(String), // Ensure string array
-          daySchedule.route.linkIds.map(String), // Ensure string array
+          daySchedule.route.nodeIds.map(String), 
+          daySchedule.route.linkIds.map(String), 
           routeStyles.default
         );
-        // Assuming renderRoute might return Naver Maps Polyline objects or similar
         if (Array.isArray(renderedFeatures)) {
             polylines.current.push(...renderedFeatures.filter(f => f && typeof f.setMap === 'function'));
         }
@@ -143,7 +163,6 @@ export const useMapCore = ({
     }
   }, [map, clearRoutes]);
 
-
   // Effect to draw route when selectedDay or itinerary changes
   useEffect(() => {
     clearRoutes(); // Clear existing routes first
@@ -151,14 +170,14 @@ export const useMapCore = ({
       const dayData = itinerary.find(d => d.day === selectedDay);
       if (dayData) {
         // Prefer server route data if available for this day
-        const serverDayRoute = serverRoutesData?.[selectedDay];
+        const serverDayRoute = serverRoutesData?.[selectedDay]; // Use state serverRoutesData
         if (serverDayRoute?.nodeIds && serverDayRoute?.linkIds && window.geoJsonLayer?.renderRoute) {
           console.log(`[useMapCore] Drawing SERVER route for day ${selectedDay}. Nodes: ${serverDayRoute.nodeIds.length}`);
           try {
             const features = window.geoJsonLayer.renderRoute(
-              serverDayRoute.nodeIds.map(String), // Ensure string[]
-              serverDayRoute.linkIds.map(String), // Ensure string[]
-              routeStyles.highlight // Use highlight style for server routes
+              serverDayRoute.nodeIds.map(String), 
+              serverDayRoute.linkIds.map(String), 
+              routeStyles.highlight 
             );
             if (Array.isArray(features)) {
                 polylines.current.push(...features.filter(f => f && typeof f.setMap === 'function'));
@@ -186,8 +205,7 @@ export const useMapCore = ({
         }
       }
     }
-  // serverRoutesData is a dependency. Map is also critical.
-  }, [selectedDay, itinerary, map, serverRoutesData, clearRoutes]); 
+  }, [selectedDay, itinerary, map, serverRoutesData, clearRoutes]); // Use state serverRoutesData
 
 
   // Effect for handling server-provided routes (This might be redundant if combined above, review)
@@ -286,6 +304,8 @@ export const useMapCore = ({
     addMarkers, // general place markers
     addItineraryDayMarkers, // itinerary day specific markers
     drawItineraryRoute, // to draw route for a specific day
-    // SelectedPlace is managed by parent, setSelectedPlace is a prop
+    calculateRoutes,    // Added to return
+    setServerRoutes,    // Added to return
+    serverRoutesData,   // Added to return
   };
 };
