@@ -6,7 +6,8 @@ import { toast } from 'sonner';
 import { useTripDetails } from './use-trip-details';
 import { getMinimumRecommendationCount } from '@/lib/itinerary/itinerary-utils';
 
-// 카테고리 한글 변환 함수
+// This function is used locally and also needed for grouping in use-left-panel.
+// Consider moving to a shared utility file e.g., src/utils/categoryUtils.ts
 const getCategoryKorean = (category?: string): string => {
   if (!category) return '기타';
   
@@ -34,13 +35,13 @@ export const useSelectedPlaces = () => {
     '카페': [],
   });
 
-  // 여행 기간 정보 가져오기
+  // Get trip details to check accommodation limits and trip duration
   const { tripDuration } = useTripDetails();
 
-  // 모든 카테고리 선택 여부 계산
+  // allCategoriesSelected 상태를 명확하게 계산
   const [allCategoriesSelected, setAllCategoriesSelected] = useState(false);
   
-  // 카테고리별 선택 상태 감시
+  // 더 자세한 디버깅을 위해 카테고리별 선택 여부 상태 추가
   useEffect(() => {
     // 각 카테고리별로 최소 1개 이상 선택되었는지 확인
     const hasAccommodation = selectedPlacesByCategory['숙소'].length > 0;
@@ -63,7 +64,7 @@ export const useSelectedPlaces = () => {
 
   const { panTo, addMarkers, clearMarkersAndUiElements } = useMapContext();
 
-  // 숙소 제한 확인 함수
+  // Check if accommodation limit reached
   const isAccommodationLimitReached = (currentCount: number): boolean => {
     if (!tripDuration || tripDuration < 1) return false;
     
@@ -72,17 +73,18 @@ export const useSelectedPlaces = () => {
   };
 
   const handleSelectPlace = (place: Place, checked: boolean, category: string | null = null) => {
-    // 카테고리 확인
-    const providedCategory = category || getCategoryKorean(place.category);
+    // 카테고리가 제공되었는지 확인하고, 누락된 경우 콘솔 로그 추가
+    const providedCategory = category || getCategoryKorean(place.category); // Fallback if category prop is null
     
-    if (!providedCategory || !['숙소', '관광지', '음식점', '카페', '기타'].includes(providedCategory)) {
+    if (!providedCategory || !['숙소', '관광지', '음식점', '카페', '기타'].includes(providedCategory) ) {
        console.warn('유효하지 않거나 알 수 없는 카테고리 값입니다:', providedCategory, '장소:', place.name);
     }
 
+    // 타입 호환성을 위해 place.id가 string인지 확인
     const normalizedPlace = { ...place };
     
     if (checked) {
-      // 숙소 추가 시 제한 확인
+      // If trying to add accommodation, check limit
       if (providedCategory === '숙소') {
         const currentAccommodationCount = selectedPlacesByCategory['숙소'].length;
         
@@ -118,8 +120,10 @@ export const useSelectedPlaces = () => {
   };
 
   const handleRemovePlace = (placeId: string) => {
+    // 타입 호환성을 위해 직접 비교
     const placeToRemove = selectedPlaces.find(p => p.id === placeId);
     
+    // 장소 제거 시 해당 카테고리에서도 제거
     setSelectedPlaces(prevPlaces => prevPlaces.filter(p => p.id !== placeId));
     
     if (placeToRemove) {
@@ -141,7 +145,7 @@ export const useSelectedPlaces = () => {
     panTo({ lat: place.y, lng: place.x });
   };
 
-  // 자동 보완 함수 개선 - 중복 제거 및 fallback 로직 추가
+  // 후보 장소 자동 보완 기능 - 디버깅 로그 추가
   const autoCompleteWithCandidates = (
     currentSelectedPlaces: Place[], 
     recommendedPlacesByCategory: { [category: string]: Place[] }, 
@@ -183,7 +187,7 @@ export const useSelectedPlaces = () => {
       '숙소': [], '관광지': [], '음식점': [], '카페': []
     };
     
-    // 선택된 장소를 카테고리별로 분류
+    // 선택된 장소를 카테고리별로 분류하고 로그 출력
     currentSelectedPlaces.forEach(place => {
       const koreanCategory = getCategoryKorean(place.category);
       if (koreanCategory && currentSelectedCountsByKoreanCategory[koreanCategory]) {
@@ -202,11 +206,7 @@ export const useSelectedPlaces = () => {
     const finalPlaces: Place[] = [...currentSelectedPlaces];
     const autoCompletedCandidatePlaces: Place[] = [];
     
-    // 선택된 장소의 ID 목록을 미리 생성하여 중복 체크에 활용
-    const selectedPlaceIds = new Set(currentSelectedPlaces.map(p => p.id));
-    const addedCandidateIds = new Set<string>();
-    
-    // 영어 카테고리 키를 기반으로 순회
+    // Iterate using English category keys from minimumRequirements
     Object.entries(minimumRequirements).forEach(([categoryEng, minCount]) => {
       const categoryKorean = categoryEngToKorMapping[categoryEng];
       if (!categoryKorean) {
@@ -225,37 +225,23 @@ export const useSelectedPlaces = () => {
         
         console.log(`[자동 보완] ${categoryKorean} 카테고리 추천 후보 풀:`, 
           availableRecommended.length > 0 
-            ? `${availableRecommended.slice(0, 5).map(p => ({name: p.name, id: p.id}))} ${availableRecommended.length > 5 ? ' 외 ' + (availableRecommended.length - 5) + '개' : ''}`
+            ? availableRecommended.slice(0, 5).map(p => ({name: p.name, id: p.id})) + `${availableRecommended.length > 5 ? ' 외 ' + (availableRecommended.length - 5) + '개' : ''}`
             : '없음'
         );
 
-        // 중복 없는 후보 추가 - ID로 필터링
         const candidatesToAdd = availableRecommended
-          .filter(rp => !selectedPlaceIds.has(rp.id) && !addedCandidateIds.has(rp.id))
+          .filter(rp => !currentSelectedPlaces.some(sp => sp.id === rp.id) && 
+                        !autoCompletedCandidatePlaces.some(acp => acp.id === rp.id))
           .slice(0, shortage);
           
-        // 후보가 부족한 경우 - fallback 전략 적용 (인접 지역 장소 추가)
-        if (candidatesToAdd.length < shortage) {
-          console.warn(`[자동 보완] ${categoryKorean} 카테고리의 추천 장소가 부족합니다 (필요: ${shortage}, 가능: ${candidatesToAdd.length})`);
-          
-          // 필요한 만큼 추가 fallback 지역 장소 추가 시도
-          // 여기에서는 예시로만 구현했으며, 실제로는 인접 지역 또는 점수가 낮은 장소도 포함하는 로직이 필요
-          // TODO: 추가 fallback 로직 구현
-          toast.warning(`${categoryKorean} 카테고리의 추천 장소가 부족합니다. 다른 지역/키워드를 선택해 보세요.`);
-        }
-        
         if (candidatesToAdd.length > 0) {
           console.log(`[자동 보완] ${categoryKorean} 카테고리에 ${candidatesToAdd.length}개 장소 자동 추가:`, 
             candidatesToAdd.map(p => p.name));
           
-          // 후보로 추가된 장소 표시
           const markedCandidates = candidatesToAdd.map(p => ({
             ...p,
             isCandidate: true 
           }));
-          
-          // ID 추적을 위해 Set에 추가
-          candidatesToAdd.forEach(p => addedCandidateIds.add(p.id));
           
           finalPlaces.push(...markedCandidates);
           autoCompletedCandidatePlaces.push(...markedCandidates);
@@ -287,12 +273,7 @@ export const useSelectedPlaces = () => {
       console.log('[자동 보완 완료] 최종 카테고리별 장소 수:', finalCounts);
       
       // 후보 목록에 추가
-      setCandidatePlaces(prev => {
-        // 기존 후보 목록에 없는 새 후보만 추가
-        const existingIds = new Set(prev.map(p => p.id));
-        const newCandidates = autoCompletedCandidatePlaces.filter(acp => !existingIds.has(acp.id));
-        return [...prev, ...newCandidates];
-      });
+      setCandidatePlaces(prev => [...prev, ...autoCompletedCandidatePlaces.filter(acp => !prev.some(p => p.id === acp.id))]);
       
       // 사용자에게 알림
       toast.info(`${autoCompletedCandidatePlaces.length}개의 추천 장소가 자동으로 추가되었습니다.`);
@@ -322,7 +303,7 @@ export const useSelectedPlaces = () => {
       여행_일수: tripDays
     });
     
-    // 카테고리별로 그룹화된 추천 장소로 자동 보완
+    // autoCompleteWithCandidates expects KOREAN category names as keys
     const enrichedPlaces = autoCompleteWithCandidates(placesToSchedule, availableRecommendedPlacesByCategory, tripDays);
 
     const userSelected: SelectedPlace[] = enrichedPlaces

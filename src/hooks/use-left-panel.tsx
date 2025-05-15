@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react'; // React 추가
+import { useState, useEffect } from 'react';
 import { useSelectedPlaces } from './use-selected-places';
 import { useTripDetails } from './use-trip-details';
 import { useCategoryResults } from './use-category-results';
@@ -9,9 +9,6 @@ import { useCategorySelection } from './use-category-selection';
 import { useCategoryHandlers } from './left-panel/use-category-handlers';
 import { useItineraryHandlers } from './left-panel/use-itinerary-handlers';
 import { useInputState } from './left-panel/use-input-state';
-import { CategoryName } from '@/utils/categoryUtils'; // CategoryName 임포트
-import { Place } from '@/types/supabase'; // Place 임포트
-import { RegionDetails } from '@/types/region'; // RegionDetails 임포트
 
 /**
  * 왼쪽 패널 기능 통합 훅
@@ -23,10 +20,10 @@ export const useLeftPanel = () => {
   const tripDetails = useTripDetails();
   
   // 상태 관리
-  const [selectedCategory, setSelectedCategory] = useState<CategoryName | null>(null); // 타입 CategoryName으로 변경
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [showCategoryResultScreen, setShowCategoryResultScreen] = useState(false);
   const [currentPanel, setCurrentPanel] = useState<'region' | 'date' | 'category' | 'itinerary'>('region');
-  const [showCategoryResult, setShowCategoryResult] = useState<CategoryName | null>(null); // 타입 CategoryName으로 변경
+  const [showCategoryResult, setShowCategoryResult] = useState<string | null>(null);
   
   // 입력값 관리
   const { directInputValues, onDirectInputChange } = useInputState();
@@ -35,8 +32,8 @@ export const useLeftPanel = () => {
   const keywordsAndInputs = {
     directInputValues,
     onDirectInputChange,
-    handleConfirmCategory: (category: CategoryName, finalKeywords: string[], clearSelection: boolean = false) => { // 타입 CategoryName으로 변경
-      categorySelection.handleConfirmCategory(category, finalKeywords, clearSelection);
+    handleConfirmCategory: (category: string, finalKeywords: string[], clearSelection: boolean = false) => {
+      categorySelection.handleConfirmCategory(category as any, finalKeywords, clearSelection);
       if (clearSelection) {
         setShowCategoryResult(category);
       }
@@ -73,7 +70,7 @@ export const useLeftPanel = () => {
     itinerary,
     selectedItineraryDay,
     showItinerary,
-    // setItinerary, // setItinerary는 generateItinerary를 통해 관리될 수 있음
+    setItinerary,
     setSelectedItineraryDay,
     setShowItinerary,
     handleSelectItineraryDay,
@@ -94,9 +91,6 @@ export const useLeftPanel = () => {
     showCategoryResult,
     setShowCategoryResult
   };
-  
-  const selectedRegionDetails: RegionDetails[] = regionSelection.selectedRegions;
-
 
   // 카테고리 결과 관리
   const { 
@@ -105,19 +99,18 @@ export const useLeftPanel = () => {
     recommendedPlaces,
     normalPlaces,
     refetch
-  } = useCategoryResults(showCategoryResult, 
+  } = useCategoryResults(showCategoryResult as any, 
     showCategoryResult ? categorySelection.selectedKeywordsByCategory[showCategoryResult] || [] : [], 
-    selectedRegionDetails); // RegionDetails[] 타입으로 전달
-
+    regionSelection.selectedRegions);
 
   const categoryResults = {
-    recommendedPlaces: (recommendedPlaces || []) as Place[], // 타입 단언
-    normalPlaces: (normalPlaces || []) as Place[] // 타입 단언
+    recommendedPlaces: recommendedPlaces || [],
+    normalPlaces: normalPlaces || []
   };
 
   // 카테고리 핸들러
   const categoryHandlers = useCategoryHandlers();
-  const handleCategorySelect = (category: CategoryName) => categoryHandlers.handleCategorySelect(category, refetch); // 타입 CategoryName으로 변경
+  const handleCategorySelect = (category: string) => categoryHandlers.handleCategorySelect(category, refetch);
   const handleCloseCategoryResult = () => categoryHandlers.handleCloseCategoryResult(setShowCategoryResult);
   const handleConfirmCategory = () => categoryHandlers.handleConfirmCategory(selectedCategory);
 
@@ -128,15 +121,15 @@ export const useLeftPanel = () => {
       tripDetails,
       selectedPlaces,
       prepareSchedulePayload,
-      recommendedPlaces as Place[], // 타입 단언
+      recommendedPlaces,
       generateItinerary,
       setShowItinerary,
-      setCurrentPanel // 타입을 올바르게 전달 (Dispatch<SetStateAction<...>>)
+      setCurrentPanel
     );
   };
   
   const handleCloseItinerary = () => {
-    itineraryHandlers.handleCloseItinerary(setShowItinerary, setCurrentPanel); // 타입을 올바르게 전달
+    itineraryHandlers.handleCloseItinerary(setShowItinerary, setCurrentPanel);
   };
 
   // 일정이 생성되면 첫 번째 날짜 선택
@@ -158,15 +151,12 @@ export const useLeftPanel = () => {
     selectedCategory,
     showCategoryResultScreen,
     currentPanel,
-    setCurrentPanel, // setCurrentPanel을 반환하여 LeftPanel에서 직접 사용
     isCategoryLoading,
     categoryError,
     categoryResults,
     handleCategorySelect,
     handleCloseCategoryResult,
     handleConfirmCategory,
-    handleCloseItinerary,
-    // onRegionsChange 와 같은 함수는 regionSelection 객체 내에 있어야 함
-    // setKeywords, clearKeywords는 categorySelection 객체 내에 있어야 함
+    handleCloseItinerary
   };
 };

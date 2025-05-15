@@ -26,14 +26,13 @@ export interface LinkProperties {
 }
 
 export interface GeoJsonFeature {
-  type: "Feature"; // "Feature"로 고정
+  type: string;
   properties: NodeProperties | LinkProperties;
   geometry: GeoJsonGeometry;
 }
 
-
 export interface GeoJsonCollection {
-  type: "FeatureCollection"; // "FeatureCollection"으로 고정
+  type: string;
   features: GeoJsonFeature[];
 }
 
@@ -104,7 +103,7 @@ export interface GeoJsonLayerRef {
   clearDisplayedFeatures: () => void;
   getNodeById: (id: string) => GeoNode | undefined;
   getLinkById: (id: string) => GeoLink | undefined;
-  renderAllNetwork?: () => any[]; // renderAllNetwork 함수 추가
+  renderAllNetwork: () => any[];  // 전체 네트워크 렌더링 함수
 }
 
 // GeoJSON 레이어 속성
@@ -136,7 +135,7 @@ export interface ServerRouteResponse {
 // 글로벌 네임스페이스 선언
 declare global {
   interface Window {
-    geoJsonLayer?: GeoJsonLayerRef; // 타입을 GeoJsonLayerRef로 명시하고 optional로 변경
+    geoJsonLayer: GeoJsonLayerRef;
     naver?: any;
   }
 }

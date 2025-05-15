@@ -1,6 +1,6 @@
+
 import { useCallback, useRef } from 'react';
-import { GeoNode, GeoLink, RouteStyle } from '@/components/rightpanel/geojson/GeoJsonTypes';
-import { Place } from '@/types/supabase';
+import { Place, ItineraryDay } from '@/types/supabase';
 import { ServerRouteResponse, ExtractedRouteData } from '@/types/schedule';
 
 /**
@@ -99,7 +99,7 @@ export const useMapFeatures = (map: any) => {
     }
   }, [map, extractNodeAndLinkIds, clearPreviousHighlightedPath, renderGeoJsonRoute]);
 
-  // 일정 경로 렌더링 함수 - 서버 데이��� 활용
+  // 일정 경로 렌더링 함수 - 서버 데이터 활용
   const renderItineraryRoute = useCallback((itineraryDay: ItineraryDay | null, serverRoutesData: Record<number, ServerRouteResponse>, renderDayRoute: (day: ItineraryDay) => void, clearAllRoutes: () => void) => {
     if (!map || !itineraryDay) {
       return;
