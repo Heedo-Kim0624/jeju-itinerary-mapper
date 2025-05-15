@@ -2,29 +2,16 @@
 import { useState, useCallback } from 'react';
 import { Place } from '@/types/supabase';
 import { toast } from 'sonner';
-import { useGeoJsonManager } from './useGeoJsonManager';
-import { useGeoJsonFeatures } from './useGeoJsonFeatures';
-import { useGeoJsonInterface } from './useGeoJsonInterface';
 
 /**
- * GeoJson 상태 관리 통합 훅
+ * GeoJson 상태 관리 훅
  */
 export const useGeoJsonState = () => {
-  // GeoJSON 가시성 상태
+  // GeoJSON 관련 상태
   const [showGeoJson, setShowGeoJson] = useState(false);
-  
-  // GeoJSON 데이터 관리
-  const {
-    isLoading,
-    isLoaded: isGeoJsonLoaded,
-    error,
-    nodes: geoJsonNodes,
-    links: geoJsonLinks,
-    handleLoadSuccess,
-    handleLoadError,
-    getNodeById,
-    getLinkById
-  } = useGeoJsonManager();
+  const [isGeoJsonLoaded, setIsGeoJsonLoaded] = useState(false);
+  const [geoJsonNodes, setGeoJsonNodes] = useState<any[]>([]);
+  const [geoJsonLinks, setGeoJsonLinks] = useState<any[]>([]);
   
   // GeoJSON 가시성 토글
   const toggleGeoJsonVisibility = useCallback(() => {
@@ -38,8 +25,10 @@ export const useGeoJsonState = () => {
       링크수: links.length
     });
     
-    handleLoadSuccess(nodes, links);
-  }, [handleLoadSuccess]);
+    setGeoJsonNodes(nodes);
+    setGeoJsonLinks(links);
+    setIsGeoJsonLoaded(true);
+  }, []);
 
   // 장소-GeoJSON 노드 매핑 품질 검사
   const checkGeoJsonMapping = useCallback((places: Place[]) => {
@@ -91,11 +80,6 @@ export const useGeoJsonState = () => {
     geoJsonLinks,
     toggleGeoJsonVisibility,
     handleGeoJsonLoaded,
-    checkGeoJsonMapping,
-    getNodeById,
-    getLinkById,
-    isLoading,
-    error,
-    handleLoadError
+    checkGeoJsonMapping
   };
 };

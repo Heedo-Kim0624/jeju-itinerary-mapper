@@ -10,14 +10,14 @@ export interface GeoJsonGeometry {
   coordinates: GeoCoordinates | GeoCoordinates[] | GeoCoordinates[][];
 }
 
-export interface NodeProperties {
+export interface GeoJsonNodeProperties {
   NODE_ID: number;
   NODE_TYPE: string;
   NODE_NAME: string;
   [key: string]: any;
 }
 
-export interface LinkProperties {
+export interface GeoJsonLinkProperties {
   LINK_ID: number;
   F_NODE: number;
   T_NODE: number;
@@ -27,7 +27,7 @@ export interface LinkProperties {
 
 export interface GeoJsonFeature {
   type: string;
-  properties: NodeProperties | LinkProperties;
+  properties: GeoJsonNodeProperties | GeoJsonLinkProperties;
   geometry: GeoJsonGeometry;
 }
 
@@ -41,7 +41,7 @@ export interface GeoNode {
   id: string;
   type: 'node';
   geometry: GeoJsonGeometry;
-  properties: NodeProperties;
+  properties: GeoJsonNodeProperties;
   coordinates: GeoCoordinates;
   adjacentLinks: string[];
   adjacentNodes: string[];
@@ -53,7 +53,7 @@ export interface GeoLink {
   id: string;
   type: 'link';
   geometry: GeoJsonGeometry;
-  properties: LinkProperties;
+  properties: GeoJsonLinkProperties;
   coordinates: GeoCoordinates[];
   fromNode: string;
   toNode: string;
@@ -72,38 +72,12 @@ export interface RouteStyle {
   zIndex?: number;
 }
 
-// 렌더러 컴포넌트 Props
-export interface NodeRendererProps {
-  map: any;
-  visible: boolean;
-  nodes: GeoNode[];
-  style: RouteStyle;
-  onMarkersCreated: (markers: any[]) => void;
-}
-
-export interface LinkRendererProps {
-  map: any;
-  visible: boolean; 
-  links: GeoLink[];
-  style: RouteStyle;
-  onPolylinesCreated: (polylines: any[]) => void;
-}
-
-export interface GeoJsonRendererProps {
-  map: any;
-  visible: boolean;
-  nodes: GeoNode[];
-  links: GeoLink[];
-  onDisplayedFeaturesChange?: (markers: any[], polylines: any[]) => void;
-}
-
 // GeoJson 레이어 참조를 위한 타입
 export interface GeoJsonLayerRef {
   renderRoute: (nodeIds: string[], linkIds: string[], style?: RouteStyle) => any[];
   clearDisplayedFeatures: () => void;
   getNodeById: (id: string) => GeoNode | undefined;
   getLinkById: (id: string) => GeoLink | undefined;
-  renderAllNetwork: () => any[];  // 전체 네트워크 렌더링 함수
 }
 
 // GeoJSON 레이어 속성
@@ -115,27 +89,9 @@ export interface GeoJsonLayerProps {
   onGeoJsonLoaded?: (nodes: GeoNode[], links: GeoLink[]) => void;
 }
 
-// GeoJSON 로더 속성
-export interface GeoJsonLoaderProps {
-  isMapInitialized: boolean;
-  isNaverLoaded: boolean;
-  onLoadSuccess: (nodes: GeoNode[], links: GeoLink[]) => void;
-  onLoadError: (error: Error) => void;
-}
-
-// 서버 경로 응답 타입
-export interface ServerRouteResponse {
-  status: string;
-  message: string;
-  nodeIds?: string[];
-  linkIds?: string[];
-  data?: any;
-}
-
 // 글로벌 네임스페이스 선언
 declare global {
   interface Window {
     geoJsonLayer: GeoJsonLayerRef;
-    naver?: any;
   }
 }
