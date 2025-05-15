@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Place } from '@/types/supabase';
-import { NormalizedPlace } from '@/lib/jeju/interfaces';
+import { NormalizedPlace } from '@/lib/jeju/interfaces'; // NormalizedPlace 사용되지 않으므로 제거 가능성 있음
 
 // 컴포넌트 Props 타입 정의
 interface CategoryResultsPanelProps {
@@ -35,8 +35,8 @@ const CategoryResultsPanel: React.FC<CategoryResultsPanelProps> = ({
 
   // 주소 정보 안전하게 접근하는 함수
   const getAddress = (place: Place): string => {
-    if (place.roadAddress) return place.roadAddress;
-    if (place.lotAddress) return place.lotAddress || '';
+    if (place.road_address) return place.road_address;
+    if (place.lot_address) return place.lot_address || '';
     return '주소 정보 없음';
   };
 

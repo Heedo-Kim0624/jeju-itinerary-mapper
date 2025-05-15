@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import { RegionDetails } from '@/types/region';
-import RegionPanel from './RegionPanel';
+import RegionPanel from './RegionPanel'; // 수정된 경로
 import { REGIONS_DATA } from '@/utils/regionData';
 
 interface RegionPanelHandlerProps {
@@ -15,6 +14,7 @@ const RegionPanelHandler: React.FC<RegionPanelHandlerProps> = ({
   onRegionsSelected,
   selectedRegions
 }) => {
+// ... keep existing code (RegionPanelHandler logic)
   const [regions, setRegions] = useState<RegionDetails[]>(REGIONS_DATA);
   const [selected, setSelected] = useState<RegionDetails[]>(selectedRegions || []);
 

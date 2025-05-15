@@ -7,13 +7,14 @@
 const NAVER_CLIENT_ID = import.meta.env.VITE_NAVER_CLIENT_ID || '';
 
 // 네이버 지도 타입 정의
-// 전역 window 객체에 naver 프로퍼티 추가
-declare global {
-  interface Window {
-    naver: any;
-    N: any;
-  }
-}
+// 전역 window 객체에 naver 프로퍼티 추가 (다른 파일에서의 선언과 충돌 방지 위해 주의)
+// GeoJsonTypes.ts 에서 이미 Window 확장이 이루어지고 있으므로, 여기서는 중복 선언을 피하거나 맞춰야 함.
+// declare global {
+//   interface Window {
+//     naver?: any; // 다른 곳에서 이미 선언되었다면 여기서는 제거하거나 optional로 유지
+//     N?: any;
+//   }
+// }
 
 // 로드 상태 추적
 let isLoading = false;
