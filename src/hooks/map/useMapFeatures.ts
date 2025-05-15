@@ -1,14 +1,8 @@
 
 import { useCallback, useRef } from 'react';
 import { Place } from '@/types/supabase';
-import { ServerRouteResponse } from '@/types/schedule';
+import { ServerRouteResponse, ExtractedRouteData } from '@/types/schedule';
 import { ItineraryDay } from '@/hooks/use-itinerary-creator';
-
-// Define ExtractedRouteData interface locally
-interface ExtractedRouteData {
-  nodeIds: string[];
-  linkIds: string[];
-}
 
 /**
  * 지도 특성(마커, 경로 등) 관리 훅
