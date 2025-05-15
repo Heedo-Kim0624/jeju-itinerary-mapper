@@ -165,6 +165,33 @@ const GeoJsonRenderer: React.FC<GeoJsonRendererProps> = ({
     
     return renderedFeatures;
   };
+
+  // 전체 네트워크 렌더링 함수
+  const renderAllNetwork = (style: RouteStyle = DEFAULT_STYLE) => {
+    // 기존에 표시된 피처 제거
+    clearAllFeatures();
+    
+    console.log('전체 GeoJSON 네트워크 렌더링:', { 노드: nodes.length, 링크: links.length });
+    
+    const renderedFeatures: any[] = [];
+    
+    // 성능을 위해 모든 링크/노드의 일부만 렌더링
+    const linkLimit = Math.min(500, links.length);
+    const linkStep = Math.max(1, Math.floor(links.length / linkLimit));
+    
+    for (let i = 0; i < links.length; i += linkStep) {
+      const link = links[i];
+      const polyline = renderLink(link, style);
+      if (polyline) renderedFeatures.push(polyline);
+    }
+    
+    // 변경된 피처 알림
+    if (onDisplayedFeaturesChange) {
+      onDisplayedFeaturesChange(markersRef.current, polylinesRef.current);
+    }
+    
+    return renderedFeatures;
+  };
   
   // 모든 피처 제거
   const clearAllFeatures = () => {
@@ -194,12 +221,18 @@ const GeoJsonRenderer: React.FC<GeoJsonRendererProps> = ({
         return renderRoute(nodeIds, linkIds, style);
       };
       
+      const originalRenderAllNetwork = window.geoJsonLayer.renderAllNetwork;
+      window.geoJsonLayer.renderAllNetwork = (style) => {
+        return renderAllNetwork(style);
+      };
+      
       const originalClear = window.geoJsonLayer.clearDisplayedFeatures;
       window.geoJsonLayer.clearDisplayedFeatures = clearAllFeatures;
       
       return () => {
         if (window.geoJsonLayer) {
           window.geoJsonLayer.renderRoute = originalRenderRoute;
+          window.geoJsonLayer.renderAllNetwork = originalRenderAllNetwork;
           window.geoJsonLayer.clearDisplayedFeatures = originalClear;
         }
       };

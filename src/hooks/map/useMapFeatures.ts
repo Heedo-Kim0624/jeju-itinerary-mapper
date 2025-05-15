@@ -1,7 +1,8 @@
 
 import { useCallback, useRef } from 'react';
-import { Place, ItineraryDay } from '@/types/supabase';
+import { Place } from '@/types/supabase';
 import { ServerRouteResponse, ExtractedRouteData } from '@/types/schedule';
+import { ItineraryDay } from '@/hooks/use-itinerary-creator';
 
 /**
  * 지도 특성(마커, 경로 등) 관리 훅
@@ -51,7 +52,7 @@ export const useMapFeatures = (map: any) => {
   }, [map]);
 
   // 특정 장소 인덱스의 경로 하이라이트
-  const showRouteForPlaceIndex = useCallback((placeIndex: number, itineraryDay: ItineraryDay, serverRoutesData: Record<number, ServerRouteResponse>) => {
+  const showRouteForPlaceIndex = useCallback((placeIndex: number, itineraryDay: ItineraryDay) => {
     if (!map || !itineraryDay || !itineraryDay.places) return;
     
     // 인덱스 유효성 검사
@@ -64,24 +65,19 @@ export const useMapFeatures = (map: any) => {
     const toIndex = placeIndex;
     
     // 서버 경로 데이터 확인
-    const serverRouteData = serverRoutesData[itineraryDay.day];
+    // 구현 필요: 서버 데이터에서 특정 구간에 해당하는 노드/링크 추출
     
-    // GeoJSON 기반 경로 하이라이트
-    if (window.geoJsonLayer && serverRouteData) {
-      // 구현 필요: 서버 데이터에서 특정 구간에 해당하는 노드/링크 추출
-      
-      // 임시 구현: 전체 경로를 하이라이트
-      const { nodeIds, linkIds } = extractNodeAndLinkIds(serverRouteData);
-      
-      // 기존 하이라이트 제거
-      clearPreviousHighlightedPath();
-      
-      console.log(`${fromIndex + 1}에서 ${toIndex + 1}까지의 경로 하이라이트`);
-      
-      // 전체 경로 하이라이트
-      const renderedFeatures = renderGeoJsonRoute(
-        nodeIds,
-        linkIds,
+    // 기존 하이라이트 제거
+    clearPreviousHighlightedPath();
+    
+    console.log(`${fromIndex + 1}에서 ${toIndex + 1}까지의 경로 하이라이트`);
+    
+    // 임시 하이라이트 색상 처리
+    // 실제 구현에서는 서버 데이터에서 추출된 nodeIds와 linkIds로 대체 필요
+    if (window.geoJsonLayer) {
+      const renderedFeatures = window.geoJsonLayer.renderRoute(
+        [], // 실제 nodeIds로 대체 필요
+        [], // 실제 linkIds로 대체 필요
         {
           strokeColor: '#FF3B30',
           strokeWeight: 6,
@@ -97,57 +93,50 @@ export const useMapFeatures = (map: any) => {
         clearPreviousHighlightedPath();
       }, 3000);
     }
-  }, [map, extractNodeAndLinkIds, clearPreviousHighlightedPath, renderGeoJsonRoute]);
+  }, [map, clearPreviousHighlightedPath, renderGeoJsonRoute]);
 
   // 일정 경로 렌더링 함수 - 서버 데이터 활용
-  const renderItineraryRoute = useCallback((itineraryDay: ItineraryDay | null, serverRoutesData: Record<number, ServerRouteResponse>, renderDayRoute: (day: ItineraryDay) => void, clearAllRoutes: () => void) => {
+  const renderItineraryRoute = useCallback((itineraryDay: ItineraryDay | null) => {
     if (!map || !itineraryDay) {
       return;
     }
     
     // 기존 경로 삭제
-    clearAllRoutes();
-    
-    // 서버 경로 데이터 확인
-    const serverRouteData = serverRoutesData[itineraryDay.day];
+    clearPreviousHighlightedPath();
     
     // GeoJSON 기반 라우팅인지 확인
-    if (window.geoJsonLayer && serverRouteData) {
-      console.log('서버 기반 GeoJSON 경로 렌더링 시도:', {
-        일자: itineraryDay.day,
-        데이터: serverRouteData
+    if (window.geoJsonLayer) {
+      console.log('경로 렌더링 시도:', {
+        일자: itineraryDay.day
       });
       
-      // 노드 ID와 링크 ID 추출
-      const { nodeIds, linkIds } = extractNodeAndLinkIds(serverRouteData);
-      
-      // Log nodeIds/linkIds passed to visualization
-      console.log("🗺️ 시각화 대상 노드/링크 ID:", { nodeIds, linkIds });
-
-      // GeoJSON 기반 경로 렌더링
-      renderGeoJsonRoute(
-        nodeIds, 
-        linkIds,
-        {
+      // 전체 네트워크 렌더링 (임시 코드)
+      if (typeof window.geoJsonLayer.renderAllNetwork === 'function') {
+        window.geoJsonLayer.renderAllNetwork({
           strokeColor: '#3366FF',
-          strokeWeight: 5,
-          strokeOpacity: 0.8
-        }
-      );
-      
-      return;
+          strokeWeight: 3,
+          strokeOpacity: 0.6
+        });
+      }
     }
+  }, [map, clearPreviousHighlightedPath]);
+  
+  // 전체 네트워크 렌더링 함수
+  const renderAllNetwork = useCallback((style: any = {}) => {
+    if (!map || !window.geoJsonLayer) return [];
     
-    // 기존 방식으로 경로 렌더링 (폴백)
-    // GeoJSON이 로드되지 않았거나 서버 데이터가 없는 경우
-    renderDayRoute(itineraryDay);
-  }, [map, extractNodeAndLinkIds, renderGeoJsonRoute]);
+    if (typeof window.geoJsonLayer.renderAllNetwork === 'function') {
+      return window.geoJsonLayer.renderAllNetwork(style);
+    }
+    return [];
+  }, [map]);
 
   return {
     renderGeoJsonRoute,
     renderItineraryRoute,
     clearPreviousHighlightedPath,
     showRouteForPlaceIndex,
-    extractNodeAndLinkIds
+    extractNodeAndLinkIds,
+    renderAllNetwork
   };
 };

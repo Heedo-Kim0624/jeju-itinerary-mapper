@@ -1,51 +1,13 @@
 
-// 재정의된 toast 훅
-import { toast as sonnerToast, Toaster as SonnerToaster } from "sonner";
-import * as React from "react";
+import { toast as sonnerToast } from 'sonner';
 
-type ToastProps = React.ComponentPropsWithoutRef<typeof SonnerToaster>;
-
-const TOAST_LIMIT = 5;
-const TOAST_REMOVE_DELAY = 1000000;
-
-export type ToastActionElement = React.ReactElement<{
-  className?: string;
-  altText?: string;
-  onClick?: () => void;
-}>;
-
-export type ToastProps = {
-  id?: string;
-  title?: React.ReactNode;
-  description?: React.ReactNode;
-  action?: ToastActionElement;
-  variant?: "default" | "destructive" | "success" | "warning" | "info";
-  duration?: number;
+export const toast = {
+  success: (message: string) => sonnerToast.success(message),
+  error: (message: string) => sonnerToast.error(message),
+  warning: (message: string) => sonnerToast.warning(message),
+  info: (message: string) => sonnerToast.info(message)
 };
 
-// 변환 함수: 이전 toast 형식을 sonner 형식으로 변환
-const convertToSonnerProps = (props: ToastProps) => {
-  const { variant, ...rest } = props;
-  
-  // sonner는 variant를 직접 지원하지 않으므로 타입에 따라 다른 함수 사용
-  if (variant === "destructive") {
-    return { ...rest, className: "destructive" };
-  }
-  
-  return rest;
-};
-
-export const toast = (props: ToastProps | string) => {
-  if (typeof props === "string") {
-    return sonnerToast(props);
-  }
-  
-  return sonnerToast(convertToSonnerProps(props));
-};
-
-// useToast 훅은 toast 함수를 반환
-export const useToast = () => {
-  return {
-    toast
-  };
-};
+export function useToast() {
+  return { toast };
+}

@@ -172,6 +172,60 @@ const useGeoJsonState = (map: any) => {
     
     return renderedFeatures;
   }, [map, clearDisplayedFeatures, getLinkById, getNodeById]);
+
+  // 전체 네트워크 렌더링 함수 추가
+  const renderAllNetwork = useCallback((style: RouteStyle = {
+    strokeColor: '#2196F3',
+    strokeWeight: 3,
+    strokeOpacity: 0.6
+  }): any[] => {
+    if (!map) return [];
+    
+    // 기존에 표시된 피처 제거
+    clearDisplayedFeatures();
+    
+    console.log('전체 GeoJSON 네트워크 렌더링 시도:', { 
+      노드수: nodes.length, 
+      링크수: links.length 
+    });
+    
+    const renderedFeatures: any[] = [];
+    
+    // 링크 렌더링 (모든 링크의 일부만 렌더링 - 성능 고려)
+    const linkLimit = Math.min(500, links.length);
+    const linkStep = Math.max(1, Math.floor(links.length / linkLimit));
+    
+    for (let i = 0; i < links.length; i += linkStep) {
+      const link = links[i];
+      if (!link) continue;
+      
+      // naver.maps.Polyline을 사용하여 링크 렌더링
+      if (window.naver && window.naver.maps) {
+        try {
+          const path = link.coordinates.map(coord => 
+            new window.naver.maps.LatLng(coord[1], coord[0])
+          );
+          
+          const polyline = new window.naver.maps.Polyline({
+            map,
+            path,
+            strokeColor: style.strokeColor,
+            strokeWeight: style.strokeWeight,
+            strokeOpacity: style.strokeOpacity,
+            zIndex: style.zIndex || 100
+          });
+          
+          renderedFeatures.push(polyline);
+          activePolylinesRef.current.push(polyline);
+        } catch (e) {
+          console.error(`전체 네트워크 렌더링 중 오류:`, e);
+        }
+      }
+    }
+    
+    console.log(`전체 네트워크 렌더링 완료: ${renderedFeatures.length}개 피처`);
+    return renderedFeatures;
+  }, [map, clearDisplayedFeatures, nodes, links]);
   
   // 전역 인터페이스 등록
   const registerGlobalInterface = useCallback(() => {
@@ -180,7 +234,8 @@ const useGeoJsonState = (map: any) => {
       renderRoute,
       clearDisplayedFeatures,
       getNodeById,
-      getLinkById
+      getLinkById,
+      renderAllNetwork  // 전체 네트워크 렌더링 함수 추가
     };
     
     window.geoJsonLayer = layerInterface;
@@ -192,7 +247,7 @@ const useGeoJsonState = (map: any) => {
         delete window.geoJsonLayer;
       }
     };
-  }, [renderRoute, clearDisplayedFeatures, getNodeById, getLinkById]);
+  }, [renderRoute, clearDisplayedFeatures, getNodeById, getLinkById, renderAllNetwork]);
   
   return {
     isLoading,
@@ -207,6 +262,7 @@ const useGeoJsonState = (map: any) => {
     getNodeById,
     getLinkById,
     renderRoute,
+    renderAllNetwork, // 전체 네트워크 렌더링 함수 추가
     registerGlobalInterface
   };
 };

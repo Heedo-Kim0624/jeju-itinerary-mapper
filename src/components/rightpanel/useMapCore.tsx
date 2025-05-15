@@ -63,22 +63,23 @@ const useMapCore = () => {
     renderGeoJsonRoute,
     renderItineraryRoute: renderItineraryRouteBase,
     clearPreviousHighlightedPath,
-    showRouteForPlaceIndex: showRouteForPlaceIndexBase
+    showRouteForPlaceIndex: showRouteForPlaceIndexBase,
+    renderAllNetwork
   } = useMapFeatures(map);
 
   // 서버 경로 데이터 설정 함수
-  const setServerRoutes = (dayRoutes: Record<number, ServerRouteResponse>) => {
+  const setServerRoutes = (dayRoutes: Record<number, any>) => {
     setServerRoutesBase(dayRoutes, showGeoJson, toggleGeoJsonVisibility);
   };
 
   // 일정 경로 렌더링 함수
   const renderItineraryRoute = (itineraryDay: any) => {
-    renderItineraryRouteBase(itineraryDay, serverRoutesData, renderDayRoute, clearAllRoutes);
+    renderItineraryRouteBase(itineraryDay);
   };
 
   // 특정 장소 인덱스의 경로 하이라이트
   const showRouteForPlaceIndex = (placeIndex: number, itineraryDay: any) => {
-    showRouteForPlaceIndexBase(placeIndex, itineraryDay, serverRoutesData);
+    showRouteForPlaceIndexBase(placeIndex, itineraryDay);
   };
 
   // 간단화된 mapPlacesWithGeoNodes 함수
@@ -114,6 +115,7 @@ const useMapCore = () => {
     clearPreviousHighlightedPath,
     showRouteForPlaceIndex,
     renderGeoJsonRoute,
+    renderAllNetwork,
     
     // 장소-노드 매핑
     mapPlacesWithGeoNodes,
