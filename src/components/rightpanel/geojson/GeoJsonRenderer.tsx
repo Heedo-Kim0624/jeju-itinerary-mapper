@@ -14,6 +14,8 @@ const DEFAULT_STYLE: RouteStyle = {
   strokeColor: '#2196F3',
   strokeWeight: 3,
   strokeOpacity: 0.6,
+  fillColor: '#4CAF50',
+  zIndex: 100
 };
 
 const GeoJsonRenderer: React.FC<GeoJsonRendererProps> = ({
@@ -58,10 +60,6 @@ const GeoJsonRenderer: React.FC<GeoJsonRendererProps> = ({
     
     if (!visible) return;
     
-    // 피처 렌더링 함수
-    // 이 예제에서는 성능 상의 이유로 모든 노드와 링크를 렌더링하지 않습니다.
-    // 필요에 따라 특정 피처를 렌더링하는 로직 구현
-    
     // 변경된 피처 알림
     if (onDisplayedFeaturesChange) {
       onDisplayedFeaturesChange(markersRef.current, polylinesRef.current);
@@ -88,22 +86,22 @@ const GeoJsonRenderer: React.FC<GeoJsonRendererProps> = ({
         position,
         icon: {
           content: `<div style="
-            width: 6px;
-            height: 6px;
-            background-color: ${style.fillColor || '#4CAF50'};
+            width: 8px;
+            height: 8px;
+            background-color: ${style.fillColor || '#FF0000'};
             border-radius: 50%;
-            border: 1px solid white;
-            box-shadow: 0 0 3px rgba(0, 0, 0, 0.2);
+            border: 2px solid white;
+            box-shadow: 0 0 5px rgba(0,0,0,0.5);
           "></div>`,
-          anchor: new window.naver.maps.Point(3, 3)
+          anchor: new window.naver.maps.Point(5, 5) // 아이콘 크기의 절반으로 조정 (테두리 포함)
         },
-        zIndex: style.zIndex || 100
+        zIndex: style.zIndex || 200 // 경로 마커가 일반 마커보다 위에 오도록 zIndex 조정
       });
       
       markersRef.current.push(marker);
       return marker;
     } catch (e) {
-      console.error(`노드 ${node.id} 렌더링 중 오류:`, e);
+      console.error(`[GeoJsonRenderer] 노드 ${node.id} 렌더링 중 오류:`, e);
       return null;
     }
   };
@@ -120,16 +118,16 @@ const GeoJsonRenderer: React.FC<GeoJsonRendererProps> = ({
       const polyline = new window.naver.maps.Polyline({
         map: visible ? map : null,
         path,
-        strokeColor: style.strokeColor,
-        strokeWeight: style.strokeWeight,
-        strokeOpacity: style.strokeOpacity,
+        strokeColor: style.strokeColor || DEFAULT_STYLE.strokeColor,
+        strokeWeight: style.strokeWeight || DEFAULT_STYLE.strokeWeight,
+        strokeOpacity: style.strokeOpacity || DEFAULT_STYLE.strokeOpacity,
         zIndex: style.zIndex || 100
       });
       
       polylinesRef.current.push(polyline);
       return polyline;
     } catch (e) {
-      console.error(`링크 ${link.id} 렌더링 중 오류:`, e);
+      console.error(`[GeoJsonRenderer] 링크 ${link.id} 렌더링 중 오류:`, e);
       return null;
     }
   };
@@ -140,42 +138,44 @@ const GeoJsonRenderer: React.FC<GeoJsonRendererProps> = ({
     clearAllFeatures();
     
     // 디버깅을 위한 로깅
-    console.log('GeoJsonRenderer 경로 렌더링 요청:', {
-      노드ID수: nodeIds.length,
-      링크ID수: linkIds.length,
-      스타일: `${style.strokeColor}, ${style.strokeWeight}px`
-    });
+    console.log("[GeoJsonRenderer] renderRoute 호출됨. 요청 ID 수:\n", 
+      `  Nodes: ${nodeIds.length} (${nodeIds.slice(0,5).join(", ")}${nodeIds.length > 5 ? "..." : ""}),\n`,
+      `  Links: ${linkIds.length} (${linkIds.slice(0,5).join(", ")}${linkIds.length > 5 ? "..." : ""}),\n`,
+      `  Style:`, style
+    );
     
     const renderedFeatures: any[] = [];
     
-    // 지정된 노드 및 링크 렌더링
+    // 지정된 노드 렌더링
     if (nodeIds.length > 0) {
-      console.log(`노드 렌더링 시작 (${nodeIds.length}개)...`);
+      console.log(`[GeoJsonRenderer] 노드 ${nodeIds.length}개 렌더링 시작...`);
       nodeIds.forEach(nodeId => {
-        const node = nodes.find(n => n.id === nodeId);
+        const node = nodes.find(n => String(n.id) === String(nodeId)); // ID 타입 일치 확인 (문자열로 통일)
         if (node) {
-          const marker = renderNode(node, style);
+          const markerStyle = { ...DEFAULT_STYLE, ...style }; // 기본 스타일과 사용자 정의 스타일 병합
+          const marker = renderNode(node, markerStyle);
           if (marker) renderedFeatures.push(marker);
         } else {
-          console.warn(`노드 ID ${nodeId} 찾을 수 없음`);
+          console.warn(`[GeoJsonRenderer] 경로 노드 ID "${nodeId}"를 로드된 GeoJSON 노드에서 찾을 수 없습니다.`);
         }
       });
     }
     
+    // 지정된 링크 렌더링
     if (linkIds.length > 0) {
-      console.log(`링크 렌더링 시작 (${linkIds.length}개)...`);
+      console.log(`[GeoJsonRenderer] 링크 ${linkIds.length}개 렌더링 시작...`);
       linkIds.forEach(linkId => {
-        const link = links.find(l => l.id === linkId);
+        const link = links.find(l => String(l.id) === String(linkId)); // ID 타입 일치 확인 (문자열로 통일)
         if (link) {
           const polyline = renderLink(link, style);
           if (polyline) renderedFeatures.push(polyline);
         } else {
-          console.warn(`링크 ID ${linkId} 찾을 수 없음`);
+          console.warn(`[GeoJsonRenderer] 경로 링크 ID "${linkId}"를 로드된 GeoJSON 링크에서 찾을 수 없습니다.`);
         }
       });
     }
     
-    console.log(`경로 렌더링 완료: ${renderedFeatures.length}개 피처`);
+    console.log(`[GeoJsonRenderer] 경로 렌더링 완료: ${renderedFeatures.length}개 피처 (마커: ${markersRef.current.length}, 폴리라인: ${polylinesRef.current.length})`);
     
     // 변경된 피처 알림
     if (onDisplayedFeaturesChange) {
@@ -243,8 +243,8 @@ const GeoJsonRenderer: React.FC<GeoJsonRendererProps> = ({
         renderRoute,
         renderAllNetwork,
         clearDisplayedFeatures: clearAllFeatures,
-        getNodeById: (id: string) => nodes.find(n => n.id === id),
-        getLinkById: (id: string) => links.find(l => l.id === id)
+        getNodeById: (id: string) => nodes.find(n => String(n.id) === String(id)),
+        getLinkById: (id: string) => links.find(l => String(l.id) === String(id))
       };
       console.log("GeoJSON 전역 인터페이스 등록 완료");
     } else {
@@ -252,8 +252,8 @@ const GeoJsonRenderer: React.FC<GeoJsonRendererProps> = ({
       window.geoJsonLayer.renderRoute = renderRoute;
       window.geoJsonLayer.renderAllNetwork = renderAllNetwork;
       window.geoJsonLayer.clearDisplayedFeatures = clearAllFeatures;
-      window.geoJsonLayer.getNodeById = (id: string) => nodes.find(n => n.id === id);
-      window.geoJsonLayer.getLinkById = (id: string) => links.find(l => l.id === id);
+      window.geoJsonLayer.getNodeById = (id: string) => nodes.find(n => String(n.id) === String(id));
+      window.geoJsonLayer.getLinkById = (id: string) => links.find(l => String(l.id) === String(id));
       console.log("GeoJSON 전역 인터페이스 업데이트 완료");
     }
     
