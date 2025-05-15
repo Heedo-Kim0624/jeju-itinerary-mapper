@@ -1,10 +1,11 @@
+
 import React, { useState, useCallback } from 'react';
 import { useMapContext } from '@/components/rightpanel/MapContext';
 import { SchedulePayload } from '@/types/schedule';
 import { ItineraryDay, Place } from '@/types/supabase';
 import { useScheduleGenerator } from '@/hooks/use-schedule-generator';
 import { CategoryName } from '@/utils/categoryUtils';
-import { KeywordPanel } from '@/components/middlepanel/KeywordPanel';
+import KeywordPanel from '@/components/middlepanel/KeywordPanel';
 import { getCategoryKorean, mapCategoryNameToKey } from '@/utils/categoryUtils';
 import { toast } from 'sonner';
 
@@ -151,14 +152,21 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onCreateItinerary }) => {
       return false;
     }
 
-    const formattedSelectedPlaces = selectedPlaces.map(p => ({ id: String(p.id), name: p.name || "" }));
-    const formattedCandidatePlaces = candidatePlaces.map(p => ({ id: String(p.id), name: p.name || "" }));
+    const formattedSelectedPlaces = selectedPlaces.map(p => ({
+      id: Number(p.id),
+      name: p.name || ""
+    }));
+    
+    const formattedCandidatePlaces = candidatePlaces.map(p => ({
+      id: Number(p.id),
+      name: p.name || ""
+    }));
 
     const payload: SchedulePayload = {
-        selected_places: formattedSelectedPlaces,
-        candidate_places: formattedCandidatePlaces,
-        start_datetime: startDate.toISOString(),
-        end_datetime: endDate.toISOString(),
+      selected_places: formattedSelectedPlaces,
+      candidate_places: formattedCandidatePlaces,
+      start_datetime: startDate.toISOString(),
+      end_datetime: endDate.toISOString()
     };
     
     centerMapToMarkers();
@@ -300,7 +308,6 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onCreateItinerary }) => {
     let currentDate = new Date(sDate);
     while (currentDate <= eDate) {
         localItineraryDays.push({
-            id: currentDate.toISOString().split('T')[0],
             date: currentDate.toISOString(), 
             places: [],
             user_id: '',
@@ -310,6 +317,11 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onCreateItinerary }) => {
     }
     return Promise.resolve(localItineraryDays);
   }, []);
+
+  // Handle itinerary creation
+  const onItineraryCreated = useCallback((itinerary: ItineraryDay[]) => {
+    onCreateItinerary(itinerary);
+  }, [onCreateItinerary]);
 
   useScheduleGenerator({
     selectedPlaces,
@@ -415,7 +427,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onCreateItinerary }) => {
       {/* 키워드 선택 패널 */}
       {isAccommodationPanelOpen && (
         <KeywordPanel
-          categoryName={getCategoryKorean('accommodation') as CategoryName}
+          categoryName={getCategoryKorean('accommodation')}
           selectedKeywords={accommodationKeywords}
           onToggleKeyword={toggleAccommodationKeyword}
           directInputValue={accommodationDirectInputValue}
@@ -428,7 +440,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onCreateItinerary }) => {
       )}
       {isLandmarkPanelOpen && (
         <KeywordPanel
-          categoryName={getCategoryKorean('landmark') as CategoryName}
+          categoryName={getCategoryKorean('landmark')}
           selectedKeywords={landmarkKeywords}
           onToggleKeyword={toggleLandmarkKeyword}
           directInputValue={landmarkDirectInputValue}
@@ -440,7 +452,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onCreateItinerary }) => {
       )}
       {isRestaurantPanelOpen && (
         <KeywordPanel
-          categoryName={getCategoryKorean('restaurant') as CategoryName}
+          categoryName={getCategoryKorean('restaurant')}
           selectedKeywords={restaurantKeywords}
           onToggleKeyword={toggleRestaurantKeyword}
           directInputValue={restaurantDirectInputValue}
@@ -452,7 +464,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onCreateItinerary }) => {
       )}
       {isCafePanelOpen && (
         <KeywordPanel
-          categoryName={getCategoryKorean('cafe') as CategoryName}
+          categoryName={getCategoryKorean('cafe')}
           selectedKeywords={cafeKeywords}
           onToggleKeyword={toggleCafeKeyword}
           directInputValue={cafeDirectInputValue}
@@ -467,31 +479,3 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onCreateItinerary }) => {
 };
 
 export default LeftPanel;
-
-// This local createItinerary function is likely superseded by the one in useScheduleGenerator or an API call.
-// If it's still needed locally for some reason, it should be typed correctly.
-// const createItinerary = (
-//   placesToUse: Place[],
-//   startDate: Date,
-//   endDate: Date,
-//   startTime: string,
-//   endTime: string
-// ): ItineraryDay[] => {
-//   const itinerary: ItineraryDay[] = [];
-//   let currentDate = new Date(startDate);
-
-//   while (currentDate <= endDate) {
-//     const day: ItineraryDay = {
-//       // Fill according to ItineraryDay structure
-//       id: currentDate.toISOString().split('T')[0], // Example
-//       date: currentDate.toISOString(),
-//       places: [], // Populate based on placesToUse for this day
-//       user_id: '', // if required
-//       trip_id: '', // if required
-//     };
-//     itinerary.push(day);
-//     currentDate.setDate(currentDate.getDate() + 1);
-//   }
-
-//   return itinerary;
-// };
