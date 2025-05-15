@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Place } from '@/types/supabase';
@@ -38,9 +39,10 @@ export const useCategoryResults = (
 
   // 키워드 기반 가중치 계산
   const calculateKeywordScore = (place: Place, keywords: string[]): number => {
+    // 키워드 없을 시 기존 가중치 유지 또는 기본값(0) 부여
     if (!keywords || keywords.length === 0) return place.weight || 0;
     
-    let score = place.weight || 0;
+    let score = place.weight || 0; // 기존 가중치가 있으면 사용, 없으면 0에서 시작
     
     const keywordBonus = keywords.reduce((bonus, keyword) => {
       const lowerKeyword = keyword.toLowerCase();
@@ -56,6 +58,17 @@ export const useCategoryResults = (
     }, 0);
     
     const normalizedBonus = Math.min(5, keywordBonus);
+    
+    // 상세 로그 (필요시 주석 해제하여 디버깅)
+    /*
+    console.log(
+      `[KeywordScore] Place: ${place.name}, ` +
+      `Original Weight: ${place.weight || 0}, ` +
+      `Keyword Bonus (raw): ${keywordBonus}, ` +
+      `Normalized Bonus: ${normalizedBonus}, ` +
+      `Final Score: ${score + normalizedBonus}`
+    );
+    */
     
     return score + normalizedBonus;
   };
@@ -102,29 +115,48 @@ export const useCategoryResults = (
           weight: calculateKeywordScore(place, keywords)
         }));
         
-        console.log(`[useCategoryResults] 키워드 매칭 점수 적용 완료. 키워드: ${keywords.join(', ')}`);
+        // --- 로그 추가 (요청사항 1.3.1) --- 
+        console.log(`[useCategoryResults] 키워드 매칭 점수 적용 완료. 샘플 변경된 장소 (최대 3개):`, 
+          data.slice(0, 3).map(p => ({ 이름: p.name, 가중치: p.weight }))
+        );
       }
 
-      const sortedData = [...data].sort((a, b) => {
-        const weightA = a.weight || 0;
-        const weightB = b.weight || 0;
-        return weightB - weightA;
-      });
+      const sortedData = [...data].sort((a, b) => (b.weight || 0) - (a.weight || 0));
 
-      const cutoff = Math.max(1, Math.floor(sortedData.length * 0.2));
+      // --- 추천/일반 장소 분류 로직 수정 (요청사항 1.3.2) --- 
+      const minRecommended = 5; // 최소 추천 장소 수
+      const recommendedRatio = 0.3; // 추천 비율 (상위 30%)
+      let cutoff = 0;
+
+      if (sortedData.length > 0) {
+        if (sortedData.length < minRecommended) {
+            cutoff = sortedData.length; // 데이터가 최소 추천 수보다 적으면 가능한 만큼 모두 추천
+        } else {
+            cutoff = Math.floor(sortedData.length * recommendedRatio);
+            if (cutoff < minRecommended) {
+                cutoff = minRecommended; // 최소 추천 수 보장 (데이터가 충분하고 비율계산이 최소보다 작을때)
+            }
+        }
+      }
+      // --- 로직 수정 끝 ---
+
       const recommendedData = sortedData.slice(0, cutoff);
       const normalData = sortedData.slice(cutoff);
       
+      // --- 로그 추가 (요청사항 1.3.3) ---
       console.log(`[useCategoryResults] 추천 장소: ${recommendedData.length}개, 일반 장소: ${normalData.length}개`);
       console.log(`[useCategoryResults] 샘플 추천 장소 (최대 3개):`, 
         recommendedData.slice(0, 3).map(p => ({ 
           이름: p.name, 
           가중치: p.weight, 
-          매칭키워드: keywords.filter(k => 
-            p.name.toLowerCase().includes(k.toLowerCase()) || 
-            p.categoryDetail?.toLowerCase().includes(k.toLowerCase()) || 
-            p.address.toLowerCase().includes(k.toLowerCase())
-          ) 
+          매칭키워드: keywords.filter(k => {
+            const lowerKeyword = k.toLowerCase();
+            // categoryDetail이 null/undefined일 수 있으므로 안전하게 접근
+            const categoryDetailMatch = p.categoryDetail ? p.categoryDetail.toLowerCase().includes(lowerKeyword) : false;
+            return p.name.toLowerCase().includes(lowerKeyword) || 
+                   categoryDetailMatch || 
+                   p.address.toLowerCase().includes(lowerKeyword);
+          }).join(', ') || "없음"
         }))
       );
 
