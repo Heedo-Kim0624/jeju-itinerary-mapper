@@ -29,15 +29,15 @@ export interface LinkProperties {
 }
 
 // Node feature from GeoJSON
-export interface NodeFeature extends Feature {
-  type: string;
+export interface NodeFeature {
+  type: "Feature";
   properties: NodeProperties;
   geometry: Geometry;
 }
 
 // Link feature from GeoJSON
-export interface LinkFeature extends Feature {
-  type: string;
+export interface LinkFeature {
+  type: "Feature";
   properties: LinkProperties;
   geometry: Geometry;
 }

@@ -1,12 +1,13 @@
 
 import React from 'react';
 import RegionSlidePanel from '../middlepanel/RegionSlidePanel';
+import { RegionDetails } from '@/utils/regionData';
 
 interface RegionPanelHandlerProps {
   open: boolean;
   onClose: () => void;
-  selectedRegions: string[];
-  onToggle: (region: string) => void;
+  selectedRegions: RegionDetails[];
+  onToggle: (region: RegionDetails) => void;
   onConfirm: () => void;
 }
 
