@@ -36,12 +36,21 @@ const Map: React.FC<MapProps> = ({
     checkGeoJsonMapping
   } = useMapContext();
 
-  // GeoJSON이 로드되면 사용자에게 알림
+  // GeoJSON 로드 시 전체 네트워크 표시
   useEffect(() => {
-    if (isGeoJsonLoaded && showGeoJson) {
-      toast.success('경로 데이터가 지도에 표시됩니다');
+    if (isGeoJsonLoaded && showGeoJson && window.geoJsonLayer?.renderAllNetwork) {
+      console.log('전체 GeoJSON 네트워크 렌더링 시작');
+      window.geoJsonLayer.renderAllNetwork();
+      toast.success('전체 경로 네트워크가 지도에 표시됩니다');
     }
   }, [isGeoJsonLoaded, showGeoJson]);
+
+  // GeoJSON 토글 시 전체 네트워크 표시
+  useEffect(() => {
+    if (showGeoJson && isGeoJsonLoaded && window.geoJsonLayer?.renderAllNetwork) {
+      window.geoJsonLayer.renderAllNetwork();
+    }
+  }, [showGeoJson, isGeoJsonLoaded]);
 
   // 일정을 선택했을 때 GeoJSON 자동 활성화
   useEffect(() => {

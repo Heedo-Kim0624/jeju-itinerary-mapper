@@ -16,6 +16,21 @@ const DEFAULT_STYLE: RouteStyle = {
   strokeOpacity: 0.6,
 };
 
+const NODE_STYLE: RouteStyle = {
+  fillColor: '#4CAF50',
+  strokeColor: '#FFFFFF',
+  strokeWeight: 1,
+  strokeOpacity: 0.8,
+  zIndex: 100
+};
+
+const LINK_STYLE: RouteStyle = {
+  strokeColor: '#2196F3',
+  strokeWeight: 2,
+  strokeOpacity: 0.4,
+  zIndex: 90
+};
+
 const GeoJsonRenderer: React.FC<GeoJsonRendererProps> = ({
   map,
   visible,
@@ -58,9 +73,14 @@ const GeoJsonRenderer: React.FC<GeoJsonRendererProps> = ({
     
     if (!visible) return;
     
-    // 피처 렌더링 함수
-    // 이 예제에서는 성능 상의 이유로 모든 노드와 링크를 렌더링하지 않습니다.
-    // 필요에 따라 특정 피처를 렌더링하는 로직 구현
+    // 모든 노드와 링크 렌더링
+    console.log('모든 GeoJSON 데이터 렌더링 시작:', {
+      노드: nodes.length,
+      링크: links.length
+    });
+
+    // 전체 네트워크를 렌더링하는 호출 추가
+    renderAllNetwork();
     
     // 변경된 피처 알림
     if (onDisplayedFeaturesChange) {
@@ -71,7 +91,22 @@ const GeoJsonRenderer: React.FC<GeoJsonRendererProps> = ({
     return () => {
       clearAllFeatures();
     };
-  }, [map, visible, onDisplayedFeaturesChange]);
+  }, [map, visible, nodes, links, onDisplayedFeaturesChange]);
+  
+  // 전체 노드와 링크 네트워크 렌더링
+  const renderAllNetwork = () => {
+    // 링크 먼저 렌더링 (레이어 순서상 아래에 있어야 함)
+    links.forEach(link => {
+      renderLink(link, LINK_STYLE);
+    });
+    
+    // 노드 렌더링
+    nodes.forEach(node => {
+      renderNode(node, NODE_STYLE);
+    });
+    
+    console.log(`전체 네트워크 렌더링 완료: ${polylinesRef.current.length}개 링크, ${markersRef.current.length}개 노드`);
+  };
   
   // 노드를 지도에 렌더링하는 함수
   const renderNode = (node: GeoNode, style: RouteStyle) => {
@@ -88,14 +123,14 @@ const GeoJsonRenderer: React.FC<GeoJsonRendererProps> = ({
         position,
         icon: {
           content: `<div style="
-            width: 6px;
-            height: 6px;
+            width: 4px;
+            height: 4px;
             background-color: ${style.fillColor || '#4CAF50'};
             border-radius: 50%;
             border: 1px solid white;
-            box-shadow: 0 0 3px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 0 2px rgba(0, 0, 0, 0.2);
           "></div>`,
-          anchor: new window.naver.maps.Point(3, 3)
+          anchor: new window.naver.maps.Point(2, 2)
         },
         zIndex: style.zIndex || 100
       });
@@ -123,7 +158,7 @@ const GeoJsonRenderer: React.FC<GeoJsonRendererProps> = ({
         strokeColor: style.strokeColor,
         strokeWeight: style.strokeWeight,
         strokeOpacity: style.strokeOpacity,
-        zIndex: style.zIndex || 100
+        zIndex: style.zIndex || 90
       });
       
       polylinesRef.current.push(polyline);
@@ -197,14 +232,18 @@ const GeoJsonRenderer: React.FC<GeoJsonRendererProps> = ({
       const originalClear = window.geoJsonLayer.clearDisplayedFeatures;
       window.geoJsonLayer.clearDisplayedFeatures = clearAllFeatures;
       
+      // 전체 네트워크 렌더링 함수 추가
+      window.geoJsonLayer.renderAllNetwork = renderAllNetwork;
+      
       return () => {
         if (window.geoJsonLayer) {
           window.geoJsonLayer.renderRoute = originalRenderRoute;
           window.geoJsonLayer.clearDisplayedFeatures = originalClear;
+          delete window.geoJsonLayer.renderAllNetwork;
         }
       };
     }
-  }, [map]);
+  }, [map, nodes, links]);
   
   return null;
 };

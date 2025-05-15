@@ -78,6 +78,7 @@ export interface GeoJsonLayerRef {
   clearDisplayedFeatures: () => void;
   getNodeById: (id: string) => GeoNode | undefined;
   getLinkById: (id: string) => GeoLink | undefined;
+  renderAllNetwork: () => void;  // 추가: 전체 네트워크 렌더링 함수
 }
 
 // GeoJSON 레이어 속성
