@@ -90,7 +90,7 @@ export const MapProvider: React.FC<{children: React.ReactNode}> = ({ children })
   const mapCore = useMapCore();
   
   return (
-    <MapContext.Provider value={mapCore}>
+    <MapContext.Provider value={mapCore as MapContextType}>
       {children}
     </MapContext.Provider>
   );

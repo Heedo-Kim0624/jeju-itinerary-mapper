@@ -9,6 +9,10 @@ import { useCategorySelection } from './use-category-selection';
 import { useCategoryHandlers } from './left-panel/use-category-handlers';
 import { useItineraryHandlers } from './left-panel/use-itinerary-handlers';
 import { useInputState } from './left-panel/use-input-state';
+import type { CategoryName } from '@/utils/categoryUtils';
+
+// Type for panel states
+type PanelState = 'region' | 'date' | 'category' | 'itinerary';
 
 /**
  * 왼쪽 패널 기능 통합 훅
@@ -22,7 +26,7 @@ export const useLeftPanel = () => {
   // 상태 관리
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [showCategoryResultScreen, setShowCategoryResultScreen] = useState(false);
-  const [currentPanel, setCurrentPanel] = useState<'region' | 'date' | 'category' | 'itinerary'>('region');
+  const [currentPanel, setCurrentPanel] = useState<PanelState>('region');
   const [showCategoryResult, setShowCategoryResult] = useState<string | null>(null);
   
   // 입력값 관리
@@ -124,12 +128,12 @@ export const useLeftPanel = () => {
       recommendedPlaces,
       generateItinerary,
       setShowItinerary,
-      setCurrentPanel
+      setCurrentPanel as any
     );
   };
   
   const handleCloseItinerary = () => {
-    itineraryHandlers.handleCloseItinerary(setShowItinerary, setCurrentPanel);
+    itineraryHandlers.handleCloseItinerary(setShowItinerary, setCurrentPanel as any);
   };
 
   // 일정이 생성되면 첫 번째 날짜 선택

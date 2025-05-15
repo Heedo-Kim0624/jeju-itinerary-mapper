@@ -24,7 +24,9 @@ export interface DaySchedule {
 
 // 서버에서 받는 경로 응답 인터페이스
 export interface ServerRouteResponse {
-  date: string;            // 요일 또는 날짜 정보
+  status: string;
+  message: string;
+  date?: string;            // 요일 또는 날짜 정보
   nodeIds: number[];       // 노드 ID 배열
   linkIds?: number[];      // 링크 ID 배열 (선택적)
   places?: SchedulePlace[]; // 장소 정보 배열 (선택적)

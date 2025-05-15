@@ -138,8 +138,9 @@ export interface GeoJsonLoaderProps {
 export interface ServerRouteResponse {
   status: string;
   message: string;
-  nodeIds?: string[];
-  linkIds?: string[];
+  date?: string;
+  nodeIds: number[];
+  linkIds?: number[];
   data?: any;
 }
 

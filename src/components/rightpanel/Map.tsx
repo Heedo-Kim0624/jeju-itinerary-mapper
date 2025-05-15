@@ -40,7 +40,7 @@ const Map: React.FC<MapProps> = ({
   useEffect(() => {
     if (isGeoJsonLoaded && showGeoJson && window.geoJsonLayer) {
       console.log('전체 GeoJSON 네트워크 렌더링 시작');
-      if (typeof window.geoJsonLayer.renderAllNetwork === 'function') {
+      if (window.geoJsonLayer && typeof window.geoJsonLayer.renderAllNetwork === 'function') {
         window.geoJsonLayer.renderAllNetwork();
         toast.success('전체 경로 네트워크가 지도에 표시됩니다');
       } else {
@@ -52,7 +52,7 @@ const Map: React.FC<MapProps> = ({
   // GeoJSON 토글 시 전체 네트워크 표시
   useEffect(() => {
     if (showGeoJson && isGeoJsonLoaded && window.geoJsonLayer) {
-      if (typeof window.geoJsonLayer.renderAllNetwork === 'function') {
+      if (window.geoJsonLayer && typeof window.geoJsonLayer.renderAllNetwork === 'function') {
         window.geoJsonLayer.renderAllNetwork();
       } else {
         console.warn('renderAllNetwork 함수가 정의되지 않았습니다');

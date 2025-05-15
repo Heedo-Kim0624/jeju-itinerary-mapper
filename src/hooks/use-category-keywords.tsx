@@ -1,74 +1,55 @@
 
-import { useState, useCallback } from 'react';
-import { CategoryKeywords, getCategoryEnglish } from '@/utils/categoryUtils';
+import { useState } from 'react';
+
+export interface CategoryKeywords {
+  '숙소': string[];
+  '관광지': string[];
+  '음식점': string[];
+  '카페': string[];
+  [category: string]: string[];  // Add index signature
+}
 
 export const useCategoryKeywords = () => {
-  // 카테고리별 선택된 키워드를 관리하는 상태
   const [selectedKeywordsByCategory, setSelectedKeywordsByCategory] = useState<CategoryKeywords>({
-    restaurant: [],
-    cafe: [],
-    attraction: [],
-    accommodation: [],
-    landmark: []
+    '숙소': [],
+    '관광지': [],
+    '음식점': [],
+    '카페': []
   });
 
-  // 키워드 토글 함수
-  const toggleKeyword = useCallback((category: string, keyword: string) => {
-    const engCategory = getCategoryEnglish(category) as keyof CategoryKeywords;
-    
-    // 카테고리가 유효한지 확인
-    if (!selectedKeywordsByCategory[engCategory]) {
-      console.warn(`알 수 없는 카테고리: ${category} (${engCategory})`);
-      return;
-    }
-
+  const toggleKeyword = (category: string, keyword: string) => {
     setSelectedKeywordsByCategory(prev => {
-      const keywords = prev[engCategory];
-      const isSelected = keywords.includes(keyword);
+      const currentKeywords = prev[category] || [];
+      const updatedKeywords = currentKeywords.includes(keyword)
+        ? currentKeywords.filter(k => k !== keyword)
+        : [...currentKeywords, keyword];
       
       return {
         ...prev,
-        [engCategory]: isSelected
-          ? keywords.filter(k => k !== keyword)
-          : [...keywords, keyword]
+        [category]: updatedKeywords
       };
     });
-  }, [selectedKeywordsByCategory]);
+  };
 
-  // 카테고리의 키워드 일괄 설정 함수
-  const setKeywords = useCallback((category: string, keywords: string[]) => {
-    const engCategory = getCategoryEnglish(category) as keyof CategoryKeywords;
-    
-    if (!selectedKeywordsByCategory[engCategory]) {
-      console.warn(`알 수 없는 카테고리: ${category} (${engCategory})`);
-      return;
-    }
-
+  const setKeywords = (category: string, keywords: string[]) => {
     setSelectedKeywordsByCategory(prev => ({
       ...prev,
-      [engCategory]: [...keywords]
+      [category]: keywords
     }));
-  }, [selectedKeywordsByCategory]);
+  };
 
-  // 카테고리의 모든 키워드 삭제 함수
-  const clearKeywords = useCallback((category: string) => {
-    const engCategory = getCategoryEnglish(category) as keyof CategoryKeywords;
-    
-    if (!selectedKeywordsByCategory[engCategory]) {
-      console.warn(`알 수 없는 카테고리: ${category} (${engCategory})`);
-      return;
-    }
-
+  const clearKeywords = (category: string) => {
     setSelectedKeywordsByCategory(prev => ({
       ...prev,
-      [engCategory]: []
+      [category]: []
     }));
-  }, [selectedKeywordsByCategory]);
+  };
 
   return {
     selectedKeywordsByCategory,
     toggleKeyword,
     setKeywords,
-    clearKeywords
+    clearKeywords,
+    setSelectedKeywordsByCategory  // Add this to expose the function
   };
 };
