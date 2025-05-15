@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { usePanelVisibility } from '../use-panel-visibility';
 import { useMapContext } from '@/components/rightpanel/MapContext';
-import type { CategoryName } from '@/utils/categoryUtils';
+import { CategoryName } from '@/utils/categoryUtils';
 
 export const usePanelHandlers = () => {
   // Panel visibility functionality

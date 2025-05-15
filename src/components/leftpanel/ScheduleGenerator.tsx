@@ -1,265 +1,264 @@
-
-import React, { useState, useEffect } from 'react';
-import { Place } from '@/types/supabase';
+import React, { useState } from 'react';
 import { toast } from 'sonner';
-import { useItineraryCreator, ItineraryDay } from '@/hooks/use-itinerary-creator';
-import ItineraryPanel from './ItineraryPanel';
-import { useScheduleGenerator } from '@/hooks/use-schedule-generator';
-import { useMapContext } from '@/components/rightpanel/MapContext';
-import { ServerRouteResponse } from '@/types/schedule';
+import { Place } from '@/types/supabase';
+import { ItineraryDay } from '@/types/itinerary';
 
 interface ScheduleGeneratorProps {
   selectedPlaces: Place[];
-  dates: {
-    startDate: Date;
-    endDate: Date;
-    startTime: string;
-    endTime: string;
-  } | null;
+  onItineraryCreated: (schedule: ItineraryDay[]) => void;
   onClose: () => void;
+  setItinerary: (itinerary: ItineraryDay[]) => void;
+  createItinerary: (places: Place[], days: number, startTime?: string, endTime?: string) => Promise<ItineraryDay[]>;
+  onSetShowItinerary: (show: boolean) => void;
 }
 
-export const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({
-  selectedPlaces,
-  dates,
-  onClose
+const ScheduleGenerator = ({ 
+  selectedPlaces, 
+  onItineraryCreated, 
+  onClose,
+  setItinerary,
+  createItinerary,
+  onSetShowItinerary
 }) => {
-  const [itinerary, setItinerary] = useState<ItineraryDay[]>([]);
-  const [selectedDay, setSelectedDay] = useState<number | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const { createItinerary } = useItineraryCreator();
-  const { generateSchedule: generateScheduleViaHook, isGenerating } = useScheduleGenerator();
-  const { setServerRoutes } = useMapContext();
+  const [dayCount, setDayCount] = useState(1);
+  const [startTime, setStartTime] = useState("09:00");
+  const [endTime, setEndTime] = useState("21:00");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isOptimizing, setIsOptimizing] = useState(false);
 
-  useEffect(() => {
-    if (!dates) {
-      toast.error("여행 날짜와 시간 정보가 없습니다.");
-      onClose();
-      return;
-    }
-
-    if (selectedPlaces.length === 0) {
+  const handleApplyOptimization = async () => {
+    if (!selectedPlaces || selectedPlaces.length === 0) {
       toast.error("선택된 장소가 없습니다.");
-      onClose();
       return;
     }
-
-    // Call the local async function that handles the generation process
-    runScheduleGenerationProcess();
-  }, []); // Removed dependencies to ensure it runs once on mount after checks
-
-  // Renamed local async function
-  const runScheduleGenerationProcess = async () => {
-    if (!dates) return;
+    
+    if (dayCount <= 0) {
+      toast.error("일정 일수는 1 이상이어야 합니다.");
+      return;
+    }
     
     try {
-      setLoading(true);
+      setIsOptimizing(true);
       
-      const payload = {
-        selected_places: selectedPlaces.map(p => ({ id: p.id, name: p.name })),
-        candidate_places: [], // This might be populated by prepareSchedulePayload if used earlier
-        start_datetime: dates.startDate.toISOString(),
-        end_datetime: dates.endDate.toISOString()
+      const timeSettings = {
+        startTime: startTime || "09:00",
+        endTime: endTime || "21:00"
       };
       
-      // Log the payload being sent to the server
-      console.log("📤 서버 요청 payload:", JSON.stringify(payload, null, 2));
+      // 일정 최적화 함수 호출
+      const optimizedSchedule = await createItinerary(
+        selectedPlaces,
+        dayCount,
+        timeSettings.startTime,
+        timeSettings.endTime
+      );
       
-      // Call the hook's renamed function
-      const serverResponse = await generateScheduleViaHook(payload);
+      // 비동기 처리 결과 확인
+      if (!optimizedSchedule || optimizedSchedule.length === 0) {
+        toast.error("일정 최적화에 실패했습니다.");
+        return;
+      }
       
-      // Log the full server response
-      console.log("🔍 서버 응답 (raw):", serverResponse);
+      // 상태 업데이트
+      setItinerary(optimizedSchedule);
+      toast.success(`${optimizedSchedule.length}일 최적화된 일정이 생성되었습니다!`);
+      
+      // 콜백 함수 호출 (있는 경우)
+      if (onItineraryCreated) {
+        onItineraryCreated(optimizedSchedule);
+      }
+      
+    } catch (error) {
+      console.error("일정 최적화 중 오류 발생:", error);
+      toast.error("일정 최적화 중 오류가 발생했습니다.");
+    } finally {
+      setIsOptimizing(false);
+    }
+  };
 
-      if (serverResponse && serverResponse.itinerary) {
-        console.log("🔍 서버 응답 (parsed for itinerary):", serverResponse);
+  const handleCreateSchedule = async () => {
+    if (!selectedPlaces || selectedPlaces.length === 0) {
+      toast.error("선택된 장소가 없습니다.");
+      return;
+    }
+    
+    if (dayCount <= 0) {
+      toast.error("일정 일수는 1 이상이어야 합니다.");
+      return;
+    }
+    
+    try {
+      setIsGenerating(true);
+      
+      const timeSettings = {
+        startTime: startTime || "09:00",
+        endTime: endTime || "21:00"
+      };
+      
+      // 일정 생성 함수 호출
+      const generatedSchedule = await createItinerary(
+        selectedPlaces,
+        dayCount,
+        timeSettings.startTime,
+        timeSettings.endTime
+      );
+      
+      // 비동기 처리 결과 확인
+      if (!generatedSchedule || generatedSchedule.length === 0) {
+        toast.error("일정 생성에 실패했습니다.");
+        return;
+      }
+      
+      // 상태 업데이트
+      setItinerary(generatedSchedule);
+      toast.success(`${generatedSchedule.length}일 일정이 생성되었습니다!`);
+      
+      // 콜백 함수 호출 (있는 경우)
+      if (onItineraryCreated) {
+        onItineraryCreated(generatedSchedule);
+      }
+      
+      // 자동으로 일정 표시 화면으로 전환
+      onSetShowItinerary(true);
+      
+    } catch (error) {
+      console.error("일정 생성 중 오류 발생:", error);
+      toast.error("일정 생성 중 오류가 발생했습니다.");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleDayCountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value, 10);
+    setDayCount(value);
+  };
+
+  const handleStartTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setStartTime(e.target.value);
+  };
+
+  const handleEndTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setEndTime(e.target.value);
+  };
+  
+  const handleConfirmPreferences = async () => {
+    if (!selectedPlaces || selectedPlaces.length === 0) {
+      toast.error("선택된 장소가 없습니다.");
+      return false;
+    }
+    
+    if (dayCount <= 0) {
+      toast.error("일정 일수는 1 이상이어야 합니다.");
+      return false;
+    }
+    
+    try {
+      // 일정 생성 호출
+      const schedule = await createItinerary(
+        selectedPlaces,
+        dayCount,
+        startTime || "09:00",
+        endTime || "21:00"
+      );
+      
+      if (schedule && schedule.length > 0) {
+        setItinerary(schedule);
         
-        // Log nodeIds from server response if available
-        if (serverResponse.routes) {
-          console.log("📊 서버 응답 경로 데이터 요약:");
-          Object.entries(serverResponse.routes).forEach(([day, route]: [string, any]) => {
-            if (route && route.nodeIds) {
-              console.log(`📌 ${day}일차 nodeIds.length = ${route.nodeIds.length}`);
-              console.log(`🔍 ${day}일차 nodeIds 샘플 =`, route.nodeIds.slice(0, 10), "...");
-              
-              // 분석: nodeId가 있는 요소의 타입 확인
-              const nodeTypes = new Set();
-              route.nodeIds.forEach((nodeId: any) => {
-                nodeTypes.add(typeof nodeId);
-              });
-              console.log(`📊 ${day}일차 nodeIds 타입:`, [...nodeTypes]);
-            } else {
-              console.log(`❌ ${day}일차 nodeIds 없음`);
-            }
-          });
-        } else {
-          console.log("❌ serverResponse.routes 없음");
+        // 일정 생성 시 콜백 호출
+        if (onItineraryCreated) {
+          onItineraryCreated(schedule);
         }
         
-        const parsedItinerary = parseServerResponse(serverResponse, selectedPlaces);
-        setItinerary(parsedItinerary);
-        
-        // 서버에서 받은 경로 데이터가 있으면 저장하고 로그 출력
-        if (serverResponse.routes) {
-          const routesData: Record<number, ServerRouteResponse> = {};
-          
-          Object.entries(serverResponse.routes).forEach(([dayStr, routeData]) => {
-            const day = parseInt(dayStr, 10);
-            if (!isNaN(day)) {
-              // 서버 응답을 적절한 형태로 변환
-              routesData[day] = routeData as ServerRouteResponse;
-              
-              // 경로 데이터 디버깅
-              const nodeIds = (routeData as ServerRouteResponse).nodeIds || [];
-              console.log(`📊 ${dayStr}일차 경로 정보 저장:`, {
-                노드수: nodeIds.length,
-                샘플: nodeIds.slice(0, 5).join(", ") + "..."
-              });
-            }
-          });
-          
-          console.log("📊 모든 일자 경로 데이터 저장 완료");
-          setServerRoutes(routesData);
-        }
-        
-        if (parsedItinerary.length > 0) {
-          setSelectedDay(parsedItinerary[0].day);
-        }
-        toast.success("서버로부터 일정을 성공적으로 생성했습니다!");
+        // 모달 닫기
+        onClose();
+        return true;
       } else {
-        // Fallback to client-side generation if server response is not as expected
-        console.warn("서버 응답이 없거나 형식이 맞지 않아 클라이언트 측 일정을 생성합니다.");
-        const generatedItinerary = createItinerary(
-          selectedPlaces,
-          dates.startDate,
-          dates.endDate,
-          dates.startTime,
-          dates.endTime
-        );
-        setItinerary(generatedItinerary);
-        if (generatedItinerary.length > 0) {
-          setSelectedDay(generatedItinerary[0].day);
-        }
-        toast.success("클라이언트에서 일정이 성공적으로 생성되었습니다!");
+        toast.error("일정 생성에 실패했습니다.");
+        return false;
       }
     } catch (error) {
-      console.error("일정 생성 오류:", error);
+      console.error("일정 생성 중 오류 발생:", error);
       toast.error("일정 생성 중 오류가 발생했습니다.");
-      // Fallback to client-side generation on error
-      if (dates) {
-        console.warn("오류 발생으로 클라이언트 측 일정을 생성합니다.");
-        const generatedItinerary = createItinerary(
-          selectedPlaces,
-          dates.startDate,
-          dates.endDate,
-          dates.startTime,
-          dates.endTime
-        );
-        setItinerary(generatedItinerary);
-        if (generatedItinerary.length > 0) {
-          setSelectedDay(generatedItinerary[0].day);
-        }
-      }
-    } finally {
-      setLoading(false);
+      return false;
     }
   };
-
-  // 서버 응답 파싱 함수 (서버 API 응답 형식에 맞게 수정 필요)
-  const parseServerResponse = (response: any, places: Place[]): ItineraryDay[] => {
-    console.log("서버 응답 파싱 시작");
-    
-    // 서버 응답 형식에 따라 구현 필요
-    if (response.itinerary && Array.isArray(response.itinerary)) {
-      const parsedItinerary = response.itinerary.map((day: any) => {
-        // 장소 매핑
-        const mappedPlaces = day.places.map((placeInfo: any) => { 
-          let placeId: string;
-          let placeName: string | undefined;
-
-          if (typeof placeInfo === 'string') {
-            placeId = placeInfo;
-          } else if (typeof placeInfo === 'object' && placeInfo !== null && placeInfo.id) {
-            placeId = placeInfo.id;
-            placeName = placeInfo.name;
-          } else {
-            return { id: 'unknown_id', name: '알 수 없는 장소', category: 'unknown', x: 0, y: 0 };
-          }
-
-          const place = places.find(p => p.id === placeId);
-          return place || { 
-            id: placeId, 
-            name: placeName || '알 수 없는 장소', 
-            category: 'unknown', 
-            x: 0, 
-            y: 0 
-          };
-        });
-        
-        // 경로 데이터 추출
-        let routeData;
-        if (response.routes && response.routes[day.day]) {
-          const dayRoute = response.routes[day.day];
-          routeData = {
-            nodeIds: dayRoute.nodeIds || [],
-            linkIds: dayRoute.linkIds || []
-          };
-          
-          console.log(`${day.day}일차 경로 데이터:`, {
-            노드수: routeData.nodeIds.length,
-            링크수: routeData.linkIds ? routeData.linkIds.length : '없음'
-          });
-        }
-        
-        return {
-          day: day.day,
-          places: mappedPlaces,
-          totalDistance: day.totalDistance || 0,
-          routeData // GeoJSON 연동을 위한 경로 데이터
-        };
-      });
-      
-      console.log(`서버에서 ${parsedItinerary.length}일 일정 파싱 완료`);
-      return parsedItinerary;
-    }
-    
-    // 기본 폴백: 클라이언트 측 일정 생성
-    if (dates) {
-      console.log("유효한 서버 응답 없음 - 클라이언트 일정 생성 시작");
-      return createItinerary(
-        places,
-        dates.startDate,
-        dates.endDate,
-        dates.startTime,
-        dates.endTime
-      );
-    }
-    
-    return [];
-  };
-
-  const handleSelectDay = (day: number) => {
-    console.log(`${day}일차 선택됨`);
-    setSelectedDay(day);
-  };
-
-  if (loading || isGenerating) {
-    return (
-      <div className="h-full flex flex-col items-center justify-center">
-        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
-        <p className="text-lg font-medium">일정을 생성하는 중...</p>
-        <p className="text-sm text-muted-foreground mt-2">잠시만 기다려주세요</p>
-      </div>
-    );
-  }
 
   return (
-    <ItineraryPanel 
-      itinerary={itinerary} 
-      startDate={dates?.startDate || new Date()}
-      onSelectDay={handleSelectDay}
-      onClose={onClose}
-      selectedDay={selectedDay}
-    />
+    <div className="p-4">
+      <h2 className="text-lg font-semibold mb-4">일정 생성 옵션</h2>
+      
+      <div className="mb-4">
+        <label htmlFor="dayCount" className="block text-sm font-medium text-gray-700">
+          여행 일수:
+        </label>
+        <input
+          type="number"
+          id="dayCount"
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+          value={dayCount}
+          onChange={handleDayCountChange}
+          min="1"
+        />
+      </div>
+      
+      <div className="mb-4">
+        <label htmlFor="startTime" className="block text-sm font-medium text-gray-700">
+          시작 시간:
+        </label>
+        <input
+          type="time"
+          id="startTime"
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+          value={startTime}
+          onChange={handleStartTimeChange}
+        />
+      </div>
+      
+      <div className="mb-4">
+        <label htmlFor="endTime" className="block text-sm font-medium text-gray-700">
+          종료 시간:
+        </label>
+        <input
+          type="time"
+          id="endTime"
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+          value={endTime}
+          onChange={handleEndTimeChange}
+        />
+      </div>
+
+      <div className="flex justify-between">
+        <button
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+          type="button"
+          onClick={handleCreateSchedule}
+          disabled={isGenerating}
+        >
+          {isGenerating ? "생성 중..." : "일정 생성"}
+        </button>
+
+        <button
+          className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+          type="button"
+          onClick={handleApplyOptimization}
+          disabled={isOptimizing}
+        >
+          {isOptimizing ? "최적화 중..." : "일정 최적화"}
+        </button>
+      </div>
+      
+      <div className="mt-4">
+        <button
+          className="bg-indigo-500 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+          type="button"
+          onClick={handleConfirmPreferences}
+        >
+          확인
+        </button>
+      </div>
+    </div>
   );
 };
+
+export default ScheduleGenerator;

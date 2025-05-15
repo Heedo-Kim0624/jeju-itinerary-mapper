@@ -1,5 +1,7 @@
 
-// Declare global naver variable with proper interface
+/**
+ * Naver maps global interface
+ */
 declare global {
   interface Window {
     naver: any;

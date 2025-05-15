@@ -12,7 +12,7 @@ export interface UseItineraryCreatorReturn {
   isCreating: boolean;
   error: Error | null;
   setItinerary: (itinerary: ItineraryDay[] | null) => void;
-  createItinerary: (places: Place[], days: number, startTime?: string, endTime?: string) => Promise<ItineraryDay[] | null>;
+  createItinerary: (places: Place[], days: number, startTime?: string, endTime?: string) => Promise<ItineraryDay[]>;
 }
 
 export const useItineraryCreator = (): UseItineraryCreatorReturn => {
@@ -22,10 +22,10 @@ export const useItineraryCreator = (): UseItineraryCreatorReturn => {
 
   // Define createItinerary function to generate an itinerary from a list of places
   const createItinerary = useCallback(
-    async (places: Place[], days: number, startTime = "09:00", endTime = "21:00"): Promise<ItineraryDay[] | null> => {
+    async (places: Place[], days: number, startTime = "09:00", endTime = "21:00"): Promise<ItineraryDay[]> => {
       if (places.length === 0 || days <= 0) {
         console.error("Invalid input for createItinerary: places must not be empty and days must be positive");
-        return null;
+        return Promise.resolve([]);
       }
 
       try {
@@ -57,7 +57,7 @@ export const useItineraryCreator = (): UseItineraryCreatorReturn => {
         const error = err instanceof Error ? err : new Error('Failed to create itinerary');
         setError(error);
         console.error("Error creating itinerary:", error);
-        return null;
+        return [];
       } finally {
         setIsCreating(false);
       }

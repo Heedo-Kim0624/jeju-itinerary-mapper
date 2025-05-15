@@ -1,5 +1,6 @@
+
 import { useState, useCallback } from 'react';
-import { ItineraryDay } from './use-itinerary-creator';
+import { ItineraryDay } from '@/types/itinerary';
 import { CategoryName } from '@/utils/categoryUtils';
 
 export type LeftPanelTab = 'region' | 'date' | 'category' | 'itinerary';

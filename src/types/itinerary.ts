@@ -12,7 +12,8 @@ export interface ItineraryPlace extends Place {
 export interface ItineraryDay {
   day: number;
   places: ItineraryPlace[];
-  routeNodeIds?: string[];
+  routeNodeIds?: string[]; // Route node IDs for rendering on the map
+  routeData?: string[]; // Legacy support for old property name (to fix existing errors)
   totalDistance: number;
   startTime?: string;
   endTime?: string;
@@ -45,6 +46,7 @@ export function convertToSupabaseItineraryDay(day: any): ItineraryDay {
     places: day.places,
     totalDistance: day.totalDistance || 0, // Default to 0 if not provided
     routeNodeIds: day.routeNodeIds,
+    routeData: day.routeData,
     startTime: day.startTime,
     endTime: day.endTime
   };
