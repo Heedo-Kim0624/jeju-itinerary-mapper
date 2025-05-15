@@ -1,14 +1,15 @@
 
 import React, { useEffect } from 'react';
 import { toast } from 'sonner';
-import { GeoNode, GeoLink, GeoJsonGeometry, GeoCoordinates, GeoJsonNodeProperties, GeoJsonLinkProperties } from './GeoJsonTypes';
-
-interface GeoJsonLoaderProps {
-  isMapInitialized: boolean;
-  isNaverLoaded: boolean;
-  onLoadSuccess: (nodes: GeoNode[], links: GeoLink[]) => void;
-  onLoadError: (error: Error) => void;
-}
+import { 
+  GeoNode, 
+  GeoLink, 
+  GeoJsonLoaderProps, 
+  GeoCoordinates, 
+  GeoJsonGeometry, 
+  GeoJsonNodeProperties, 
+  GeoJsonLinkProperties 
+} from './GeoJsonTypes';
 
 const GeoJsonLoader: React.FC<GeoJsonLoaderProps> = ({
   isMapInitialized,
@@ -48,19 +49,15 @@ const GeoJsonLoader: React.FC<GeoJsonLoaderProps> = ({
         // 노드 객체 생성
         const nodes = nodeJson.features.map((feature: any): GeoNode => {
           const id = String(feature.properties.NODE_ID);
-          const coordinates = feature.geometry.coordinates as GeoCoordinates;
+          const coordinates = feature.geometry.coordinates as [number, number];
           
           return {
             id,
             type: 'node',
-            geometry: feature.geometry as GeoJsonGeometry,
-            properties: feature.properties as GeoJsonNodeProperties,
             coordinates,
+            properties: feature.properties,
             adjacentLinks: [],
-            adjacentNodes: [],
-            setStyles: (styles: any) => {
-              // 스타일 설정 로직 (마커 생성 시 구현)
-            }
+            adjacentNodes: []
           };
         });
         
@@ -75,12 +72,12 @@ const GeoJsonLoader: React.FC<GeoJsonLoaderProps> = ({
           const fromNode = nodes.find(node => node.id === fromNodeId);
           const toNode = nodes.find(node => node.id === toNodeId);
           
-          if (fromNode) {
+          if (fromNode && fromNode.adjacentLinks && fromNode.adjacentNodes) {
             fromNode.adjacentLinks.push(id);
             if (toNodeId) fromNode.adjacentNodes.push(toNodeId);
           }
           
-          if (toNode) {
+          if (toNode && toNode.adjacentLinks && toNode.adjacentNodes) {
             toNode.adjacentLinks.push(id);
             if (fromNodeId) toNode.adjacentNodes.push(fromNodeId);
           }
@@ -88,15 +85,11 @@ const GeoJsonLoader: React.FC<GeoJsonLoaderProps> = ({
           return {
             id,
             type: 'link',
-            geometry: feature.geometry as GeoJsonGeometry,
-            properties: feature.properties as GeoJsonLinkProperties,
-            coordinates: feature.geometry.coordinates as GeoCoordinates[],
+            coordinates: feature.geometry.coordinates as [number, number][],
+            properties: feature.properties,
             fromNode: fromNodeId,
             toNode: toNodeId,
-            length,
-            setStyles: (styles: any) => {
-              // 스타일 설정 로직 (폴리라인 생성 시 구현)
-            }
+            length
           };
         });
         
@@ -106,7 +99,7 @@ const GeoJsonLoader: React.FC<GeoJsonLoaderProps> = ({
         });
         
         // 성공 콜백 호출
-        onLoadSuccess(nodes as GeoNode[], links);
+        onLoadSuccess(nodes, links);
         
       } catch (error) {
         console.error('GeoJSON 데이터 로드 중 오류:', error);

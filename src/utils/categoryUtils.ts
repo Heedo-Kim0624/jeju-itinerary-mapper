@@ -37,6 +37,14 @@ export const englishToKorean = (englishName: string): CategoryName | null => {
   }
 };
 
+// getCategoryKorean 함수 추가
+export const getCategoryKorean = (englishCategory?: string): CategoryName | '기타' => {
+  if (!englishCategory) return '기타';
+  
+  const koreanCategory = englishToKorean(englishCategory);
+  return koreanCategory || '기타';
+};
+
 // 카테고리별 최소 추천 개수 계산 함수
 export const getMinimumRecommendationsByCategory = (days: number) => {
   return {

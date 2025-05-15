@@ -1,19 +1,27 @@
+
 export interface GeoNode {
   id: string;
   type: 'node';
   coordinates: [number, number]; // [lng, lat]
   properties?: Record<string, any>;
   naverMarker?: any; // Naver Maps Marker instance
+  adjacentLinks?: string[]; // 인접 링크 ID 배열
+  adjacentNodes?: string[]; // 인접 노드 ID 배열
+  setStyles?: (styles: any) => void; // 스타일 설정 함수
 }
 
 export interface GeoLink {
   id: string;
   type: 'link';
-  source: string; // source node id
-  target: string; // target node id
+  source?: string; // source node id
+  target?: string; // target node id
+  fromNode?: string; // F_NODE
+  toNode?: string; // T_NODE
   coordinates: [number, number][]; // Array of [lng, lat]
   properties?: Record<string, any>;
   naverPolyline?: any; // Naver Maps Polyline instance
+  length?: number; // 링크 길이
+  setStyles?: (styles: any) => void; // 스타일 설정 함수
 }
 
 export interface RouteStyle {
@@ -31,6 +39,23 @@ export interface GeoJsonData {
   links: GeoLink[];
 }
 
+// GeoJsonLoader.tsx에서 사용하는 타입 추가
+export type GeoCoordinates = [number, number] | [number, number][];
+export interface GeoJsonGeometry {
+  type: string;
+  coordinates: GeoCoordinates;
+}
+export interface GeoJsonNodeProperties {
+  NODE_ID: string;
+  [key: string]: any;
+}
+export interface GeoJsonLinkProperties {
+  LINK_ID: string;
+  F_NODE?: string;
+  T_NODE?: string;
+  LENGTH?: number;
+  [key: string]: any;
+}
 
 // 전역 GeoJSON 레이어 인터페이스
 export interface GeoJsonLayerRef {
@@ -38,17 +63,14 @@ export interface GeoJsonLayerRef {
   clearDisplayedFeatures: () => void;
   getNodeById: (id: string) => GeoNode | undefined;
   getLinkById: (id: string) => GeoLink | undefined;
-  // 모든 노드와 링크를 표시하는 함수 추가 (선택적)
-  renderAllFeatures?: (style?: RouteStyle) => void; 
+  // 모든 노드와 링크를 표시하는 함수 추가
+  renderAllFeatures: (style?: RouteStyle) => void; 
 }
 
 // 전역 window 객체에 타입 선언 (Naver Maps API와 GeoJSON 레이어)
 declare global {
   interface Window {
-    // navermaps 관련 타입은 src/types/navermaps.d.ts 등 별도 파일에서 관리하는 것이 좋음
-    // 여기서는 naver 관련 타입 선언을 제거하여 loadNaverMaps.ts와의 충돌을 피함.
-    // naver: any; // 이 줄을 주석 처리하거나 삭제
-
+    // window.naver는 loadNaverMaps.ts에서 관리
     geoJsonLayer?: GeoJsonLayerRef; // GeoJSON 레이어 객체
   }
 }
@@ -69,7 +91,6 @@ export interface GeoJsonRendererProps {
   links: GeoLink[];
   onDisplayedFeaturesChange?: (markers: any[], polylines: any[]) => void;
 }
-
 
 // GeoJsonLayer 메인 컴포넌트의 props 타입
 export interface GeoJsonLayerProps {

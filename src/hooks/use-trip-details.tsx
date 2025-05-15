@@ -1,11 +1,17 @@
 
 import { useState, useMemo } from 'react';
 
-interface TripDetails {
+export interface TripDetails {
   startDate: Date | null;
   endDate: Date | null;
   startTime: string;
   endTime: string;
+  dates?: {
+    startDate: Date | null;
+    endDate: Date | null;
+    startTime: string;
+    endTime: string;
+  }
 }
 
 export const useTripDetails = () => {
@@ -46,7 +52,7 @@ export const useTripDetails = () => {
 
   // Add a function to set all dates at once
   const setDates = (dates: TripDetails) => {
-    setDetails(dates);
+    setDetails({...details, dates: dates});
   };
 
   // Adding direct input state that's referenced in use-left-panel.tsx

@@ -38,7 +38,6 @@ const useGeoJsonState = (map: any) => {
       노드: loadedNodes.length,
       링크: loadedLinks.length
     });
-    // toast.success(`GeoJSON 데이터 로드: 노드 ${loadedNodes.length}개, 링크 ${loadedLinks.length}개`);
   }, []);
   
   // 데이터 로딩 오류 처리
@@ -105,11 +104,6 @@ const useGeoJsonState = (map: any) => {
         return [];
     }
     
-    // 기존에 표시된 특정 경로 피처 제거 (전체 GeoJSON 데이터는 유지)
-    // clearDisplayedFeatures(); // 이 함수는 모든 활성 피처를 지우므로, 선택적으로 사용해야 함
-    // 특정 경로를 그릴 때는 이전에 그린 '특정 경로'만 지우는 메커니즘이 필요할 수 있음.
-    // 여기서는 일단 모든 활성 피처를 지우고 새로 그림.
-
     const renderedFeatures: any[] = [];
     
     linkIds.forEach(linkId => {
@@ -161,18 +155,14 @@ const useGeoJsonState = (map: any) => {
       } catch (e) { console.error(`노드 ${nodeId} 렌더링 중 오류:`, e); }
     });
     
-    // console.log(`[RenderRoute] ${nodeIds.length}개 노드, ${linkIds.length}개 링크 렌더링 완료.`);
     return renderedFeatures;
-  }, [map, getLinkById, getNodeById]); // clearDisplayedFeatures는 의존성에서 제거하거나, 필요시 추가
-
+  }, [map, getLinkById, getNodeById]);
+  
   // 모든 노드와 링크를 기본 스타일로 렌더링하는 함수
   const renderAllFeatures = useCallback((style: RouteStyle = {}) => {
     if (!map || !isLoaded || !window.naver || !window.naver.maps) {
-      // console.warn("renderAllFeatures: 지도 또는 GeoJSON 데이터가 준비되지 않았습니다.");
       return;
     }
-    // console.log(`renderAllFeatures: ${nodes.length}개 노드, ${links.length}개 링크 렌더링 시도.`);
-    // clearDisplayedFeatures(); // 기존 모든 활성 피처 제거
 
     const defaultNodeStyle = { fillColor: '#4CAF50', zIndex: 101, ...style };
     const defaultLinkStyle = { strokeColor: '#2196F3', strokeWeight: 3, strokeOpacity: 0.7, zIndex: 100, ...style };
@@ -209,10 +199,9 @@ const useGeoJsonState = (map: any) => {
             link.naverPolyline = polyline;
         } catch (e) { console.error(`전체 링크 ${link.id} 렌더링 오류:`, e); }
     });
-    // console.log("renderAllFeatures: 완료");
 
-  }, [map, isLoaded, nodes, links, clearDisplayedFeatures]); // clearDisplayedFeatures 의존성 추가
-
+  }, [map, isLoaded, nodes, links]);
+  
   // 전역 인터페이스 등록
   const registerGlobalInterface = useCallback(() => {
     // 전역에 GeoJSON 레이어 인터페이스 제공
@@ -237,12 +226,9 @@ const useGeoJsonState = (map: any) => {
   
   // isLoaded 상태가 true로 변경되면 모든 피처를 렌더링하도록 useEffect 추가
    useEffect(() => {
-    if (isLoaded && map && window.geoJsonLayer && typeof window.geoJsonLayer.renderAllFeatures === 'function') {
-        // console.log("GeoJSON 데이터 로드 완료, 모든 피처 렌더링 시도.");
-        // window.geoJsonLayer.renderAllFeatures(); // GeoJsonRenderer가 이 역할을 하도록 변경됨
-        // GeoJsonRenderer가 visible 상태에 따라 알아서 그리도록 함.
-        // 여기서 직접 호출하면 GeoJsonRenderer와 충돌 가능성.
-        // 대신, GeoJsonLayer 컴포넌트에서 visible이 true일 때 GeoJsonRenderer가 그리도록 유도.
+    if (isLoaded && map && window.geoJsonLayer) {
+        // GeoJsonRenderer가 이 역할을 하도록 변경됨
+        // 여기서는 직접 호출하지 않음
     }
   }, [isLoaded, map]);
 
@@ -259,6 +245,7 @@ const useGeoJsonState = (map: any) => {
     getNodeById,
     getLinkById,
     renderRoute,
+    renderAllFeatures,
     registerGlobalInterface
   };
 };
