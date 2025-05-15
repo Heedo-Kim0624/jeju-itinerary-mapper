@@ -1,78 +1,88 @@
 
-import React, { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
-import { useGeoJsonState } from './geojson/useGeoJsonState';
-import { GeoJsonRenderer } from './geojson/GeoJsonRenderer';
-import { RenderStyle } from './geojson/GeoJsonTypes';
-import { NodeFeature, LinkFeature } from './geojson/GeoJsonTypes';
+import { useEffect } from 'react';
+import { toast } from 'sonner';
+import useGeoJsonState from './geojson/useGeoJsonState';
+import GeoJsonLoader from './geojson/GeoJsonLoader';
+import GeoJsonRenderer from './geojson/GeoJsonRenderer';
+import { GeoJsonLayerProps } from './geojson/GeoJsonTypes';
 
-export interface GeoJsonLayerRef {
-  renderRoute: (nodeIds: string[], linkIds: string[], style?: RenderStyle) => any[];
-  renderAllNetwork: (options?: {nodeStyle?: RenderStyle, linkStyle?: RenderStyle}) => any[];
-  clearDisplayedFeatures: () => void;
-  getNodeById: (id: string) => NodeFeature | undefined;
-  getLinkById: (id: string) => LinkFeature | undefined;
-}
+const GeoJsonLayer: React.FC<GeoJsonLayerProps> = ({
+  map,
+  visible,
+  isMapInitialized,
+  isNaverLoaded,
+  onGeoJsonLoaded
+}) => {
+  // GeoJSON 상태 관리 훅 사용
+  const {
+    isLoading,
+    error,
+    isLoaded,
+    nodes,
+    links,
+    handleLoadSuccess,
+    handleLoadError,
+    handleDisplayedFeaturesChange,
+    registerGlobalInterface
+  } = useGeoJsonState(map);
 
-interface GeoJsonLayerProps {
-  map: any; // naver.maps.Map
-  onDataLoaded?: () => void;
-}
+  // 데이터 로드 성공 시 콜백 호출
+  useEffect(() => {
+    if (isLoaded && onGeoJsonLoaded) {
+      onGeoJsonLoaded(nodes, links);
+    }
+  }, [isLoaded, nodes, links, onGeoJsonLoaded]);
+  
+  // 전역 인터페이스 등록
+  useEffect(() => {
+    if (isMapInitialized && isNaverLoaded && isLoaded) {
+      return registerGlobalInterface();
+    }
+  }, [isMapInitialized, isNaverLoaded, isLoaded, registerGlobalInterface]);
 
-const GeoJsonLayer = forwardRef<GeoJsonLayerRef, GeoJsonLayerProps>(
-  ({ map, onDataLoaded }, ref) => {
-    const { state, actions, renderer } = useGeoJsonState(map);
-    const rendererRef = useRef<GeoJsonRenderer | null>(null);
-
-    useEffect(() => {
-      // Make renderer available globally
-      window.geoJsonLayer = {
-        renderRoute: (nodeIds, linkIds, style) => {
-          return renderer.renderRoute(nodeIds, linkIds, style);
-        },
-        renderAllNetwork: (options) => {
-          return renderer.renderAllNetwork(options);
-        },
-        clearDisplayedFeatures: () => {
-          renderer.clearDisplayedFeatures();
-        },
-        getNodeById: (id) => {
-          return state.nodesById.get(id);
-        },
-        getLinkById: (id) => {
-          return state.linksById.get(id);
-        }
-      };
+  return (
+    <>
+      {/* 데이터 로더 컴포넌트 */}
+      {(!isLoaded && !error) && (
+        <GeoJsonLoader
+          isMapInitialized={isMapInitialized}
+          isNaverLoaded={isNaverLoaded}
+          onLoadSuccess={(nodes, links) => {
+            handleLoadSuccess(nodes, links);
+            if (visible) {
+              toast.success('경로 데이터가 로드되었습니다.');
+            }
+          }}
+          onLoadError={handleLoadError}
+        />
+      )}
       
-      // Clear references when unmounting
-      return () => {
-        if (window.geoJsonLayer) {
-          delete window.geoJsonLayer;
-        }
-      };
-    }, [renderer, state.nodesById, state.linksById]);
-
-    useImperativeHandle(ref, () => ({
-      renderRoute: (nodeIds, linkIds, style) => {
-        return renderer.renderRoute(nodeIds, linkIds, style);
-      },
-      renderAllNetwork: (options) => {
-        return renderer.renderAllNetwork(options);
-      },
-      clearDisplayedFeatures: () => {
-        renderer.clearDisplayedFeatures();
-      },
-      getNodeById: (id) => {
-        return state.nodesById.get(id);
-      },
-      getLinkById: (id) => {
-        return state.linksById.get(id);
-      }
-    }));
-
-    return null;
-  }
-);
-
-GeoJsonLayer.displayName = 'GeoJsonLayer';
+      {/* 데이터 렌더러 컴포넌트 */}
+      {isLoaded && (
+        <GeoJsonRenderer
+          map={map}
+          visible={visible}
+          nodes={nodes}
+          links={links}
+          onDisplayedFeaturesChange={handleDisplayedFeaturesChange}
+        />
+      )}
+      
+      {/* 로딩 상태 표시 */}
+      {isLoading && (
+        <div className="absolute bottom-16 left-4 bg-background/80 backdrop-blur-sm p-2 rounded-md text-sm">
+          경로 데이터 로드 중...
+        </div>
+      )}
+      
+      {/* 오류 상태 표시 */}
+      {error && (
+        <div className="absolute bottom-16 left-4 bg-red-500/80 text-white backdrop-blur-sm p-2 rounded-md text-sm">
+          경로 데이터 로드 실패
+        </div>
+      )}
+    </>
+  );
+};
 
 export default GeoJsonLayer;
