@@ -1,5 +1,5 @@
 
-// Don't need to see the whole file, just fix the declaration issue
+// Declare global naver variable
 declare global {
   interface Window {
     naver: any;

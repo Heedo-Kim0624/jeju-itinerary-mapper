@@ -158,7 +158,7 @@ export const useMapFeatures = (map: any) => {
       }
       
       // 경로 데이터가 없는 경우, 전체 네트워크를 표시 (디버깅 용도)
-      if (typeof window.geoJsonLayer.renderAllNetwork === 'function') {
+      if (window.geoJsonLayer && typeof window.geoJsonLayer.renderAllNetwork === 'function') {
         console.log("전체 네트워크 표시 시도 (경로 데이터 없음)");
         const renderedFeatures = window.geoJsonLayer.renderAllNetwork({
           strokeColor: '#3366FF',
@@ -168,6 +168,8 @@ export const useMapFeatures = (map: any) => {
         });
         
         highlightedPathRef.current = renderedFeatures;
+      } else {
+        console.warn("renderAllNetwork function not available");
       }
     }
   }, [map, clearPreviousHighlightedPath]);
@@ -179,12 +181,13 @@ export const useMapFeatures = (map: any) => {
       return [];
     }
     
-    if (typeof window.geoJsonLayer.renderAllNetwork === 'function') {
+    if (window.geoJsonLayer && typeof window.geoJsonLayer.renderAllNetwork === 'function') {
       console.log("전체 네트워크 렌더링");
       return window.geoJsonLayer.renderAllNetwork(style);
+    } else {
+      console.warn("renderAllNetwork function not available");
     }
     
-    console.warn("renderAllNetwork function not available");
     return [];
   }, [map]);
 

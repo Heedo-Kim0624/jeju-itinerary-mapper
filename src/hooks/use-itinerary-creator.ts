@@ -11,6 +11,7 @@ export interface ItineraryDay {
     nodeIds: string[];
     linkIds?: string[];
   };
+  totalDistance?: number; // Added to match the type in supabase
 }
 
 export interface Itinerary {

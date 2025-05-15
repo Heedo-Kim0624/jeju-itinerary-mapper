@@ -1,9 +1,9 @@
-
 import { useState, useCallback } from 'react';
 import { ItineraryDay } from './use-itinerary-creator';
 import { CategoryName } from '@/types/travel';
 
 export type LeftPanelTab = 'region' | 'date' | 'category' | 'itinerary';
+export type CategoryName = '숙소' | '관광지' | '음식점' | '카페'; // Define CategoryName here since it's missing from travel.ts
 
 interface UseLeftPanelProps {
   defaultTab?: LeftPanelTab;
