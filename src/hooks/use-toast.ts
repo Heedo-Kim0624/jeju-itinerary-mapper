@@ -1,23 +1,21 @@
 
 import { toast as sonnerToast } from 'sonner';
 
-export const useToast = () => {
+// Create a simple wrapper with a similar API to the shadcn toast
+export function useToast() {
   return {
-    toast: sonnerToast
+    toast: (props: { title?: string; description?: string; variant?: 'default' | 'destructive' }) => {
+      if (props.variant === 'destructive') {
+        return sonnerToast.error(props.title, {
+          description: props.description
+        });
+      }
+      return sonnerToast(props.title || '', {
+        description: props.description
+      });
+    }
   };
-};
+}
 
-export const toast = {
-  success: (message: string) => {
-    sonnerToast.success(message);
-  },
-  error: (message: string) => {
-    sonnerToast.error(message);
-  },
-  warning: (message: string) => {
-    sonnerToast.warning(message);
-  },
-  info: (message: string) => {
-    sonnerToast.info(message);
-  }
-};
+// Re-export sonner's toast for direct usage
+export const toast = sonnerToast;

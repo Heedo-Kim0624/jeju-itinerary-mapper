@@ -1,4 +1,3 @@
-
 // GeoJSON 노드/링크 타입 정의
 export interface GeoCoordinates {
   0: number; // 경도 (longitude)
@@ -74,14 +73,14 @@ export interface RouteStyle {
 
 // GeoJson 레이어 참조를 위한 타입
 export interface GeoJsonLayerRef {
-  renderRoute: (nodeIds: string[], linkIds: string[], style?: RouteStyle) => any[];
-  renderAllNetwork: (style?: RouteStyle) => any[]; // 전체 네트워크를 렌더링하는 함수 추가
+  renderRoute: (nodeIds: string[], linkIds: string[], style?: any) => any[];
+  renderAllNetwork: () => any[]; // Add renderAllNetwork method
   clearDisplayedFeatures: () => void;
-  getNodeById: (id: string) => GeoNode | undefined;
-  getLinkById: (id: string) => GeoLink | undefined;
+  getNodeById: (id: string) => any;
+  getLinkById: (id: string) => any;
 }
 
-// GeoJSON 레이어 속성
+// GeoJson 레이어 속성
 export interface GeoJsonLayerProps {
   map: any;
   visible: boolean;
