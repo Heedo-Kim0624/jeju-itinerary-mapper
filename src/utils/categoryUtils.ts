@@ -1,4 +1,8 @@
 
+export type CategoryName = 'accommodation' | 'landmark' | 'restaurant' | 'cafe' | 'attraction' | '숙소' | '관광지' | '음식점' | '카페';
+
+export type CategoryKeywords = Record<CategoryName, string[]>;
+
 type CategoryKey = 'accommodation' | 'landmark' | 'restaurant' | 'cafe' | 'attraction';
 
 /**
