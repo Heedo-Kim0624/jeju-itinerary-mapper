@@ -1,17 +1,14 @@
 
 import { useState } from 'react';
-import { CategoryName, CategoryKeywords } from '@/utils/categoryUtils'; // Ensure these are exported
+import { CategoryName, CategoryKeywords } from '@/utils/categoryUtils';
 
 export const useCategoryKeywords = () => {
-  // Initialize with all CategoryName keys
-  const initialKeywords: CategoryKeywords = {
-    'accommodation': [],
-    'landmark': [],
-    'restaurant': [],
-    'cafe': [],
-    'attraction': [], // Add if 'attraction' is a distinct CategoryName
-  };
-  const [selectedKeywordsByCategory, setSelectedKeywordsByCategory] = useState<CategoryKeywords>(initialKeywords);
+  const [selectedKeywordsByCategory, setSelectedKeywordsByCategory] = useState<CategoryKeywords>({
+    '숙소': [],
+    '관광지': [],
+    '음식점': [],
+    '카페': [],
+  });
 
   const toggleKeyword = (category: CategoryName, keyword: string) => {
     setSelectedKeywordsByCategory(prev => {

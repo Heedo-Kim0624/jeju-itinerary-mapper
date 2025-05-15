@@ -9,8 +9,7 @@ interface KeywordInputProps {
 
 const KeywordInput: React.FC<KeywordInputProps> = ({ value, onChange, onAdd }) => {
   const handleKeyPress = (e: KeyboardEvent<HTMLInputElement>) => {
-    // Use optional chaining and nullish coalescing to safely handle undefined values
-    if (e.key === 'Enter' && (value ?? "").trim() !== '') {
+    if (e.key === 'Enter' && value.trim() !== '') {
       onAdd();
     }
   };
@@ -21,7 +20,7 @@ const KeywordInput: React.FC<KeywordInputProps> = ({ value, onChange, onAdd }) =
       <div className="flex gap-2">
         <input
           type="text"
-          value={value || ''}
+          value={value}
           onChange={(e) => onChange(e.target.value)}
           onKeyPress={handleKeyPress}
           placeholder="키워드를 입력하세요"
@@ -30,10 +29,9 @@ const KeywordInput: React.FC<KeywordInputProps> = ({ value, onChange, onAdd }) =
         <button
           type="button"
           onClick={onAdd}
-          // Use optional chaining and nullish coalescing to safely handle undefined values
-          disabled={(value ?? "").trim() === ''}
+          disabled={value.trim() === ''}
           className={`px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors text-xs ${
-            (value ?? "").trim() === '' ? 'opacity-50 cursor-not-allowed' : ''
+            value.trim() === '' ? 'opacity-50 cursor-not-allowed' : ''
           }`}
         >
           추가

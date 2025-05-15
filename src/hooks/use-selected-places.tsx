@@ -5,7 +5,20 @@ import { useMapContext } from '@/components/rightpanel/MapContext';
 import { toast } from 'sonner';
 import { useTripDetails } from './use-trip-details';
 import { getMinimumRecommendationCount } from '@/lib/itinerary/itinerary-utils';
-import { getCategoryKorean } from '@/utils/categoryUtils'; // getCategoryKorean 임포트
+
+// This function is used locally and also needed for grouping in use-left-panel.
+// Consider moving to a shared utility file e.g., src/utils/categoryUtils.ts
+const getCategoryKorean = (category?: string): string => {
+  if (!category) return '기타';
+  
+  switch (category.toLowerCase()) {
+    case 'accommodation': return '숙소';
+    case 'attraction': return '관광지';
+    case 'restaurant': return '음식점';
+    case 'cafe': return '카페';
+    default: return '기타';
+  }
+};
 
 export const useSelectedPlaces = () => {
   const [selectedPlaces, setSelectedPlaces] = useState<Place[]>([]);
@@ -22,14 +35,20 @@ export const useSelectedPlaces = () => {
     '카페': [],
   });
 
+  // Get trip details to check accommodation limits and trip duration
   const { tripDuration } = useTripDetails();
+
+  // allCategoriesSelected 상태를 명확하게 계산
   const [allCategoriesSelected, setAllCategoriesSelected] = useState(false);
   
+  // 더 자세한 디버깅을 위해 카테고리별 선택 여부 상태 추가
   useEffect(() => {
+    // 각 카테고리별로 최소 1개 이상 선택되었는지 확인
     const hasAccommodation = selectedPlacesByCategory['숙소'].length > 0;
     const hasLandmark = selectedPlacesByCategory['관광지'].length > 0;
     const hasRestaurant = selectedPlacesByCategory['음식점'].length > 0;
     const hasCafe = selectedPlacesByCategory['카페'].length > 0;
+    
     const allSelected = hasAccommodation && hasLandmark && hasRestaurant && hasCafe;
     
     console.log('카테고리별 선택 현황:', {
@@ -39,28 +58,36 @@ export const useSelectedPlaces = () => {
       카페: selectedPlacesByCategory['카페'].length,
       모든카테고리선택됨: allSelected
     });
+    
     setAllCategoriesSelected(allSelected);
   }, [selectedPlacesByCategory]);
 
   const { panTo, addMarkers, clearMarkersAndUiElements } = useMapContext();
 
+  // Check if accommodation limit reached
   const isAccommodationLimitReached = (currentCount: number): boolean => {
     if (!tripDuration || tripDuration < 1) return false;
+    
+    // n박 여행이면 최대 n개의 숙소만 선택 가능
     return currentCount >= tripDuration;
   };
 
   const handleSelectPlace = (place: Place, checked: boolean, category: string | null = null) => {
-    const providedCategory = category || getCategoryKorean(place.category);
+    // 카테고리가 제공되었는지 확인하고, 누락된 경우 콘솔 로그 추가
+    const providedCategory = category || getCategoryKorean(place.category); // Fallback if category prop is null
     
     if (!providedCategory || !['숙소', '관광지', '음식점', '카페', '기타'].includes(providedCategory) ) {
        console.warn('유효하지 않거나 알 수 없는 카테고리 값입니다:', providedCategory, '장소:', place.name);
     }
 
+    // 타입 호환성을 위해 place.id가 string인지 확인
     const normalizedPlace = { ...place };
     
     if (checked) {
+      // If trying to add accommodation, check limit
       if (providedCategory === '숙소') {
         const currentAccommodationCount = selectedPlacesByCategory['숙소'].length;
+        
         if (isAccommodationLimitReached(currentAccommodationCount)) {
           toast.error(`${tripDuration}박 여행에는 최대 ${tripDuration}개의 숙소만 선택할 수 있습니다.`);
           return;
@@ -82,6 +109,7 @@ export const useSelectedPlaces = () => {
       }
     } else {
       setSelectedPlaces(prevPlaces => prevPlaces.filter(p => p.id !== normalizedPlace.id));
+      
       if (providedCategory && selectedPlacesByCategory[providedCategory as keyof typeof selectedPlacesByCategory]) {
         setSelectedPlacesByCategory(prev => ({
           ...prev,
@@ -92,16 +120,19 @@ export const useSelectedPlaces = () => {
   };
 
   const handleRemovePlace = (placeId: string) => {
-    const placeToRemove = selectedPlaces.find(p => String(p.id) === String(placeId)); // ID 비교 시 타입 일치
-    setSelectedPlaces(prevPlaces => prevPlaces.filter(p => String(p.id) !== String(placeId)));
+    // 타입 호환성을 위해 직접 비교
+    const placeToRemove = selectedPlaces.find(p => p.id === placeId);
+    
+    // 장소 제거 시 해당 카테고리에서도 제거
+    setSelectedPlaces(prevPlaces => prevPlaces.filter(p => p.id !== placeId));
     
     if (placeToRemove) {
       Object.keys(selectedPlacesByCategory).forEach(category => {
         const categoryKey = category as keyof typeof selectedPlacesByCategory;
-        if (selectedPlacesByCategory[categoryKey].some(p => String(p.id) === String(placeId))) {
+        if (selectedPlacesByCategory[categoryKey].some(p => p.id === placeId)) {
           setSelectedPlacesByCategory(prev => ({
             ...prev,
-            [categoryKey]: prev[categoryKey].filter(p => String(p.id) !== String(placeId))
+            [categoryKey]: prev[categoryKey].filter(p => p.id !== placeId)
           }));
         }
       });
@@ -114,6 +145,7 @@ export const useSelectedPlaces = () => {
     panTo({ lat: place.y, lng: place.x });
   };
 
+  // 후보 장소 자동 보완 기능 - 디버깅 로그 추가
   const autoCompleteWithCandidates = (
     currentSelectedPlaces: Place[], 
     recommendedPlacesByCategory: { [category: string]: Place[] }, 
@@ -125,6 +157,7 @@ export const useSelectedPlaces = () => {
       추천_카테고리_목록: Object.keys(recommendedPlacesByCategory)
     });
     
+    // 각 카테고리별 추천 가능 장소 개수 출력
     Object.entries(recommendedPlacesByCategory).forEach(([category, places]) => {
       console.log(`[자동 보완] ${category} 카테고리 추천 후보 장소: ${places.length}개`);
     });
@@ -143,13 +176,20 @@ export const useSelectedPlaces = () => {
       'cafe': '카페',
       'accommodation': '숙소'
     };
+    const categoryKorToEngMapping: Record<string, string> = {
+      '관광지': 'attraction',
+      '음식점': 'restaurant',
+      '카페': 'cafe',
+      '숙소': 'accommodation'
+    };
 
     const currentSelectedCountsByKoreanCategory: Record<string, Place[]> = {
       '숙소': [], '관광지': [], '음식점': [], '카페': []
     };
     
+    // 선택된 장소를 카테고리별로 분류하고 로그 출력
     currentSelectedPlaces.forEach(place => {
-      const koreanCategory = getCategoryKorean(place.category); // place.category 사용
+      const koreanCategory = getCategoryKorean(place.category);
       if (koreanCategory && currentSelectedCountsByKoreanCategory[koreanCategory]) {
         currentSelectedCountsByKoreanCategory[koreanCategory].push(place);
       }
@@ -166,6 +206,7 @@ export const useSelectedPlaces = () => {
     const finalPlaces: Place[] = [...currentSelectedPlaces];
     const autoCompletedCandidatePlaces: Place[] = [];
     
+    // Iterate using English category keys from minimumRequirements
     Object.entries(minimumRequirements).forEach(([categoryEng, minCount]) => {
       const categoryKorean = categoryEngToKorMapping[categoryEng];
       if (!categoryKorean) {
@@ -179,22 +220,18 @@ export const useSelectedPlaces = () => {
       console.log(`[자동 보완] ${categoryKorean} (${categoryEng}) 카테고리: 현재 ${currentCount}개, 최소 ${minCount}개, 부족 ${shortage}개`);
 
       if (shortage > 0) {
-        // recommendedPlacesByCategory의 키는 한글 카테고리 이름이어야 합니다.
-        // useCategoryResults가 반환하는 recommendedPlaces의 category 필드를 확인해야 합니다.
-        // 현재는 categoryKorean을 키로 사용합니다.
+        // 이 카테고리에 대한 추천 장소 배열 가져오기
         const availableRecommended = recommendedPlacesByCategory[categoryKorean] || [];
         
         console.log(`[자동 보완] ${categoryKorean} 카테고리 추천 후보 풀:`, 
           availableRecommended.length > 0 
-            ? availableRecommended.slice(0, 5).map(p => ({name: p.name, id: p.id})) : '없음',
-          availableRecommended.length > 5 ? ` 외 ${availableRecommended.length - 5}개 더 있음` : ''
+            ? availableRecommended.slice(0, 5).map(p => ({name: p.name, id: p.id})) + `${availableRecommended.length > 5 ? ' 외 ' + (availableRecommended.length - 5) + '개' : ''}`
+            : '없음'
         );
 
         const candidatesToAdd = availableRecommended
-          .filter(rp => 
-            !finalPlaces.some(sp => String(sp.id) === String(rp.id)) && // 이미 최종 목록에 있는지 확인
-            !autoCompletedCandidatePlaces.some(acp => String(acp.id) === String(rp.id)) // 이미 자동완성 후보에 있는지 확인 (오타 수정: acp.id === rp.id)
-          )
+          .filter(rp => !currentSelectedPlaces.some(sp => sp.id === rp.id) && 
+                        !autoCompletedCandidatePlaces.some(acp => acp.id === rp.id))
           .slice(0, shortage);
           
         if (candidatesToAdd.length > 0) {
@@ -214,18 +251,20 @@ export const useSelectedPlaces = () => {
       }
     });
     
+    // 최종 결과 로그 출력
     if (autoCompletedCandidatePlaces.length > 0) {
       console.log(`[자동 보완 완료] 총 ${autoCompletedCandidatePlaces.length}개의 장소를 자동으로 추가했습니다.`, 
         autoCompletedCandidatePlaces.map(p => `${p.name} (${getCategoryKorean(p.category)})`));
         
-      const finalCounts: Record<string, number> = {
+      // 최종 선택 장소와 카테고리별 통계 출력
+      const finalCounts = {
         '숙소': 0, '관광지': 0, '음식점': 0, '카페': 0, '기타': 0
       };
       
       finalPlaces.forEach(place => {
         const category = getCategoryKorean(place.category);
-        if (finalCounts[category] !== undefined) {
-          finalCounts[category]++;
+        if (category && finalCounts[category as keyof typeof finalCounts] !== undefined) {
+          finalCounts[category as keyof typeof finalCounts]++;
         } else {
           finalCounts['기타']++;
         }
@@ -233,11 +272,10 @@ export const useSelectedPlaces = () => {
       
       console.log('[자동 보완 완료] 최종 카테고리별 장소 수:', finalCounts);
       
-      setCandidatePlaces(prev => {
-        const newCandidates = autoCompletedCandidatePlaces.filter(acp => !prev.some(p => String(p.id) === String(acp.id)));
-        return [...prev, ...newCandidates];
-      });
+      // 후보 목록에 추가
+      setCandidatePlaces(prev => [...prev, ...autoCompletedCandidatePlaces.filter(acp => !prev.some(p => p.id === acp.id))]);
       
+      // 사용자에게 알림
       toast.info(`${autoCompletedCandidatePlaces.length}개의 추천 장소가 자동으로 추가되었습니다.`);
     } else {
       console.log('[자동 보완] 추가된 자동 추천 장소가 없습니다.');
@@ -258,29 +296,23 @@ export const useSelectedPlaces = () => {
 
     const startDate = new Date(dateTime.start_datetime);
     const endDate = new Date(dateTime.end_datetime);
-    // 여행 일수 계산 시 +1 을 해야 정확한 'N박 M일' 중 'M일'에 해당하는 값이 나옴
-    // 예: 21일 시작, 24일 종료 -> 24-21 = 3. 실제 여행일은 4일. (21, 22, 23, 24)
-    // N박 (Nights) = M일 - 1. tripDuration은 보통 N박을 의미하므로, +1 하지 않아도 될 수 있음.
-    // getMinimumRecommendationCount는 tripDuration(N박)을 기준으로 계산.
-    // 여기서는 일(days) 수가 필요하므로 +1.
     const tripDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
     
     console.log("[일정 생성] 일정 생성 전 장소 자동 보완 시작", {
       선택된_장소_수: placesToSchedule.length, 
-      여행_일수_계산용: tripDays, // 이 값은 getMinimumRecommendationCount에 전달될 수 있음
-      실제_최소요건_계산_기준_여행기간: tripDuration // useTripDetails에서 온 N박 값
+      여행_일수: tripDays
     });
     
-    // autoCompleteWithCandidates는 N박 기준 tripDuration을 사용해야 함.
-    const enrichedPlaces = autoCompleteWithCandidates(placesToSchedule, availableRecommendedPlacesByCategory, tripDuration);
+    // autoCompleteWithCandidates expects KOREAN category names as keys
+    const enrichedPlaces = autoCompleteWithCandidates(placesToSchedule, availableRecommendedPlacesByCategory, tripDays);
 
     const userSelected: SelectedPlace[] = enrichedPlaces
       .filter(p => !p.isCandidate)
-      .map(p => ({ id: String(p.id), name: p.name })); // ID를 문자열로 변환
+      .map(p => ({ id: p.id, name: p.name }));
 
     const autoCandidates: SelectedPlace[] = enrichedPlaces
       .filter(p => p.isCandidate)
-      .map(p => ({ id: String(p.id), name: p.name })); // ID를 문자열로 변환
+      .map(p => ({ id: p.id, name: p.name }));
 
     console.log('[일정 생성] 일정 생성 데이터 (prepareSchedulePayload):', {
       사용자선택_장소수: userSelected.length,
@@ -291,6 +323,7 @@ export const useSelectedPlaces = () => {
       payload_candidates: autoCandidates.map(p => p.name),
     });
 
+    // 서버 요청 페이로드 디버깅 로그
     const payload = {
       selected_places: userSelected,
       candidate_places: autoCandidates,
@@ -312,6 +345,6 @@ export const useSelectedPlaces = () => {
     allCategoriesSelected,
     prepareSchedulePayload,
     isAccommodationLimitReached,
-    autoCompleteWithCandidates // 외부에서 호출 가능하도록 export
+    autoCompleteWithCandidates
   };
 };

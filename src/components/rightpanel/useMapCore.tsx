@@ -1,3 +1,4 @@
+
 import { useMapInitialization } from '@/hooks/map/useMapInitialization';
 import { useMapNavigation } from '@/hooks/map/useMapNavigation';
 import { useMapMarkers } from '@/hooks/map/useMapMarkers';
@@ -6,7 +7,6 @@ import { useGeoJsonState } from '@/hooks/map/useGeoJsonState';
 import { useServerRoutes } from '@/hooks/map/useServerRoutes';
 import { useMapFeatures } from '@/hooks/map/useMapFeatures';
 import { Place } from '@/types/supabase';
-import { ServerRouteResponse } from '@/types/schedule';
 
 /**
  * 지도 핵심 기능 통합 훅

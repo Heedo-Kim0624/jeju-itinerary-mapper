@@ -1,137 +1,162 @@
-import { useState, useCallback } from 'react';
-import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import {
-  setAccommodationKeywords,
-  setLandmarkKeywords,
-  setRestaurantKeywords,
-  setCafeKeywords,
-  setCategoryPanelOpen,
-} from '@/store/slices/keywordSlice';
-import { CategoryName } from '@/utils/categoryUtils';
-import { SchedulePayload } from '@/types/schedule';
-import { ItineraryDay, Place, SelectedPlace } from '@/types/supabase';
-import { useScheduleGenerator } from './use-schedule-generator';
-import { createItinerary as apiCreateItinerary } from '@/api/itinerary';
 
-export const useLeftPanel = ({ onItineraryCreated }: { onItineraryCreated: (itinerary: ItineraryDay[]) => void }) => {
-  const dispatch = useAppDispatch();
-  const selectedPlacesFromStore = useAppSelector((state) => state.place.selectedPlaces as Place[]);
-  const candidatePlacesFromStore = useAppSelector((state) => state.place.candidatePlaces as Place[]);
-  const [startDate, setStartDate] = useState<Date | null>(null);
-  const [endDate, setEndDate] = useState<Date | null>(null);
+import { useState, useEffect } from 'react';
+import { useSelectedPlaces } from './use-selected-places';
+import { useTripDetails } from './use-trip-details';
+import { useCategoryResults } from './use-category-results';
+import { useItinerary } from './use-itinerary';
+import { useRegionSelection } from './use-region-selection';
+import { useCategorySelection } from './use-category-selection';
+import { useCategoryHandlers } from './left-panel/use-category-handlers';
+import { useItineraryHandlers } from './left-panel/use-itinerary-handlers';
+import { useInputState } from './left-panel/use-input-state';
 
-  const [accommodationDirectInputValue, setAccommodationDirectInputValue] = useState('');
-  const [landmarkDirectInputValue, setLandmarkDirectInputValue] = useState('');
-  const [restaurantDirectInputValue, setRestaurantDirectInputValue] = useState('');
-  const [cafeDirectInputValue, setCafeDirectInputValue] = useState('');
+/**
+ * 왼쪽 패널 기능 통합 훅
+ */
+export const useLeftPanel = () => {
+  // 지역 및 카테고리 선택 기능
+  const regionSelection = useRegionSelection();
+  const categorySelection = useCategorySelection();
+  const tripDetails = useTripDetails();
+  
+  // 상태 관리
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [showCategoryResultScreen, setShowCategoryResultScreen] = useState(false);
+  const [currentPanel, setCurrentPanel] = useState<'region' | 'date' | 'category' | 'itinerary'>('region');
+  const [showCategoryResult, setShowCategoryResult] = useState<string | null>(null);
+  
+  // 입력값 관리
+  const { directInputValues, onDirectInputChange } = useInputState();
 
-  const confirmAccommodationKeywords = useCallback(
-    (keywords: string[], clearSelection: boolean = false) => {
-      dispatch(setAccommodationKeywords({ keywords, clearSelection }));
-    },
-    [dispatch]
-  );
-
-  const confirmLandmarkKeywords = useCallback(
-    (keywords: string[], clearSelection: boolean = false) => {
-      dispatch(setLandmarkKeywords({ keywords, clearSelection }));
-    },
-    [dispatch]
-  );
-
-  const confirmRestaurantKeywords = useCallback(
-    (keywords: string[], clearSelection: boolean = false) => {
-      dispatch(setRestaurantKeywords({ keywords, clearSelection }));
-    },
-    [dispatch]
-  );
-
-  const confirmCafeKeywords = useCallback(
-    (keywords: string[], clearSelection: boolean = false) => {
-      dispatch(setCafeKeywords({ keywords, clearSelection }));
-    },
-    [dispatch]
-  );
-
-  const closeAccommodationPanel = useCallback(() => {
-    dispatch(setCategoryPanelOpen({ category: 'accommodation', open: false }));
-  }, [dispatch]);
-
-  const closeLandmarkPanel = useCallback(() => {
-    dispatch(setCategoryPanelOpen({ category: 'landmark', open: false }));
-  }, [dispatch]);
-
-  const closeRestaurantPanel = useCallback(() => {
-    dispatch(setCategoryPanelOpen({ category: 'restaurant', open: false }));
-  }, [dispatch]);
-
-  const closeCafePanel = useCallback(() => {
-    dispatch(setCategoryPanelOpen({ category: 'cafe', open: false }));
-  }, [dispatch]);
-
-  const setCategoryKeyword = (category: CategoryName) => (value: string) => {
-    if (category === 'accommodation') {
-      setAccommodationDirectInputValue(value);
-    } else if (category === 'landmark' || category === 'attraction') {
-      setLandmarkDirectInputValue(value);
-    } else if (category === 'restaurant') {
-      setRestaurantDirectInputValue(value);
-    } else if (category === 'cafe') {
-      setCafeDirectInputValue(value);
+  // 키워드 및 입력 관련 기능
+  const keywordsAndInputs = {
+    directInputValues,
+    onDirectInputChange,
+    handleConfirmCategory: (category: string, finalKeywords: string[], clearSelection: boolean = false) => {
+      categorySelection.handleConfirmCategory(category as any, finalKeywords, clearSelection);
+      if (clearSelection) {
+        setShowCategoryResult(category);
+      }
     }
   };
 
-  const createItineraryWrapper = useCallback(async (payload: SchedulePayload): Promise<ItineraryDay[]> => {
-    if (!payload.start_datetime || !payload.end_datetime) {
-      toast.error("Date information is missing in payload for itinerary generation.");
-      return Promise.reject(new Error("Date information is missing"));
-    }
-    const sDate = new Date(payload.start_datetime);
-    const eDate = new Date(payload.end_datetime);
-    
-    const localItineraryDays: ItineraryDay[] = [];
-    let currentDate = new Date(sDate);
-    while (currentDate <= eDate) {
-      localItineraryDays.push({
-        id: currentDate.toISOString().split('T')[0], 
-        date: currentDate.toISOString(), 
-        places: [], 
-        user_id: '', 
-        trip_id: '', 
-      });
-      currentDate.setDate(currentDate.getDate() + 1);
-    }
-    return Promise.resolve(localItineraryDays);
-  }, []);
+  // 장소 관리 기능
+  const {
+    selectedPlaces,
+    candidatePlaces,
+    selectedPlacesByCategory,
+    handleSelectPlace,
+    handleRemovePlace,
+    handleViewOnMap,
+    allCategoriesSelected,
+    prepareSchedulePayload,
+    isAccommodationLimitReached,
+  } = useSelectedPlaces();
 
-  useScheduleGenerator({
-    selectedPlaces: selectedPlacesFromStore,
-    candidatePlaces: candidatePlacesFromStore,
-    createItinerary: createItineraryWrapper,
-    onItineraryCreated,
-    startDate,
-    endDate,
-  });
+  const placesManagement = {
+    selectedPlaces,
+    candidatePlaces,
+    selectedPlacesByCategory,
+    handleSelectPlace,
+    handleRemovePlace,
+    handleViewOnMap,
+    allCategoriesSelected,
+    isAccommodationLimitReached,
+    prepareSchedulePayload
+  };
+
+  // 일정 관리 기능
+  const { 
+    itinerary,
+    selectedItineraryDay,
+    showItinerary,
+    setItinerary,
+    setSelectedItineraryDay,
+    setShowItinerary,
+    handleSelectItineraryDay,
+    generateItinerary
+  } = useItinerary();
+
+  const itineraryManagement = {
+    itinerary,
+    selectedItineraryDay,
+    setSelectedItineraryDay,
+    handleSelectItineraryDay
+  };
+
+  // UI 가시성 관리
+  const uiVisibility = {
+    showItinerary,
+    setShowItinerary,
+    showCategoryResult,
+    setShowCategoryResult
+  };
+
+  // 카테고리 결과 관리
+  const { 
+    isLoading: isCategoryLoading,
+    error: categoryError,
+    recommendedPlaces,
+    normalPlaces,
+    refetch
+  } = useCategoryResults(showCategoryResult as any, 
+    showCategoryResult ? categorySelection.selectedKeywordsByCategory[showCategoryResult] || [] : [], 
+    regionSelection.selectedRegions);
+
+  const categoryResults = {
+    recommendedPlaces: recommendedPlaces || [],
+    normalPlaces: normalPlaces || []
+  };
+
+  // 카테고리 핸들러
+  const categoryHandlers = useCategoryHandlers();
+  const handleCategorySelect = (category: string) => categoryHandlers.handleCategorySelect(category, refetch);
+  const handleCloseCategoryResult = () => categoryHandlers.handleCloseCategoryResult(setShowCategoryResult);
+  const handleConfirmCategory = () => categoryHandlers.handleConfirmCategory(selectedCategory);
+
+  // 일정 핸들러
+  const itineraryHandlers = useItineraryHandlers();
+  const handleCreateItinerary = async () => {
+    return itineraryHandlers.handleCreateItinerary(
+      tripDetails,
+      selectedPlaces,
+      prepareSchedulePayload,
+      recommendedPlaces,
+      generateItinerary,
+      setShowItinerary,
+      setCurrentPanel
+    );
+  };
+  
+  const handleCloseItinerary = () => {
+    itineraryHandlers.handleCloseItinerary(setShowItinerary, setCurrentPanel);
+  };
+
+  // 일정이 생성되면 첫 번째 날짜 선택
+  useEffect(() => {
+    if (itinerary && itinerary.length > 0 && showItinerary) {
+      setSelectedItineraryDay(itinerary[0]?.day || 1);
+    }
+  }, [itinerary, showItinerary, setSelectedItineraryDay]);
 
   return {
-    accommodationDirectInputValue,
-    landmarkDirectInputValue,
-    restaurantDirectInputValue,
-    cafeDirectInputValue,
-    setAccommodationDirectInputValue,
-    setLandmarkDirectInputValue,
-    setRestaurantDirectInputValue,
-    setCafeDirectInputValue,
-    confirmAccommodationKeywords,
-    confirmLandmarkKeywords,
-    confirmRestaurantKeywords,
-    confirmCafeKeywords,
-    closeAccommodationPanel,
-    closeLandmarkPanel,
-    closeRestaurantPanel,
-    closeCafePanel,
-    setCategoryKeyword,
-    setStartDate,
-    setEndDate,
+    regionSelection,
+    categorySelection,
+    keywordsAndInputs,
+    placesManagement,
+    tripDetails,
+    uiVisibility,
+    itineraryManagement,
+    handleCreateItinerary,
+    selectedCategory,
+    showCategoryResultScreen,
+    currentPanel,
+    isCategoryLoading,
+    categoryError,
+    categoryResults,
+    handleCategorySelect,
+    handleCloseCategoryResult,
+    handleConfirmCategory,
+    handleCloseItinerary
   };
 };

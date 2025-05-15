@@ -1,6 +1,6 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+
+import { useState, useCallback, useRef } from 'react';
 import { GeoNode, GeoLink, RouteStyle, GeoJsonLayerRef } from './GeoJsonTypes';
-import { toast } from 'sonner';
 
 const useGeoJsonState = (map: any) => {
   const [isLoading, setIsLoading] = useState(false);
@@ -28,8 +28,8 @@ const useGeoJsonState = (map: any) => {
     const nodeMap = new Map<string, GeoNode>();
     const linkMap = new Map<string, GeoLink>();
     
-    loadedNodes.forEach(node => nodeMap.set(String(node.id), node)); // ID를 문자열로 통일
-    loadedLinks.forEach(link => linkMap.set(String(link.id), link)); // ID를 문자열로 통일
+    loadedNodes.forEach(node => nodeMap.set(node.id, node));
+    loadedLinks.forEach(link => linkMap.set(link.id, link));
     
     nodeMapRef.current = nodeMap;
     linkMapRef.current = linkMap;
@@ -45,7 +45,6 @@ const useGeoJsonState = (map: any) => {
     setIsLoading(false);
     setError(loadError);
     console.error('GeoJSON 데이터 로드 실패:', loadError);
-    toast.error(`GeoJSON 데이터 로드 실패: ${loadError.message}`);
   }, []);
   
   // 활성 피처 변경 처리
@@ -71,136 +70,108 @@ const useGeoJsonState = (map: any) => {
       }
     });
     activePolylinesRef.current = [];
-    
-    // Naver 객체에 저장된 참조도 초기화 (선택적)
-    nodeMapRef.current.forEach(node => {
-        if(node.naverMarker) node.naverMarker = null;
-    });
-    linkMapRef.current.forEach(link => {
-        if(link.naverPolyline) link.naverPolyline = null;
-    });
   }, []);
   
   // 노드 ID로 노드 조회
   const getNodeById = useCallback((id: string): GeoNode | undefined => {
-    return nodeMapRef.current.get(String(id)); // ID를 문자열로 통일
+    return nodeMapRef.current.get(id);
   }, []);
   
   // 링크 ID로 링크 조회
   const getLinkById = useCallback((id: string): GeoLink | undefined => {
-    return linkMapRef.current.get(String(id)); // ID를 문자열로 통일
+    return linkMapRef.current.get(id);
   }, []);
   
   // 경로 렌더링 함수
   const renderRoute = useCallback((nodeIds: string[], linkIds: string[], style: RouteStyle = {
-    strokeColor: '#3366FF', // 경로 기본 색상 (파란색 계열)
+    strokeColor: '#2196F3',
     strokeWeight: 5,
-    strokeOpacity: 0.8,
-    fillColor: '#FF5722', // 노드 기본 색상 (주황색 계열)
-    zIndex: 150 // 경로가 다른 요소들 위에 오도록 zIndex 설정
+    strokeOpacity: 0.8
   }): any[] => {
-    if (!map || !window.naver || !window.naver.maps) {
-        console.warn("지도 객체 또는 Naver Maps API가 준비되지 않았습니다.");
-        return [];
-    }
+    if (!map) return [];
+    
+    // 기존에 표시된 피처 제거
+    clearDisplayedFeatures();
     
     const renderedFeatures: any[] = [];
     
+    // 링크 렌더링
     linkIds.forEach(linkId => {
-      const link = getLinkById(String(linkId));
+      const link = getLinkById(linkId);
       if (!link) {
-        console.warn(`[RenderRoute] 링크 ID ${linkId}를 찾을 수 없습니다.`);
+        console.warn(`링크 ID ${linkId}를 찾을 수 없습니다.`);
         return;
       }
-      if (link.naverPolyline && typeof link.naverPolyline.setMap === 'function') {
-          link.naverPolyline.setMap(null); // 기존 폴리라인 제거
+      
+      // naver.maps.Polyline을 사용하여 링크 렌더링
+      if (window.naver && window.naver.maps) {
+        try {
+          const path = link.coordinates.map(coord => 
+            new window.naver.maps.LatLng(coord[1], coord[0])
+          );
+          
+          const polyline = new window.naver.maps.Polyline({
+            map,
+            path,
+            strokeColor: style.strokeColor,
+            strokeWeight: style.strokeWeight,
+            strokeOpacity: style.strokeOpacity,
+            zIndex: style.zIndex || 100
+          });
+          
+          renderedFeatures.push(polyline);
+          activePolylinesRef.current.push(polyline);
+          link.naverPolyline = polyline;
+        } catch (e) {
+          console.error(`링크 ${linkId} 렌더링 중 오류:`, e);
+        }
       }
-      try {
-        const path = link.coordinates.map(coord => new window.naver.maps.LatLng(coord[1], coord[0]));
-        const polyline = new window.naver.maps.Polyline({
-          map, path,
-          strokeColor: style.strokeColor,
-          strokeWeight: style.strokeWeight,
-          strokeOpacity: style.strokeOpacity,
-          zIndex: style.zIndex
-        });
-        renderedFeatures.push(polyline);
-        activePolylinesRef.current.push(polyline); // 활성 피처 목록에 추가
-        link.naverPolyline = polyline; // 참조 저장
-      } catch (e) { console.error(`링크 ${linkId} 렌더링 중 오류:`, e); }
     });
     
+    // 노드 렌더링
     nodeIds.forEach(nodeId => {
-      const node = getNodeById(String(nodeId));
+      const node = getNodeById(nodeId);
       if (!node) {
-        console.warn(`[RenderRoute] 노드 ID ${nodeId}를 찾을 수 없습니다.`);
+        console.warn(`노드 ID ${nodeId}를 찾을 수 없습니다.`);
         return;
       }
-      if (node.naverMarker && typeof node.naverMarker.setMap === 'function') {
-        node.naverMarker.setMap(null); // 기존 마커 제거
+      
+      // naver.maps.Marker를 사용하여 노드 렌더링
+      if (window.naver && window.naver.maps) {
+        try {
+          const position = new window.naver.maps.LatLng(
+            node.coordinates[1],
+            node.coordinates[0]
+          );
+          
+          const marker = new window.naver.maps.Marker({
+            map,
+            position,
+            icon: {
+              content: `<div style="
+                width: 8px;
+                height: 8px;
+                background-color: ${style.fillColor || '#FF5722'};
+                border-radius: 50%;
+                border: 2px solid white;
+                box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
+              "></div>`,
+              anchor: new window.naver.maps.Point(4, 4)
+            },
+            zIndex: (style.zIndex || 100) + 1
+          });
+          
+          renderedFeatures.push(marker);
+          activeMarkersRef.current.push(marker);
+          node.naverMarker = marker;
+        } catch (e) {
+          console.error(`노드 ${nodeId} 렌더링 중 오류:`, e);
+        }
       }
-      try {
-        const position = new window.naver.maps.LatLng(node.coordinates[1], node.coordinates[0]);
-        const marker = new window.naver.maps.Marker({
-          map, position,
-          icon: {
-            content: `<div style="width: 8px; height: 8px; background-color: ${style.fillColor}; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.3);"></div>`,
-            anchor: new window.naver.maps.Point(4, 4)
-          },
-          zIndex: (style.zIndex || 100) + 1
-        });
-        renderedFeatures.push(marker);
-        activeMarkersRef.current.push(marker); // 활성 피처 목록에 추가
-        node.naverMarker = marker; // 참조 저장
-      } catch (e) { console.error(`노드 ${nodeId} 렌더링 중 오류:`, e); }
     });
     
     return renderedFeatures;
-  }, [map, getLinkById, getNodeById]);
-  
-  // 모든 노드와 링크를 기본 스타일로 렌더링하는 함수
-  const renderAllFeatures = useCallback((style: RouteStyle = {}) => {
-    if (!map || !isLoaded || !window.naver || !window.naver.maps) {
-      return;
-    }
-
-    const defaultNodeStyle = { fillColor: '#4CAF50', zIndex: 101, ...style };
-    const defaultLinkStyle = { strokeColor: '#2196F3', strokeWeight: 3, strokeOpacity: 0.7, zIndex: 100, ...style };
-
-    nodes.forEach(node => {
-        if (node.naverMarker && typeof node.naverMarker.setMap === 'function') node.naverMarker.setMap(null);
-        try {
-            const position = new window.naver.maps.LatLng(node.coordinates[1], node.coordinates[0]);
-            const marker = new window.naver.maps.Marker({
-                map, position,
-                icon: {
-                    content: `<div style="width: 6px; height: 6px; background-color: ${defaultNodeStyle.fillColor}; border-radius: 50%; border: 1px solid white;"></div>`,
-                    anchor: new window.naver.maps.Point(3,3)
-                },
-                zIndex: defaultNodeStyle.zIndex
-            });
-            activeMarkersRef.current.push(marker);
-            node.naverMarker = marker;
-        } catch (e) { console.error(`전체 노드 ${node.id} 렌더링 오류:`, e); }
-    });
-
-    links.forEach(link => {
-        if (link.naverPolyline && typeof link.naverPolyline.setMap === 'function') link.naverPolyline.setMap(null);
-        try {
-            const path = link.coordinates.map(coord => new window.naver.maps.LatLng(coord[1], coord[0]));
-            const polyline = new window.naver.maps.Polyline({
-                map, path,
-                strokeColor: defaultLinkStyle.strokeColor,
-                strokeWeight: defaultLinkStyle.strokeWeight,
-                strokeOpacity: defaultLinkStyle.strokeOpacity,
-                zIndex: defaultLinkStyle.zIndex
-            });
-            activePolylinesRef.current.push(polyline);
-            link.naverPolyline = polyline;
-        } catch (e) { console.error(`전체 링크 ${link.id} 렌더링 오류:`, e); }
-    });
-
-  }, [map, isLoaded, nodes, links]);
+  }, [map, clearDisplayedFeatures, getLinkById, getNodeById]);
   
   // 전역 인터페이스 등록
   const registerGlobalInterface = useCallback(() => {
@@ -209,8 +180,7 @@ const useGeoJsonState = (map: any) => {
       renderRoute,
       clearDisplayedFeatures,
       getNodeById,
-      getLinkById,
-      renderAllFeatures // 추가된 함수
+      getLinkById
     };
     
     window.geoJsonLayer = layerInterface;
@@ -222,16 +192,8 @@ const useGeoJsonState = (map: any) => {
         delete window.geoJsonLayer;
       }
     };
-  }, [renderRoute, clearDisplayedFeatures, getNodeById, getLinkById, renderAllFeatures]);
+  }, [renderRoute, clearDisplayedFeatures, getNodeById, getLinkById]);
   
-  // isLoaded 상태가 true로 변경되면 모든 피처를 렌더링하도록 useEffect 추가
-   useEffect(() => {
-    if (isLoaded && map && window.geoJsonLayer) {
-        // GeoJsonRenderer가 이 역할을 하도록 변경됨
-        // 여기서는 직접 호출하지 않음
-    }
-  }, [isLoaded, map]);
-
   return {
     isLoading,
     error,
@@ -245,7 +207,6 @@ const useGeoJsonState = (map: any) => {
     getNodeById,
     getLinkById,
     renderRoute,
-    renderAllFeatures,
     registerGlobalInterface
   };
 };

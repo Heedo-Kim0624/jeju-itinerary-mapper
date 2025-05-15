@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { CategoryName } from '@/utils/categoryUtils'; // Ensure CategoryName is exported
+import { CategoryName } from '@/utils/categoryUtils';
 
 export const useCategoryPanel = () => {
   const [activeMiddlePanelCategory, setActiveMiddlePanelCategory] = useState<CategoryName | null>(null);
