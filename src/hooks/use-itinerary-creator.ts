@@ -1,212 +1,78 @@
+
 import { useState, useCallback } from 'react';
 import { Place } from '@/types/supabase';
-import { ServerRouteResponse } from '@/types/schedule';
+import { ItineraryDay } from '@/types/itinerary';
 
-export interface ItineraryDay {
-  day: number;
-  places: Place[];
-  startTime?: string;
-  endTime?: string;
-  routeData?: {
-    nodeIds: string[];
-    linkIds?: string[];
-  };
-  totalDistance?: number; // Added to match the type in supabase
+export interface UseItineraryCreatorProps {
+  // Add any props that the hook needs
 }
 
-export interface Itinerary {
-  id?: string;
-  title: string;
-  startDate: Date;
-  endDate: Date;
-  days: number;
-  schedule: ItineraryDay[];
+export interface UseItineraryCreatorReturn {
+  itinerary: ItineraryDay[] | null;
+  isCreating: boolean;
+  error: Error | null;
+  setItinerary: (itinerary: ItineraryDay[] | null) => void;
+  createItinerary: (places: Place[], days: number, startTime?: string, endTime?: string) => Promise<ItineraryDay[] | null>;
 }
 
-interface UseItineraryCreatorProps {
-  initialItinerary?: Itinerary;
-}
+export const useItineraryCreator = (): UseItineraryCreatorReturn => {
+  const [itinerary, setItinerary] = useState<ItineraryDay[] | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
 
-interface UseItineraryCreatorReturn {
-  itinerary: Itinerary;
-  updateItineraryTitle: (title: string) => void;
-  updateItineraryDates: (startDate: Date, endDate: Date) => void;
-  addPlaceToDay: (day: number, place: Place) => void;
-  removePlaceFromDay: (day: number, placeId: string) => void;
-  movePlaceToDay: (fromDay: number, toDay: number, placeId: string) => void;
-  setDayRouteData: (day: number, routeData: { nodeIds: string[]; linkIds?: string[] | undefined; }) => void;
-  clearDayRouteData: (day: number) => void;
-  initializeItinerary: (newItinerary: Itinerary) => void;
-  resetItinerary: () => void;
-}
+  // Define createItinerary function to generate an itinerary from a list of places
+  const createItinerary = useCallback(
+    async (places: Place[], days: number, startTime = "09:00", endTime = "21:00"): Promise<ItineraryDay[] | null> => {
+      if (places.length === 0 || days <= 0) {
+        console.error("Invalid input for createItinerary: places must not be empty and days must be positive");
+        return null;
+      }
 
-/**
- * 일정 생성 및 관리 훅
- */
-export const useItineraryCreator = ({ initialItinerary }: UseItineraryCreatorProps = {}): UseItineraryCreatorReturn => {
-  const [itinerary, setItinerary] = useState<Itinerary>(
-    initialItinerary || {
-      title: '나의 새로운 여행 일정',
-      startDate: new Date(),
-      endDate: new Date(),
-      days: 1,
-      schedule: [{ day: 1, places: [] }],
-    }
+      try {
+        setIsCreating(true);
+        setError(null);
+
+        // Default implementation logic - in a real app, this might call an API
+        const placesPerDay = Math.ceil(places.length / days);
+        const generatedItinerary: ItineraryDay[] = [];
+
+        for (let day = 1; day <= days; day++) {
+          const startIndex = (day - 1) * placesPerDay;
+          const endIndex = Math.min(startIndex + placesPerDay, places.length);
+          const dayPlaces = places.slice(startIndex, endIndex);
+
+          generatedItinerary.push({
+            day,
+            places: dayPlaces,
+            totalDistance: 0, // This should be calculated based on routes
+            startTime,
+            endTime
+          });
+        }
+
+        // Set the generated itinerary
+        setItinerary(generatedItinerary);
+        return generatedItinerary;
+      } catch (err) {
+        const error = err instanceof Error ? err : new Error('Failed to create itinerary');
+        setError(error);
+        console.error("Error creating itinerary:", error);
+        return null;
+      } finally {
+        setIsCreating(false);
+      }
+    },
+    []
   );
-
-  // 일정 제목 업데이트
-  const updateItineraryTitle = useCallback((title: string) => {
-    setItinerary(prev => ({ ...prev, title }));
-  }, []);
-
-  // 일정 시작/종료 날짜 업데이트
-  const updateItineraryDates = useCallback((startDate: Date, endDate: Date) => {
-    const days = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1);
-
-    setItinerary(prev => {
-      // 기존 schedule 유지하고 날짜만 업데이트
-      const updatedSchedule = prev.schedule.map((daySchedule, index) => ({
-        ...daySchedule,
-        day: index + 1, // day 속성도 업데이트
-      }));
-
-      // 날짜 변경에 따른 schedule 조정
-      if (days > prev.days) {
-        // 늘어난 날짜만큼 schedule에 추가
-        for (let i = prev.days; i < days; i++) {
-          updatedSchedule.push({ day: i + 1, places: [] });
-        }
-      } else if (days < prev.days) {
-        // 줄어든 날짜만큼 schedule에서 제거
-        updatedSchedule.length = days;
-      }
-
-      return {
-        ...prev,
-        startDate,
-        endDate,
-        days,
-        schedule: updatedSchedule,
-      };
-    });
-  }, []);
-
-  // 특정 날짜에 장소 추가
-  const addPlaceToDay = useCallback((day: number, place: Place) => {
-    setItinerary(prev => {
-      const updatedSchedule = prev.schedule.map(daySchedule => {
-        if (daySchedule.day === day) {
-          return { ...daySchedule, places: [...daySchedule.places, place] };
-        }
-        return daySchedule;
-      });
-
-      return { ...prev, schedule: updatedSchedule };
-    });
-  }, []);
-
-  // 특정 날짜에서 장소 제거
-  const removePlaceFromDay = useCallback((day: number, placeId: string) => {
-    setItinerary(prev => {
-      const updatedSchedule = prev.schedule.map(daySchedule => {
-        if (daySchedule.day === day) {
-          return {
-            ...daySchedule,
-            places: daySchedule.places.filter(place => place.id !== placeId),
-          };
-        }
-        return daySchedule;
-      });
-
-      return { ...prev, schedule: updatedSchedule };
-    });
-  }, []);
-
-  // 특정 날짜에서 다른 날짜로 장소 이동
-  const movePlaceToDay = useCallback((fromDay: number, toDay: number, placeId: string) => {
-    setItinerary(prev => {
-      let movedPlace: Place | undefined;
-
-      const updatedSchedule = prev.schedule.map(daySchedule => {
-        if (daySchedule.day === fromDay) {
-          const placeToRemove = daySchedule.places.find(place => place.id === placeId);
-          if (placeToRemove) {
-            movedPlace = placeToRemove;
-          }
-          return {
-            ...daySchedule,
-            places: daySchedule.places.filter(place => place.id !== placeId),
-          };
-        }
-        return daySchedule;
-      });
-
-      if (movedPlace) {
-        const finalSchedule = updatedSchedule.map(daySchedule => {
-          if (daySchedule.day === toDay) {
-            return { ...daySchedule, places: [...daySchedule.places, movedPlace!] };
-          }
-          return daySchedule;
-        });
-        return { ...prev, schedule: finalSchedule };
-      }
-
-      return prev;
-    });
-  }, []);
-
-  // 특정 날짜에 대한 경로 데이터 설정
-  const setDayRouteData = useCallback((day: number, routeData: { nodeIds: string[]; linkIds?: string[] | undefined; }) => {
-    setItinerary(prev => {
-      const updatedSchedule = prev.schedule.map(daySchedule => {
-        if (daySchedule.day === day) {
-          return { ...daySchedule, routeData: routeData };
-        }
-        return daySchedule;
-      });
-      return { ...prev, schedule: updatedSchedule };
-    });
-  }, []);
-
-  // 특정 날짜에 대한 경로 데이터 초기화
-  const clearDayRouteData = useCallback((day: number) => {
-    setItinerary(prev => {
-      const updatedSchedule = prev.schedule.map(daySchedule => {
-        if (daySchedule.day === day) {
-          return { ...daySchedule, routeData: undefined };
-        }
-        return daySchedule;
-      });
-      return { ...prev, schedule: updatedSchedule };
-    });
-  }, []);
-
-  // 외부에서 itinerary data를 받아와서 초기화
-  const initializeItinerary = useCallback((newItinerary: Itinerary) => {
-    setItinerary(newItinerary);
-  }, []);
-
-  // 일정 초기화
-  const resetItinerary = useCallback(() => {
-    setItinerary({
-      title: '나의 새로운 여행 일정',
-      startDate: new Date(),
-      endDate: new Date(),
-      days: 1,
-      schedule: [{ day: 1, places: [] }],
-    });
-  }, []);
 
   return {
     itinerary,
-    updateItineraryTitle,
-    updateItineraryDates,
-    addPlaceToDay,
-    removePlaceFromDay,
-    movePlaceToDay,
-    setDayRouteData,
-    clearDayRouteData,
-    initializeItinerary,
-    resetItinerary,
+    isCreating,
+    error,
+    setItinerary,
+    createItinerary
   };
 };
+
+// Re-export ItineraryDay type for convenience and backwards compatibility
+export type { ItineraryDay } from '@/types/itinerary';

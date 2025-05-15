@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
-import { useLeftPanel, CategoryName } from '@/hooks/use-left-panel';
+import { useLeftPanel } from '@/hooks/use-left-panel';
+import { CategoryName } from '@/utils/categoryUtils';
 import LeftPanelContent from './LeftPanelContent';
 import RegionPanelHandler from './RegionPanelHandler';
 import CategoryResultHandler from './CategoryResultHandler';
@@ -55,7 +56,7 @@ const LeftPanel: React.FC = () => {
     setItineraryPanelDisplayed(false);
   };
 
-  // 카테고리 확인 핸들러
+  // 카테고리 확인 핸들러 - CategoryName 타입 사용
   const handleConfirmByCategory = (category: CategoryName, finalKeywords: string[]) => {
     console.log(`카테고리 '${category}' 확인, 키워드: ${finalKeywords.join(', ')}`);
     // 키워드 확인 후 카테고리 결과 화면 표시

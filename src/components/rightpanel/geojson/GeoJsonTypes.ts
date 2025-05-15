@@ -42,7 +42,7 @@ export interface GeoJsonLayerProps {
 // Interface for the global GeoJSON layer reference
 export interface GeoJsonLayerRef {
   renderRoute: (nodeIds: string[], linkIds: string[], style?: RouteStyle) => any[];
-  renderAllNetwork: (style?: RouteStyle) => any[]; // Added this method
+  renderAllNetwork: (style?: RouteStyle) => any[]; // Method to render the entire network
   clearDisplayedFeatures: () => void;
   getNodeById: (id: string) => GeoNode | undefined;
   getLinkById: (id: string) => GeoLink | undefined;
