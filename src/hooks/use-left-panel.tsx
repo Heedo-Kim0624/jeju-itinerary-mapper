@@ -130,12 +130,13 @@ export const useLeftPanel = () => {
       recommendedPlaces,
       generateItinerary,
       setShowItinerary,
-      (panel: 'region' | 'date' | 'category' | 'itinerary') => setCurrentPanel(panel)
+      (panel) => setCurrentPanel(panel as 'region' | 'date' | 'category' | 'itinerary')
     );
   };
   
   const handleCloseItinerary = () => {
-    itineraryHandlers.handleCloseItinerary(setShowItinerary, setCurrentPanel);
+    itineraryHandlers.handleCloseItinerary(setShowItinerary, 
+      (panel) => setCurrentPanel(panel as 'region' | 'date' | 'category' | 'itinerary'));
   };
 
   // 일정이 생성되면 첫 번째 날짜 선택

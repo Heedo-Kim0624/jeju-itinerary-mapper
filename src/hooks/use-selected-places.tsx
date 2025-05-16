@@ -133,7 +133,7 @@ export const useSelectedPlaces = () => {
   };
 
   // Enhanced auto-completion function with better trip duration handling
-  const handleAutoCompletePlaces = (category: string, recommendedPlaces: Place[]) => {
+  const handleAutoCompletePlaces = (category: string, selectedPlaces: Place[], recommendedPlaces: Place[]) => {
     if (!tripDuration || tripDuration < 1) {
       console.warn('[자동 보완] 여행 기간이 설정되지 않아 자동 보완을 실행할 수 없습니다.');
       toast.error('여행 일정을 먼저 설정해주세요!');

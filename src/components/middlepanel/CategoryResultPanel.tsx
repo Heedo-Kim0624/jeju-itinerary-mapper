@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Place } from '@/types/supabase';
 import { useMapContext } from '../rightpanel/MapContext';
@@ -9,6 +10,7 @@ import LoadingState from './category-result/LoadingState';
 import ErrorState from './category-result/ErrorState';
 import { Button } from '@/components/ui/button';
 import { CheckIcon } from 'lucide-react';
+import { useTripDetails } from '@/hooks/use-trip-details';
 
 interface CategoryResultPanelProps {
   category: '숙소' | '관광지' | '음식점' | '카페';
@@ -34,6 +36,7 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const { panTo, addMarkers, clearMarkersAndUiElements } = useMapContext();
   const [userSelectedPlaces, setUserSelectedPlaces] = useState<Place[]>([]);
+  const { tripDuration } = useTripDetails();
   
   // 안전하게 regions 배열을 처리 - regions가 undefined일 경우 빈 배열 사용
   const safeRegions = Array.isArray(regions) ? regions : [];
@@ -91,7 +94,15 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
     onSelectPlace(place, checked);
   };
 
+  // 통합된 확인 버튼 핸들러
   const handleConfirm = () => {
+    // 여행 기간 확인
+    if (!tripDuration || tripDuration < 1) {
+      console.warn(`[CategoryResultPanel] 여행 기간이 설정되지 않음: ${tripDuration}`);
+    } else {
+      console.log(`[CategoryResultPanel] 여행 기간: ${tripDuration}일`);
+    }
+    
     console.log(`[카테고리 확인] ${category} 카테고리 선택 완료 및 자동 보완 시작: ${userSelectedPlaces.length}개 장소`);
     
     if (onConfirm) {
@@ -121,7 +132,7 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
                 isLoading={isLoading}
                 selectedPlaces={[]}
                 onSelectPlace={handlePlaceSelect}
-                onViewOnMap={handleViewDetails}
+                onViewDetails={handleViewDetails}
                 isPlaceSelected={isPlaceSelected}
               />
               
@@ -132,7 +143,7 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
                   isLoading={isLoading}
                   selectedPlaces={[]}
                   onSelectPlace={handlePlaceSelect}
-                  onViewOnMap={handleViewDetails}
+                  onViewDetails={handleViewDetails}
                   isPlaceSelected={isPlaceSelected}
                 />
               )}
@@ -140,7 +151,7 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
           )}
         </div>
 
-        {/* Replace "Select Complete" and "Confirm" buttons with a single "Confirm" button */}
+        {/* 하나의 "확인" 버튼만 남기고 기능 통합 */}
         <div className="p-4 border-t border-gray-200">
           <Button 
             onClick={handleConfirm}
