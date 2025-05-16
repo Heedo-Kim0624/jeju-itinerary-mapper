@@ -1,4 +1,3 @@
-
 export interface Place {
   id: string;
   name: string;
@@ -29,9 +28,10 @@ export interface Place {
   raw?: any; // 원본 데이터 저장을 위한 필드
 }
 
-export interface SelectedPlace {
-  id: string | number;  // Changed to accept both string and number
-  name: string;
+export interface SelectedPlace extends Place {
+  category: CategoryName;
+  isSelected: boolean;
+  isCandidate: boolean;
 }
 
 // 새로운 타입 정의: 여행 날짜와 시간

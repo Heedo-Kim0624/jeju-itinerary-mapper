@@ -37,6 +37,9 @@ export const englishToKorean = (englishName: string): CategoryName | null => {
   }
 };
 
+// Add missing constants
+export const CATEGORIES: CategoryName[] = ['숙소', '관광지', '음식점', '카페'];
+
 // 카테고리별 최소 추천 개수 계산 함수
 export const getMinimumRecommendationsByCategory = (days: number) => {
   return {
@@ -46,6 +49,9 @@ export const getMinimumRecommendationsByCategory = (days: number) => {
     '카페': Math.max(3, Math.ceil(3 * days))
   };
 };
+
+// Export with alias for backwards compatibility
+export const MINIMUM_RECOMMENDATION_COUNT = getMinimumRecommendationsByCategory;
 
 // 카테고리별 시간대 추천 가중치
 export const timeOfDayWeights = {

@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { Place, SchedulePayload, SelectedPlace } from '@/types/supabase';
 import { CategoryName, CATEGORIES, MINIMUM_RECOMMENDATION_COUNT } from '@/utils/categoryUtils';
@@ -6,7 +7,7 @@ import { sortByWeightDescending } from '@/lib/utils';
 
 export const useSelectedPlaces = () => {
   const [selectedPlaces, setSelectedPlaces] = useState<SelectedPlace[]>([]);
-  const [candidatePlaces, setCandidatePlaces] = useState<Place[]>([]);
+  const [candidatePlaces, setCandidatePlaces] = useState<SelectedPlace[]>([]);
 
   const selectedPlacesByCategory = useMemo(() => {
     const grouped: Record<CategoryName, SelectedPlace[]> = {
@@ -24,7 +25,7 @@ export const useSelectedPlaces = () => {
   }, [selectedPlaces]);
 
   const handleSelectPlace = useCallback((place: Place, checked: boolean, categoryOverride?: CategoryName) => {
-    const placeCategory = categoryOverride || place.categoryType || (place.category as CategoryName);
+    const placeCategory = categoryOverride || place.category as CategoryName;
     
     // Validate category
     if (!placeCategory || !CATEGORIES.includes(placeCategory)) {
@@ -92,7 +93,7 @@ export const useSelectedPlaces = () => {
 
       if (travelDays === null || travelDays <= 0) {
         console.warn(`[자동 보완] 유효한 여행 기간(총 ${travelDays}일)이 없어 자동 보완을 실행할 수 없습니다. 카테고리: ${category}`);
-        toast.info("여행 기간 정보가 올바르지 않아 장소를 자동 보완할 수 없습니다. 날짜를 확인해주세요.");
+        toast.error("여행 기간 정보가 올바르지 않아 장소를 자동 보완할 수 없습니다. 날짜를 확인해주세요.");
         return;
       }
 
@@ -125,27 +126,28 @@ export const useSelectedPlaces = () => {
       const placesToAutoAddAsCandidates: Place[] = [];
       for (const place of availableToRecommend) {
         if (shortfall === 0) break;
-        placesToAutoAddAsCandidates.push({ ...place, categoryType: category }); // categoryType 명시
+        placesToAutoAddAsCandidates.push(place);
         shortfall--;
       }
       
       if (placesToAutoAddAsCandidates.length > 0) {
+        const newCandidates = placesToAutoAddAsCandidates.map(place => ({
+          ...place,
+          category: category, // Assign the correct category
+          isSelected: true,
+          isCandidate: true
+        }));
+        
         setCandidatePlaces(prevCandidates => {
-          const newCandidateIds = new Set(placesToAutoAddAsCandidates.map(p => p.id));
+          const newCandidateIds = new Set(newCandidates.map(p => p.id));
           // 기존 후보 장소 중 새로 추가될 장소와 ID가 중복되지 않는 것만 유지
           const filteredPrevCandidates = prevCandidates.filter(p => !newCandidateIds.has(p.id));
-          return [...filteredPrevCandidates, ...placesToAutoAddAsCandidates];
+          return [...filteredPrevCandidates, ...newCandidates];
         });
         
         // 자동 추가된 장소들을 selectedPlaces에도 isCandidate: true로 반영
         setSelectedPlaces(prevSelected => {
-            const autoAddedSelectedPlaces: SelectedPlace[] = placesToAutoAddAsCandidates.map(p => ({
-                ...p,
-                category: category, // categoryType을 category로 사용
-                isSelected: true, // 일단 선택된 것으로 처리 (UI에서 후보로 표시될 것)
-                isCandidate: true,
-            }));
-
+            const autoAddedSelectedPlaces = newCandidates;
             // ID 기반으로 중복 제거하면서 합치기
             const existingIds = new Set(prevSelected.map(p => p.id));
             const uniqueAutoAdded = autoAddedSelectedPlaces.filter(p => !existingIds.has(p.id));
@@ -156,7 +158,7 @@ export const useSelectedPlaces = () => {
         toast.success(`${category}: ${placesToAutoAddAsCandidates.length}개의 장소가 자동으로 추천 목록에 추가되었습니다.`);
         console.log(`[자동 보완] ${category}: ${placesToAutoAddAsCandidates.length}개 장소 자동 추가 완료.`);
       } else if (shortfall > 0) {
-        toast.warn(`${category}: 추천할 장소가 부족하여 ${shortfall}개를 더 채우지 못했습니다.`);
+        toast.error(`${category}: 추천할 장소가 부족하여 ${shortfall}개를 더 채우지 못했습니다.`);
         console.log(`[자동 보완] ${category}: 추천 장소 부족으로 ${shortfall}개 미보완.`);
       } else {
          toast.success(`${category} 선택 완료!`);
@@ -172,22 +174,13 @@ export const useSelectedPlaces = () => {
   ): SchedulePayload => {
     const { startDate, endDate, startTime, endTime } = tripDateTime;
 
-    // Combine selected and candidate places, ensuring candidates are marked
-    const finalPlacesForPayload = currentPlaces.map(p => ({
-      id: p.id,
-      name: p.name,
-      category: p.category as CategoryName, // 확실하게 타입 지정
-      is_candidate: !!p.isCandidate, // boolean으로 확실하게
-      // x, y 좌표는 서버에서 조회하므로 여기서는 불필요
-    }));
-    
     // payload 생성
     const payload: SchedulePayload = {
-      places: finalPlacesForPayload,
-      start_date: startDate.toISOString().split('T')[0],
-      end_date: endDate.toISOString().split('T')[0],
-      start_time: startTime, // "HH:MM"
-      end_time: endTime,     // "HH:MM"
+      startDate: startDate.toISOString().split('T')[0],
+      endDate: endDate.toISOString().split('T')[0],
+      startTime: startTime, // "HH:MM"
+      endTime: endTime,     // "HH:MM"
+      selectedPlaces: currentPlaces
     };
 
     console.log("[일정 생성] 최종 Payload 준비:", JSON.stringify(payload, null, 2));
@@ -211,7 +204,7 @@ export const useSelectedPlaces = () => {
     isAccommodationLimitReached,
     handleAutoCompletePlaces,
     prepareSchedulePayload,
-    setCandidatePlaces, // UI 등에서 직접 후보 장소 설정이 필요할 경우 대비
-    setSelectedPlaces // 직접 전체 선택 장소 목록을 설정해야 하는 경우 대비
+    setCandidatePlaces,
+    setSelectedPlaces
   };
 };

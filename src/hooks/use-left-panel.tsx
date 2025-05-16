@@ -126,8 +126,8 @@ export const useLeftPanel = () => {
     return itineraryHandlers.handleCreateItinerary(
       tripDetails,
       selectedPlaces,
-      (places, dateTime, recommendedPlaces) => prepareSchedulePayload(places, dateTime, recommendedPlaces),
-      recommendedPlaces,
+      (places, dateTime) => prepareSchedulePayload(places, dateTime),
+      [],
       generateItinerary,
       setShowItinerary,
       (panel: 'region' | 'date' | 'category' | 'itinerary') => setCurrentPanel(panel)

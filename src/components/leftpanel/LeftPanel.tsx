@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { useLeftPanel } from '@/hooks/use-left-panel';
 import LeftPanelContent from './LeftPanelContent';
@@ -147,25 +148,25 @@ const LeftPanel: React.FC = () => {
             selectedKeywordsByCategory={categorySelection.selectedKeywordsByCategory}
             toggleKeyword={categorySelection.toggleKeyword}
             directInputValues={{
-              accommodation: keywordsAndInputs.directInputValues['숙소'] || '',
+              accomodation: keywordsAndInputs.directInputValues['숙소'] || '',
               landmark: keywordsAndInputs.directInputValues['관광지'] || '',
               restaurant: keywordsAndInputs.directInputValues['음식점'] || '',
               cafe: keywordsAndInputs.directInputValues['카페'] || ''
             }}
             onDirectInputChange={{
-              accommodation: (value: string) => keywordsAndInputs.onDirectInputChange('숙소', value),
+              accomodation: (value: string) => keywordsAndInputs.onDirectInputChange('숙소', value),
               landmark: (value: string) => keywordsAndInputs.onDirectInputChange('관광지', value),
               restaurant: (value: string) => keywordsAndInputs.onDirectInputChange('음식점', value),
               cafe: (value: string) => keywordsAndInputs.onDirectInputChange('카페', value)
             }}
             onConfirmCategory={{
-              accommodation: (finalKeywords: string[]) => handleConfirmByCategory('숙소', finalKeywords),
+              accomodation: (finalKeywords: string[]) => handleConfirmByCategory('숙소', finalKeywords),
               landmark: (finalKeywords: string[]) => handleConfirmByCategory('관광지', finalKeywords),
               restaurant: (finalKeywords: string[]) => handleConfirmByCategory('음식점', finalKeywords),
               cafe: (finalKeywords: string[]) => handleConfirmByCategory('카페', finalKeywords)
             }}
             handlePanelBack={{
-              accommodation: () => handlePanelBackByCategory('숙소'),
+              accomodation: () => handlePanelBackByCategory('숙소'),
               landmark: () => handlePanelBackByCategory('관광지'),
               restaurant: () => handlePanelBackByCategory('음식점'),
               cafe: () => handlePanelBackByCategory('카페')
