@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useRef } from 'react';
 import { GeoNode, GeoLink, RouteStyle, GeoJsonLayerRef } from './GeoJsonTypes';
 
@@ -34,9 +33,9 @@ const useGeoJsonState = (map: any) => {
     nodeMapRef.current = nodeMap;
     linkMapRef.current = linkMap;
     
-    console.log('GeoJSON 상태 초기화 완료:', {
-      노드: loadedNodes.length,
-      링크: loadedLinks.length
+    console.log('GeoJSON 상태 초기화 완료 (useGeoJsonState):', {
+      노드수: loadedNodes.length,
+      링크수: loadedLinks.length
     });
   }, []);
   
@@ -44,7 +43,7 @@ const useGeoJsonState = (map: any) => {
   const handleLoadError = useCallback((loadError: Error) => {
     setIsLoading(false);
     setError(loadError);
-    console.error('GeoJSON 데이터 로드 실패:', loadError);
+    console.error('GeoJSON 데이터 로드 실패 (useGeoJsonState):', loadError);
   }, []);
   
   // 활성 피처 변경 처리
@@ -55,7 +54,6 @@ const useGeoJsonState = (map: any) => {
   
   // 모든 활성 피처 제거
   const clearDisplayedFeatures = useCallback(() => {
-    // 마커 제거
     activeMarkersRef.current.forEach(marker => {
       if (marker && typeof marker.setMap === 'function') {
         marker.setMap(null);
@@ -63,7 +61,6 @@ const useGeoJsonState = (map: any) => {
     });
     activeMarkersRef.current = [];
     
-    // 폴리라인 제거
     activePolylinesRef.current.forEach(polyline => {
       if (polyline && typeof polyline.setMap === 'function') {
         polyline.setMap(null);
@@ -83,19 +80,25 @@ const useGeoJsonState = (map: any) => {
   }, []);
   
   // 경로 렌더링 함수
-  const renderRoute = useCallback((nodeIds: string[], linkIds: string[], style: RouteStyle = {
-    strokeColor: '#2196F3',
-    strokeWeight: 5,
-    strokeOpacity: 0.8
-  }): any[] => {
+  const renderRoute = useCallback((nodeIds: string[], linkIds: string[], style: RouteStyle = {}): any[] => {
     if (!map) return [];
     
-    // 기존에 표시된 피처 제거
     clearDisplayedFeatures();
     
     const renderedFeatures: any[] = [];
+
+    // 스타일 기본값 설정
+    const effectiveStyle: Required<RouteStyle> = {
+      strokeColor: style.strokeColor || '#90EE90', // 연두색 기본
+      strokeWeight: style.strokeWeight || 5,
+      strokeOpacity: style.strokeOpacity || 0.8,
+      fillColor: style.fillColor || '#FF0000', // 빨간색 기본
+      zIndex: style.zIndex || 100,
+      // 다음 속성들은 RouteStyle에 없으므로 직접 사용하거나, RouteStyle에 추가 필요
+      // icon: style.icon, 
+      // title: style.title
+    };
     
-    // 링크 렌더링
     linkIds.forEach(linkId => {
       const link = getLinkById(linkId);
       if (!link) {
@@ -103,7 +106,6 @@ const useGeoJsonState = (map: any) => {
         return;
       }
       
-      // naver.maps.Polyline을 사용하여 링크 렌더링
       if (window.naver && window.naver.maps) {
         try {
           const path = link.coordinates.map(coord => 
@@ -113,22 +115,21 @@ const useGeoJsonState = (map: any) => {
           const polyline = new window.naver.maps.Polyline({
             map,
             path,
-            strokeColor: style.strokeColor,
-            strokeWeight: style.strokeWeight,
-            strokeOpacity: style.strokeOpacity,
-            zIndex: style.zIndex || 100
+            strokeColor: effectiveStyle.strokeColor,
+            strokeWeight: effectiveStyle.strokeWeight,
+            strokeOpacity: effectiveStyle.strokeOpacity,
+            zIndex: effectiveStyle.zIndex
           });
           
           renderedFeatures.push(polyline);
           activePolylinesRef.current.push(polyline);
-          link.naverPolyline = polyline;
+          // link.naverPolyline = polyline; // GeoNode/GeoLink 타입에 naverPolyline 추가 필요
         } catch (e) {
           console.error(`링크 ${linkId} 렌더링 중 오류:`, e);
         }
       }
     });
     
-    // 노드 렌더링
     nodeIds.forEach(nodeId => {
       const node = getNodeById(nodeId);
       if (!node) {
@@ -136,7 +137,6 @@ const useGeoJsonState = (map: any) => {
         return;
       }
       
-      // naver.maps.Marker를 사용하여 노드 렌더링
       if (window.naver && window.naver.maps) {
         try {
           const position = new window.naver.maps.LatLng(
@@ -147,23 +147,23 @@ const useGeoJsonState = (map: any) => {
           const marker = new window.naver.maps.Marker({
             map,
             position,
-            icon: {
+            icon: { // 아이콘 스타일 직접 지정
               content: `<div style="
-                width: 8px;
-                height: 8px;
-                background-color: ${style.fillColor || '#FF5722'};
+                width: 10px; /* 크기 약간 증가 */
+                height: 10px; /* 크기 약간 증가 */
+                background-color: ${effectiveStyle.fillColor}; /* 빨간색 적용 */
                 border-radius: 50%;
-                border: 2px solid white;
-                box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
+                border: 2px solid white; /* 흰색 테두리 추가 */
+                box-shadow: 0 0 5px rgba(0,0,0,0.5); /* 그림자 효과 */
               "></div>`,
-              anchor: new window.naver.maps.Point(4, 4)
+              anchor: new window.naver.maps.Point(5, 5) // 중앙 정렬
             },
-            zIndex: (style.zIndex || 100) + 1
+            zIndex: effectiveStyle.zIndex + 1 // 마커가 폴리라인 위에 오도록
           });
           
           renderedFeatures.push(marker);
           activeMarkersRef.current.push(marker);
-          node.naverMarker = marker;
+          // node.naverMarker = marker; // GeoNode/GeoLink 타입에 naverMarker 추가 필요
         } catch (e) {
           console.error(`노드 ${nodeId} 렌더링 중 오류:`, e);
         }
@@ -184,12 +184,14 @@ const useGeoJsonState = (map: any) => {
     };
     
     window.geoJsonLayer = layerInterface;
+    console.log("🌍 GeoJSON Layer Interface registered to window.geoJsonLayer (useGeoJsonState)");
     
     // 클리어 함수 반환 (컴포넌트 언마운트 시 호출됨)
     return () => {
       clearDisplayedFeatures();
       if (window.geoJsonLayer === layerInterface) {
         delete window.geoJsonLayer;
+        console.log("🌍 GeoJSON Layer Interface unregistered from window.geoJsonLayer (useGeoJsonState)");
       }
     };
   }, [renderRoute, clearDisplayedFeatures, getNodeById, getLinkById]);
