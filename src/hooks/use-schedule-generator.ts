@@ -6,7 +6,7 @@ import { SchedulePayload, ServerScheduleResponse, ParsedRoute } from '@/types/sc
 import { parseInterleavedRoute as parseInterleavedRouteUtil } from '@/utils/routeParser';
 
 // 서버 URL 환경 변수에서 가져오기 (환경변수가 없으면 고정 URL 사용)
-const SERVER_URL = "https://fa3f-34-91-44-214.ngrok-free.app/generate_schedule";
+const SERVER_URL = "https://fa3f-34-91-44-214.ngrok-free.app";
 
 export const useScheduleGenerator = () => {
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
