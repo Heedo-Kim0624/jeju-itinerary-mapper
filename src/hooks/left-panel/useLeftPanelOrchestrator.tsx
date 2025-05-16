@@ -32,11 +32,10 @@ export const useLeftPanelOrchestrator = () => {
   } = useLeftPanel();
 
   const { dates, setDates } = useTripDetails();
-  const { selectedPlaces, handleSelectPlace } = useSelectedPlaces();
+  const { selectedPlaces, handleSelectPlace, allCategoriesSelected } = useSelectedPlaces();
   const { 
     itinerary,
     generateItinerary, // This is () => Promise<ItineraryDay[] | null>
-    allCategoriesSelected // This is boolean
   } = useItinerary();
 
   useEffect(() => {
@@ -183,4 +182,3 @@ export const useLeftPanelOrchestrator = () => {
     handleResultClose, // Exported for CategoryResultHandler
   };
 };
-

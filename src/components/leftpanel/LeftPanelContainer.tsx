@@ -16,12 +16,12 @@ interface LeftPanelContainerProps {
   allCategoriesSelected: boolean;
   children: React.ReactNode;
   dates: {
-    startDate: Date;
-    endDate: Date;
+    startDate: Date | null;
+    endDate: Date | null;
     startTime: string;
     endTime: string;
   } | null;
-  onCreateItinerary: () => Promise<boolean>; // 변경된 타입
+  onCreateItinerary: () => Promise<boolean>;
   itinerary: ItineraryDay[] | null;
   selectedItineraryDay: number | null;
   onSelectDay: (day: number) => void;

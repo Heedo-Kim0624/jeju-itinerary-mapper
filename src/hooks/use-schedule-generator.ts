@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Place, SelectedPlace, SchedulePayload } from '@/types/supabase';
 import { toast } from 'sonner';

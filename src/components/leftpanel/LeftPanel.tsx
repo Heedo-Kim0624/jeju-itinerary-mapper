@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useLeftPanelOrchestrator } from '@/hooks/left-panel/useLeftPanelOrchestrator';
 import LeftPanelContent from './LeftPanelContent';
@@ -32,9 +33,6 @@ const LeftPanel: React.FC = () => {
     handlePanelBackByCategory,
     handleResultClose,
   } = useLeftPanelOrchestrator();
-
-  // itinerary 타입 변환 (Itinerary -> ItineraryDay[])
-  // This is now handled inside useLeftPanelOrchestrator for itineraryManagement.itinerary
 
   return (
     <div className="relative h-full">
@@ -119,12 +117,12 @@ const LeftPanel: React.FC = () => {
       />
 
       <CategoryResultHandler
-        showCategoryResult={uiVisibility.showCategoryResult} // Use from orchestrator
+        showCategoryResult={uiVisibility.showCategoryResult} 
         selectedRegions={regionSelection.selectedRegions}
         selectedKeywordsByCategory={categorySelection.selectedKeywordsByCategory}
-        onClose={handleResultClose} // Use from orchestrator
-        onSelectPlace={placesManagement.handleSelectPlace} // Use from orchestrator
-        selectedPlaces={placesManagement.selectedPlaces} // Use from orchestrator
+        onClose={handleResultClose} 
+        onSelectPlace={placesManagement.handleSelectPlace} 
+        selectedPlaces={placesManagement.selectedPlaces}
       />
     </div>
   );
