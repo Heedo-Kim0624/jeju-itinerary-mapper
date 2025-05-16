@@ -1,7 +1,6 @@
-
 import { useCallback } from 'react';
 import { toast } from 'sonner';
-import { Place, SchedulePayload } from '@/types/supabase';
+import { Place, SchedulePayload, ItineraryDay } from '@/types/supabase';
 import { useMapContext } from '@/components/rightpanel/MapContext';
 
 /**
@@ -10,17 +9,28 @@ import { useMapContext } from '@/components/rightpanel/MapContext';
 export const useItineraryHandlers = () => {
   const { clearMarkersAndUiElements } = useMapContext();
 
+  // Define a more specific type for tripDetails based on useTripDetails hook structure
+  interface TripDetailsForItinerary {
+    dates: {
+      startDate: Date;
+      endDate: Date;
+      startTime: string;
+      endTime: string;
+    } | null; // Ensure dates can be null initially
+    startDatetime: string | null;
+    endDatetime: string | null;
+  }
+
   // 일정 생성 핸들러
   const handleCreateItinerary = useCallback(async (
-    tripDetails: any,
+    tripDetails: TripDetailsForItinerary,
     selectedPlaces: Place[],
-    prepareSchedulePayload: (places: Place[], dateTime: any, recommendedPlaces: any) => SchedulePayload | null,
-    recommendedPlaces: Place[],
-    generateItinerary: any,
+    prepareSchedulePayloadFn: (places: Place[], startISO: string | null, endISO: string | null) => SchedulePayload | null,
+    generateItineraryFn: (placesToUse: Place[], startDate: Date, endDate: Date, startTime: string, endTime: string) => ItineraryDay[] | null,
     setShowItinerary: (show: boolean) => void,
     setCurrentPanel: (panel: string) => void
   ) => {
-    if (!tripDetails.dates) {
+    if (!tripDetails.dates || !tripDetails.startDatetime || !tripDetails.endDatetime) {
       toast.error("여행 날짜와 시간을 먼저 설정해주세요.");
       return false;
     }
@@ -29,49 +39,17 @@ export const useItineraryHandlers = () => {
       toast.error("선택된 장소가 없습니다. 장소를 선택해주세요.");
       return false;
     }
-
-    // 추천 장소를 카테고리별로 그룹화
-    const engToKorCategory = (engCategory?: string): string => {
-      if (!engCategory) return '기타';
-      switch (engCategory.toLowerCase()) {
-        case 'accommodation': return '숙소';
-        case 'attraction': return '관광지';
-        case 'restaurant': return '음식점';
-        case 'cafe': return '카페';
-        default: return '기타';
-      }
-    };
     
-    const recommendedPlacesGroupedByCategory: Record<string, Place[]> = {};
-    if (recommendedPlaces) {
-      recommendedPlaces.forEach(place => {
-        const koreanCategoryKey = engToKorCategory(place.category);
-        if (!recommendedPlacesGroupedByCategory[koreanCategoryKey]) {
-          recommendedPlacesGroupedByCategory[koreanCategoryKey] = [];
-        }
-        recommendedPlacesGroupedByCategory[koreanCategoryKey].push(place);
-      });
-    }
-    
-    console.log("추천 장소 (카테고리별 그룹화):", recommendedPlacesGroupedByCategory);
+    // The recommendedPlacesGroupedByCategory logic seemed to be only for logging and wasn't used in payload generation.
+    // If it's needed for other purposes, it should be re-evaluated. For now, removing to simplify.
+    // console.log("추천 장소 (카테고리별 그룹화): ...); // This part is removed
 
-    const dateTimeInfo = tripDetails.dates ? {
-      start_datetime: new Date(tripDetails.dates.startDate.setHours(
-        parseInt(tripDetails.dates.startTime.split(':')[0]), 
-        parseInt(tripDetails.dates.startTime.split(':')[1])
-      )).toISOString(),
-      end_datetime: new Date(tripDetails.dates.endDate.setHours(
-        parseInt(tripDetails.dates.endTime.split(':')[0]), 
-        parseInt(tripDetails.dates.endTime.split(':')[1])
-      )).toISOString(),
-    } : null;
-
-    // 경로 생성 페이로드 준비
-    const payload = prepareSchedulePayload(selectedPlaces, dateTimeInfo, recommendedPlacesGroupedByCategory);
+    // 경로 생성 페이로드 준비 (using startDatetime and endDatetime from tripDetails)
+    const payload = prepareSchedulePayloadFn(selectedPlaces, tripDetails.startDatetime, tripDetails.endDatetime);
 
     if (payload) {
-      console.log("경로 생성 버튼 클릭됨, 경로 생성 함수 호출");
-      const result = generateItinerary(
+      console.log("클라이언트 측 일정 생성 요청됨, 생성 함수 호출"); // Clarified this is client-side
+      const result = generateItineraryFn(
         selectedPlaces, 
         tripDetails.dates.startDate, 
         tripDetails.dates.endDate, 
@@ -86,7 +64,11 @@ export const useItineraryHandlers = () => {
       
       return !!result;
     } else {
-      console.error("일정 생성에 필요한 정보가 부족합니다.");
+      // prepareSchedulePayloadFn should handle its own error toasts if payload creation fails due to missing dates.
+      // Or, if it returns null for other reasons, a generic error might be needed here.
+      // For now, assuming prepareSchedulePayloadFn handles toasts for critical failures like missing dates.
+      console.error("일정 생성에 필요한 정보가 부족하여 페이로드를 생성할 수 없습니다.");
+      // toast.error("일정 생성에 필요한 정보가 부족합니다."); // This might be redundant if prepareSchedulePayloadFn toasts.
       return false;
     }
   }, []);

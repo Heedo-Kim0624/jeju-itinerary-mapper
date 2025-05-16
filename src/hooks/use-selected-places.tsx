@@ -29,7 +29,7 @@ export const useSelectedPlaces = () => {
     const placeCategory = categoryOverride || place.category as CategoryName;
     
     if (!placeCategory || !CATEGORIES.includes(placeCategory)) {
-        console.warn(`[장소 선택] 유효하지 않은 카테고리 (${placeCategory}) 또는 장소 정보 부족:`, place);
+        console.warn(`[장소 선택] 유효하지 않은 카테고리 (${placeCategory}) 또는 장소 정�� 부족:`, place);
         toast.error("장소 정보에 오류가 있어 선택할 수 없습니다.");
         return;
     }
@@ -39,13 +39,13 @@ export const useSelectedPlaces = () => {
         ...place,
         category: placeCategory,
         isSelected: checked,
-        isCandidate: false,
+        isCandidate: false, // Directly selected places are not candidates by default
       };
 
       if (checked) {
+        // Check for accommodation limit
         if (placeCategory === '숙소') {
           const currentAccommodations = prev.filter(p => p.category === '숙소');
-          // Use tripDuration as the maximum number of accommodations allowed
           const maxAccommodations = tripDuration !== null && tripDuration >= 0 ? Math.max(tripDuration, 1) : 1;
           
           if (currentAccommodations.length >= maxAccommodations) {
@@ -53,8 +53,13 @@ export const useSelectedPlaces = () => {
             return prev; 
           }
         }
-        return [...prev, newSelectedPlace];
+        // Add if not already present
+        if (!prev.find(p => p.id === place.id)) {
+          return [...prev, newSelectedPlace];
+        }
+        return prev; // Already exists, do nothing (or update if needed, but current logic adds)
       } else {
+        // Remove if present
         return prev.filter(p => p.id !== place.id);
       }
     });
@@ -62,25 +67,34 @@ export const useSelectedPlaces = () => {
 
   const handleRemovePlace = useCallback((id: string | number) => {
     setSelectedPlaces(prev => prev.filter(place => place.id !== id));
-    setCandidatePlaces(prev => prev.filter(place => place.id !== id));
+    setCandidatePlaces(prev => prev.filter(place => place.id !== id)); // Also remove from candidates if present
   }, []);
 
   const handleViewOnMap = useCallback((place: Place) => {
+    // Placeholder for map view functionality
     console.log("지도에서 보기:", place);
+    // Implementation would typically involve context or a callback to the map component
   }, []);
 
   const allCategoriesSelected = useMemo(() => {
     return CATEGORIES.every(category => {
       const placesInCat = selectedPlacesByCategory[category] || [];
+      // Consider if "selected" means at least one *non-candidate* place,
+      // or if candidate places count towards this.
+      // For now, assuming any place in selectedPlacesByCategory counts.
       return placesInCat.length > 0;
     });
   }, [selectedPlacesByCategory]);
-
+  
   const isAccommodationLimitReached = useMemo(() => {
     const maxAccommodations = tripDuration !== null && tripDuration >= 0 ? Math.max(tripDuration, 1) : 1;
     return (selectedPlacesByCategory['숙소']?.length || 0) >= maxAccommodations;
   }, [selectedPlacesByCategory, tripDuration]);
   
+  const isPlaceSelected = useCallback((placeId: string | number): boolean => {
+    return selectedPlaces.some(p => p.id === placeId && p.isSelected);
+  }, [selectedPlaces]);
+
   const handleAutoCompletePlaces = useCallback(
     (
       category: CategoryName,
@@ -104,7 +118,7 @@ export const useSelectedPlaces = () => {
       
       const minCountConfig = MINIMUM_RECOMMENDATION_COUNT(currentTravelDays);
       const minimumCountForCategory = minCountConfig[category];
-      const currentSelectedInCategory = selectedPlacesByCategory[category]?.length || 0; 
+      const currentSelectedInCategory = selectedPlacesByCategory[category]?.filter(p => !p.isCandidate).length || 0; 
       
       let shortfall = Math.max(0, minimumCountForCategory - currentSelectedInCategory);
       console.log(`[자동 보완] ${category}: 최소 필요 ${minimumCountForCategory}개, 현재 선택 ${currentSelectedInCategory}개, 부족분 ${shortfall}개`);
@@ -117,14 +131,14 @@ export const useSelectedPlaces = () => {
         } else if (currentSelectedInCategory > maxAccommodations) {
              toast.error(`숙소 선택 개수(${currentSelectedInCategory}개)가 최대 허용치(${maxAccommodations}개)를 초과했습니다.`);
         } else {
-            toast.success(`${category} 선택 완료!`);
+            // toast.success(`${category} 선택 완료!`); // Removed per user request to remove auto-recommendation messages
         }
         return;
       }
 
       if (shortfall === 0) {
         console.log(`[자동 보완] ${category}: 이미 최소 개수(${minimumCountForCategory}개)를 충족하여 추가 보완하지 않습니다.`);
-        toast.success(`${category} 선택 완료!`);
+        // toast.success(`${category} 선택 완료!`); // Removed per user request
         return;
       }
 
@@ -150,25 +164,24 @@ export const useSelectedPlaces = () => {
         const newCandidatesToAddState = placesToAutoAddAsCandidates.map(place => ({
           ...place,
           category: category, 
-          isSelected: true, 
+          isSelected: true, // Candidates are effectively "selected" for itinerary generation
           isCandidate: true
         }));
         
         setCandidatePlaces(prevCandidates => {
           const newCandidateIds = new Set(newCandidatesToAddState.map(p => p.id));
+          // Filter out any existing candidates that are about to be re-added to prevent duplicates
           const filteredPrevCandidates = prevCandidates.filter(p => !newCandidateIds.has(p.id));
           return [...filteredPrevCandidates, ...newCandidatesToAddState];
         });
         
-        // Remove toast message to avoid notifying users about auto-completed places
-        // toast.success(`${category}: ${placesToAutoAddAsCandidates.length}개의 장소가 자동으로 추천 목록에 추가되었습니다.`);
-        console.log(`[자동 보완] ${category}: ${placesToAutoAddAsCandidates.length}개 장소 자동 추가 완료 (후보 목록에만).`);
+        console.log(`[자동 보완] ${category}: ${placesToAutoAddAsCandidates.length}개 장소 자동 추가 완료 (후보 목록에).`);
+        // toast.success(`${category}: ${placesToAutoAddAsCandidates.length}개의 장소가 자동으로 추천 목록에 추가되었습니다.`); // Removed
       } else if (shortfall > 0) {
-        // Keep this error message as it's important for users to know
         toast.error(`${category}: 추천할 장소가 부족하여 ${shortfall}개를 더 채우지 못했습니다.`);
         console.log(`[자동 보완] ${category}: 추천 장소 부족으로 ${shortfall}개 미보완.`);
       } else {
-         toast.success(`${category} 선택 완료!`);
+        // toast.success(`${category} 선택 완료!`); // Removed
       }
     },
     [selectedPlacesByCategory, selectedPlaces, candidatePlaces, tripDuration] 
@@ -178,18 +191,24 @@ export const useSelectedPlaces = () => {
     userSelectedPlacesInput: SelectedPlace[], 
     startDatetimeISO: string | null, 
     endDatetimeISO: string | null
-  ): LocalSchedulePayload => {
+  ): LocalSchedulePayload | null => { // Return type can be null if validation fails
     
     if (!startDatetimeISO || !endDatetimeISO) {
       toast.error("날짜 및 시간을 먼저 선택해주세요.");
-      throw new Error("날짜 및 시간을 먼저 선택해주세요. 시작 또는 종료 날짜/시간이 유효하지 않습니다.");
+      // throw new Error("날짜 및 시간을 먼저 선택해주세요. 시작 또는 종료 날짜/시간이 유효하지 않습니다.");
+      return null; // Return null instead of throwing, caller should handle this
     }
     
-    const selectedPlacesForPayload: SchedulePlace[] = userSelectedPlacesInput.map(p => ({
+    // Filter out candidate places from userSelectedPlacesInput if they are separately handled by candidate_places
+    // Assuming userSelectedPlacesInput should only contain non-candidate, directly selected places.
+    const directlySelectedPlaces = userSelectedPlacesInput.filter(p => !p.isCandidate);
+
+    const selectedPlacesForPayload: SchedulePlace[] = directlySelectedPlaces.map(p => ({
       id: typeof p.id === 'string' ? parseInt(p.id, 10) || p.id : p.id,
       name: p.name || 'Unknown Place'
     }));
     
+    // Candidate places are managed by the 'candidatePlaces' state in this hook
     const candidatePlacesForPayload: SchedulePlace[] = candidatePlaces.map(p => ({
       id: typeof p.id === 'string' ? parseInt(p.id, 10) || p.id : p.id,
       name: p.name || 'Unknown Place'
@@ -202,7 +221,7 @@ export const useSelectedPlaces = () => {
       end_datetime: endDatetimeISO
     };
 
-    console.log("[일정 생성] 최종 Payload 준비:", JSON.stringify(payload, null, 2));
+    console.log("[일정 생성] 최종 Payload 준비 (useSelectedPlaces):", JSON.stringify(payload, null, 2));
     return payload;
   };
 
@@ -222,6 +241,7 @@ export const useSelectedPlaces = () => {
     handleViewOnMap,
     allCategoriesSelected,
     isAccommodationLimitReached,
+    isPlaceSelected, // Exporting the new function
     handleAutoCompletePlaces,
     prepareSchedulePayload,
     setCandidatePlaces,
