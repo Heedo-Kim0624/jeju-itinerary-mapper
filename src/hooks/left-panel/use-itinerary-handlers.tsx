@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { toast } from 'sonner';
-import { Place, SchedulePayload, ItineraryDay } from '@/types/supabase';
+import { Place, SchedulePayload, ItineraryDay, SelectedPlace } from '@/types/supabase';
 import { useMapContext } from '@/components/rightpanel/MapContext';
 
 /**
@@ -17,20 +17,32 @@ export const useItineraryHandlers = () => {
       startTime: string;
       endTime: string;
     } | null; // Ensure dates can be null initially
-    startDatetime: string | null;
-    endDatetime: string | null;
+    // These are now the locally formatted strings "YYYY-MM-DDTHH:mm:ss"
+    startDatetimeLocal: string | null; 
+    endDatetimeLocal: string | null;
+    // ISO versions might still be around if needed by other parts, but payload uses local
+    startDatetime: string | null; // ISO
+    endDatetime: string | null;   // ISO
   }
+  
+  // The signature of generateItineraryFn should match what useItinerary.generateItinerary provides.
+  // Assuming useItinerary.generateItinerary now expects local time strings.
+  type GenerateItineraryFnType = (
+    placesToUse: SelectedPlace[], // Changed Place[] to SelectedPlace[] for consistency
+    tripDates: { startDate: Date; endDate: Date; startTime: string; endTime: string; },
+    startLocal: string, // local formatted string
+    endLocal: string    // local formatted string
+  ) => Promise<ItineraryDay[] | null>; // Assuming it might be async if it calls schedule generation
 
   // 일정 생성 핸들러
   const handleCreateItinerary = useCallback(async (
     tripDetails: TripDetailsForItinerary,
-    selectedPlaces: Place[],
-    prepareSchedulePayloadFn: (places: Place[], startISO: string | null, endISO: string | null) => SchedulePayload | null,
-    generateItineraryFn: (placesToUse: Place[], startDate: Date, endDate: Date, startTime: string, endTime: string) => ItineraryDay[] | null,
+    selectedPlaces: SelectedPlace[],
+    generateItineraryFn: GenerateItineraryFnType,
     setShowItinerary: (show: boolean) => void,
     setCurrentPanel: (panel: string) => void
   ) => {
-    if (!tripDetails.dates || !tripDetails.startDatetime || !tripDetails.endDatetime) {
+    if (!tripDetails.dates || !tripDetails.startDatetimeLocal || !tripDetails.endDatetimeLocal) {
       toast.error("여행 날짜와 시간을 먼저 설정해주세요.");
       return false;
     }
@@ -40,35 +52,31 @@ export const useItineraryHandlers = () => {
       return false;
     }
     
-    // The recommendedPlacesGroupedByCategory logic seemed to be only for logging and wasn't used in payload generation.
-    // If it's needed for other purposes, it should be re-evaluated. For now, removing to simplify.
-    // console.log("추천 장소 (카테고리별 그룹화): ...); // This part is removed
+    console.log("일정 생성 요청 (useItineraryHandlers):", {
+      start: tripDetails.startDatetimeLocal,
+      end: tripDetails.endDatetimeLocal
+    });
 
-    // 경로 생성 페이로드 준비 (using startDatetime and endDatetime from tripDetails)
-    const payload = prepareSchedulePayloadFn(selectedPlaces, tripDetails.startDatetime, tripDetails.endDatetime);
-
-    if (payload) {
-      console.log("클라이언트 측 일정 생성 요청됨, 생성 함수 호출"); // Clarified this is client-side
-      const result = generateItineraryFn(
-        selectedPlaces, 
-        tripDetails.dates.startDate, 
-        tripDetails.dates.endDate, 
-        tripDetails.dates.startTime, 
-        tripDetails.dates.endTime
-      );
+    // generateItineraryFn (from useItinerary) is now responsible for calling useScheduleManagement
+    // with all necessary details including startDatetimeLocal and endDatetimeLocal.
+    const result = await generateItineraryFn(
+      selectedPlaces, 
+      tripDetails.dates, // Pass full dates object
+      tripDetails.startDatetimeLocal,
+      tripDetails.endDatetimeLocal
+    );
       
-      if (result) {
-        setShowItinerary(true);
-        setCurrentPanel('itinerary');
-      }
-      
-      return !!result;
+    if (result && result.length > 0 && result.some(day => day.places.length > 0) ) {
+      setShowItinerary(true);
+      setCurrentPanel('itinerary');
+      toast.success("일정이 준비되었습니다."); // More generic success
+      return true;
     } else {
-      // prepareSchedulePayloadFn should handle its own error toasts if payload creation fails due to missing dates.
-      // Or, if it returns null for other reasons, a generic error might be needed here.
-      // For now, assuming prepareSchedulePayloadFn handles toasts for critical failures like missing dates.
-      console.error("일정 생성에 필요한 정보가 부족하여 페이로드를 생성할 수 없습니다.");
-      // toast.error("일정 생성에 필요한 정보가 부족합니다."); // This might be redundant if prepareSchedulePayloadFn toasts.
+      // Error toast for empty/failed generation is now handled within useScheduleManagement
+      // or if generateItineraryFn itself returns null for a known reason.
+      // If result is null or empty, it implies failure that should have been toasted.
+      console.error("일정 생성 실패 또는 빈 일정 반환됨 (useItineraryHandlers)");
+      // setShowItinerary(false); // Keep itinerary view potentially, to show "no schedule" message
       return false;
     }
   }, []);

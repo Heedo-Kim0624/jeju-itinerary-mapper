@@ -1,5 +1,6 @@
 
 import { useState, useMemo } from 'react';
+import { format } from 'date-fns';
 
 interface TripDetails {
   startDate: Date | null;
@@ -8,23 +9,29 @@ interface TripDetails {
   endTime: string;
 }
 
-// Utility function to format date and time into an ISO string
-const formatDateTime = (date: Date | null, time: string): string | null => {
+// Utility function to format date and time into "YYYY-MM-DDTHH:mm:ss"
+const formatLocalDateTime = (date: Date | null, time: string): string | null => {
   if (!date || !time) return null;
-  // Ensure time is a string before splitting
   if (typeof time !== 'string') {
-    console.warn(`[formatDateTime] Invalid time value: ${time}. Expected string.`);
-    return null; 
+    console.warn(`[formatLocalDateTime] Invalid time value: ${time}. Expected string.`);
+    return null;
   }
   const parts = time.split(':');
   if (parts.length !== 2) {
-    console.warn(`[formatDateTime] Invalid time format: ${time}. Expected HH:MM.`);
+    console.warn(`[formatLocalDateTime] Invalid time format: ${time}. Expected HH:MM.`);
     return null;
   }
-  const [hh, mm] = parts;
-  const withTime = new Date(date);
-  withTime.setHours(parseInt(hh, 10), parseInt(mm, 10), 0, 0);
-  return withTime.toISOString();
+  // Use date-fns format to construct the string directly
+  // This avoids issues with Date object's internal timezone handling and toISOString()
+  try {
+    const [hours, minutes] = parts.map(Number);
+    const dateWithTime = new Date(date);
+    dateWithTime.setHours(hours, minutes, 0, 0); // Set time locally
+    return format(dateWithTime, "yyyy-MM-dd'T'HH:mm:ss");
+  } catch (error) {
+    console.error(`[formatLocalDateTime] Error formatting date-time:`, error);
+    return null;
+  }
 };
 
 export const useTripDetails = () => {
@@ -45,8 +52,28 @@ export const useTripDetails = () => {
     return Math.max(0, diffDays);
   }, [details.startDate, details.endDate]);
 
-  const startDatetime = useMemo(() => formatDateTime(details.startDate, details.startTime), [details.startDate, details.startTime]);
-  const endDatetime = useMemo(() => formatDateTime(details.endDate, details.endTime), [details.endDate, details.endTime]);
+  // startDatetime and endDatetime are still ISO for compatibility with payload if needed,
+  // but we'll introduce local versions for direct use.
+  const startDatetimeISO = useMemo(() => {
+    if (!details.startDate || !details.startTime) return null;
+    const [hh, mm] = details.startTime.split(':');
+    const d = new Date(details.startDate);
+    d.setHours(parseInt(hh, 10), parseInt(mm, 10), 0, 0);
+    return d.toISOString();
+  }, [details.startDate, details.startTime]);
+
+  const endDatetimeISO = useMemo(() => {
+    if (!details.endDate || !details.endTime) return null;
+    const [hh, mm] = details.endTime.split(':');
+    const d = new Date(details.endDate);
+    d.setHours(parseInt(hh, 10), parseInt(mm, 10), 0, 0);
+    return d.toISOString();
+  }, [details.endDate, details.endTime]);
+
+  // New local formatted date-time strings
+  const startDatetimeLocal = useMemo(() => formatLocalDateTime(details.startDate, details.startTime), [details.startDate, details.startTime]);
+  const endDatetimeLocal = useMemo(() => formatLocalDateTime(details.endDate, details.endTime), [details.endDate, details.endTime]);
+
 
   const setStartDate = (date: Date | null) => {
     setDetails((prev) => ({ ...prev, startDate: date }));
@@ -86,8 +113,10 @@ export const useTripDetails = () => {
     setEndTime,
     setDates,
     dates: details,
-    startDatetime, // Export new ISO string
-    endDatetime,   // Export new ISO string
+    startDatetime: startDatetimeISO, // Keep original ISO for now if anything relies on it
+    endDatetime: endDatetimeISO,   // Keep original ISO for now
+    startDatetimeLocal, // Export new local formatted string
+    endDatetimeLocal,   // Export new local formatted string
     accomodationDirectInput,
     setAccomodationDirectInput,
     landmarkDirectInput,
@@ -98,4 +127,3 @@ export const useTripDetails = () => {
     setCafeDirectInput,
   };
 };
-
