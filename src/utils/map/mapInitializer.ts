@@ -1,4 +1,3 @@
-
 import { toast } from "sonner";
 
 // Jeju Island center coordinates
@@ -16,6 +15,8 @@ export const initializeNaverMap = (mapContainer: HTMLDivElement | null) => {
   }
 
   try {
+    console.log("Creating new Naver Map instance with container:", mapContainer);
+    
     const mapOptions = {
       center: new window.naver.maps.LatLng(JEJU_CENTER.lat, JEJU_CENTER.lng),
       zoom: 10,
@@ -27,8 +28,17 @@ export const initializeNaverMap = (mapContainer: HTMLDivElement | null) => {
       }
     };
 
-    console.log("Creating new Naver Map instance");
+    // 명시적인 지도 컨테이너 크기 확인
+    if (mapContainer.clientWidth === 0 || mapContainer.clientHeight === 0) {
+      console.warn("Map container has zero width or height. Setting minimum dimensions.");
+      mapContainer.style.minWidth = "300px";
+      mapContainer.style.minHeight = "300px";
+    }
+
     const map = new window.naver.maps.Map(mapContainer, mapOptions);
+    
+    // 디버깅: 지도 객체 상태 확인
+    console.log("Map instance created:", map);
     
     // Event listener for debugging map initialization
     window.naver.maps.Event.once(map, 'init_stylemap', () => {

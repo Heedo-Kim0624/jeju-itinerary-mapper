@@ -1,7 +1,4 @@
 
-// We'll remove the global declaration here since it's now in vite-env.d.ts
-// and focus only on the loadNaverMaps implementation
-
 /**
  * 네이버 맵 스크립트를 비동기적으로 불러오는 함수
  */
@@ -17,6 +14,7 @@ export const loadNaverMaps = (): Promise<void> => {
     // 클라이언트 ID 가져오기
     const clientId = import.meta.env.VITE_NAVER_CLIENT_ID;
     if (!clientId) {
+      console.error('Naver Maps API 클라이언트 ID가 설정되지 않았습니다.');
       reject(new Error('Naver Maps API 클라이언트 ID가 설정되지 않았습니다.'));
       return;
     }
@@ -30,11 +28,20 @@ export const loadNaverMaps = (): Promise<void> => {
     // 로딩 완료 이벤트
     script.onload = () => {
       console.log('Naver Maps API가 성공적으로 로드되었습니다.');
-      resolve();
+      
+      // 추가: API가 실제로 사용 가능한지 확인하는 짧은 타임아웃
+      setTimeout(() => {
+        if (window.naver && window.naver.maps) {
+          resolve();
+        } else {
+          reject(new Error('Naver Maps API가 로드되었지만 사용할 수 없습니다.'));
+        }
+      }, 100);
     };
 
     // 오류 이벤트
     script.onerror = () => {
+      console.error('Naver Maps API 로딩 중 오류가 발생했습니다.');
       reject(new Error('Naver Maps API 로딩 중 오류가 발생했습니다.'));
     };
 
