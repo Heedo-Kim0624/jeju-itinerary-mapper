@@ -1,12 +1,7 @@
 
 // 재정의된 toast 훅
-import { toast as sonnerToast, Toaster as SonnerToaster } from "sonner";
+import { toast as sonnerToast, Toaster as SonnerToaster, type ToasterProps } from "sonner";
 import * as React from "react";
-
-type ToastProps = React.ComponentPropsWithoutRef<typeof SonnerToaster>;
-
-const TOAST_LIMIT = 5;
-const TOAST_REMOVE_DELAY = 1000000;
 
 export type ToastActionElement = React.ReactElement<{
   className?: string;
@@ -14,14 +9,14 @@ export type ToastActionElement = React.ReactElement<{
   onClick?: () => void;
 }>;
 
-export type ToastProps = {
+export interface ToastProps {
   id?: string;
   title?: React.ReactNode;
   description?: React.ReactNode;
   action?: ToastActionElement;
   variant?: "default" | "destructive" | "success" | "warning" | "info";
   duration?: number;
-};
+}
 
 // 변환 함수: 이전 toast 형식을 sonner 형식으로 변환
 const convertToSonnerProps = (props: ToastProps) => {

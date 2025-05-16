@@ -60,7 +60,7 @@ const LeftPanel: React.FC = () => {
     console.log(`[LeftPanel] ${category} 카테고리 결과 확인, 선택 장소 ${selectedPlaces.length}개, 추천 장소 ${recommendedPlaces.length}개`);
     
     // Auto-complete candidate places based on user selection
-    placesManagement.handleAutoCompletePlaces(category, recommendedPlaces);
+    placesManagement.handleAutoCompletePlaces(category as CategoryName, recommendedPlaces);
     
     // Close the category result panel
     uiVisibility.setShowCategoryResult(null);
@@ -153,7 +153,7 @@ const LeftPanel: React.FC = () => {
       />
 
       <CategoryResultHandler
-        showCategoryResult={uiVisibility.showCategoryResult}
+        showCategoryResult={uiVisibility.showCategoryResult as CategoryName | null}
         selectedRegions={regionSelection.selectedRegions}
         selectedKeywordsByCategory={categorySelection.selectedKeywordsByCategory}
         onClose={handleResultClose}

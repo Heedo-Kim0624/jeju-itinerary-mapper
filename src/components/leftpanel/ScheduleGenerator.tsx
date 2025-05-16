@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Place } from '@/types/supabase';
 import { toast } from 'sonner';
@@ -187,7 +188,7 @@ export const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({
           if (typeof placeInfo === 'string') {
             placeId = placeInfo;
           } else if (typeof placeInfo === 'object' && placeInfo !== null && placeInfo.id) {
-            placeId = placeInfo.id;
+            placeId = placeInfo.id.toString();
             placeName = placeInfo.name;
           } else {
             // Fallback for unexpected format

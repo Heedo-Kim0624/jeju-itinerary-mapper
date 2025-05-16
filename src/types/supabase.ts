@@ -30,15 +30,8 @@ export interface Place {
 }
 
 export interface SelectedPlace {
-  id: string;
+  id: string | number;  // Changed to accept both string and number
   name: string;
-}
-
-export interface SchedulePayload {
-  selected_places: SelectedPlace[];
-  candidate_places: SelectedPlace[];
-  start_datetime: string;
-  end_datetime: string;
 }
 
 // 새로운 타입 정의: 여행 날짜와 시간

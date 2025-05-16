@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useSelectedPlaces } from './use-selected-places';
 import { useTripDetails } from './use-trip-details';
@@ -9,6 +10,7 @@ import { useCategoryHandlers } from './left-panel/use-category-handlers';
 import { useItineraryHandlers } from './left-panel/use-itinerary-handlers';
 import { useInputState } from './left-panel/use-input-state';
 import { Place } from '@/types/supabase';
+import { CategoryName } from '@/utils/categoryUtils';
 
 /**
  * 왼쪽 패널 기능 통합 훅
@@ -23,7 +25,7 @@ export const useLeftPanel = () => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [showCategoryResultScreen, setShowCategoryResultScreen] = useState(false);
   const [currentPanel, setCurrentPanel] = useState<'region' | 'date' | 'category' | 'itinerary'>('region');
-  const [showCategoryResult, setShowCategoryResult] = useState<string | null>(null);
+  const [showCategoryResult, setShowCategoryResult] = useState<CategoryName | null>(null);
   
   // 입력값 관리
   const { directInputValues, onDirectInputChange } = useInputState();
@@ -33,9 +35,9 @@ export const useLeftPanel = () => {
     directInputValues,
     onDirectInputChange,
     handleConfirmCategory: (category: string, finalKeywords: string[], clearSelection: boolean = false) => {
-      categorySelection.handleConfirmCategory(category as any, finalKeywords, clearSelection);
+      categorySelection.handleConfirmCategory(category as CategoryName, finalKeywords, clearSelection);
       if (clearSelection) {
-        setShowCategoryResult(category);
+        setShowCategoryResult(category as CategoryName);
       }
     }
   };
@@ -126,7 +128,7 @@ export const useLeftPanel = () => {
       recommendedPlaces,
       generateItinerary,
       setShowItinerary,
-      (panel) => setCurrentPanel(panel as 'region' | 'date' | 'category' | 'itinerary')
+      (panel: string) => setCurrentPanel(panel as 'region' | 'date' | 'category' | 'itinerary')
     );
   };
   

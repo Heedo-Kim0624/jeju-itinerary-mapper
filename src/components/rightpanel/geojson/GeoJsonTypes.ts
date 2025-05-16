@@ -1,3 +1,4 @@
+
 // GeoJSON 노드/링크 타입 정의
 export interface GeoCoordinates {
   0: number; // 경도 (longitude)
@@ -86,11 +87,4 @@ export interface GeoJsonLayerProps {
   isMapInitialized: boolean;
   isNaverLoaded: boolean;
   onGeoJsonLoaded?: (nodes: GeoNode[], links: GeoLink[]) => void;
-}
-
-// 글로벌 네임스페이스 선언
-declare global {
-  interface Window {
-    geoJsonLayer: GeoJsonLayerRef;
-  }
 }

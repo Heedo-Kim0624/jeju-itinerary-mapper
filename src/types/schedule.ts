@@ -5,7 +5,7 @@ export interface SchedulePlace {
 }
 
 export interface SelectedPlace {
-  id: string;
+  id: string | number;  // Changed to accept both string and number
   name: string;
 }
 
