@@ -7,9 +7,9 @@ interface PlaceListingViewProps {
   places: Place[];
   title: string;
   isLoading: boolean;
-  selectedPlaces: Place[]; // This prop might not be directly used if isPlaceSelected is sufficient
+  selectedPlaces: Place[];
   onSelectPlace: (place: Place, checked: boolean) => void;
-  onViewOnMap: (place: Place) => void;
+  onViewOnMap: (place: Place) => void; // This prop is kept on the interface for now
   isPlaceSelected: (id: string | number) => boolean;
 }
 
@@ -17,9 +17,9 @@ const PlaceListingView: React.FC<PlaceListingViewProps> = ({
   places,
   title,
   isLoading,
-  selectedPlaces, // Keep for now, might be useful for other things or can be removed if truly unused
+  selectedPlaces,
   onSelectPlace,
-  onViewOnMap,
+  onViewOnMap, // Kept in destructuring, but not passed to PlaceCard if it doesn't accept it
   isPlaceSelected
 }) => {
   if (isLoading) {
@@ -52,10 +52,12 @@ const PlaceListingView: React.FC<PlaceListingViewProps> = ({
           <PlaceCard
             key={place.id}
             place={place}
-            onSelect={onSelectPlace} // Changed: Pass onSelectPlace directly
-                                     // This assumes PlaceCard's onSelect prop is (place: Place, checked: boolean) => void
-                                     // and PlaceCard calls it with its own place prop and the new checked state.
-            onViewOnMap={() => onViewOnMap(place)}
+            onSelect={onSelectPlace}
+            // onViewOnMap prop is removed as PlaceCard does not seem to accept it based on the error.
+            // If PlaceCard *should* have this, its own definition (read-only) needs an update.
+            // For now, to fix the build error, we don't pass it.
+            // The onViewOnMap function received by PlaceListingView can be used elsewhere if needed,
+            // for example, by adding a separate button within PlaceListingView itself if desired.
             isSelected={isPlaceSelected(place.id)}
           />
         ))}
