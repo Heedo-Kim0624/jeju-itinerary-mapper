@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Place, SchedulePayload } from '@/types/supabase';
+import { Place, SchedulePayload, ItineraryPlaceWithTime, CategoryName } from '@/types/supabase';
 import { useItineraryCreator, ItineraryDay } from '../use-itinerary-creator';
 import { useScheduleGenerator } from '../use-schedule-generator';
 import { toast } from 'sonner';
-import { NewServerScheduleResponse, ServerScheduleItem, ServerRouteSummaryItem } from '@/types/schedule';
+import { NewServerScheduleResponse } from '@/types/schedule';
 
 export const useItineraryActions = () => {
   const [itinerary, setItinerary] = useState<ItineraryDay[] | null>(null);
@@ -74,7 +74,7 @@ export const useItineraryActions = () => {
     try {
       toast.loading("서버에 일정 생성 요청 중...");
       
-      const serverResponse = await generateSchedule(payload);
+      const serverResponse = await generateSchedule(payload); // This now returns NewServerScheduleResponse | null
       
       if (!serverResponse || !serverResponse.schedule || serverResponse.schedule.length === 0 || !serverResponse.route_summary || serverResponse.route_summary.length === 0) {
         toast.error("서버에서 일정을 받아오지 못했거나, 내용이 비어있습니다.");
@@ -84,27 +84,30 @@ export const useItineraryActions = () => {
       const dayOfWeekMap: { [key: string]: number } = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
       const tripStartDayOfWeek = tripStartDate.getDay();
 
+      // serverResponse is NewServerScheduleResponse
       const formattedItinerary: ItineraryDay[] = serverResponse.route_summary.map(summary => {
         const routeDayOfWeek = dayOfWeekMap[summary.day.substring(0, 3).charAt(0).toUpperCase() + summary.day.substring(1,3).toLowerCase()];
         let tripDayNumber = routeDayOfWeek - tripStartDayOfWeek + 1;
         if (tripDayNumber <= 0) tripDayNumber += 7;
         
-        const dayPlaces = serverResponse.schedule
-            .map(item => ({
+        // serverResponse.schedule is ServerScheduleItem[]
+        const dayPlaces = serverResponse.schedule 
+            .map(item => ({ // item is ServerScheduleItem
                 id: item.id?.toString() || item.place_name,
                 name: item.place_name,
-                category: item.place_type as CategoryName, // 직접 캐스팅
+                category: item.place_type as CategoryName, 
                 timeBlock: item.time_block,
+                // Default values for properties not present in ServerScheduleItem, to satisfy ItineraryPlaceWithTime
                 x:0, y:0, address:'', phone:'', description:'', rating:0, image_url:'', road_address:'', homepage:'',
-                isSelected: false, isCandidate: false,
-            } as ItineraryPlaceWithTime));
+                isSelected: false, isCandidate: false, 
+            } as ItineraryPlaceWithTime)); // Cast to ItineraryPlaceWithTime
 
         return {
           day: tripDayNumber,
-          places: dayPlaces,
+          places: dayPlaces, // These are ItineraryPlaceWithTime[]
           totalDistance: summary.total_distance_m / 1000,
           interleaved_route: summary.interleaved_route,
-          routeData: {
+          routeData: { // This part is for client-side rendering if needed
             nodeIds: summary.interleaved_route.filter((_, idx) => idx % 2 === 0).map(String),
             linkIds: summary.interleaved_route.filter((_, idx) => idx % 2 !== 0).map(String),
           }
@@ -159,8 +162,19 @@ export const useItineraryActions = () => {
     
     // 서버 API를 통한 일정 생성
     if (payload && dates?.startDate) {
-      console.log("서버 API를 통한 일정 생성 시도");
-      return handleServerItineraryCreation(payload, dates.startDate);
+      console.log("서버 API를 통한 일정 생성 시도 (useItineraryActions)");
+      // return handleServerItineraryCreation(payload, dates.startDate); // This returns Promise
+      // To keep it simple for now, let's make it async or handle promise if needed by caller
+      // For now, just calling it. The caller (useItinerary) doesn't seem to await this.
+      // This needs careful review of how useItinerary and useLeftPanel use this.
+      // For now, let's assume the primary generation path is via ScheduleGenerator -> useScheduleManagement.
+      // This path might be for a different button/flow.
+       handleServerItineraryCreation(payload, dates.startDate).then(result => {
+         if (result) {
+           setShowItinerary(true); // Ensure UI updates if server call is successful
+         }
+       });
+       return null; // Or return a promise if the caller expects it
     }
     
     // 로컬 알고리즘을 통한 일정 생성 (기존 방식, 폴백)

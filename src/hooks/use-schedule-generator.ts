@@ -1,29 +1,32 @@
+
 import { useState } from 'react';
-import { Place, SelectedPlace } from '@/types/supabase';
+// import { Place, SelectedPlace } from '@/types/supabase'; // Not used
 import { toast } from 'sonner';
-import { useItineraryCreator } from './use-itinerary-creator';
-import { SchedulePayload, ServerScheduleResponse, ParsedRoute } from '@/types/schedule';
+// import { useItineraryCreator } from './use-itinerary-creator'; // Not used
+import { SchedulePayload, NewServerScheduleResponse } from '@/types/schedule'; // Changed to NewServerScheduleResponse
 import { parseInterleavedRoute as parseInterleavedRouteUtil } from '@/utils/routeParser';
 
-// 서버 URL 환경 변수에서 가져오기 (환경변수가 없으면 고정 URL 사용)
-const SERVER_URL = import.meta.env.VITE_SCHEDULE_API;
-
+// 서버 URL 환경 변수에서 가져오기
+const SERVER_BASE_URL = import.meta.env.VITE_SCHEDULE_API;
+const SCHEDULE_GENERATION_ENDPOINT = "/generate_schedule"; // 경로 추가
 
 export const useScheduleGenerator = () => {
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [generationError, setGenerationError] = useState<Error | null>(null);
-  const { createItinerary } = useItineraryCreator();
-  
+  // const { createItinerary } = useItineraryCreator(); // Not used here
+
   // 서버에 일정 생성 요청
-  const generateSchedule = async (payload: SchedulePayload): Promise<ServerScheduleResponse | null> => {
+  const generateSchedule = async (payload: SchedulePayload): Promise<NewServerScheduleResponse | null> => {
     setIsGenerating(true);
     setGenerationError(null);
     
+    const fullApiUrl = `${SERVER_BASE_URL}${SCHEDULE_GENERATION_ENDPOINT}`;
+    console.log('[일정 생성] 서버 요청 URL:', fullApiUrl); // Check the full URL
+
     try {
-      console.log('[일정 생성] 서버 요청 URL:', SERVER_URL);
-      console.log('[일정 생성] 서버에 일정 생성 요청 전송:', JSON.stringify(payload, null, 2));
+      console.log('[일정 생성] 서버에 일정 생성 요청 전송 (use-schedule-generator):', JSON.stringify(payload, null, 2));
       
-      const response = await fetch(SERVER_URL, {
+      const response = await fetch(fullApiUrl, { // Use fullApiUrl
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -31,42 +34,41 @@ export const useScheduleGenerator = () => {
         body: JSON.stringify(payload)
       });
       
+      console.log('[일정 생성] Fetch 요청 보낸 후, 응답 상태 확인 전');
+
       if (!response.ok) {
         const errorText = await response.text();
+        console.error(`[일정 생성] 서버 오류 (${response.status}): ${errorText}`);
         throw new Error(`서버 오류 (${response.status}): ${errorText}`);
       }
       
-      const data: ServerScheduleResponse = await response.json();
-      console.log('[일정 생성] 서버로부터 받은 일정 데이터:', data);
+      const data: NewServerScheduleResponse = await response.json();
+      console.log('[일정 생성] 서버로부터 받은 일정 데이터 (NewServerScheduleResponse):', data);
       
-      if (data.routes) {
-        console.log('[일정 생성] 경로 데이터 포함:', 
-          Object.keys(data.routes).length + '일치 경로 데이터 수신');
+      // The following log block used data.routes which is part of ServerScheduleResponse, not NewServerScheduleResponse.
+      // NewServerScheduleResponse has route_summary. Let's adjust or simplify for now.
+      if (data.route_summary && data.route_summary.length > 0) {
+        console.log('[일정 생성] 경로 요약 데이터 포함:', 
+          data.route_summary.length + '일치 경로 요약 데이터 수신');
         
-        const firstRouteDayKey = Object.keys(data.routes)[0];
-        if (firstRouteDayKey) {
-          const firstRoute = data.routes[firstRouteDayKey];
-          console.log(`[일정 생성] ${firstRouteDayKey}일차 경로 샘플:`, {
-            nodeIds_길이: firstRoute.nodeIds?.length || 0,
-            linkIds_길이: firstRoute.linkIds?.length || 0,
-            interleaved_route_길이: firstRoute.interleaved_route?.length || 0,
-            첫20개_노드: firstRoute.nodeIds?.slice(0, 20) || [],
-            첫20개_인터리브드: firstRoute.interleaved_route?.slice(0, 20) || []
+        const firstRouteSummary = data.route_summary[0];
+        if (firstRouteSummary && firstRouteSummary.interleaved_route) {
+          console.log(`[일정 생성] ${firstRouteSummary.day} 경로 샘플:`, {
+            interleaved_route_길이: firstRouteSummary.interleaved_route?.length || 0,
+            첫20개_인터리브드: firstRouteSummary.interleaved_route?.slice(0, 20) || []
           });
           
-          if (firstRoute.interleaved_route) {
-            // Use the utility function for parsing
-            const parsedSegments = parseInterleavedRouteUtil(firstRoute.interleaved_route);
-            console.log(`[일정 생성] ${firstRouteDayKey}일차 파싱된 경로 (util):`, parsedSegments);
-          }
+          // Use the utility function for parsing
+          const parsedSegments = parseInterleavedRouteUtil(firstRouteSummary.interleaved_route);
+          console.log(`[일정 생성] ${firstRouteSummary.day} 파싱된 경로 (util):`, parsedSegments);
         }
       } else {
-        console.warn('[일정 생성] 경로 데이터 누락: 서버 응답에 routes 필드가 없습니다!');
+        console.warn('[일정 생성] 경로 요약 데이터 누락 또는 비어있음: 서버 응답에 route_summary 필드가 없거나 비어있습니다!');
       }
       
       return data;
     } catch (error) {
-      console.error('[일정 생성] 오류 발생:', error);
+      console.error('[일정 생성] 오류 발생 (use-schedule-generator):', error);
       setGenerationError(error instanceof Error ? error : new Error('알 수 없는 오류'));
       toast.error('일정 생성에 실패했습니다.');
       return null;
@@ -81,3 +83,4 @@ export const useScheduleGenerator = () => {
     generationError
   };
 };
+
