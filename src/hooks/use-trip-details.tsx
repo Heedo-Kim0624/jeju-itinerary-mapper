@@ -8,23 +8,25 @@ interface TripDetails {
   endTime: string;
 }
 
-// Utility function to format date and time into an ISO string
-const formatDateTime = (date: Date | null, time: string): string | null => {
+// Utility function to format date and time into an ISO-like local string
+const formatLocalDateTime = (date: Date | null, time: string): string | null => {
   if (!date || !time) return null;
-  // Ensure time is a string before splitting
   if (typeof time !== 'string') {
-    console.warn(`[formatDateTime] Invalid time value: ${time}. Expected string.`);
-    return null; 
+    console.warn(`[formatLocalDateTime] Invalid time value: ${time}. Expected string.`);
+    return null;
   }
   const parts = time.split(':');
   if (parts.length !== 2) {
-    console.warn(`[formatDateTime] Invalid time format: ${time}. Expected HH:MM.`);
+    console.warn(`[formatLocalDateTime] Invalid time format: ${time}. Expected HH:MM.`);
     return null;
   }
   const [hh, mm] = parts;
-  const withTime = new Date(date);
-  withTime.setHours(parseInt(hh, 10), parseInt(mm, 10), 0, 0);
-  return withTime.toISOString();
+
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  
+  return `${year}-${month}-${day}T${hh}:${mm}:00`;
 };
 
 export const useTripDetails = () => {
@@ -45,8 +47,9 @@ export const useTripDetails = () => {
     return Math.max(0, diffDays);
   }, [details.startDate, details.endDate]);
 
-  const startDatetime = useMemo(() => formatDateTime(details.startDate, details.startTime), [details.startDate, details.startTime]);
-  const endDatetime = useMemo(() => formatDateTime(details.endDate, details.endTime), [details.endDate, details.endTime]);
+  // 요청사항 1, 3: 로컬 시간 기준 문자열 생성
+  const startDatetimeLocal = useMemo(() => formatLocalDateTime(details.startDate, details.startTime), [details.startDate, details.startTime]);
+  const endDatetimeLocal = useMemo(() => formatLocalDateTime(details.endDate, details.endTime), [details.endDate, details.endTime]);
 
   const setStartDate = (date: Date | null) => {
     setDetails((prev) => ({ ...prev, startDate: date }));
@@ -74,6 +77,7 @@ export const useTripDetails = () => {
   const [restaurantDirectInput, setRestaurantDirectInput] = useState('');
   const [cafeDirectInput, setCafeDirectInput] = useState('');
 
+
   return {
     startDate: details.startDate,
     endDate: details.endDate,
@@ -86,8 +90,11 @@ export const useTripDetails = () => {
     setEndTime,
     setDates,
     dates: details,
-    startDatetime, // Export new ISO string
-    endDatetime,   // Export new ISO string
+    startDatetime: startDatetimeLocal, // Export new local datetime string
+    endDatetime: endDatetimeLocal,   // Export new local datetime string
+    // Ensure old startDatetime/endDatetime are aliased or removed if no longer needed
+    // For now, replacing them. If old ISOString (UTC) format is needed elsewhere, this might be a breaking change.
+    // Original 'startDatetime' and 'endDatetime' (which used to be ISO UTC) are now local time strings.
     accomodationDirectInput,
     setAccomodationDirectInput,
     landmarkDirectInput,
@@ -98,4 +105,3 @@ export const useTripDetails = () => {
     setCafeDirectInput,
   };
 };
-

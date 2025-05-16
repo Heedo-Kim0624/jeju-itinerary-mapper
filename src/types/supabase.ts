@@ -1,4 +1,3 @@
-
 import { CategoryName } from '@/utils/categoryUtils';
 
 // 서버로 전송할 장소 데이터 간소화 구조
@@ -12,7 +11,7 @@ export interface Place {
   name: string;
   address: string;
   phone: string;
-  category: string;
+  category: string; // 실제로는 CategoryName 타입이어야 할 수 있음
   description: string;
   rating: number;
   x: number;
@@ -27,18 +26,20 @@ export interface Place {
   isRecommended?: boolean;
   geoNodeId?: string;
   geoNodeDistance?: number;
+  weight?: number;
+  isCandidate?: boolean;
+  raw?: any;
+
+  // 빌드 에러 해결을 위해 옵셔널 필드로 추가
   categoryDetail?: string;
   reviewCount?: number;
   naverLink?: string;
   instaLink?: string;
   operatingHours?: string;
-  weight?: number;
-  isCandidate?: boolean;  // 후보 장소 여부 필드 추가
-  raw?: any; // 원본 데이터 저장을 위한 필드
 }
 
 export interface SelectedPlace extends Place {
-  category: CategoryName;
+  category: CategoryName; // 이 부분은 CategoryName으로 강제
   isSelected: boolean;
   isCandidate: boolean;
 }
@@ -76,18 +77,19 @@ export interface SegmentRoute {
 // ItineraryDay 인터페이스 확장
 export interface ItineraryDay {
   day: number;
-  places: Place[];
+  places: ItineraryPlaceWithTime[]; // Place[] 에서 ItineraryPlaceWithTime[] 으로 변경
   totalDistance: number;
   routeData?: RouteData;
+  interleaved_route?: (string | number)[]; // 요청사항 4, 5 - 추가
 }
 
 // Update ItineraryPlaceWithTime interface with correct property names
 export interface ItineraryPlaceWithTime extends Place {
   arriveTime?: string;
   departTime?: string;
-  stayDuration?: number;
-  travelTimeToNext?: string;
-  timeBlock?: string; // time_block 대신 camelCase로 추가
+  stayDuration?: number; // 분 단위
+  travelTimeToNext?: string; // 다음 장소까지 이동 시간 (예: "30분")
+  timeBlock?: string; // 요청사항 7 - "09:00 - 10:00" 형식 또는 "09:00 도착" 등
 }
 
 // 새로운 인터페이스: 서버에서 받은 경로 데이터 파싱을 위한 인터페이스

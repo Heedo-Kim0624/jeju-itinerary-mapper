@@ -8,22 +8,22 @@ import { useScheduleManagement } from '@/hooks/useScheduleManagement';
 
 interface ScheduleGeneratorProps {
   selectedPlaces: SelectedPlace[];
-  dates: {
+  dates: { // 이 dates는 startDate, endDate, startTime, endTime 객체여야 함
     startDate: Date;
     endDate: Date;
     startTime: string;
     endTime: string;
   } | null;
-  startDatetimeISO: string | null;
-  endDatetimeISO: string | null;
+  startDatetimeLocal: string | null; // ISO 대신 local 추가, 또는 startDatetimeISO 이름 유지하고 값을 로컬 포맷으로
+  endDatetimeLocal: string | null;   // ISO 대신 local 추가
   onClose: () => void;
 }
 
 export const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({
   selectedPlaces,
   dates,
-  startDatetimeISO,
-  endDatetimeISO,
+  startDatetimeLocal, // props 이름 변경 또는 값 형식 변경
+  endDatetimeLocal,   // props 이름 변경 또는 값 형식 변경
   onClose
 }) => {
   const {
@@ -34,13 +34,14 @@ export const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({
     runScheduleGenerationProcess
   } = useScheduleManagement({
     selectedPlaces,
-    dates,
-    startDatetimeISO,
-    endDatetimeISO,
+    dates, // useScheduleManagement가 이 dates 객체를 받아서 내부적으로 start/end datetime 문자열 생성하도록 수정할 수도 있음
+    startDatetimeISO: startDatetimeLocal, // useScheduleManagement에는 startDatetimeISO로 전달
+    endDatetimeISO: endDatetimeLocal,     // useScheduleManagement에는 endDatetimeISO로 전달
   });
 
   useEffect(() => {
-    if (!startDatetimeISO || !endDatetimeISO) {
+    // startDatetimeLocal과 endDatetimeLocal로 조건 변경
+    if (!startDatetimeLocal || !endDatetimeLocal) {
       toast.error("여행 날짜와 시간 정보가 올바르지 않아 일정을 생성할 수 없습니다.");
       onClose();
       return;
@@ -52,7 +53,7 @@ export const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({
       return;
     }
     runScheduleGenerationProcess();
-  }, [startDatetimeISO, endDatetimeISO, selectedPlaces, onClose, runScheduleGenerationProcess]);
+  }, [startDatetimeLocal, endDatetimeLocal, selectedPlaces, onClose, runScheduleGenerationProcess]); // 의존성 배열 업데이트
 
   if (isLoading) {
     return <ScheduleLoadingIndicator />;

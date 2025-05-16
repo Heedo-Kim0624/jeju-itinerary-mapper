@@ -1,11 +1,12 @@
 
 import React, { useEffect } from 'react';
 import { useLeftPanel } from '@/hooks/use-left-panel';
-import LeftPanelContent from './LeftPanelContent';
+import LeftPanelContainer from './LeftPanelContainer'; // 수정: 중괄호 제거
+import LeftPanelContent from './LeftPanelContent'; // 수정: 중괄호 제거
 import RegionPanelHandler from './RegionPanelHandler';
 import CategoryResultHandler from './CategoryResultHandler';
-import LeftPanelContainer from './LeftPanelContainer';
-import ItineraryView from './ItineraryView';
+// import ItineraryPanel from './ItineraryPanel'; // ItineraryView를 사용하므로 주석 처리 또는 확인 필요
+import ItineraryView from './ItineraryView'; // ItineraryView를 사용
 import { CategoryName } from '@/utils/categoryUtils';
 import { Place } from '@/types/supabase';
 import { toast } from 'sonner';
