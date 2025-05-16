@@ -1,4 +1,5 @@
 import { CategoryName } from '@/utils/categoryUtils';
+export type { CategoryName } from '@/utils/categoryUtils';
 
 // 서버로 전송할 장소 데이터 간소화 구조
 export interface SchedulePlace {
@@ -11,7 +12,7 @@ export interface Place {
   name: string;
   address: string;
   phone: string;
-  category: string; // 실제로는 CategoryName 타입이어야 할 수 있음
+  category: string; 
   description: string;
   rating: number;
   x: number;
@@ -29,8 +30,6 @@ export interface Place {
   weight?: number;
   isCandidate?: boolean;
   raw?: any;
-
-  // 빌드 에러 해결을 위해 옵셔널 필드로 추가
   categoryDetail?: string;
   reviewCount?: number;
   naverLink?: string;
@@ -39,7 +38,7 @@ export interface Place {
 }
 
 export interface SelectedPlace extends Place {
-  category: CategoryName; // 이 부분은 CategoryName으로 강제
+  category: CategoryName; 
   isSelected: boolean;
   isCandidate: boolean;
 }
