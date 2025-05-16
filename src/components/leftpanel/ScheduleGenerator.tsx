@@ -6,7 +6,7 @@ import { useItineraryCreator, ItineraryDay } from '@/hooks/use-itinerary-creator
 import ItineraryPanel from './ItineraryPanel';
 import { useScheduleGenerator } from '@/hooks/use-schedule-generator';
 import { useMapContext } from '@/components/rightpanel/MapContext';
-import { ServerRouteResponse, SchedulePayload, SchedulePlace } from '@/types/schedule';
+import { ServerRouteResponse, SchedulePayload } from '@/types/schedule';
 
 interface ScheduleGeneratorProps {
   selectedPlaces: Place[];
@@ -52,32 +52,35 @@ export const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({
   const preparePayload = (): SchedulePayload => {
     if (!dates) throw new Error("Dates not provided");
     
-    // Prepare selected places in the expected format
-    const selectedPlacesPayload: SchedulePlace[] = selectedPlaces
-      .filter(p => !p.isCandidate)
-      .map(p => ({ 
-        id: typeof p.id === 'string' ? parseInt(p.id, 10) : p.id, 
-        name: p.name || 'Unknown Place' 
-      }));
+    // 사용자가 선택한 장소와 자동 보완 장소 분리
+    const directlySelectedPlaces = selectedPlaces.filter(p => !p.isCandidate);
+    const autoCompletedPlaces = selectedPlaces.filter(p => p.isCandidate);
     
-    // Prepare candidate places in the expected format
-    const candidatePlacesPayload: SchedulePlace[] = selectedPlaces
-      .filter(p => p.isCandidate)
-      .map(p => ({ 
-        id: typeof p.id === 'string' ? parseInt(p.id, 10) : p.id, 
-        name: p.name || 'Unknown Place' 
-      }));
+    // 서버에 보낼 형식으로 변환 (id, name만 포함)
+    const selectedPlacesPayload = directlySelectedPlaces.map(p => ({ 
+      id: typeof p.id === 'string' ? parseInt(p.id, 10) || p.id : p.id, 
+      name: p.name || 'Unknown Place' 
+    }));
     
-    // Format dates as ISO strings
-    const startDateTime = dates.startDate.toISOString();
-    const endDateTime = dates.endDate.toISOString();
+    const candidatePlacesPayload = autoCompletedPlaces.map(p => ({ 
+      id: typeof p.id === 'string' ? parseInt(p.id, 10) || p.id : p.id, 
+      name: p.name || 'Unknown Place' 
+    }));
+    
+    // 날짜를 ISO 타임스탬프로 변환
+    const formatDateWithTime = (date: Date, time: string): string => {
+      const [hours, minutes] = time.split(':').map(Number);
+      const newDate = new Date(date);
+      newDate.setHours(hours, minutes, 0, 0);
+      return newDate.toISOString();
+    };
     
     // Build and log the payload for debugging
     const payload: SchedulePayload = {
       selected_places: selectedPlacesPayload,
       candidate_places: candidatePlacesPayload,
-      start_datetime: startDateTime,
-      end_datetime: endDateTime
+      start_datetime: formatDateWithTime(dates.startDate, dates.startTime),
+      end_datetime: formatDateWithTime(dates.endDate, dates.endTime)
     };
     
     console.log("📤 서버 요청 payload:", JSON.stringify(payload, null, 2));

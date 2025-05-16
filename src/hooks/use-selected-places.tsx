@@ -1,9 +1,9 @@
-
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { Place, SchedulePayload, SelectedPlace } from '@/types/supabase';
 import { CategoryName, CATEGORIES, MINIMUM_RECOMMENDATION_COUNT } from '@/utils/categoryUtils';
 import { toast } from 'sonner';
 import { sortByWeightDescending } from '@/lib/utils';
+import { SchedulePlace } from '@/types/schedule';
 
 export const useSelectedPlaces = () => {
   const [selectedPlaces, setSelectedPlaces] = useState<SelectedPlace[]>([]);
@@ -104,6 +104,17 @@ export const useSelectedPlaces = () => {
       let shortfall = Math.max(0, minimumCountForCategory - currentSelectedInCategory);
       console.log(`[자동 보완] ${category}: 최소 필요 ${minimumCountForCategory}개, 현재 선택 ${currentSelectedInCategory}개, 부족분 ${shortfall}개`);
 
+      // 숙소 카테고리는 자동 보완을 하지 않음 (사용자가 반드시 선택해야 함)
+      if (category === '숙소') {
+        console.log('[자동 보완] 숙소는 자동 보완을 하지 않습니다. 사용자가 선택한 숙소만 포함됩니다.');
+        if (shortfall > 0) {
+          toast.warning(`숙소는 ${minimumCountForCategory}개가 필요합니다. 현재 ${currentSelectedInCategory}개가 선택되어 있습니다.`);
+        } else {
+          toast.success(`${category} 선택 완료!`);
+        }
+        return;
+      }
+
       if (shortfall === 0) {
         console.log(`[자동 보완] ${category}: 이미 최소 개수(${minimumCountForCategory}개)를 충족하여 추가 보완하지 않습니다.`);
         toast.success(`${category} 선택 완료!`);
@@ -167,20 +178,42 @@ export const useSelectedPlaces = () => {
     [selectedPlacesByCategory, selectedPlaces, candidatePlaces]
   );
   
+  // 수정된 payload 생성 함수: schedule.ts의 SchedulePayload 구조에 맞게 조정
   const prepareSchedulePayload = (
     currentPlaces: SelectedPlace[], // 현재 선택된 장소들 (isCandidate 포함 가능)
     tripDateTime: { startDate: Date; endDate: Date; startTime: string; endTime: string },
-    recommendedPlacesPool?: Place[] // 카테고리별 추천 장소 풀 (옵셔널)
   ): SchedulePayload => {
     const { startDate, endDate, startTime, endTime } = tripDateTime;
-
+    
+    // 사용자가 선택한 장소와 자동 보완 장소 분리
+    const selectedPlaces = currentPlaces.filter(p => !p.isCandidate);
+    const candidatePlaces = currentPlaces.filter(p => p.isCandidate);
+    
+    // 장소 데이터를 SchedulePlace 형식으로 변환 (id, name만 포함)
+    const selectedPlacesForPayload: SchedulePlace[] = selectedPlaces.map(p => ({
+      id: typeof p.id === 'string' ? parseInt(p.id, 10) || p.id : p.id,
+      name: p.name || 'Unknown Place'
+    }));
+    
+    const candidatePlacesForPayload: SchedulePlace[] = candidatePlaces.map(p => ({
+      id: typeof p.id === 'string' ? parseInt(p.id, 10) || p.id : p.id,
+      name: p.name || 'Unknown Place'
+    }));
+    
+    // ISO8601 형식의 타임스탬프 생성
+    const formatDateWithTime = (date: Date, time: string) => {
+      const [hours, minutes] = time.split(':').map(Number);
+      const newDate = new Date(date);
+      newDate.setHours(hours, minutes, 0, 0);
+      return newDate.toISOString();
+    };
+    
     // payload 생성
     const payload: SchedulePayload = {
-      startDate: startDate.toISOString().split('T')[0],
-      endDate: endDate.toISOString().split('T')[0],
-      startTime: startTime, // "HH:MM"
-      endTime: endTime,     // "HH:MM"
-      selectedPlaces: currentPlaces
+      selected_places: selectedPlacesForPayload,
+      candidate_places: candidatePlacesForPayload,
+      start_datetime: formatDateWithTime(startDate, startTime),
+      end_datetime: formatDateWithTime(endDate, endTime)
     };
 
     console.log("[일정 생성] 최종 Payload 준비:", JSON.stringify(payload, null, 2));

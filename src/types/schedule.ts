@@ -1,14 +1,13 @@
 
+import { Place, SelectedPlace } from './supabase';
+
+// 서버로 전송할 장소 데이터 간소화 구조
 export interface SchedulePlace {
   id: number | string;
   name: string;
 }
 
-export interface SelectedPlace {
-  id: string | number;  // Changed to accept both string and number
-  name: string;
-}
-
+// 서버에 전송할 일정 생성 요청 Payload
 export interface SchedulePayload {
   selected_places: SchedulePlace[];
   candidate_places: SchedulePlace[];
@@ -16,27 +15,42 @@ export interface SchedulePayload {
   end_datetime: string;
 }
 
+// 서버로부터 받은 경로 응답 구조
+export interface ServerRouteResponse {
+  nodeIds?: string[];
+  linkIds?: string[];
+  status?: string;
+  total_distance_m?: number;
+  interleaved_route?: (string | number)[];
+}
+
+// 서버로부터 받은 일정 항목 응답 구조
 export interface ScheduleItem {
   time_block: string;
   place_type: string;
   place_name: string;
+  place_id?: number | string;
 }
 
-export interface DaySchedule {
-  day: number;
-  items: ScheduleItem[];
+// 경로 파싱을 위한 추가 인터페이스
+export interface ParsedRoute {
+  from: string | number;
+  to: string | number;
+  links: (string | number)[];
 }
 
-// 서버에서 받는 경로 응답 인터페이스
-export interface ServerRouteResponse {
-  date: string;            // 요일 또는 날짜 정보
-  nodeIds: number[];       // 노드 ID 배열
-  linkIds?: number[];      // 링크 ID 배열 (선택적)
-  places?: SchedulePlace[]; // 장소 정보 배열 (선택적)
+// 경로 요약 정보
+export interface RouteSummary {
+  day: string;
+  status: string;
+  total_distance_m: number;
+  interleaved_route: (string | number)[];
 }
 
-// 추출된 경로 정보 인터페이스
-export interface ExtractedRouteData {
-  nodeIds: string[];       // 화면에 표시할 노드 ID 배열
-  linkIds: string[];       // 화면에 표시할 링크 ID 배열
+// 서버 응답 전체 구조
+export interface ServerScheduleResponse {
+  schedule?: ScheduleItem[];
+  route_summary?: RouteSummary[];
+  itinerary?: any[]; // 서버가 반환하는 일정 정보
+  routes?: Record<number | string, ServerRouteResponse>; // 일자별 경로 정보
 }

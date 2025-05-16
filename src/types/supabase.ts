@@ -1,3 +1,6 @@
+
+import { CategoryName } from '@/utils/categoryUtils';
+
 export interface Place {
   id: string;
   name: string;
@@ -42,12 +45,13 @@ export interface TripDateTime {
   endTime: string;
 }
 
-// 새로운 타입 정의: 일정 생성 API 요청 페이로드
+// 수정된 타입 정의: 일정 생성 API 요청 페이로드
 export interface SchedulePayload {
+  // 기존 필드 수정
   selected_places: SelectedPlace[];
   candidate_places: SelectedPlace[];
-  start_datetime: string;
-  end_datetime: string;
+  start_datetime: string; // ISO8601 타임스탬프
+  end_datetime: string;   // ISO8601 타임스탬프
 }
 
 // 경로 데이터 인터페이스 추가
@@ -79,4 +83,18 @@ export interface ItineraryPlaceWithTime extends Place {
   stayDuration?: number;
   travelTimeToNext?: string;
   timeBlock?: string; // time_block 대신 camelCase로 추가
+}
+
+// 새로운 인터페이스: 서버에서 받은 경로 데이터 파싱을 위한 인터페이스
+export interface RouteSegment {
+  from: string; // 출발 노드 ID
+  to: string;   // 도착 노드 ID
+  links: string[]; // 링크 ID 배열
+}
+
+// 경로 응답에서 추출한 파싱된 경로 세그먼트
+export interface ParsedRouteData {
+  day: number;
+  segments: RouteSegment[];
+  totalDistanceMeters: number;
 }

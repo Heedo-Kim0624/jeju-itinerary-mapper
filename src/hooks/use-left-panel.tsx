@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useSelectedPlaces } from './use-selected-places';
 import { useTripDetails } from './use-trip-details';
@@ -9,7 +8,7 @@ import { useCategorySelection } from './use-category-selection';
 import { useCategoryHandlers } from './left-panel/use-category-handlers';
 import { useItineraryHandlers } from './left-panel/use-itinerary-handlers';
 import { useInputState } from './left-panel/use-input-state';
-import { Place } from '@/types/supabase';
+import { Place, SelectedPlace } from '@/types/supabase';
 import { CategoryName } from '@/utils/categoryUtils';
 
 /**
@@ -125,17 +124,21 @@ export const useLeftPanel = () => {
   const handleCreateItinerary = async () => {
     return itineraryHandlers.handleCreateItinerary(
       tripDetails,
-      selectedPlaces,
-      (places, dateTime) => prepareSchedulePayload(places, dateTime),
+      // SelectedPlace 배열 타입을 확실히 지정
+      selectedPlaces as SelectedPlace[], 
+      (places: SelectedPlace[], dateTime) => prepareSchedulePayload(places, dateTime),
       [],
       generateItinerary,
-      setShowItinerary,
+      (showItinerary: boolean) => setShowItinerary(showItinerary),
       (panel: 'region' | 'date' | 'category' | 'itinerary') => setCurrentPanel(panel)
     );
   };
   
   const handleCloseItinerary = () => {
-    itineraryHandlers.handleCloseItinerary(setShowItinerary, setCurrentPanel);
+    itineraryHandlers.handleCloseItinerary(
+      (showItinerary: boolean) => setShowItinerary(showItinerary), 
+      (panel: 'region' | 'date' | 'category' | 'itinerary') => setCurrentPanel(panel)
+    );
   };
 
   // 일정이 생성되면 첫 번째 날짜 선택
