@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { Place, SelectedPlace, SchedulePlace, SchedulePayload as LocalSchedulePayload } from '@/types/supabase';
 import { CategoryName, CATEGORIES, MINIMUM_RECOMMENDATION_COUNT } from '@/utils/categoryUtils';
@@ -40,29 +39,16 @@ export const useSelectedPlaces = () => {
         ...place,
         category: placeCategory,
         isSelected: checked,
-        isCandidate: false, 
+        isCandidate: false, // User-selected places are not candidates by default
       };
 
       if (checked) {
         if (placeCategory === '숙소') {
           const currentAccommodations = prev.filter(p => p.category === '숙소');
-          // tripDuration is nights. Max accomms = tripDuration (if >0) or 1 (if tripDuration is 0 or null).
-          // n박 = tripDuration. 여행일수(nDays) = tripDuration + 1.
-          // 숙소는 n박 만큼 필요 (최소 1개). 즉, Math.max(tripDuration, 1) 이 아니라, 여행일수 - 1.
-          // 예를 들어 0박 1일 -> 1개. 1박 2일 -> 1개. 2박 3일 -> 2개.
-          // The logic was: maxAccommodations = tripDuration !== null && tripDuration >= 0 ? Math.max(tripDuration, 1) : 1;
-          // This seems to mean: if 0 nights (1 day trip), max 1 accom. If 1 night (2 day trip), max 1 accom. If 2 nights (3 day trip), max 2 accoms.
-          // This can be simplified: number of nights = tripDuration. If 0 nights, it's a day trip.
-          // If tripDuration is 0 (day trip), maxAccommodations = 1.
-          // If tripDuration is > 0, maxAccommodations = tripDuration.
-          // So, maxAccommodations = tripDuration === 0 ? 1 : (tripDuration === null ? 1 : tripDuration); (This is a bit complex)
-          // Let's use the original logic which was: maxAccommodations = tripDuration !== null && tripDuration >= 0 ? Math.max(tripDuration, 1) : 1;
-          // This means: if tripDuration is 0, it's max(0,1) = 1. if tripDuration is 1, it's max(1,1)=1. if tripDuration is 2, max(2,1)=2. This seems correct.
-          
           const maxAccommodations = tripDuration !== null && tripDuration >= 0 ? Math.max(tripDuration, 1) : 1;
           
           if (currentAccommodations.length >= maxAccommodations) {
-            toast.info(`숙소는 최대 ${maxAccommodations}개까지 선택할 수 있습니다. 기존 숙소를 변경하려면 먼저 삭제해주세요.`);
+            toast.info(`숙소는 최대 ${maxAccommodations}개까지 선택할 수 있습니��. 기존 숙소를 변경하려면 먼저 삭제해주세요.`);
             return prev; 
           }
         }
@@ -75,7 +61,7 @@ export const useSelectedPlaces = () => {
 
   const handleRemovePlace = useCallback((id: string | number) => {
     setSelectedPlaces(prev => prev.filter(place => place.id !== id));
-    setCandidatePlaces(prev => prev.filter(place => place.id !== id));
+    setCandidatePlaces(prev => prev.filter(place => place.id !== id)); // Also remove from candidates if it was there
   }, []);
 
   const handleViewOnMap = useCallback((place: Place) => {
@@ -98,7 +84,7 @@ export const useSelectedPlaces = () => {
     (
       category: CategoryName,
       recommendedPool: Place[],
-      travelDays: number | null // actualTravelDays = tripDuration + 1
+      travelDays: number | null
     ) => {
       let currentTravelDays = travelDays;
       if (currentTravelDays === null && tripDuration !== null && tripDuration >= 0) {
@@ -115,13 +101,9 @@ export const useSelectedPlaces = () => {
         return;
       }
       
-      const selectedAccommodationCount = selectedPlacesByCategory['숙소']?.length || 0;
-      // Assuming MINIMUM_RECOMMENDATION_COUNT from categoryUtils.ts expects 1 argument (nDays) due to TS error.
-      // The user's spec showed it taking selectedAccommodationCount as well.
-      // If the actual function signature is different, this call might not use selectedAccommodationCount.
       const minCountConfig = MINIMUM_RECOMMENDATION_COUNT(currentTravelDays);
       const minimumCountForCategory = minCountConfig[category];
-      const currentSelectedInCategory = selectedPlacesByCategory[category]?.length || 0;
+      const currentSelectedInCategory = selectedPlacesByCategory[category]?.length || 0; // Based on user-selected places
       
       let shortfall = Math.max(0, minimumCountForCategory - currentSelectedInCategory);
       console.log(`[자동 보완] ${category}: 최소 필요 ${minimumCountForCategory}개, 현재 선택 ${currentSelectedInCategory}개, 부족분 ${shortfall}개`);
@@ -145,13 +127,14 @@ export const useSelectedPlaces = () => {
         return;
       }
 
-      const allCurrentlySelectedIds = new Set([
+      // Consider IDs from both selectedPlaces (user picked) and existing candidatePlaces to avoid duplicates
+      const allCurrentlySelectedOrCandidateIds = new Set([
         ...selectedPlaces.map(p => p.id),
         ...candidatePlaces.map(p => p.id)
       ]);
 
       const availableToRecommend = sortByWeightDescending(
-        recommendedPool.filter(p => !allCurrentlySelectedIds.has(p.id))
+        recommendedPool.filter(p => !allCurrentlySelectedOrCandidateIds.has(p.id))
       );
       
       console.log(`[자동 보완] ${category}: 추천 풀에서 선택 가능한 장소 ${availableToRecommend.length}개`);
@@ -164,29 +147,29 @@ export const useSelectedPlaces = () => {
       }
       
       if (placesToAutoAddAsCandidates.length > 0) {
-        const newCandidates = placesToAutoAddAsCandidates.map(place => ({
+        const newCandidatesToAddState = placesToAutoAddAsCandidates.map(place => ({
           ...place,
           category: category, 
-          isSelected: true, // Auto-added candidates are considered "selected" for itinerary generation
+          isSelected: true, // Retain for consistency if prepareSchedulePayload expects it from combined list
           isCandidate: true
         }));
         
         setCandidatePlaces(prevCandidates => {
-          const newCandidateIds = new Set(newCandidates.map(p => p.id));
+          const newCandidateIds = new Set(newCandidatesToAddState.map(p => p.id));
+          // Filter out any pre-existing candidates that are part of the new batch to avoid duplicates
           const filteredPrevCandidates = prevCandidates.filter(p => !newCandidateIds.has(p.id));
-          return [...filteredPrevCandidates, ...newCandidates];
+          return [...filteredPrevCandidates, ...newCandidatesToAddState];
         });
         
-        // Also add to selectedPlaces so they are included in the schedule generation
-        setSelectedPlaces(prevSelected => {
-            const existingIds = new Set(prevSelected.map(p => p.id));
-            const uniqueAutoAdded = newCandidates.filter(p => !existingIds.has(p.id));
-            
-            return [...prevSelected, ...uniqueAutoAdded];
-        });
+        // DO NOT add to selectedPlaces state anymore.
+        // setSelectedPlaces(prevSelected => {
+        //     const existingIds = new Set(prevSelected.map(p => p.id));
+        //     const uniqueAutoAdded = newCandidatesToAddState.filter(p => !existingIds.has(p.id));
+        //     return [...prevSelected, ...uniqueAutoAdded];
+        // });
 
         toast.success(`${category}: ${placesToAutoAddAsCandidates.length}개의 장소가 자동으로 추천 목록에 추가되었습니다.`);
-        console.log(`[자동 보완] ${category}: ${placesToAutoAddAsCandidates.length}개 장소 자동 추가 완료.`);
+        console.log(`[자동 보완] ${category}: ${placesToAutoAddAsCandidates.length}개 장소 자동 추가 완료 (후보 목록에만).`);
       } else if (shortfall > 0) {
         toast.error(`${category}: 추천할 장소가 부족하여 ${shortfall}개를 더 채우지 못했습니다.`);
         console.log(`[자동 보완] ${category}: 추천 장소 부족으로 ${shortfall}개 미보완.`);
@@ -198,35 +181,31 @@ export const useSelectedPlaces = () => {
   );
   
   const prepareSchedulePayload = (
-    currentPlaces: SelectedPlace[], // This is the combined list from useLeftPanel
+    // This argument will be the user-selected places from the selectedPlaces state hook
+    userSelectedPlacesInput: SelectedPlace[], 
     tripDateTime: { startDate: Date; endDate: Date; startTime: string; endTime: string },
   ): LocalSchedulePayload => {
     const { startDate, endDate, startTime, endTime } = tripDateTime;
     
-    const userSelectedPlaces = currentPlaces.filter(p => !p.isCandidate);
-    const autoCompletedCandidatePlaces = currentPlaces.filter(p => p.isCandidate);
+    // userSelectedPlacesInput are the places explicitly selected by the user.
+    // candidatePlaces (from the hook's state) are the auto-completed ones.
     
-    const selectedPlacesForPayload: SchedulePlace[] = userSelectedPlaces.map(p => ({
+    const selectedPlacesForPayload: SchedulePlace[] = userSelectedPlacesInput.map(p => ({
       id: typeof p.id === 'string' ? parseInt(p.id, 10) || p.id : p.id,
       name: p.name || 'Unknown Place'
     }));
     
-    const candidatePlacesForPayload: SchedulePlace[] = autoCompletedCandidatePlaces.map(p => ({
+    // Use the candidatePlaces state directly from the hook for candidate places.
+    const candidatePlacesForPayload: SchedulePlace[] = candidatePlaces.map(p => ({
       id: typeof p.id === 'string' ? parseInt(p.id, 10) || p.id : p.id,
       name: p.name || 'Unknown Place'
     }));
     
-    // Defensive coding for formatDateWithTime
     const formatDateWithTime = (date: Date, timeStr: string | undefined): string => {
       let resolvedTimeStr = timeStr;
       if (!resolvedTimeStr) {
-        // Using a generic fallback. Ideally, distinguish between start and end time defaults.
-        // For now, '10:00' as a generic fallback for safety.
-        // The defaults in use-trip-details are '10:00' for start and '22:00' for end.
-        // DatePicker uses '10:00' and '18:00'.
-        // Let's use '10:00' as a generic default if time is missing.
         console.warn(`[일정 생성] 시간 정보(startTime/endTime)가 누락되어 기본값 '10:00'을 사용합니다. 날짜: ${date.toISOString().split('T')[0]}`);
-        resolvedTimeStr = '10:00';
+        resolvedTimeStr = '10:00'; // Fallback for missing time
       }
       
       const [hours, minutes] = resolvedTimeStr.split(':').map(Number);
@@ -247,8 +226,8 @@ export const useSelectedPlaces = () => {
   };
 
   useEffect(() => {
-    console.log("[SelectedPlaces Hook] 선택된 장소 변경됨:", selectedPlaces);
-    console.log("[SelectedPlaces Hook] 후보 장소 변경됨:", candidatePlaces);
+    console.log("[SelectedPlaces Hook] 선택된 장소 변경됨 (사용자 선택):", selectedPlaces);
+    console.log("[SelectedPlaces Hook] 후보 장소 변경됨 (자동 보완):", candidatePlaces);
     console.log("[SelectedPlaces Hook] 현재 여행 기간(박):", tripDuration);
   }, [selectedPlaces, candidatePlaces, tripDuration]);
 
@@ -264,7 +243,7 @@ export const useSelectedPlaces = () => {
     isAccommodationLimitReached,
     handleAutoCompletePlaces,
     prepareSchedulePayload,
-    setCandidatePlaces, // Exposing these might be for specific UI interactions or debugging
-    setSelectedPlaces  // Exposing these might be for specific UI interactions or debugging
+    setCandidatePlaces,
+    setSelectedPlaces
   };
 };

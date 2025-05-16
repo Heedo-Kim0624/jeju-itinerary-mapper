@@ -1,15 +1,15 @@
 
 import React from 'react';
 import { Place } from '@/types/supabase';
-import PlaceCard, { PlaceCardProps } from '@/components/middlepanel/PlaceCard'; // Assuming PlaceCardProps might be needed if we define a wrapper
+import PlaceCard from '@/components/middlepanel/PlaceCard';
 
 interface PlaceListingViewProps {
   places: Place[];
   title: string;
   isLoading: boolean;
-  selectedPlaces: Place[];
+  // selectedPlaces prop removed as it's not used and can be derived if needed
   onSelectPlace: (place: Place, checked: boolean) => void;
-  onViewOnMap: (place: Place) => void; // This is for onViewDetails
+  onViewOnMap: (place: Place) => void;
   isPlaceSelected: (id: string | number) => boolean;
 }
 
@@ -17,7 +17,6 @@ const PlaceListingView: React.FC<PlaceListingViewProps> = ({
   places,
   title,
   isLoading,
-  selectedPlaces,
   onSelectPlace,
   onViewOnMap,
   isPlaceSelected
@@ -53,7 +52,7 @@ const PlaceListingView: React.FC<PlaceListingViewProps> = ({
             key={place.id}
             place={place}
             onSelect={onSelectPlace}
-            onViewDetails={onViewOnMap} // Added missing required prop
+            onViewDetails={onViewOnMap}
             isSelected={isPlaceSelected(place.id)}
           />
         ))}
