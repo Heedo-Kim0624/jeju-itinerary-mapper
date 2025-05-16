@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { useLeftPanel } from '@/hooks/use-left-panel';
 import LeftPanelContent from './LeftPanelContent';
@@ -8,6 +7,7 @@ import LeftPanelContainer from './LeftPanelContainer';
 import ItineraryView from './ItineraryView';
 import { CategoryName } from '@/utils/categoryUtils';
 import { Place } from '@/types/supabase';
+import { toast } from 'sonner';
 
 const LeftPanel: React.FC = () => {
   const {
@@ -43,8 +43,7 @@ const LeftPanel: React.FC = () => {
   // 결과 닫기 핸들러
   const handleResultClose = () => {
     console.log("카테고리 결과 화면 닫기");
-    // Cast to ensure type compatibility
-    uiVisibility.setShowCategoryResult(null as unknown as CategoryName);
+    uiVisibility.setShowCategoryResult(null);
   };
 
   // 카테고리 확인 핸들러
@@ -56,19 +55,45 @@ const LeftPanel: React.FC = () => {
   };
 
   // 카테고리 결과 확인 핸들러 (업데이트: 자동 보완 로직 통합)
-  const handleConfirmCategory = (category: string, selectedPlaces: Place[], recommendedPlaces: Place[]) => {
-    console.log(`[LeftPanel] ${category} 카테고리 결과 확인, 선택 장소 ${selectedPlaces.length}개, 추천 장소 ${recommendedPlaces.length}개`);
-    
-    if (!tripDetails.tripDuration) {
-      console.warn("[LeftPanel] 여행 기간이 설정되지 않았습니다. 자동 보완을 실행할 수 없습니다.");
+  const handleConfirmCategory = (
+    category: CategoryName,
+    userSelectedInPanel: Place[],
+    recommendedPoolForCategory: Place[]
+  ) => {
+    const nDaysInNights = tripDetails.tripDuration;
+
+    console.log(
+      `[LeftPanel] '${category}' 카테고리 결과 확인. 사용자가 패널에서 선택: ${userSelectedInPanel.length}개, 전체 추천 풀: ${recommendedPoolForCategory.length}개. 여행 기간(박): ${nDaysInNights}`
+    );
+
+    if (nDaysInNights === null) {
+      console.warn("[LeftPanel] 여행 기간(tripDuration)이 null입니다. 자동 보완을 실행할 수 없습니다.");
+      toast.error("여행 기간을 먼저 설정해주세요. 날짜 선택 후 다시 시도해주세요.");
+      uiVisibility.setShowCategoryResult(null); // 패널 닫기
+      return;
+    }
+
+    // tripDuration은 '박' 수이므로, 총 여행일수는 +1
+    const actualTravelDays = nDaysInNights + 1;
+    console.log(`[LeftPanel] 계산된 총 여행일수: ${actualTravelDays}일`);
+
+    if (actualTravelDays <= 0) {
+      console.warn(`[LeftPanel] 총 여행일수(${actualTravelDays}일)가 유효하지 않아 자동 보완을 실행할 수 없습니다.`);
+      toast.error("여행 기간이 올바르게 설정되지 않았습니다. 날짜를 다시 확인해주세요.");
+      uiVisibility.setShowCategoryResult(null); // 패널 닫기
       return;
     }
     
-    // Auto-complete candidate places based on user selection
-    placesManagement.handleAutoCompletePlaces(category as CategoryName, recommendedPlaces);
+    // 사용자가 패널에서 선택한 장소는 이미 onSelectPlace를 통해 placesManagement.selectedPlaces에 반영되었을 것입니다.
+    // handleAutoCompletePlaces는 부족한 장소를 추가하는 역할을 합니다.
+    placesManagement.handleAutoCompletePlaces(
+      category,
+      recommendedPoolForCategory, // 자동 보완 시 사용할 추천 장소 풀
+      actualTravelDays // 총 여행일수 전달
+    );
     
     // Close the category result panel
-    uiVisibility.setShowCategoryResult(null as unknown as CategoryName);
+    uiVisibility.setShowCategoryResult(null);
   };
 
   return (
@@ -97,9 +122,14 @@ const LeftPanel: React.FC = () => {
             endTime: tripDetails.dates?.endTime || "21:00"
           }}
           onCreateItinerary={() => {
-            // Wrap Promise in a function that returns a boolean
-            handleCreateItinerary().then(() => true);
-            return true;
+            handleCreateItinerary().then((success) => {
+              if (success) {
+                console.log("일정 생성 성공 후 LeftPanelContainer 업데이트");
+              } else {
+                console.log("일정 생성 실패 후 LeftPanelContainer 업데이트");
+              }
+            });
+            return true; 
           }}
           itinerary={itineraryManagement.itinerary}
           selectedItineraryDay={itineraryManagement.selectedItineraryDay}
@@ -108,7 +138,7 @@ const LeftPanel: React.FC = () => {
           <LeftPanelContent
             onDateSelect={tripDetails.setDates}
             onOpenRegionPanel={() => regionSelection.setRegionSlidePanelOpen(true)}
-            hasSelectedDates={!!tripDetails.dates}
+            hasSelectedDates={!!tripDetails.dates.startDate && !!tripDetails.dates.endDate}
             onCategoryClick={categorySelection.handleCategoryButtonClick}
             regionConfirmed={regionSelection.regionConfirmed}
             categoryStepIndex={categorySelection.stepIndex}
@@ -117,28 +147,28 @@ const LeftPanel: React.FC = () => {
             selectedKeywordsByCategory={categorySelection.selectedKeywordsByCategory}
             toggleKeyword={categorySelection.toggleKeyword}
             directInputValues={{
-              accomodation: keywordsAndInputs.directInputValues['accommodation'] || '',
-              landmark: keywordsAndInputs.directInputValues['landmark'] || '',
-              restaurant: keywordsAndInputs.directInputValues['restaurant'] || '',
-              cafe: keywordsAndInputs.directInputValues['cafe'] || ''
+              accommodation: keywordsAndInputs.directInputValues['숙소'] || '',
+              landmark: keywordsAndInputs.directInputValues['관광지'] || '',
+              restaurant: keywordsAndInputs.directInputValues['음식점'] || '',
+              cafe: keywordsAndInputs.directInputValues['카페'] || ''
             }}
             onDirectInputChange={{
-              accomodation: (value: string) => keywordsAndInputs.onDirectInputChange('accommodation', value),
-              landmark: (value: string) => keywordsAndInputs.onDirectInputChange('landmark', value),
-              restaurant: (value: string) => keywordsAndInputs.onDirectInputChange('restaurant', value),
-              cafe: (value: string) => keywordsAndInputs.onDirectInputChange('cafe', value)
+              accommodation: (value: string) => keywordsAndInputs.onDirectInputChange('숙소', value),
+              landmark: (value: string) => keywordsAndInputs.onDirectInputChange('관광지', value),
+              restaurant: (value: string) => keywordsAndInputs.onDirectInputChange('음식점', value),
+              cafe: (value: string) => keywordsAndInputs.onDirectInputChange('카페', value)
             }}
             onConfirmCategory={{
-              accomodation: (finalKeywords: string[]) => handleConfirmByCategory('숙소', finalKeywords),
+              accommodation: (finalKeywords: string[]) => handleConfirmByCategory('숙소', finalKeywords),
               landmark: (finalKeywords: string[]) => handleConfirmByCategory('관광지', finalKeywords),
               restaurant: (finalKeywords: string[]) => handleConfirmByCategory('음식점', finalKeywords),
               cafe: (finalKeywords: string[]) => handleConfirmByCategory('카페', finalKeywords)
             }}
             handlePanelBack={{
-              accomodation: () => handlePanelBackByCategory('accommodation'),
-              landmark: () => handlePanelBackByCategory('landmark'),
-              restaurant: () => handlePanelBackByCategory('restaurant'),
-              cafe: () => handlePanelBackByCategory('cafe')
+              accommodation: () => handlePanelBackByCategory('숙소'),
+              landmark: () => handlePanelBackByCategory('관광지'),
+              restaurant: () => handlePanelBackByCategory('음식점'),
+              cafe: () => handlePanelBackByCategory('카페')
             }}
             isCategoryButtonEnabled={categorySelection.isCategoryButtonEnabled}
           />
@@ -152,13 +182,16 @@ const LeftPanel: React.FC = () => {
         onToggle={regionSelection.handleRegionToggle}
         onConfirm={() => {
           regionSelection.setRegionSlidePanelOpen(false);
-          if (regionSelection.selectedRegions.length > 0) regionSelection.setRegionConfirmed(true);
-          else alert('지역을 선택해주세요.');
+          if (regionSelection.selectedRegions.length > 0) {
+            regionSelection.setRegionConfirmed(true);
+          } else {
+             toast.info('지역을 선택해주세요.');
+          }
         }}
       />
 
       <CategoryResultHandler
-        showCategoryResult={uiVisibility.showCategoryResult as CategoryName | null}
+        showCategoryResult={uiVisibility.showCategoryResult}
         selectedRegions={regionSelection.selectedRegions}
         selectedKeywordsByCategory={categorySelection.selectedKeywordsByCategory}
         onClose={handleResultClose}
