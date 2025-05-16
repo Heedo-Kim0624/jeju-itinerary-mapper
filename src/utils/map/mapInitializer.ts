@@ -1,3 +1,4 @@
+
 import { toast } from "sonner";
 
 // Jeju Island center coordinates
@@ -17,6 +18,22 @@ export const initializeNaverMap = (mapContainer: HTMLDivElement | null) => {
   try {
     console.log("Creating new Naver Map instance with container:", mapContainer);
     
+    // 명시적인 지도 컨테이너 크기 확인
+    if (mapContainer.clientWidth === 0 || mapContainer.clientHeight === 0) {
+      console.warn("Map container has zero width or height. Setting minimum dimensions.");
+      mapContainer.style.minWidth = "300px";
+      mapContainer.style.minHeight = "300px";
+    }
+    
+    // 디버깅: 컨테이너 크기 로그
+    console.log("Map container dimensions:", {
+      width: mapContainer.clientWidth,
+      height: mapContainer.clientHeight,
+      offsetWidth: mapContainer.offsetWidth,
+      offsetHeight: mapContainer.offsetHeight,
+      style: mapContainer.style
+    });
+    
     const mapOptions = {
       center: new window.naver.maps.LatLng(JEJU_CENTER.lat, JEJU_CENTER.lng),
       zoom: 10,
@@ -28,13 +45,7 @@ export const initializeNaverMap = (mapContainer: HTMLDivElement | null) => {
       }
     };
 
-    // 명시적인 지도 컨테이너 크기 확인
-    if (mapContainer.clientWidth === 0 || mapContainer.clientHeight === 0) {
-      console.warn("Map container has zero width or height. Setting minimum dimensions.");
-      mapContainer.style.minWidth = "300px";
-      mapContainer.style.minHeight = "300px";
-    }
-
+    // Naver Map 인스턴스 생성
     const map = new window.naver.maps.Map(mapContainer, mapOptions);
     
     // 디버깅: 지도 객체 상태 확인
@@ -45,6 +56,26 @@ export const initializeNaverMap = (mapContainer: HTMLDivElement | null) => {
       console.log("지도 초기화 완료 이벤트 발생");
       toast.success("제주도 지도가 로드되었습니다");
     });
+    
+    // 백업: 지도 로딩 완료 여부 확인을 위한 타이머
+    setTimeout(() => {
+      // 지도 중심점을 읽어서 초기화 여부 확인
+      try {
+        const center = map.getCenter();
+        console.log("Map center verified after timeout:", center);
+        
+        // 지도가 실제로 렌더링되었는지 확인하기 위한 추가 검증
+        if (mapContainer.querySelector('.btns_act')
+            || mapContainer.querySelector('path')
+            || mapContainer.querySelector('.btn_compass')) {
+          console.log("지도 UI 엘리먼트 감지됨, 초기화 성공");
+        } else {
+          console.warn("지도 초기화되었으나 UI 엘리먼트가 감지되지 않음");
+        }
+      } catch (err) {
+        console.error("지도 초기화 확인 중 오류:", err);
+      }
+    }, 2000);
     
     return map;
   } catch (error) {

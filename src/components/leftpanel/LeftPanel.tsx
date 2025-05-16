@@ -38,11 +38,14 @@ const LeftPanel: React.FC = () => {
 
   // 다른 필요한 훅들을 사용하여 필요한 상태와 함수들을 가져옴
   const { dates, setDates } = useTripDetails();
-  const { selectedPlaces, removePlace } = useSelectedPlaces();
+  
+  // 타입 오류 수정: 올바른 프로퍼티 사용
+  const { selectedPlaces, handleSelectPlace } = useSelectedPlaces();
+  
   const { 
     itinerary,
-    createItinerary,
-    allCategoriesConfirmed
+    generateItinerary,
+    allCategoriesSelected
   } = useItinerary();
 
   // 일정 생성 후 UI 상태 변화를 디버깅
@@ -90,6 +93,18 @@ const LeftPanel: React.FC = () => {
     setActivePanel('category');
   };
 
+  // 선택된 장소 제거 핸들러
+  const removePlace = (placeId: string) => {
+    console.log("장소 제거:", placeId);
+    if (handleSelectPlace) {
+      // false를 전달해서 선택 해제
+      const placeToRemove = selectedPlaces.find(p => p.id === placeId);
+      if (placeToRemove) {
+        handleSelectPlace(placeToRemove, false);
+      }
+    }
+  };
+
   // Placeholder functions for compatibility with existing code
   const regionSelection = {
     regionSlidePanelOpen: isRegionPanelActive,
@@ -123,10 +138,10 @@ const LeftPanel: React.FC = () => {
   
   const placesManagement = {
     selectedPlaces: selectedPlaces || [],
-    handleRemovePlace: removePlace || ((id: string) => console.warn("removePlace not implemented")),
+    handleRemovePlace: removePlace,
     handleViewOnMap: viewPlaceOnMap,
     handleSelectPlace: (place: Place) => { /* TODO: Implement place selection logic */ },
-    allCategoriesSelected: allCategoriesConfirmed || false,
+    allCategoriesSelected: allCategoriesSelected || false,
   };
     
   const uiVisibility = {
@@ -137,20 +152,27 @@ const LeftPanel: React.FC = () => {
       console.log("Category result visibility:", show);
     }
   };
+
+  // itinerary 타입 변환 (Itinerary -> ItineraryDay[])
+  const itineraryDays = itinerary ? (Array.isArray(itinerary) ? itinerary : []) : [];
   
   const itineraryManagement = {
-    itinerary: itinerary,
+    itinerary: itineraryDays,
     selectedItineraryDay: selectedDay,
     handleSelectItineraryDay: setSelectedDay
   };
   
   const handleActualCreateItinerary = async () => {
-    if (createItinerary) {
-      const result = await createItinerary();
-      if (result) {
-        setItineraryCreated(true);
-        openItineraryPanel();
-        return true;
+    if (generateItinerary) {
+      try {
+        const result = await generateItinerary();
+        if (result) {
+          setItineraryCreated(true);
+          openItineraryPanel();
+          return true;
+        }
+      } catch (error) {
+        console.error("일정 생성 중 오류 발생:", error);
       }
     }
     return false;
@@ -158,10 +180,10 @@ const LeftPanel: React.FC = () => {
 
   return (
     <div className="relative h-full">
-      {uiVisibility.showItinerary && itineraryManagement.itinerary ? (
+      {uiVisibility.showItinerary && itineraryManagement.itinerary && itineraryManagement.itinerary.length > 0 ? (
         <div className="fixed top-0 left-0 w-[300px] h-full bg-white border-r border-gray-200 z-40 shadow-md">
           <ItineraryView
-            itinerary={itineraryManagement.itinerary as ItineraryDay[]}
+            itinerary={itineraryManagement.itinerary}
             startDate={dates?.startDate || new Date()}
             onSelectDay={itineraryManagement.handleSelectItineraryDay}
             selectedDay={itineraryManagement.selectedItineraryDay}

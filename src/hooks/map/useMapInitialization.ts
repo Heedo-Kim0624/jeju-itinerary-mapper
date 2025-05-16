@@ -12,6 +12,7 @@ export const useMapInitialization = () => {
   const [loadAttempts, setLoadAttempts] = useState<number>(0);
   const [map, setMap] = useState<any>(null);
   const [isInitializing, setIsInitializing] = useState<boolean>(false);
+  const initTimeoutRef = useRef<number | null>(null);
 
   // 네이버 지도 API 로드
   useEffect(() => {
@@ -32,7 +33,7 @@ export const useMapInitialization = () => {
         await loadNaverMaps();
         
         // 네이버 맵 객체 검증
-        if (!window.naver || !window.naver.maps) {
+        if (!window.naver || !window.naver.maps || typeof window.naver.maps.Map !== 'function') {
           throw new Error("네이버 지도 API가 올바르게 로드되지 않았습니다");
         }
         
@@ -44,17 +45,27 @@ export const useMapInitialization = () => {
         setIsMapError(true);
         setIsInitializing(false);
         
-        // 3초 후 재시도 설정
+        // 실패 후 재시도 전 대기 시간을 점진적으로 증가
+        const retryDelay = (loadAttempts + 1) * 2000; // 2초, 4초, 6초
+        console.log(`${retryDelay}ms 후에 재시도합니다.`);
+        
         setTimeout(() => {
           setLoadAttempts(prev => prev + 1);
           setIsMapError(false);
-        }, 3000);
+        }, retryDelay);
       }
     };
     
     if (!isNaverLoaded && !isMapError && !isInitializing) {
       initNaverMaps();
     }
+    
+    // 컴포넌트 언마운트 시 타임아웃 정리
+    return () => {
+      if (initTimeoutRef.current) {
+        window.clearTimeout(initTimeoutRef.current);
+      }
+    };
   }, [loadAttempts, isNaverLoaded, isMapError, isInitializing]);
 
   // 지도 초기화
@@ -63,38 +74,57 @@ export const useMapInitialization = () => {
       return;
     }
 
-    let initTimeout: number;
-
     try {
       console.log("지도 초기화 시작");
       
       // 추가된 디버깅 정보
       console.log("지도 컨테이너 크기:", {
         width: mapContainer.current.clientWidth,
-        height: mapContainer.current.clientHeight
+        height: mapContainer.current.clientHeight,
+        offsetWidth: mapContainer.current.offsetWidth,
+        offsetHeight: mapContainer.current.offsetHeight,
+        style: mapContainer.current.style
       });
+      
+      // 컨테이너 크기가 0이면 최소 크기 설정
+      if (mapContainer.current.clientWidth === 0 || mapContainer.current.clientHeight === 0) {
+        console.warn("지도 컨테이너 크기가 0입니다. 최소 크기를 설정합니다.");
+        mapContainer.current.style.minWidth = "300px";
+        mapContainer.current.style.minHeight = "300px";
+      }
       
       const newMap = initializeNaverMap(mapContainer.current);
       
       if (newMap) {
         // 타임아웃 설정 - 이벤트가 발생하지 않더라도 성공으로 처리
-        initTimeout = window.setTimeout(() => {
+        initTimeoutRef.current = window.setTimeout(() => {
           if (!isMapInitialized) {
             console.log("지도 초기화 타임아웃 후 완료 처리");
             setMap(newMap);
             setIsMapInitialized(true);
             toast.success("지도가 준비되었습니다");
           }
-        }, 3000);
+        }, 5000); // 5초 타임아웃
         
         // 이벤트 기반 초기화 완료 감지
         window.naver.maps.Event.once(newMap, 'init_stylemap', () => {
-          window.clearTimeout(initTimeout);
+          if (initTimeoutRef.current) {
+            window.clearTimeout(initTimeoutRef.current);
+          }
           console.log("지도 초기화 완료 이벤트 발생");
           setMap(newMap);
           setIsMapInitialized(true);
           toast.success("지도가 준비되었습니다");
         });
+        
+        // 추가 검증: 지도 객체가 제대로 생성되었는지 확인
+        try {
+          const center = newMap.getCenter();
+          const zoom = newMap.getZoom();
+          console.log("지도 초기 중심점 및 줌 레벨 확인:", { center, zoom });
+        } catch (err) {
+          console.error("지도 상태 확인 중 오류:", err);
+        }
       } else {
         throw new Error("지도 초기화 실패");
       }
@@ -105,8 +135,8 @@ export const useMapInitialization = () => {
     }
 
     return () => {
-      if (initTimeout) {
-        window.clearTimeout(initTimeout);
+      if (initTimeoutRef.current) {
+        window.clearTimeout(initTimeoutRef.current);
       }
     };
   }, [isNaverLoaded, isMapInitialized]);
