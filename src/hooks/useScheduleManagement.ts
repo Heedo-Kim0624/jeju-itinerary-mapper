@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { Place, SelectedPlace, ItineraryDay as DomainItineraryDay, ItineraryPlaceWithTime, CategoryName } from '@/types/supabase'; // CategoryName 추가
 import { toast } from 'sonner';
@@ -204,7 +205,7 @@ export const useScheduleManagement = ({
         );
         const domainItinerary = generatedItinerary.map(day => ({
             ...day,
-            places: day.places.map(p => ({...p, timeBlock: "시간 정보 없음"}) as ItineraryPlaceWithTime)),
+            places: day.places.map(p => ({...p, timeBlock: "시간 정보 없음"}) as ItineraryPlaceWithTime),
         }));
         setItinerary(domainItinerary);
         if (domainItinerary.length > 0) {

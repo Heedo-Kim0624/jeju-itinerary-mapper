@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useRef } from 'react';
 import { Place, ItineraryDay } from '@/types/supabase';
 import useMapCore from './useMapCore';
@@ -41,7 +42,7 @@ interface MapContextType {
   geoJsonNodes: any[];
   geoJsonLinks: any[];
   // 서버 경로 관련 기능 수정
-  setServerRoutes: (dayRoutes: Record<number, ServerRouteSummaryItem>) | ((prevRoutes: Record<number, ServerRouteSummaryItem>) => Record<number, ServerRouteSummaryItem>) => void;
+  setServerRoutes: (dayRoutes: Record<number, ServerRouteSummaryItem> | ((prevRoutes: Record<number, ServerRouteSummaryItem>) => Record<number, ServerRouteSummaryItem>)) => void;
   serverRoutesData: Record<number, ServerRouteSummaryItem>;
 }
 
