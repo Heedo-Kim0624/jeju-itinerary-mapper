@@ -1,46 +1,66 @@
 
-import React from 'react';
-import { useLeftPanelOrchestrator } from '@/hooks/left-panel/useLeftPanelOrchestrator';
+import React, { useEffect } from 'react';
+import { useLeftPanel } from '@/hooks/use-left-panel';
 import LeftPanelContent from './LeftPanelContent';
 import RegionPanelHandler from './RegionPanelHandler';
 import CategoryResultHandler from './CategoryResultHandler';
 import LeftPanelContainer from './LeftPanelContainer';
 import ItineraryView from './ItineraryView';
-// CategoryName is used by orchestrator, Place and ItineraryDay too.
+import type { CategoryName } from '@/utils/categoryUtils';
 
 const LeftPanel: React.FC = () => {
   const {
-    // activePanel, // No longer directly needed here
-    dates,
-    setDates,
-    // itineraryCreated, // Managed by orchestrator effects or not directly needed
-    // itineraryPanelDisplayed, // from uiVisibility
-    // selectedDay, // from itineraryManagement
-    // setActivePanel, // Used by orchestrator
-    // openRegionPanel, // Used by orchestrator
-    // openItineraryPanel, // Used by orchestrator
-    // setItineraryCreated, // Used by orchestrator
-    // setItineraryPanelDisplayed, // from uiVisibility
-    // setSelectedDay, // from itineraryManagement
-    // setPanelCategoryWithCategoryName, // Used by orchestrator
     regionSelection,
     categorySelection,
     keywordsAndInputs,
     placesManagement,
+    tripDetails,
     uiVisibility,
     itineraryManagement,
-    handleActualCreateItinerary,
-    handlePanelBackByCategory,
-    handleResultClose,
-  } = useLeftPanelOrchestrator();
+    handleCreateItinerary
+  } = useLeftPanel();
+
+  // 일정 생성 후 UI 상태 변화를 디버깅
+  useEffect(() => {
+    console.log("LeftPanel - 일정 관련 상태 변화 감지:", {
+      일정생성됨: !!itineraryManagement.itinerary,
+      일정패널표시: uiVisibility.showItinerary,
+      선택된일자: itineraryManagement.selectedItineraryDay
+    });
+  }, [
+    itineraryManagement.itinerary, 
+    uiVisibility.showItinerary, 
+    itineraryManagement.selectedItineraryDay
+  ]);
+
+  // 각 카테고리별로 패널 뒤로가기 함수
+  const handlePanelBackByCategory = (category: string) => {
+    console.log(`${category} 카테고리 패널 뒤로가기`);
+    categorySelection.handlePanelBack();
+  };
+
+  // 결과 닫기 핸들러
+  const handleResultClose = () => {
+    console.log("카테고리 결과 화면 닫기");
+    // null 사용
+    uiVisibility.setShowCategoryResult(null);
+  };
+
+  // 카테고리 확인 핸들러
+  const handleConfirmByCategory = (category: CategoryName, finalKeywords: string[]) => {
+    console.log(`카테고리 '${category}' 확인, 키워드: ${finalKeywords.join(', ')}`);
+    // 키워드 확인 후 카테고리 결과 화면 표시
+    keywordsAndInputs.handleConfirmCategory(category, finalKeywords, true);
+    return true;
+  };
 
   return (
     <div className="relative h-full">
-      {uiVisibility.showItinerary && itineraryManagement.itinerary && itineraryManagement.itinerary.length > 0 ? (
+      {uiVisibility.showItinerary && itineraryManagement.itinerary ? (
         <div className="fixed top-0 left-0 w-[300px] h-full bg-white border-r border-gray-200 z-40 shadow-md">
           <ItineraryView
             itinerary={itineraryManagement.itinerary}
-            startDate={dates?.startDate || new Date()}
+            startDate={tripDetails.dates?.startDate || new Date()}
             onSelectDay={itineraryManagement.handleSelectItineraryDay}
             selectedDay={itineraryManagement.selectedItineraryDay}
           />
@@ -54,20 +74,24 @@ const LeftPanel: React.FC = () => {
           onViewOnMap={placesManagement.handleViewOnMap}
           allCategoriesSelected={placesManagement.allCategoriesSelected}
           dates={{
-            startDate: dates?.startDate || null,
-            endDate: dates?.endDate || null,
-            startTime: dates?.startTime || "09:00",
-            endTime: dates?.endTime || "21:00"
+            startDate: tripDetails.dates?.startDate || null,
+            endDate: tripDetails.dates?.endDate || null,
+            startTime: tripDetails.dates?.startTime || "09:00",
+            endTime: tripDetails.dates?.endTime || "21:00"
           }}
-          onCreateItinerary={handleActualCreateItinerary} // This is now Promise<boolean>
+          onCreateItinerary={() => {
+            // For type compatibility, convert the Promise to a boolean
+            handleCreateItinerary().then(result => !!result);
+            return true;
+          }}
           itinerary={itineraryManagement.itinerary}
           selectedItineraryDay={itineraryManagement.selectedItineraryDay}
           onSelectDay={itineraryManagement.handleSelectItineraryDay}
         >
           <LeftPanelContent
-            onDateSelect={setDates}
+            onDateSelect={tripDetails.setDates}
             onOpenRegionPanel={() => regionSelection.setRegionSlidePanelOpen(true)}
-            hasSelectedDates={!!(dates?.startDate && dates?.endDate)}
+            hasSelectedDates={!!tripDetails.dates}
             onCategoryClick={categorySelection.handleCategoryButtonClick}
             regionConfirmed={regionSelection.regionConfirmed}
             categoryStepIndex={categorySelection.stepIndex}
@@ -88,10 +112,10 @@ const LeftPanel: React.FC = () => {
               cafe: (value: string) => keywordsAndInputs.onDirectInputChange('cafe', value)
             }}
             onConfirmCategory={{
-              accomodation: (finalKeywords: string[]) => keywordsAndInputs.handleConfirmCategory('숙소', finalKeywords),
-              landmark: (finalKeywords: string[]) => keywordsAndInputs.handleConfirmCategory('관광지', finalKeywords),
-              restaurant: (finalKeywords: string[]) => keywordsAndInputs.handleConfirmCategory('음식점', finalKeywords),
-              cafe: (finalKeywords: string[]) => keywordsAndInputs.handleConfirmCategory('카페', finalKeywords)
+              accomodation: (finalKeywords: string[]) => handleConfirmByCategory('숙소', finalKeywords),
+              landmark: (finalKeywords: string[]) => handleConfirmByCategory('관광지', finalKeywords),
+              restaurant: (finalKeywords: string[]) => handleConfirmByCategory('음식점', finalKeywords),
+              cafe: (finalKeywords: string[]) => handleConfirmByCategory('카페', finalKeywords)
             }}
             handlePanelBack={{
               accomodation: () => handlePanelBackByCategory('accommodation'),
@@ -117,11 +141,11 @@ const LeftPanel: React.FC = () => {
       />
 
       <CategoryResultHandler
-        showCategoryResult={uiVisibility.showCategoryResult} 
+        showCategoryResult={uiVisibility.showCategoryResult}
         selectedRegions={regionSelection.selectedRegions}
         selectedKeywordsByCategory={categorySelection.selectedKeywordsByCategory}
-        onClose={handleResultClose} 
-        onSelectPlace={placesManagement.handleSelectPlace} 
+        onClose={handleResultClose}
+        onSelectPlace={placesManagement.handleSelectPlace}
         selectedPlaces={placesManagement.selectedPlaces}
       />
     </div>

@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Calendar, Clock, MapPin, Navigation } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
@@ -36,23 +36,6 @@ const ItineraryView: React.FC<ItineraryViewProps> = ({
     return format(date, 'EEEE', { locale: ko });
   };
 
-  useEffect(() => {
-    // 현재 선택된 일자가 있고 경로 데이터가 있다면 콘솔에 출력
-    if (selectedDay !== null) {
-      const currentDayItinerary = itinerary.find(day => day.day === selectedDay);
-      if (currentDayItinerary?.routeData) {
-        console.log(`🔍 ${selectedDay}일차 경로 데이터 확인:`, {
-          nodeIds: `${currentDayItinerary.routeData.nodeIds.length}개`,
-          linkIds: currentDayItinerary.routeData.linkIds ? 
-                  `${currentDayItinerary.routeData.linkIds.length}개` : '없음',
-          노드샘플: currentDayItinerary.routeData.nodeIds.slice(0, 10).join(", ") + "..."
-        });
-      } else {
-        console.log(`❌ ${selectedDay}일차 경로 데이터 없음`);
-      }
-    }
-  }, [selectedDay, itinerary]);
-
   if (!itinerary || itinerary.length === 0) {
     return (
       <div className="flex items-center justify-center h-full text-muted-foreground">
@@ -78,21 +61,15 @@ const ItineraryView: React.FC<ItineraryViewProps> = ({
           dayDate.setDate(startDate.getDate() + day.day - 1);
           const formattedDate = format(dayDate, 'MM/dd(EEE)', { locale: ko });
           
-          // 경로 데이터 있는지 표시
-          const hasRouteData = !!day.routeData && day.routeData.nodeIds.length > 0;
-          
           return (
             <Button
               key={day.day}
               variant={selectedDay === day.day ? "default" : "outline"}
-              className={`flex flex-col h-16 min-w-16 whitespace-nowrap ${hasRouteData ? 'border-green-500' : ''}`}
+              className="flex flex-col h-16 min-w-16 whitespace-nowrap"
               onClick={() => handleDayClick(day.day)}
             >
               <span className="font-bold text-sm">{day.day}일차</span>
               <span className="text-xs">{formattedDate}</span>
-              {hasRouteData && (
-                <span className="text-xs text-green-600 mt-1">🛣️ 경로 있음</span>
-              )}
             </Button>
           );
         })}
@@ -109,19 +86,10 @@ const ItineraryView: React.FC<ItineraryViewProps> = ({
               <MapPin className="h-4 w-4" />
               <span>총 이동거리: {currentDayItinerary.totalDistance?.toFixed(1) || '계산 중...'} km</span>
             </div>
-            
-            {currentDayItinerary.routeData && currentDayItinerary.routeData.nodeIds.length > 0 && (
-              <div className="flex flex-col gap-1 text-sm text-primary mt-2 bg-primary/10 p-2 rounded-md">
-                <div className="flex items-center gap-2">
-                  <Navigation className="h-4 w-4" />
-                  <span>지도에 {selectedDay}일차 경로가 표시됩니다</span>
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  (노드 {currentDayItinerary.routeData.nodeIds.length}개, 
-                  링크 {currentDayItinerary.routeData.linkIds?.length || 0}개)
-                </div>
-              </div>
-            )}
+            <div className="flex items-center gap-2 text-sm text-primary mt-2 bg-primary/10 p-2 rounded-md">
+              <Navigation className="h-4 w-4" />
+              <span>지도에 {selectedDay}일차 경로가 표시됩니다</span>
+            </div>
           </div>
           
           <ScrollArea className="h-[calc(100%-120px)]">

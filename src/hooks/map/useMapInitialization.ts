@@ -12,13 +12,21 @@ export const useMapInitialization = () => {
   const [loadAttempts, setLoadAttempts] = useState<number>(0);
   const [map, setMap] = useState<any>(null);
   const [isInitializing, setIsInitializing] = useState<boolean>(false);
-  const initTimeoutRef = useRef<number | null>(null);
-  const mapInstanceRef = useRef<any>(null); // Store map instance in ref to avoid recreation
+
+  // 지도 API 초기화 상태 확인 헬퍼 함수
+  const checkMapInitialized = () => {
+    return !!(window.naver?.maps?.Map);
+  };
+  
+  const checkGeoJsonInitialized = () => {
+    return !!(window.naver?.maps?.GeoJSON && typeof window.naver.maps.GeoJSON.read === 'function');
+  };
 
   // 네이버 지도 API 로드
   useEffect(() => {
     const initNaverMaps = async () => {
-      if (isNaverLoaded || isInitializing) return;
+      if (isNaverLoaded) return; // 이미 로드되었으면 중복 실행 방지
+      if (isInitializing) return; // 이미 초기화 중이면 중복 실행 방지
       
       if (loadAttempts >= 3) {
         console.error("최대 로드 시도 횟수에 도달했습니다. 재시도를 중단합니다.");
@@ -32,13 +40,7 @@ export const useMapInitialization = () => {
       try {
         console.log(`네이버 지도 API 로드 시도 (${loadAttempts + 1}/3)`);
         await loadNaverMaps();
-        
-        // 네이버 맵 객체 검증
-        if (!window.naver || !window.naver.maps || typeof window.naver.maps.Map !== 'function') {
-          throw new Error("네이버 지도 API가 올바르게 로드되지 않았습니다");
-        }
-        
-        console.log("네이버 지도 API 로드 성공", window.naver.maps);
+        console.log("네이버 지도 API 로드 성공");
         setIsNaverLoaded(true);
         setIsInitializing(false);
       } catch (error) {
@@ -46,92 +48,65 @@ export const useMapInitialization = () => {
         setIsMapError(true);
         setIsInitializing(false);
         
-        // 실패 후 재시도 전 대기 시간을 점진적으로 증가
-        const retryDelay = (loadAttempts + 1) * 2000; // 2초, 4초, 6초
-        console.log(`${retryDelay}ms 후에 재시도합니다.`);
-        
+        // 3초 후 재시도 설정
         setTimeout(() => {
           setLoadAttempts(prev => prev + 1);
           setIsMapError(false);
-        }, retryDelay);
+        }, 3000);
       }
     };
     
     if (!isNaverLoaded && !isMapError && !isInitializing) {
       initNaverMaps();
     }
-    
-    // 컴포넌트 언마운트 시 타임아웃 정리
-    return () => {
-      if (initTimeoutRef.current) {
-        window.clearTimeout(initTimeoutRef.current);
-      }
-    };
   }, [loadAttempts, isNaverLoaded, isMapError, isInitializing]);
 
   // 지도 초기화
   useEffect(() => {
-    // Prevent duplicate initialization
-    if (!isNaverLoaded || !mapContainer.current || isMapInitialized || !window.naver || !window.naver.maps || mapInstanceRef.current) {
+    if (!isNaverLoaded || !mapContainer.current || isMapInitialized) {
       return;
     }
+
+    let initTimeout: number;
 
     try {
       console.log("지도 초기화 시작");
       
-      // 추가된 디버깅 정보
-      console.log("지도 컨테이너 크기:", {
-        width: mapContainer.current.clientWidth,
-        height: mapContainer.current.clientHeight,
-        offsetWidth: mapContainer.current.offsetWidth,
-        offsetHeight: mapContainer.current.offsetHeight,
-        style: mapContainer.current.style
-      });
-      
-      // 컨테이너 크기가 0이면 최소 크기 설정
-      if (mapContainer.current.clientWidth === 0 || mapContainer.current.clientHeight === 0) {
-        console.warn("지도 컨테이너 크기가 0입니다. 최소 크기를 설정합니다.");
-        mapContainer.current.style.minWidth = "300px";
-        mapContainer.current.style.minHeight = "300px";
+      // 지도 API가 실제로 완전히 로드되었는지 다시 한번 확인
+      if (!checkMapInitialized()) {
+        console.log("지도 API가 아직 준비되지 않았습니다. 1초 후 재시도합니다.");
+        setTimeout(() => {
+          setIsNaverLoaded(false); // 로드 시도 재개
+        }, 1000);
+        return;
       }
       
       const newMap = initializeNaverMap(mapContainer.current);
       
       if (newMap) {
-        // Store map instance in ref
-        mapInstanceRef.current = newMap;
-        
-        // 타임아웃 설정 - 이벤트가 발생하지 않더라도 성공으로 처리
-        initTimeoutRef.current = window.setTimeout(() => {
-          if (!isMapInitialized) {
-            console.log("지도 초기화 타임아웃 후 완료 처리");
-            setMap(newMap);
-            setIsMapInitialized(true);
-            toast.success("지도가 준비되었습니다");
-          }
-        }, 5000); // 5초 타임아웃
-        
-        // 이벤트 기반 초기화 완료 감지
-        if (window.naver && window.naver.maps && window.naver.maps.Event) {
-          window.naver.maps.Event.once(newMap, 'init_stylemap', () => {
-            if (initTimeoutRef.current) {
-              window.clearTimeout(initTimeoutRef.current);
-              initTimeoutRef.current = null;
+        // 지도 초기화 이벤트 리스너 추가
+        if (window.naver && window.naver.maps) {
+          // 이벤트 리스너가 트리거되지 않을 경우를 대비한 타임아웃 설정
+          initTimeout = window.setTimeout(() => {
+            if (!isMapInitialized) {
+              console.log("지도 초기화 타임아웃 후 완료 처리");
+              setMap(newMap);
+              setIsMapInitialized(true);
+              toast.success("지도가 준비되었습니다");
             }
+          }, 5000);
+          
+          window.naver.maps.Event.once(newMap, 'init_stylemap', () => {
+            window.clearTimeout(initTimeout);
             console.log("지도 초기화 완료 이벤트 발생");
             setMap(newMap);
             setIsMapInitialized(true);
             toast.success("지도가 준비되었습니다");
           });
-        }
-        
-        // 추가 검증: 지도 객체가 제대로 생성되었는지 확인
-        try {
-          const center = newMap.getCenter();
-          const zoom = newMap.getZoom();
-          console.log("지도 초기 중심점 및 줌 레벨 확인:", { center, zoom });
-        } catch (err) {
-          console.error("지도 상태 확인 중 오류:", err);
+        } else {
+          setMap(newMap);
+          setIsMapInitialized(true);
+          toast.success("지도가 준비되었습니다");
         }
       } else {
         throw new Error("지도 초기화 실패");
@@ -143,9 +118,8 @@ export const useMapInitialization = () => {
     }
 
     return () => {
-      if (initTimeoutRef.current) {
-        window.clearTimeout(initTimeoutRef.current);
-        initTimeoutRef.current = null;
+      if (initTimeout) {
+        window.clearTimeout(initTimeout);
       }
     };
   }, [isNaverLoaded, isMapInitialized]);
@@ -156,6 +130,6 @@ export const useMapInitialization = () => {
     isMapInitialized,
     isNaverLoaded,
     isMapError,
-    isGeoJsonInitialized: !!(window.naver?.maps?.GeoJSON && typeof window.naver.maps.GeoJSON.read === 'function')
+    isGeoJsonInitialized: checkGeoJsonInitialized()
   };
 };

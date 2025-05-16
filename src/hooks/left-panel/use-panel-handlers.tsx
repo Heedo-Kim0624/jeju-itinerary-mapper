@@ -1,7 +1,8 @@
+
 import { useState } from 'react';
 import { usePanelVisibility } from '../use-panel-visibility';
 import { useMapContext } from '@/components/rightpanel/MapContext';
-import { CategoryName } from '@/utils/categoryUtils';
+import type { CategoryName } from '@/utils/categoryUtils';
 
 export const usePanelHandlers = () => {
   // Panel visibility functionality
@@ -24,22 +25,22 @@ export const usePanelHandlers = () => {
   const handleConfirmByCategory = {
     accomodation: (finalKeywords: string[], clearSelection: boolean = false) => {
       handleConfirmCategory('숙소', finalKeywords, clearSelection);
-      setShowCategoryResult("명소");
+      setShowCategoryResult('숙소');
       if (selectedRegions.length > 0) panTo(selectedRegions[0]);
     },
     landmark: (finalKeywords: string[], clearSelection: boolean = false) => {
       handleConfirmCategory('관광지', finalKeywords, clearSelection);
-      setShowCategoryResult("명소");
+      setShowCategoryResult('관광지');
       if (selectedRegions.length > 0) panTo(selectedRegions[0]);
     },
     restaurant: (finalKeywords: string[], clearSelection: boolean = false) => {
       handleConfirmCategory('음식점', finalKeywords, clearSelection);
-      setShowCategoryResult("명소");
+      setShowCategoryResult('음식점');
       if (selectedRegions.length > 0) panTo(selectedRegions[0]);
     },
     cafe: (finalKeywords: string[], clearSelection: boolean = false) => {
       handleConfirmCategory('카페', finalKeywords, clearSelection);
-      setShowCategoryResult("명소");
+      setShowCategoryResult('카페');
       if (selectedRegions.length > 0) panTo(selectedRegions[0]);
     }
   };

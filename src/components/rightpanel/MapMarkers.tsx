@@ -1,8 +1,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useMapContext } from './MapContext';
-import { Place } from '@/types/supabase';
-import { ItineraryDay, ItineraryPlace } from '@/types/itinerary';
+import { Place, ItineraryDay } from '@/types/supabase';
 import { toast } from 'sonner';
 
 interface MapMarkersProps {
@@ -36,16 +35,6 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
   
   const [markerRefs, setMarkerRefs] = useState<any[]>([]);
   const [geoJsonMappingChecked, setGeoJsonMappingChecked] = useState<boolean>(false);
-
-  // Convert ItineraryPlace[] to Place[] for use with addMarkers
-  const convertToPlace = (itineraryPlaces: ItineraryPlace[]): Place[] => {
-    return itineraryPlaces.map(place => ({
-      ...place,
-      road_address: place.road_address || '',  // Ensure required fields exist
-      homepage: place.homepage || '',
-      category_name: place.category  // Map category to category_name if needed
-    } as Place));
-  };
 
   // 마커 클릭 핸들러
   const handleMarkerClick = useCallback((place: Place, index: number) => {
@@ -115,7 +104,7 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
       const placeToDisplay = useMappedPlaces ? 
         mapPlacesWithGeoNodes([selectedPlace])[0] : selectedPlace;
       
-      const markers = addMarkers([placeToDisplay]);
+      const markers = addMarkers([placeToDisplay], { highlight: true });
       setMarkerRefs(markers);
       
       // 선택된 장소로 지도 이동
@@ -131,10 +120,10 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
       if (selectedItinerary) {
         console.log(`[MapMarkers] 일정 ${selectedDay}일차 표시, 장소 ${selectedItinerary.places.length}개`);
         
-        // Convert ItineraryPlace[] to Place[] for compatibility with addMarkers
+        // GeoJSON 매핑된 장소 사용
         const placesToDisplay = useMappedPlaces ? 
-          mapPlacesWithGeoNodes(convertToPlace(selectedItinerary.places)) : 
-          convertToPlace(selectedItinerary.places);
+          mapPlacesWithGeoNodes(selectedItinerary.places) : 
+          selectedItinerary.places;
           
         // 카테고리별로 색상을 다르게 표시하는 마커 추가
         const markers = addMarkers(placesToDisplay, { 

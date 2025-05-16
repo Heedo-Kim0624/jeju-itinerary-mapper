@@ -2,7 +2,7 @@
 import React from 'react';
 import { toast } from 'sonner';
 import { Place } from '@/types/supabase';
-import { ItineraryDay } from '@/types/itinerary';
+import { ItineraryDay } from '@/hooks/use-itinerary-creator';
 import PlaceCart from './PlaceCart';
 import ItineraryButton from './ItineraryButton';
 import ScheduleViewer from './ScheduleViewer';
@@ -16,12 +16,12 @@ interface LeftPanelContainerProps {
   allCategoriesSelected: boolean;
   children: React.ReactNode;
   dates: {
-    startDate: Date | null;
-    endDate: Date | null;
+    startDate: Date;
+    endDate: Date;
     startTime: string;
     endTime: string;
   } | null;
-  onCreateItinerary: () => Promise<boolean>; // Updated type to match the actual return type
+  onCreateItinerary: () => boolean;
   itinerary: ItineraryDay[] | null;
   selectedItineraryDay: number | null;
   onSelectDay: (day: number) => void;

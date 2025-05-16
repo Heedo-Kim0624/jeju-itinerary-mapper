@@ -8,7 +8,7 @@ import { getMinimumRecommendationCount } from '@/lib/itinerary/itinerary-utils';
 
 // This function is used locally and also needed for grouping in use-left-panel.
 // Consider moving to a shared utility file e.g., src/utils/categoryUtils.ts
-export const getCategoryKorean = (category?: string): string => {
+const getCategoryKorean = (category?: string): string => {
   if (!category) return '기타';
   
   switch (category.toLowerCase()) {
@@ -18,22 +18,6 @@ export const getCategoryKorean = (category?: string): string => {
     case 'cafe': return '카페';
     default: return '기타';
   }
-};
-
-// 영문 카테고리를 한글로 변환하는 매핑
-export const categoryEngToKorMapping: Record<string, string> = {
-  'attraction': '관광지',
-  'restaurant': '음식점',
-  'cafe': '카페',
-  'accommodation': '숙소'
-};
-
-// 한글 카테고리를 영문으로 변환하는 매핑
-export const categoryKorToEngMapping: Record<string, string> = {
-  '관광지': 'attraction',
-  '음식점': 'restaurant',
-  '카페': 'cafe',
-  '숙소': 'accommodation'
 };
 
 export const useSelectedPlaces = () => {
@@ -185,6 +169,19 @@ export const useSelectedPlaces = () => {
     
     const minimumRequirements = getMinimumRecommendationCount(currentTripDuration);
     console.log('[자동 보완] 카테고리별 최소 필요 장소 수:', minimumRequirements);
+    
+    const categoryEngToKorMapping: Record<string, string> = {
+      'attraction': '관광지',
+      'restaurant': '음식점',
+      'cafe': '카페',
+      'accommodation': '숙소'
+    };
+    const categoryKorToEngMapping: Record<string, string> = {
+      '관광지': 'attraction',
+      '음식점': 'restaurant',
+      '카페': 'cafe',
+      '숙소': 'accommodation'
+    };
 
     const currentSelectedCountsByKoreanCategory: Record<string, Place[]> = {
       '숙소': [], '관광지': [], '음식점': [], '카페': []
@@ -287,52 +284,6 @@ export const useSelectedPlaces = () => {
     return finalPlaces;
   };
 
-  // NEW: 사용자가 장소 선택 후 "확인" 버튼 클릭 시 호출되는 함수
-  const handleConfirmPlaceSelection = (
-    category: string,
-    selectedRecommendedPlaces: Place[]
-  ) => {
-    console.log(`[장소 선택 확인] ${category} 카테고리에서 ${selectedRecommendedPlaces.length}개 장소 선택 확인`);
-    
-    // 선택된 장소들을 selectedPlaces에 추가
-    let newSelectedPlaces = [...selectedPlaces];
-    
-    // 이미 선택된 장소는 제외하고 추가
-    const placesToAdd = selectedRecommendedPlaces.filter(
-      rp => !newSelectedPlaces.some(sp => sp.id === rp.id)
-    );
-    
-    if (placesToAdd.length > 0) {
-      console.log(`[장소 선택 확인] ${placesToAdd.length}개 새 장소 추가:`, 
-        placesToAdd.map(p => p.name));
-      
-      // 장소 추가
-      newSelectedPlaces = [...newSelectedPlaces, ...placesToAdd];
-      setSelectedPlaces(newSelectedPlaces);
-      
-      // 카테고리별 장소 목록도 업데이트
-      const koreanCategory = getCategoryKorean(category);
-      
-      if (koreanCategory && selectedPlacesByCategory[koreanCategory as keyof typeof selectedPlacesByCategory]) {
-        setSelectedPlacesByCategory(prev => ({
-          ...prev,
-          [koreanCategory]: [
-            ...prev[koreanCategory as keyof typeof prev],
-            ...placesToAdd
-          ]
-        }));
-      }
-      
-      // 추가 성공 메시지
-      toast.success(`${category} 카테고리에 ${placesToAdd.length}개 장소가 추가되었습니다.`);
-    } else {
-      console.log(`[장소 선택 확인] 새로 추가할 장소가 없습니다.`);
-      toast.info("이미 선택된 장소입니다.");
-    }
-    
-    return newSelectedPlaces;
-  };
-
   const prepareSchedulePayload = (
     placesToSchedule: Place[], 
     dateTime: { start_datetime: string; end_datetime: string } | null,
@@ -394,7 +345,6 @@ export const useSelectedPlaces = () => {
     allCategoriesSelected,
     prepareSchedulePayload,
     isAccommodationLimitReached,
-    autoCompleteWithCandidates,
-    handleConfirmPlaceSelection // NEW: 사용자가 장소 선택 후 확인 버튼 클릭 시 호출 함수
+    autoCompleteWithCandidates
   };
 };

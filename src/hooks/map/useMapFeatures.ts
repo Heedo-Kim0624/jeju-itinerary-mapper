@@ -1,200 +1,153 @@
-import { useEffect, useState, useCallback } from 'react';
-import { RouteStyle } from '@/components/rightpanel/geojson/GeoJsonTypes';
-import { ItineraryDay } from '@/types/itinerary';
 
-// Route styles
-const DEFAULT_STYLE: RouteStyle = {
-  strokeColor: '#5347AA',
-  strokeWeight: 5,
-  strokeOpacity: 0.7,
-  zIndex: 100
-};
-
-const HIGHLIGHTED_STYLE: RouteStyle = {
-  strokeColor: '#FF6B6B',
-  strokeWeight: 6,
-  strokeOpacity: 0.9,
-  zIndex: 200
-};
-
-interface UseMapFeaturesProps {
-  /**
-   * Whether the GeoJSON is available and loaded
-   */
-  isGeoJsonAvailable: boolean;
-  
-  /**
-   * Itinerary schedule if available
-   */
-  schedule?: ItineraryDay[];
-  
-  /**
-   * Currently selected day in the itinerary
-   */
-  selectedDay?: number | null;
-}
+import { useCallback, useRef } from 'react';
+import { Place, ItineraryDay } from '@/types/supabase';
+import { ServerRouteResponse, ExtractedRouteData } from '@/types/schedule';
 
 /**
- * Hook to manage map features like routes, markers, etc.
+ * 지도 특성(마커, 경로 등) 관리 훅
  */
-export const useMapFeatures = ({
-  isGeoJsonAvailable,
-  schedule,
-  selectedDay
-}: UseMapFeaturesProps) => {
-
-  const [isRouteDisplayed, setIsRouteDisplayed] = useState(false);
-  const [displayedFeatures, setDisplayedFeatures] = useState<any[]>([]);
-  const [networkDisplayed, setNetworkDisplayed] = useState(false);
-
-  /**
-   * Render route for a specific day
-   */
-  const renderDayRoute = useCallback(
-    (day: number, style: RouteStyle = DEFAULT_STYLE) => {
-      if (!isGeoJsonAvailable || !window.geoJsonLayer || !schedule) return;
-
-      const daySchedule = schedule.find((d) => d.day === day);
-      
-      if (!daySchedule) {
-        console.warn(`[useMapFeatures] Day ${day} not found in schedule`);
-        return;
-      }
-      
-      if (!daySchedule.route || !daySchedule.route.nodeIds || daySchedule.route.nodeIds.length === 0 || !daySchedule.route.linkIds) {
-        console.warn(`[useMapFeatures] No or incomplete route data for day ${day}`);
-        if (window.geoJsonLayer?.clearDisplayedFeatures) {
-            window.geoJsonLayer.clearDisplayedFeatures();
-        }
-        setIsRouteDisplayed(false);
-        return;
-      }
-      
-      try {
-        // Clear any previously displayed features
-        window.geoJsonLayer.clearDisplayedFeatures();
-        
-        const placeNodeIds = daySchedule.route.nodeIds.map(String); // Ensure string array
-        const linkIds = daySchedule.route.linkIds.map(String); // Ensure string array
-        
-        // Render the route using the GeoJSON layer
-        const features = window.geoJsonLayer.renderRoute(
-          placeNodeIds,
-          linkIds,
-          style
-        );
-        
-        setDisplayedFeatures(features);
-        setIsRouteDisplayed(true);
-      } catch (error) {
-        console.error(`[useMapFeatures] Error rendering route for day ${day}:`, error);
-        setIsRouteDisplayed(false);
-      }
-    },
-    [isGeoJsonAvailable, schedule]
-  );
-
-  /**
-   * Display route for currently selected day
-   */
-  const displaySelectedDayRoute = useCallback(() => {
-    if (selectedDay === null || !schedule || !isGeoJsonAvailable) { // Check selectedDay for null explicitly
-      if (isGeoJsonAvailable && window.geoJsonLayer?.clearDisplayedFeatures) {
-        window.geoJsonLayer.clearDisplayedFeatures();
-      }
-      setIsRouteDisplayed(false);
-      return;
+export const useMapFeatures = (map: any) => {
+  // 노드 ID로부터 링크 ID 추출 (서버 응답 형식에 따라 조정 필요)
+  const extractNodeAndLinkIds = useCallback((response: ServerRouteResponse): ExtractedRouteData => {
+    // 서버가 이미 linkIds를 제공하는 경우
+    if (response.linkIds && response.linkIds.length > 0) {
+      return {
+        nodeIds: response.nodeIds.map(id => id.toString()),
+        linkIds: response.linkIds.map(id => id.toString())
+      };
     }
-
-    const daySchedule = schedule.find((d) => d.day === selectedDay);
     
-    if (!daySchedule) {
-      console.warn(`[useMapFeatures] Selected day ${selectedDay} not found in schedule`);
-      if (isGeoJsonAvailable && window.geoJsonLayer?.clearDisplayedFeatures) {
-        window.geoJsonLayer.clearDisplayedFeatures();
-      }
-      setIsRouteDisplayed(false);
-      return;
-    }
-
-    if (!daySchedule.route || !daySchedule.route.nodeIds || daySchedule.route.nodeIds.length === 0 || !daySchedule.route.linkIds) {
-      console.warn(`[useMapFeatures] No or incomplete route data available for day ${selectedDay}`);
-      if (isGeoJsonAvailable && window.geoJsonLayer?.clearDisplayedFeatures) {
-        window.geoJsonLayer.clearDisplayedFeatures();
-      }
-      setIsRouteDisplayed(false);
-      return;
-    }
-
-    renderDayRoute(selectedDay, HIGHLIGHTED_STYLE);
-  }, [isGeoJsonAvailable, renderDayRoute, schedule, selectedDay]);
-
-  /**
-   * Toggle display of the full transportation network
-   */
-  const toggleNetworkDisplay = useCallback(() => {
-    if (!isGeoJsonAvailable || !window.geoJsonLayer) return;
-    
-    try {
-      if (networkDisplayed) {
-        // Hide the network
-        window.geoJsonLayer.clearDisplayedFeatures();
-        setNetworkDisplayed(false);
-        
-        // If a day was selected, re-render that day's route
-        if (selectedDay !== null && schedule) { // Check selectedDay for null
-          displaySelectedDayRoute();
-        }
-      } else {
-        // Show the full network with a different style
-        const networkStyle: RouteStyle = {
-          strokeColor: '#AAAAAA',
-          strokeWeight: 2,
-          strokeOpacity: 0.4,
-          zIndex: 50
-        };
-        
-        // Render all network links and nodes
-        const features = window.geoJsonLayer.renderAllNetwork(networkStyle);
-        setDisplayedFeatures(features);
-        setNetworkDisplayed(true);
-      }
-    } catch (error) {
-      console.error('[useMapFeatures] Error toggling network display:', error);
-    }
-  }, [
-    displaySelectedDayRoute, 
-    isGeoJsonAvailable, 
-    networkDisplayed, 
-    schedule, 
-    selectedDay
-  ]);
-
-  // Update route display whenever selected day changes
-  useEffect(() => {
-    if (isGeoJsonAvailable && selectedDay !== null && schedule) { // Check selectedDay for null
-      displaySelectedDayRoute();
-    } else if (isGeoJsonAvailable && window.geoJsonLayer?.clearDisplayedFeatures) {
-      // Clear route if no day is selected or schedule is unavailable
-      window.geoJsonLayer.clearDisplayedFeatures();
-      setIsRouteDisplayed(false);
-    }
-  }, [displaySelectedDayRoute, isGeoJsonAvailable, schedule, selectedDay]);
-
-  // Clear displayed features on unmount
-  useEffect(() => {
-    return () => {
-      if (window.geoJsonLayer?.clearDisplayedFeatures) {
-        window.geoJsonLayer.clearDisplayedFeatures();
-      }
+    // linkIds가 없는 경우, nodeIds에서 추출 시도
+    const nodeIds = response.nodeIds.map(id => id.toString());
+    return {
+      nodeIds,
+      linkIds: [] // 서버 응답 형식에 따라 구현 필요
     };
   }, []);
 
+  // 하이라이트된 경로 참조
+  const highlightedPathRef = useRef<any[]>([]);
+
+  // 이전 하이라이트된 경로 제거
+  const clearPreviousHighlightedPath = useCallback(() => {
+    if (highlightedPathRef.current && highlightedPathRef.current.length > 0) {
+      highlightedPathRef.current.forEach(feature => {
+        if (feature && typeof feature.setMap === 'function') {
+          feature.setMap(null);
+        }
+      });
+      highlightedPathRef.current = [];
+    }
+  }, []);
+
+  // GeoJSON 노드와 링크를 사용하여 경로 렌더링
+  const renderGeoJsonRoute = useCallback((nodeIds: string[], linkIds: string[], style: any = {}): any[] => {
+    if (!map || !window.geoJsonLayer || typeof window.geoJsonLayer.renderRoute !== 'function') {
+      console.warn('GeoJSON 렌더링 레이어를 찾을 수 없습니다.');
+      return [];
+    }
+    
+    return window.geoJsonLayer.renderRoute(nodeIds, linkIds, style);
+  }, [map]);
+
+  // 특정 장소 인덱스의 경로 하이라이트
+  const showRouteForPlaceIndex = useCallback((placeIndex: number, itineraryDay: ItineraryDay, serverRoutesData: Record<number, ServerRouteResponse>) => {
+    if (!map || !itineraryDay || !itineraryDay.places) return;
+    
+    // 인덱스 유효성 검사
+    if (placeIndex <= 0 || placeIndex >= itineraryDay.places.length) {
+      console.log('유효하지 않은 장소 인덱스:', placeIndex);
+      return;
+    }
+    
+    const fromIndex = placeIndex - 1;
+    const toIndex = placeIndex;
+    
+    // 서버 경로 데이터 확인
+    const serverRouteData = serverRoutesData[itineraryDay.day];
+    
+    // GeoJSON 기반 경로 하이라이트
+    if (window.geoJsonLayer && serverRouteData) {
+      // 구현 필요: 서버 데이터에서 특정 구간에 해당하는 노드/링크 추출
+      
+      // 임시 구현: 전체 경로를 하이라이트
+      const { nodeIds, linkIds } = extractNodeAndLinkIds(serverRouteData);
+      
+      // 기존 하이라이트 제거
+      clearPreviousHighlightedPath();
+      
+      console.log(`${fromIndex + 1}에서 ${toIndex + 1}까지의 경로 하이라이트`);
+      
+      // 전체 경로 하이라이트
+      const renderedFeatures = renderGeoJsonRoute(
+        nodeIds,
+        linkIds,
+        {
+          strokeColor: '#FF3B30',
+          strokeWeight: 6,
+          strokeOpacity: 0.9,
+          zIndex: 200
+        }
+      );
+      
+      highlightedPathRef.current = renderedFeatures;
+      
+      // 3초 후 하이라이트 제거
+      setTimeout(() => {
+        clearPreviousHighlightedPath();
+      }, 3000);
+    }
+  }, [map, extractNodeAndLinkIds, clearPreviousHighlightedPath, renderGeoJsonRoute]);
+
+  // 일정 경로 렌더링 함수 - 서버 데이터 활용
+  const renderItineraryRoute = useCallback((itineraryDay: ItineraryDay | null, serverRoutesData: Record<number, ServerRouteResponse>, renderDayRoute: (day: ItineraryDay) => void, clearAllRoutes: () => void) => {
+    if (!map || !itineraryDay) {
+      return;
+    }
+    
+    // 기존 경로 삭제
+    clearAllRoutes();
+    
+    // 서버 경로 데이터 확인
+    const serverRouteData = serverRoutesData[itineraryDay.day];
+    
+    // GeoJSON 기반 라우팅인지 확인
+    if (window.geoJsonLayer && serverRouteData) {
+      console.log('서버 기반 GeoJSON 경로 렌더링 시도:', {
+        일자: itineraryDay.day,
+        데이터: serverRouteData
+      });
+      
+      // 노드 ID와 링크 ID 추출
+      const { nodeIds, linkIds } = extractNodeAndLinkIds(serverRouteData);
+      
+      // Log nodeIds/linkIds passed to visualization
+      console.log("🗺️ 시각화 대상 노드/링크 ID:", { nodeIds, linkIds });
+
+      // GeoJSON 기반 경로 렌더링
+      renderGeoJsonRoute(
+        nodeIds, 
+        linkIds,
+        {
+          strokeColor: '#3366FF',
+          strokeWeight: 5,
+          strokeOpacity: 0.8
+        }
+      );
+      
+      return;
+    }
+    
+    // 기존 방식으로 경로 렌더링 (폴백)
+    // GeoJSON이 로드되지 않았거나 서버 데이터가 없는 경우
+    renderDayRoute(itineraryDay);
+  }, [map, extractNodeAndLinkIds, renderGeoJsonRoute]);
+
   return {
-    isRouteDisplayed,
-    renderDayRoute,
-    displaySelectedDayRoute,
-    toggleNetworkDisplay,
-    networkDisplayed
+    renderGeoJsonRoute,
+    renderItineraryRoute,
+    clearPreviousHighlightedPath,
+    showRouteForPlaceIndex,
+    extractNodeAndLinkIds
   };
 };

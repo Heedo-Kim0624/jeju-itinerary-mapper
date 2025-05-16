@@ -1,12 +1,11 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useJejuMap } from '@/hooks/use-jeju-map';
 import { useJejuBoundaryLayer } from './useJejuBoundaryLayer';
 import { useJejuLandmarks } from './useJejuLandmarks';
 import JejuInfoPanel from './JejuInfoPanel';
 import JejuMapControls from './JejuMapControls';
 import JejuLoadingState from './JejuLoadingState';
-import { toast } from 'sonner';
 
 interface JejuVisualizerProps {
   className?: string;
@@ -29,25 +28,11 @@ const JejuVisualizer: React.FC<JejuVisualizerProps> = ({ className }) => {
     clearMarkersAndInfoWindows
   } = useJejuMap();
   
-  const [loadingTimeout, setLoadingTimeout] = useState<boolean>(false);
-  
   // 경계선 그리기
   useJejuBoundaryLayer(map, isMapInitialized, markers);
   
   // 제주도 랜드마크 추가
   useJejuLandmarks(map, isMapInitialized, markers, infoWindows, setActiveMarker);
-  
-  // 로딩이 너무 오래 걸릴 경우 사용자에게 알림
-  useEffect(() => {
-    if (!isNaverLoaded && !isMapError) {
-      const timer = setTimeout(() => {
-        setLoadingTimeout(true);
-        toast.warning("지도 로딩이 지연되고 있습니다. 잠시만 기다려주세요.");
-      }, 10000);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [isNaverLoaded, isMapError]);
   
   // 디버깅 목적의 상태 로그
   useEffect(() => {
@@ -55,10 +40,9 @@ const JejuVisualizer: React.FC<JejuVisualizerProps> = ({ className }) => {
       isNaverLoaded, 
       isMapInitialized,
       isMapError,
-      showInfoPanel,
-      mapExists: !!map
+      showInfoPanel
     });
-  }, [isNaverLoaded, isMapInitialized, isMapError, showInfoPanel, map]);
+  }, [isNaverLoaded, isMapInitialized, isMapError, showInfoPanel]);
 
   // 위치로 이동하는 함수
   const moveToLocation = (lat: number, lng: number, name: string) => {
@@ -98,12 +82,9 @@ const JejuVisualizer: React.FC<JejuVisualizerProps> = ({ className }) => {
       {/* 초기화 중 로딩 표시 */}
       {!isMapInitialized && (
         <div className="absolute inset-0 flex items-center justify-center bg-white/50 backdrop-blur-sm z-10">
-          <div className="flex flex-col items-center bg-white p-4 rounded-lg shadow-md">
+          <div className="flex flex-col items-center">
             <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
             <p className="font-medium">제주도 지도를 초기화하는 중...</p>
-            {loadingTimeout && (
-              <p className="text-sm text-gray-500 mt-2">로딩이 예상보다 오래 걸리고 있습니다.</p>
-            )}
           </div>
         </div>
       )}

@@ -15,20 +15,14 @@ export const useGeoJsonState = () => {
   
   // GeoJSON 가시성 토글
   const toggleGeoJsonVisibility = useCallback(() => {
-    setShowGeoJson(prev => {
-      const newValue = !prev;
-      console.log(`GeoJSON 시각화 ${newValue ? '활성화' : '비활성화'}`);
-      return newValue;
-    });
+    setShowGeoJson(prev => !prev);
   }, []);
 
   // GeoJSON 데이터 로드 완료 핸들러
   const handleGeoJsonLoaded = useCallback((nodes: any[], links: any[]) => {
     console.log('GeoJSON 데이터 로드 완료:', { 
       노드수: nodes.length,
-      링크수: links.length,
-      첫번째노드: nodes.length > 0 ? nodes[0].id : 'N/A',
-      첫번째링크: links.length > 0 ? links[0].id : 'N/A'
+      링크수: links.length
     });
     
     setGeoJsonNodes(nodes);

@@ -8,10 +8,9 @@ import { fetchLandmarks } from '@/services/landmarks/landmarkService';
 import { fetchRestaurants } from '@/services/restaurants/restaurantService';
 import { fetchCafes } from '@/services/cafes/cafeService';
 import { useDebounceEffect } from './use-debounce-effect';
-import type { CategoryName } from '@/utils/categoryUtils'; // CategoryName 임포트
 
 export const useCategoryResults = (
-  category: CategoryName | null, // category 타입을 CategoryName | null 로 변경
+  category: '숙소' | '관광지' | '음식점' | '카페' | null,
   keywords: string[],
   regions: string[] = []
 ) => {
@@ -39,17 +38,19 @@ export const useCategoryResults = (
 
   // 키워드 기반 가중치 계산
   const calculateKeywordScore = (place: Place, keywords: string[]): number => {
-    // 키워드 없을 시 기존 가중치 유지 또는 기본값(0) 부여
-    if (!keywords || keywords.length === 0) return place.weight || 0;
+    if (!keywords || keywords.length === 0) return 0;
     
-    let score = place.weight || 0; // 기존 가중치가 있으면 사용, 없으면 0에서 시작
+    // 기본 점수는 place.weight 또는 0
+    let score = place.weight || 0;
     
+    // 키워드 매칭 점수 계산 (최대 5점)
     const keywordBonus = keywords.reduce((bonus, keyword) => {
-      const lowerKeyword = keyword.toLowerCase();
-      const matchesName = place.name.toLowerCase().includes(lowerKeyword);
-      const matchesCategoryDetail = place.categoryDetail?.toLowerCase().includes(lowerKeyword) || false;
-      const matchesAddress = place.address.toLowerCase().includes(lowerKeyword);
+      // 기본 검색 대상: 이름, 카테고리 상세, 주소
+      const matchesName = place.name.toLowerCase().includes(keyword.toLowerCase());
+      const matchesCategoryDetail = place.categoryDetail?.toLowerCase().includes(keyword.toLowerCase()) || false;
+      const matchesAddress = place.address.toLowerCase().includes(keyword.toLowerCase());
       
+      // 가중치 부여: 이름(3점), 카테고리 상세(2점), 주소(1점)
       if (matchesName) bonus += 3;
       if (matchesCategoryDetail) bonus += 2;
       if (matchesAddress) bonus += 1;
@@ -57,19 +58,10 @@ export const useCategoryResults = (
       return bonus;
     }, 0);
     
+    // 최대 5점까지 키워드 보너스 제한
     const normalizedBonus = Math.min(5, keywordBonus);
     
-    // 상세 로그 (필요시 주석 해제하여 디버깅)
-    /*
-    console.log(
-      `[KeywordScore] Place: ${place.name}, ` +
-      `Original Weight: ${place.weight || 0}, ` +
-      `Keyword Bonus (raw): ${keywordBonus}, ` +
-      `Normalized Bonus: ${normalizedBonus}, ` +
-      `Final Score: ${score + normalizedBonus}`
-    );
-    */
-    
+    // 최종 점수 = 기존 가중치 + 키워드 보너스
     return score + normalizedBonus;
   };
 
@@ -87,6 +79,7 @@ export const useCategoryResults = (
 
       let data: Place[] = [];
       
+      // 카테고리에 따라 적절한 서비스 함수 호출
       switch (category) {
         case '숙소':
           data = await fetchAccommodations();
@@ -101,62 +94,47 @@ export const useCategoryResults = (
           data = await fetchCafes();
           break;
         default:
-          const exhaustiveCheck: never = category; 
-          throw new Error(`지원하지 않는 카테고리입니다: ${exhaustiveCheck}`);
+          throw new Error('지원하지 않는 카테고리입니다.');
       }
 
+      // 지역으로 필터링
       data = filterByRegion(data, regions);
       
       console.log(`[useCategoryResults] ${data.length}개의 장소 로드됨. 지역 필터링 후.`);
       
+      // 키워드 매칭 점수 계산 및 할당
       if (keywords && keywords.length > 0) {
         data = data.map(place => ({
           ...place,
           weight: calculateKeywordScore(place, keywords)
         }));
         
-        // --- 로그 추가 (요청사항 1.3.1) --- 
-        console.log(`[useCategoryResults] 키워드 매칭 점수 적용 완료. 샘플 변경된 장소 (최대 3개):`, 
-          data.slice(0, 3).map(p => ({ 이름: p.name, 가중치: p.weight }))
-        );
+        console.log(`[useCategoryResults] 키워드 매칭 점수 적용 완료. 키워드: ${keywords.join(', ')}`);
       }
 
-      const sortedData = [...data].sort((a, b) => (b.weight || 0) - (a.weight || 0));
+      // weight 기준으로 정렬
+      const sortedData = [...data].sort((a, b) => {
+        const weightA = a.weight || 0;
+        const weightB = b.weight || 0;
+        return weightB - weightA;
+      });
 
-      // --- 추천/일반 장소 분류 로직 수정 (요청사항 1.3.2) --- 
-      const minRecommended = 5; // 최소 추천 장소 수
-      const recommendedRatio = 0.3; // 추천 비율 (상위 30%)
-      let cutoff = 0;
-
-      if (sortedData.length > 0) {
-        if (sortedData.length < minRecommended) {
-            cutoff = sortedData.length; // 데이터가 최소 추천 수보다 적으면 가능한 만큼 모두 추천
-        } else {
-            cutoff = Math.floor(sortedData.length * recommendedRatio);
-            if (cutoff < minRecommended) {
-                cutoff = minRecommended; // 최소 추천 수 보장 (데이터가 충분하고 비율계산이 최소보다 작을때)
-            }
-        }
-      }
-      // --- 로직 수정 끝 ---
-
+      // 상위 20%는 추천 장소로, 나머지는 일반 장소로 분류
+      const cutoff = Math.max(1, Math.floor(sortedData.length * 0.2));
       const recommendedData = sortedData.slice(0, cutoff);
       const normalData = sortedData.slice(cutoff);
       
-      // --- 로그 추가 (요청사항 1.3.3) ---
+      // 결과 로깅
       console.log(`[useCategoryResults] 추천 장소: ${recommendedData.length}개, 일반 장소: ${normalData.length}개`);
       console.log(`[useCategoryResults] 샘플 추천 장소 (최대 3개):`, 
         recommendedData.slice(0, 3).map(p => ({ 
           이름: p.name, 
           가중치: p.weight, 
-          매칭키워드: keywords.filter(k => {
-            const lowerKeyword = k.toLowerCase();
-            // categoryDetail이 null/undefined일 수 있으므로 안전하게 접근
-            const categoryDetailMatch = p.categoryDetail ? p.categoryDetail.toLowerCase().includes(lowerKeyword) : false;
-            return p.name.toLowerCase().includes(lowerKeyword) || 
-                   categoryDetailMatch || 
-                   p.address.toLowerCase().includes(lowerKeyword);
-          }).join(', ') || "없음"
+          매칭키워드: keywords.filter(k => 
+            p.name.toLowerCase().includes(k.toLowerCase()) || 
+            p.categoryDetail?.toLowerCase().includes(k.toLowerCase()) || 
+            p.address.toLowerCase().includes(k.toLowerCase())
+          ) 
         }))
       );
 
@@ -172,6 +150,7 @@ export const useCategoryResults = (
     }
   };
 
+  // 디바운스 효과로 검색 요청 최적화
   useDebounceEffect(() => {
     fetchCategoryData();
   }, [category, keywords.join(','), regions.join(',')], 300);

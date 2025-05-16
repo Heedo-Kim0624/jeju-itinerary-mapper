@@ -1,9 +1,10 @@
+
 import { useEffect } from 'react';
 import { toast } from 'sonner';
 import useGeoJsonState from './geojson/useGeoJsonState';
 import GeoJsonLoader from './geojson/GeoJsonLoader';
 import GeoJsonRenderer from './geojson/GeoJsonRenderer';
-import { GeoJsonLayerProps, GeoNode, GeoLink } from './geojson/GeoJsonTypes';
+import { GeoJsonLayerProps } from './geojson/GeoJsonTypes';
 
 const GeoJsonLayer: React.FC<GeoJsonLayerProps> = ({
   map,
@@ -34,17 +35,10 @@ const GeoJsonLayer: React.FC<GeoJsonLayerProps> = ({
   
   // 전역 인터페이스 등록
   useEffect(() => {
-    if (map && isLoaded && nodes.length > 0 && links.length > 0) {
-      // registerGlobalInterface from useGeoJsonState likely needs nodes/links if it's creating
-      // getNodeById/getLinkById. GeoJsonRenderer also has its own useEffect to set window.geoJsonLayer.
-      // This could be a source of conflict or redundancy.
-      // For now, let's assume GeoJsonRenderer is the primary source for window.geoJsonLayer.
-      // The call to registerGlobalInterface() from useGeoJsonState might need adjustment
-      // if it also tries to set window.geoJsonLayer.
-      // Based on the previous code, GeoJsonRenderer sets window.geoJsonLayer.
-      // The registerGlobalInterface from useGeoJsonState might be for something else or an alternative.
+    if (isMapInitialized && isNaverLoaded && isLoaded) {
+      return registerGlobalInterface();
     }
-  }, [map, isLoaded, nodes, links, registerGlobalInterface]);
+  }, [isMapInitialized, isNaverLoaded, isLoaded, registerGlobalInterface]);
 
   return (
     <>
@@ -53,8 +47,8 @@ const GeoJsonLayer: React.FC<GeoJsonLayerProps> = ({
         <GeoJsonLoader
           isMapInitialized={isMapInitialized}
           isNaverLoaded={isNaverLoaded}
-          onLoadSuccess={(loadedNodes: GeoNode[], loadedLinks: GeoLink[]) => {
-            handleLoadSuccess(loadedNodes, loadedLinks);
+          onLoadSuccess={(nodes, links) => {
+            handleLoadSuccess(nodes, links);
             if (visible) {
               toast.success('경로 데이터가 로드되었습니다.');
             }

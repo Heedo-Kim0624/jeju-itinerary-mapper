@@ -32,7 +32,7 @@ export async function fetchPlaceData(
   const linkTable = `${category}_link`;
   const categoryDetailTable = `${category}_categories`;
 
-  console.log(`🔍 [Supabase] fetchPlaceData: 조회 시작 - 카테고리: ${category}, 위치 필터:`, locations);
+  console.log(`🔍 [Supabase] 조회 시작: ${category} 카테고리`);
   console.log(`📊 [Supabase] 테이블 정보:`, { 
     정보: infoTable, 
     평점: ratingTable, 
@@ -47,24 +47,14 @@ export async function fetchPlaceData(
     if (locations.length > 0) {
       query = query.in('location', locations);
     }
-    
-    // 쿼리 로그 출력
-    console.log(`🔍 [Supabase] 실행 쿼리: ${infoTable} 테이블에서 ${locations.length > 0 ? '위치 필터 적용' : '모든 데이터'} 조회`);
-    
     const { data: places, error: placesError } = await query;
 
-    // 결과 로그 출력
-    console.log(`[Supabase fetchPlaceData - ${category}] Raw places data count: ${places ? places.length : 0}`);
-    if (places && places.length > 0) {
-      console.log(`[Supabase fetchPlaceData - ${category}] First raw place sample:`, JSON.stringify(places[0]));
-    }
-
     if (placesError) {
-      console.error(`[Supabase fetchPlaceData - ${category}] Places fetch error:`, placesError);
+      console.error('Places fetch error:', placesError);
       return { places: [], ratings: [], categories: [], links: [], reviews: [] };
     }
     if (!places || places.length === 0) {
-      console.log(`❌ [Supabase fetchPlaceData - ${category}] 검색 조건에 맞는 장소가 없습니다. 위치 필터:`, locations);
+      console.log(`❌ [Supabase] ${category}: 검색 조건에 맞는 장소가 없습니다`);
       return { places: [], ratings: [], categories: [], links: [], reviews: [] };
     }
 
