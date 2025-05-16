@@ -2,12 +2,11 @@ import { useState } from 'react';
 import { Place, SelectedPlace } from '@/types/supabase';
 import { toast } from 'sonner';
 import { useItineraryCreator } from './use-itinerary-creator';
-import { SchedulePayload, NewServerScheduleResponse } from '@/types/schedule';
+import { SchedulePayload, ServerScheduleResponse, ParsedRoute } from '@/types/schedule';
 import { parseInterleavedRoute as parseInterleavedRouteUtil } from '@/utils/routeParser';
 
 // 서버 URL 환경 변수에서 가져오기 (환경변수가 없으면 고정 URL 사용)
-const SERVER_BASE_URL = "https://fa3f-34-91-44-214.ngrok-free.app"; // 서버 기본 주소
-const SCHEDULE_GENERATION_ENDPOINT = "/generate_schedule"; // 엔드포인트
+const SERVER_URL = "https://fa3f-34-91-44-214.ngrok-free.app";
 
 export const useScheduleGenerator = () => {
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
@@ -15,16 +14,15 @@ export const useScheduleGenerator = () => {
   const { createItinerary } = useItineraryCreator();
   
   // 서버에 일정 생성 요청
-  const generateSchedule = async (payload: SchedulePayload): Promise<NewServerScheduleResponse | null> => {
+  const generateSchedule = async (payload: SchedulePayload): Promise<ServerScheduleResponse | null> => {
     setIsGenerating(true);
     setGenerationError(null);
     
-    const fullServerUrl = `${SERVER_BASE_URL}${SCHEDULE_GENERATION_ENDPOINT}`;
     try {
-      console.log('[일정 생성] 서버 요청 URL:', fullServerUrl);
+      console.log('[일정 생성] 서버 요청 URL:', SERVER_URL);
       console.log('[일정 생성] 서버에 일정 생성 요청 전송:', JSON.stringify(payload, null, 2));
       
-      const response = await fetch(fullServerUrl, {
+      const response = await fetch(`${SERVER_URL}/generate-schedule`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -34,32 +32,35 @@ export const useScheduleGenerator = () => {
       
       if (!response.ok) {
         const errorText = await response.text();
-        console.error(`[일정 생성] 서버 오류 응답 (${response.status}): ${errorText}`);
         throw new Error(`서버 오류 (${response.status}): ${errorText}`);
       }
       
-      const data: NewServerScheduleResponse = await response.json();
+      const data: ServerScheduleResponse = await response.json();
       console.log('[일정 생성] 서버로부터 받은 일정 데이터:', data);
       
-      if (data.route_summary && data.route_summary.length > 0) {
-        console.log('[일정 생성] 경로 요약 데이터 포함:', 
-          data.route_summary.length + '일치 경로 데이터 수신');
+      if (data.routes) {
+        console.log('[일정 생성] 경로 데이터 포함:', 
+          Object.keys(data.routes).length + '일치 경로 데이터 수신');
         
-        const firstRouteDay = data.route_summary[0];
-        if (firstRouteDay) {
-          console.log(`[일정 생성] ${firstRouteDay.day} 경로 샘플:`, {
-            interleaved_route_길이: firstRouteDay.interleaved_route?.length || 0,
-            첫20개_인터리브드: firstRouteDay.interleaved_route?.slice(0, 20) || []
+        const firstRouteDayKey = Object.keys(data.routes)[0];
+        if (firstRouteDayKey) {
+          const firstRoute = data.routes[firstRouteDayKey];
+          console.log(`[일정 생성] ${firstRouteDayKey}일차 경로 샘플:`, {
+            nodeIds_길이: firstRoute.nodeIds?.length || 0,
+            linkIds_길이: firstRoute.linkIds?.length || 0,
+            interleaved_route_길이: firstRoute.interleaved_route?.length || 0,
+            첫20개_노드: firstRoute.nodeIds?.slice(0, 20) || [],
+            첫20개_인터리브드: firstRoute.interleaved_route?.slice(0, 20) || []
           });
           
-          if (firstRouteDay.interleaved_route) {
+          if (firstRoute.interleaved_route) {
             // Use the utility function for parsing
-            // const parsedSegments = parseInterleavedRouteUtil(firstRouteDay.interleaved_route);
-            // console.log(`[일정 생성] ${firstRouteDay.day} 파싱된 경로 (util):`, parsedSegments);
+            const parsedSegments = parseInterleavedRouteUtil(firstRoute.interleaved_route);
+            console.log(`[일정 생성] ${firstRouteDayKey}일차 파싱된 경로 (util):`, parsedSegments);
           }
         }
       } else {
-        console.warn('[일정 생성] 경로 요약 데이터(route_summary) 누락 또는 비어있음!');
+        console.warn('[일정 생성] 경로 데이터 누락: 서버 응답에 routes 필드가 없습니다!');
       }
       
       return data;
