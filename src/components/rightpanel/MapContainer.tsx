@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import Map from './Map';
 import { Place, ItineraryDay } from '@/types/supabase';
 
@@ -18,6 +18,28 @@ const MapContainer: React.FC<MapContainerProps> = ({
   selectedDay,
   selectedPlaces = [],
 }) => {
+  // Use ref to track whether map component has been mounted
+  const mountedRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  // Debug log to track map container rendering
+  useEffect(() => {
+    console.log("MapContainer rendered", {
+      placesCount: places.length,
+      hasSelectedPlace: !!selectedPlace,
+      hasItinerary: !!itinerary,
+      selectedDay,
+      mounted: mountedRef.current
+    });
+  });
+
   return (
     <div className="w-full h-full">
       <Map
@@ -31,4 +53,4 @@ const MapContainer: React.FC<MapContainerProps> = ({
   );
 };
 
-export default MapContainer;
+export default React.memo(MapContainer); // Use memo to prevent unnecessary re-renders

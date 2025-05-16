@@ -13,6 +13,7 @@ export const useMapInitialization = () => {
   const [map, setMap] = useState<any>(null);
   const [isInitializing, setIsInitializing] = useState<boolean>(false);
   const initTimeoutRef = useRef<number | null>(null);
+  const mapInstanceRef = useRef<any>(null); // Store map instance in ref to avoid recreation
 
   // 네이버 지도 API 로드
   useEffect(() => {
@@ -70,7 +71,8 @@ export const useMapInitialization = () => {
 
   // 지도 초기화
   useEffect(() => {
-    if (!isNaverLoaded || !mapContainer.current || isMapInitialized || !window.naver || !window.naver.maps) {
+    // Prevent duplicate initialization
+    if (!isNaverLoaded || !mapContainer.current || isMapInitialized || !window.naver || !window.naver.maps || mapInstanceRef.current) {
       return;
     }
 
@@ -96,6 +98,9 @@ export const useMapInitialization = () => {
       const newMap = initializeNaverMap(mapContainer.current);
       
       if (newMap) {
+        // Store map instance in ref
+        mapInstanceRef.current = newMap;
+        
         // 타임아웃 설정 - 이벤트가 발생하지 않더라도 성공으로 처리
         initTimeoutRef.current = window.setTimeout(() => {
           if (!isMapInitialized) {
@@ -107,15 +112,18 @@ export const useMapInitialization = () => {
         }, 5000); // 5초 타임아웃
         
         // 이벤트 기반 초기화 완료 감지
-        window.naver.maps.Event.once(newMap, 'init_stylemap', () => {
-          if (initTimeoutRef.current) {
-            window.clearTimeout(initTimeoutRef.current);
-          }
-          console.log("지도 초기화 완료 이벤트 발생");
-          setMap(newMap);
-          setIsMapInitialized(true);
-          toast.success("지도가 준비되었습니다");
-        });
+        if (window.naver && window.naver.maps && window.naver.maps.Event) {
+          window.naver.maps.Event.once(newMap, 'init_stylemap', () => {
+            if (initTimeoutRef.current) {
+              window.clearTimeout(initTimeoutRef.current);
+              initTimeoutRef.current = null;
+            }
+            console.log("지도 초기화 완료 이벤트 발생");
+            setMap(newMap);
+            setIsMapInitialized(true);
+            toast.success("지도가 준비되었습니다");
+          });
+        }
         
         // 추가 검증: 지도 객체가 제대로 생성되었는지 확인
         try {
@@ -137,6 +145,7 @@ export const useMapInitialization = () => {
     return () => {
       if (initTimeoutRef.current) {
         window.clearTimeout(initTimeoutRef.current);
+        initTimeoutRef.current = null;
       }
     };
   }, [isNaverLoaded, isMapInitialized]);

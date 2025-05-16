@@ -48,7 +48,7 @@ const PlaceListingView: React.FC<PlaceListingViewProps> = ({
             key={place.id}
             place={place}
             isSelected={isPlaceSelected(place.id)}
-            onSelect={(checked) => onSelectPlace(place, checked)}
+            onSelect={(checked: boolean) => onSelectPlace(place, checked)} // Fixed type to boolean
             onClick={() => {}}
             onViewDetails={() => onViewOnMap(place)}
           />

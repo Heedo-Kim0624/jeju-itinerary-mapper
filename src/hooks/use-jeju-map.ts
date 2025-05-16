@@ -17,6 +17,7 @@ export const useJejuMap = () => {
   const [showInfoPanel, setShowInfoPanel] = useState<boolean>(true);
   const [loadAttempts, setLoadAttempts] = useState<number>(0);
   const [isLoadingScript, setIsLoadingScript] = useState<boolean>(false);
+  const mapInitializedRef = useRef<boolean>(false); // Reference to track initialization
 
   useEffect(() => {
     const initNaverMaps = async () => {
@@ -68,7 +69,8 @@ export const useJejuMap = () => {
   }, [loadAttempts, isNaverLoaded, isMapError, isLoadingScript]);
 
   useEffect(() => {
-    if (!isNaverLoaded || !mapContainer.current || isMapInitialized) return;
+    // Prevent duplicate initialization
+    if (!isNaverLoaded || !mapContainer.current || mapInitializedRef.current) return;
     
     let initTimeout: number;
     
@@ -102,6 +104,7 @@ export const useJejuMap = () => {
 
       console.log("Creating Jeju Map instance");
       map.current = new window.naver.maps.Map(mapContainer.current, options);
+      mapInitializedRef.current = true; // Mark as initialized in ref
       
       // 백업 타이머 설정: 5초 후에도 init_stylemap 이벤트가 발생하지 않으면 강제로 초기화 완료 처리
       initTimeout = window.setTimeout(() => {
@@ -113,24 +116,27 @@ export const useJejuMap = () => {
       }, 5000);
       
       // 이벤트 리스너로 초기화 완료 감지
-      window.naver.maps.Event.once(map.current, 'init_stylemap', function() {
-        window.clearTimeout(initTimeout);
-        console.log("Jeju map initialized through event");
-        setIsMapInitialized(true);
-        toast.success("제주도 지도가 로드되었습니다");
-      });
+      if (window.naver.maps.Event) {
+        window.naver.maps.Event.once(map.current, 'init_stylemap', function() {
+          window.clearTimeout(initTimeout);
+          console.log("Jeju map initialized through event");
+          setIsMapInitialized(true);
+          toast.success("제주도 지도가 로드되었습니다");
+        });
       
-      window.naver.maps.Event.addListener(map.current, 'zoom_changed', (zoom: number) => {
-        console.log('Zoom changed to:', zoom);
-        
-        if (zoom < 9) {
-          setShowInfoPanel(true);
-        }
-      });
+        window.naver.maps.Event.addListener(map.current, 'zoom_changed', (zoom: number) => {
+          console.log('Zoom changed to:', zoom);
+          
+          if (zoom < 9) {
+            setShowInfoPanel(true);
+          }
+        });
+      }
       
     } catch (error) {
       console.error("Failed to initialize Jeju map:", error);
       setIsMapError(true);
+      mapInitializedRef.current = false; // Reset initialization flag on error
       toast.error("제주도 지도 초기화에 실패했습니다");
     }
 

@@ -4,6 +4,9 @@ import { toast } from "sonner";
 // Jeju Island center coordinates
 export const JEJU_CENTER = { lat: 33.3617, lng: 126.5292 };
 
+// Flag to prevent multiple initializations
+let mapInitializationAttempted = false;
+
 export const initializeNaverMap = (mapContainer: HTMLDivElement | null) => {
   if (!mapContainer) {
     console.error("Map container is not available");
@@ -12,6 +15,12 @@ export const initializeNaverMap = (mapContainer: HTMLDivElement | null) => {
   
   if (!window.naver || !window.naver.maps) {
     console.error("Naver Maps API is not loaded");
+    return null;
+  }
+  
+  // Prevent multiple initializations in the same container
+  if (mapContainer.dataset.mapInitialized === 'true') {
+    console.warn("Map has already been initialized in this container");
     return null;
   }
 
@@ -45,6 +54,10 @@ export const initializeNaverMap = (mapContainer: HTMLDivElement | null) => {
       }
     };
 
+    // Mark container as having an initialized map
+    mapContainer.dataset.mapInitialized = 'true';
+    mapInitializationAttempted = true;
+
     // Naver Map 인스턴스 생성
     const map = new window.naver.maps.Map(mapContainer, mapOptions);
     
@@ -52,10 +65,12 @@ export const initializeNaverMap = (mapContainer: HTMLDivElement | null) => {
     console.log("Map instance created:", map);
     
     // Event listener for debugging map initialization
-    window.naver.maps.Event.once(map, 'init_stylemap', () => {
-      console.log("지도 초기화 완료 이벤트 발생");
-      toast.success("제주도 지도가 로드되었습니다");
-    });
+    if (window.naver.maps.Event) {
+      window.naver.maps.Event.once(map, 'init_stylemap', () => {
+        console.log("지도 초기화 완료 이벤트 발생");
+        toast.success("제주도 지도가 로드되었습니다");
+      });
+    }
     
     // 백업: 지도 로딩 완료 여부 확인을 위한 타이머
     setTimeout(() => {

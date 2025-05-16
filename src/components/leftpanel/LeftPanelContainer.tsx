@@ -21,7 +21,7 @@ interface LeftPanelContainerProps {
     startTime: string;
     endTime: string;
   } | null;
-  onCreateItinerary: () => Promise<boolean>;
+  onCreateItinerary: () => Promise<boolean>; // Updated type to match the actual return type
   itinerary: ItineraryDay[] | null;
   selectedItineraryDay: number | null;
   onSelectDay: (day: number) => void;
