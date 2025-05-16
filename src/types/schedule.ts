@@ -1,6 +1,11 @@
 
 export interface SchedulePlace {
-  id: number;
+  id: number | string;
+  name: string;
+}
+
+export interface SelectedPlace {
+  id: string;
   name: string;
 }
 

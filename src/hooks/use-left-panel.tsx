@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useSelectedPlaces } from './use-selected-places';
 import { useTripDetails } from './use-trip-details';
@@ -123,11 +122,11 @@ export const useLeftPanel = () => {
     return itineraryHandlers.handleCreateItinerary(
       tripDetails,
       selectedPlaces,
-      prepareSchedulePayload,
+      (places, dateTime, recommendedPlaces) => prepareSchedulePayload(places, dateTime, recommendedPlaces),
       recommendedPlaces,
       generateItinerary,
       setShowItinerary,
-      setCurrentPanel
+      (panel) => setCurrentPanel(panel as 'region' | 'date' | 'category' | 'itinerary')
     );
   };
   

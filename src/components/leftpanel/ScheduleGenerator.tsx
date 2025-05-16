@@ -5,7 +5,7 @@ import { useItineraryCreator, ItineraryDay } from '@/hooks/use-itinerary-creator
 import ItineraryPanel from './ItineraryPanel';
 import { useScheduleGenerator } from '@/hooks/use-schedule-generator';
 import { useMapContext } from '@/components/rightpanel/MapContext';
-import { ServerRouteResponse } from '@/types/schedule';
+import { ServerRouteResponse, SchedulePayload, SchedulePlace } from '@/types/schedule';
 
 interface ScheduleGeneratorProps {
   selectedPlaces: Place[];
@@ -45,7 +45,44 @@ export const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({
 
     // Call the local async function that handles the generation process
     runScheduleGenerationProcess();
-  }, []); // Removed dependencies to ensure it runs once on mount after checks
+  }, []); // Run once on mount after checks
+
+  // Create a function to prepare payload based on the expected format
+  const preparePayload = (): SchedulePayload => {
+    if (!dates) throw new Error("Dates not provided");
+    
+    // Prepare selected places in the expected format
+    const selectedPlacesPayload: SchedulePlace[] = selectedPlaces
+      .filter(p => !p.isCandidate)
+      .map(p => ({ 
+        id: typeof p.id === 'string' ? parseInt(p.id, 10) : p.id, 
+        name: p.name || 'Unknown Place' 
+      }));
+    
+    // Prepare candidate places in the expected format
+    const candidatePlacesPayload: SchedulePlace[] = selectedPlaces
+      .filter(p => p.isCandidate)
+      .map(p => ({ 
+        id: typeof p.id === 'string' ? parseInt(p.id, 10) : p.id, 
+        name: p.name || 'Unknown Place' 
+      }));
+    
+    // Format dates as ISO strings
+    const startDateTime = dates.startDate.toISOString();
+    const endDateTime = dates.endDate.toISOString();
+    
+    // Build and log the payload for debugging
+    const payload: SchedulePayload = {
+      selected_places: selectedPlacesPayload,
+      candidate_places: candidatePlacesPayload,
+      start_datetime: startDateTime,
+      end_datetime: endDateTime
+    };
+    
+    console.log("📤 서버 요청 payload:", JSON.stringify(payload, null, 2));
+    
+    return payload;
+  };
 
   // Renamed local async function
   const runScheduleGenerationProcess = async () => {
@@ -54,15 +91,8 @@ export const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({
     try {
       setLoading(true);
       
-      const payload = {
-        selected_places: selectedPlaces.map(p => ({ id: p.id, name: p.name })),
-        candidate_places: [], // This might be populated by prepareSchedulePayload if used earlier
-        start_datetime: dates.startDate.toISOString(),
-        end_datetime: dates.endDate.toISOString()
-      };
-      
-      // Log the payload being sent to the server
-      console.log("📤 서버 요청 payload:", JSON.stringify(payload, null, 2));
+      // Build the payload according to the expected format
+      const payload = preparePayload();
       
       // Call the hook's renamed function
       const serverResponse = await generateScheduleViaHook(payload);

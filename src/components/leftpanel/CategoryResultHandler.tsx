@@ -46,7 +46,7 @@ const CategoryResultHandler: React.FC<CategoryResultHandlerProps> = ({
     <CategoryResultPanel
       isOpen={!!showCategoryResult}
       onClose={onClose}
-      category={currentCategory as '숙소' | '관광지' | '음식점' | '카페'}
+      category={currentCategory}
       regions={selectedRegions}
       keywords={selectedKeywords}
       onSelectPlace={handlePlaceSelection}

@@ -6,7 +6,7 @@ import RegionPanelHandler from './RegionPanelHandler';
 import CategoryResultHandler from './CategoryResultHandler';
 import LeftPanelContainer from './LeftPanelContainer';
 import ItineraryView from './ItineraryView';
-import type { CategoryName } from '@/utils/categoryUtils';
+import { CategoryName } from '@/utils/categoryUtils';
 import { Place } from '@/types/supabase';
 
 const LeftPanel: React.FC = () => {
