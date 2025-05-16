@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useSelectedPlaces } from './use-selected-places';
 import { useTripDetails } from './use-trip-details';
@@ -53,7 +52,8 @@ export const useLeftPanel = () => {
     allCategoriesSelected,
     prepareSchedulePayload,
     isAccommodationLimitReached,
-    handleAutoCompletePlaces
+    handleAutoCompletePlaces,
+    isPlaceSelected // Added from previous refactor, ensure it's here
   } = useSelectedPlaces();
 
   const placesManagement = {
@@ -66,7 +66,8 @@ export const useLeftPanel = () => {
     allCategoriesSelected,
     isAccommodationLimitReached,
     prepareSchedulePayload,
-    handleAutoCompletePlaces
+    handleAutoCompletePlaces,
+    isPlaceSelected // Added from previous refactor
   };
 
   // 일정 관리 기능
@@ -124,8 +125,8 @@ export const useLeftPanel = () => {
   const itineraryHandlers = useItineraryHandlers();
   const handleCreateItinerary = async () => {
     return itineraryHandlers.handleCreateItinerary(
-      tripDetails,
-      selectedPlaces as SelectedPlace[], 
+      selectedPlaces as SelectedPlace[], // Swapped: Expected Place[] or SelectedPlace[]
+      tripDetails,                     // Swapped: Actual TripDetails
       (places: SelectedPlace[], startDatetime, endDatetime) => prepareSchedulePayload(places, startDatetime, endDatetime),
       tripDetails.dates,
       generateItinerary,
