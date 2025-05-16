@@ -119,7 +119,7 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
                 places={recommendedPlaces}
                 title={`🌟 추천 장소 (${safeRegions.join(', ')})`}
                 isLoading={isLoading}
-                selectedPlaces={[]}
+                // selectedPlaces prop 제거
                 onSelectPlace={handlePlaceSelect}
                 onViewOnMap={handleViewDetails}
                 isPlaceSelected={isPlaceSelected}
@@ -130,7 +130,7 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
                   places={normalPlaces}
                   title="📍 주변 장소"
                   isLoading={isLoading}
-                  selectedPlaces={[]}
+                  // selectedPlaces prop 제거
                   onSelectPlace={handlePlaceSelect}
                   onViewOnMap={handleViewDetails}
                   isPlaceSelected={isPlaceSelected}
