@@ -16,8 +16,8 @@ interface LeftPanelContainerProps {
   allCategoriesSelected: boolean;
   children: React.ReactNode;
   dates: {
-    startDate: Date;
-    endDate: Date;
+    startDate: Date | null;
+    endDate: Date | null;
     startTime: string;
     endTime: string;
   } | null;

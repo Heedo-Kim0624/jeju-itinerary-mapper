@@ -12,7 +12,7 @@ interface PlaceListingViewProps {
   selectedPlaces: Place[];
   onSelectPlace: (place: Place, checked: boolean) => void;
   onViewOnMap: (place: Place) => void;
-  isPlaceSelected?: (id: string | number) => boolean;  // Added the isPlaceSelected prop as optional
+  isPlaceSelected?: (id: string | number) => boolean;
 }
 
 const PlaceListingView: React.FC<PlaceListingViewProps> = ({
@@ -52,6 +52,10 @@ const PlaceListingView: React.FC<PlaceListingViewProps> = ({
     );
   }
 
+  const handlePlaceSelect = (place: Place, checked: boolean) => {
+    onSelectPlace(place, checked);
+  };
+
   return (
     <div className="p-4 border-b">
       <h2 className="text-sm font-medium mb-3">{title}</h2>
@@ -61,7 +65,7 @@ const PlaceListingView: React.FC<PlaceListingViewProps> = ({
             key={place.id}
             place={place}
             isSelected={isPlaceSelected ? isPlaceSelected(place.id) : selectedPlaces.some(p => p.id === place.id)}
-            onSelect={onSelectPlace}
+            onSelect={(checked) => handlePlaceSelect(place, checked)}
             onViewDetails={() => onViewOnMap(place)}
           />
         ))}

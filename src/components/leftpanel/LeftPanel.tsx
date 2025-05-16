@@ -7,6 +7,7 @@ import CategoryResultHandler from './CategoryResultHandler';
 import LeftPanelContainer from './LeftPanelContainer';
 import ItineraryView from './ItineraryView';
 import type { CategoryName } from '@/utils/categoryUtils';
+import { Place } from '@/types/supabase';
 
 const LeftPanel: React.FC = () => {
   const {
@@ -54,6 +55,17 @@ const LeftPanel: React.FC = () => {
     return true;
   };
 
+  // 카테고리 결과 확인 핸들러 (새로 추가)
+  const handleConfirmCategory = (category: string, selectedPlaces: Place[], recommendedPlaces: Place[]) => {
+    console.log(`[LeftPanel] ${category} 카테고리 결과 확인, 선택 장소 ${selectedPlaces.length}개, 추천 장소 ${recommendedPlaces.length}개`);
+    
+    // Auto-complete candidate places based on user selection
+    placesManagement.handleAutoCompletePlaces(category, recommendedPlaces);
+    
+    // Close the category result panel
+    uiVisibility.setShowCategoryResult(null);
+  };
+
   return (
     <div className="relative h-full">
       {uiVisibility.showItinerary && itineraryManagement.itinerary ? (
@@ -80,8 +92,8 @@ const LeftPanel: React.FC = () => {
             endTime: tripDetails.dates?.endTime || "21:00"
           }}
           onCreateItinerary={() => {
-            // For type compatibility, convert the Promise to a boolean
-            handleCreateItinerary().then(result => !!result);
+            // Wrap Promise in a function that returns a boolean
+            handleCreateItinerary().then(() => true);
             return true;
           }}
           itinerary={itineraryManagement.itinerary}
@@ -147,6 +159,7 @@ const LeftPanel: React.FC = () => {
         onClose={handleResultClose}
         onSelectPlace={placesManagement.handleSelectPlace}
         selectedPlaces={placesManagement.selectedPlaces}
+        onConfirmCategory={handleConfirmCategory}
       />
     </div>
   );

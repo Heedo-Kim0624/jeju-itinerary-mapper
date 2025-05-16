@@ -9,6 +9,8 @@ import ResultHeader from './category-result/ResultHeader';
 import ResultFooter from './category-result/ResultFooter';
 import LoadingState from './category-result/LoadingState';
 import ErrorState from './category-result/ErrorState';
+import { Button } from '@/components/ui/button';
+import { CheckIcon } from 'lucide-react';
 
 interface CategoryResultPanelProps {
   category: '숙소' | '관광지' | '음식점' | '카페';
@@ -18,6 +20,7 @@ interface CategoryResultPanelProps {
   onSelectPlace: (place: Place, checked: boolean) => void;
   isPlaceSelected: (id: string | number) => boolean;
   isOpen: boolean;
+  onConfirm?: (category: string, selectedPlaces: Place[], recommendedPlaces: Place[]) => void;
 }
 
 const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
@@ -27,10 +30,12 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
   onClose,
   onSelectPlace,
   isPlaceSelected,
-  isOpen
+  isOpen,
+  onConfirm
 }) => {
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const { panTo, addMarkers, clearMarkersAndUiElements } = useMapContext();
+  const [userSelectedPlaces, setUserSelectedPlaces] = useState<Place[]>([]);
   
   // 안전하게 regions 배열을 처리 - regions가 undefined일 경우 빈 배열 사용
   const safeRegions = Array.isArray(regions) ? regions : [];
@@ -68,6 +73,28 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
     }
   };
 
+  const handlePlaceSelect = (place: Place, checked: boolean) => {
+    // Track locally selected places to pass to confirmation handler
+    if (checked) {
+      setUserSelectedPlaces(prev => [...prev, place]);
+    } else {
+      setUserSelectedPlaces(prev => prev.filter(p => p.id !== place.id));
+    }
+    
+    // Call the parent handler
+    onSelectPlace(place, checked);
+  };
+
+  const handleConfirmPlaces = () => {
+    console.log(`[카테고리 확인] ${category} 카테고리 선택 완료: ${userSelectedPlaces.length}개 장소`);
+    
+    if (onConfirm) {
+      // Pass the category, user-selected places, and all recommended places for auto-completion
+      onConfirm(category, userSelectedPlaces, recommendedPlaces);
+      onClose();
+    }
+  };
+
   return (
     <div className="fixed top-0 left-[300px] w-[300px] h-full bg-white border-l border-r border-gray-200 z-40 shadow-md">
       <div className="h-full flex flex-col">
@@ -85,7 +112,7 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
                 title={`🌟 추천 장소 (${safeRegions.join(', ')})`}
                 isLoading={isLoading}
                 selectedPlaces={[]}
-                onSelectPlace={onSelectPlace}
+                onSelectPlace={handlePlaceSelect}
                 onViewOnMap={handleViewDetails}
                 isPlaceSelected={isPlaceSelected}
               />
@@ -96,13 +123,24 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
                   title="📍 주변 장소"
                   isLoading={isLoading}
                   selectedPlaces={[]}
-                  onSelectPlace={onSelectPlace}
+                  onSelectPlace={handlePlaceSelect}
                   onViewOnMap={handleViewDetails}
                   isPlaceSelected={isPlaceSelected}
                 />
               )}
             </>
           )}
+        </div>
+
+        {/* Add confirmation button */}
+        <div className="p-4 border-t border-gray-200">
+          <Button 
+            onClick={handleConfirmPlaces}
+            className="w-full" 
+            variant="default"
+          >
+            <CheckIcon className="mr-2 h-4 w-4" /> 선택 완료
+          </Button>
         </div>
 
         <ResultFooter onClose={onClose} />

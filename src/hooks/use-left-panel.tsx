@@ -9,6 +9,7 @@ import { useCategorySelection } from './use-category-selection';
 import { useCategoryHandlers } from './left-panel/use-category-handlers';
 import { useItineraryHandlers } from './left-panel/use-itinerary-handlers';
 import { useInputState } from './left-panel/use-input-state';
+import { Place } from '@/types/supabase';
 
 /**
  * 왼쪽 패널 기능 통합 훅
@@ -51,6 +52,7 @@ export const useLeftPanel = () => {
     allCategoriesSelected,
     prepareSchedulePayload,
     isAccommodationLimitReached,
+    handleAutoCompletePlaces
   } = useSelectedPlaces();
 
   const placesManagement = {
@@ -62,7 +64,8 @@ export const useLeftPanel = () => {
     handleViewOnMap,
     allCategoriesSelected,
     isAccommodationLimitReached,
-    prepareSchedulePayload
+    prepareSchedulePayload,
+    handleAutoCompletePlaces
   };
 
   // 일정 관리 기능

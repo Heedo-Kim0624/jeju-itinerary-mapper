@@ -11,6 +11,7 @@ interface CategoryResultHandlerProps {
   onClose: () => void;
   onSelectPlace: (place: Place, checked: boolean, category: string | null) => void;
   selectedPlaces: Place[];
+  onConfirmCategory?: (category: string, selectedPlaces: Place[], recommendedPlaces: Place[]) => void;
 }
 
 const CategoryResultHandler: React.FC<CategoryResultHandlerProps> = ({
@@ -19,7 +20,8 @@ const CategoryResultHandler: React.FC<CategoryResultHandlerProps> = ({
   selectedKeywordsByCategory,
   onClose,
   onSelectPlace,
-  selectedPlaces
+  selectedPlaces,
+  onConfirmCategory
 }) => {
   if (!showCategoryResult) return null;
   
@@ -33,15 +35,23 @@ const CategoryResultHandler: React.FC<CategoryResultHandlerProps> = ({
     onSelectPlace(place, checked, currentCategory);
   };
 
+  const handleConfirm = (category: string, selectedPlaces: Place[], recommendedPlaces: Place[]) => {
+    console.log(`[CategoryResultHandler] ${category} 카테고리 확인됨, 선택된 장소: ${selectedPlaces.length}개`);
+    if (onConfirmCategory) {
+      onConfirmCategory(category, selectedPlaces, recommendedPlaces);
+    }
+  };
+
   return (
     <CategoryResultPanel
       isOpen={!!showCategoryResult}
       onClose={onClose}
-      category={currentCategory}
+      category={currentCategory as '숙소' | '관광지' | '음식점' | '카페'}
       regions={selectedRegions}
       keywords={selectedKeywords}
       onSelectPlace={handlePlaceSelection}
       isPlaceSelected={isPlaceSelected}
+      onConfirm={handleConfirm}
     />
   );
 };
