@@ -8,6 +8,25 @@ interface TripDetails {
   endTime: string;
 }
 
+// Utility function to format date and time into an ISO string
+const formatDateTime = (date: Date | null, time: string): string | null => {
+  if (!date || !time) return null;
+  // Ensure time is a string before splitting
+  if (typeof time !== 'string') {
+    console.warn(`[formatDateTime] Invalid time value: ${time}. Expected string.`);
+    return null; 
+  }
+  const parts = time.split(':');
+  if (parts.length !== 2) {
+    console.warn(`[formatDateTime] Invalid time format: ${time}. Expected HH:MM.`);
+    return null;
+  }
+  const [hh, mm] = parts;
+  const withTime = new Date(date);
+  withTime.setHours(parseInt(hh, 10), parseInt(mm, 10), 0, 0);
+  return withTime.toISOString();
+};
+
 export const useTripDetails = () => {
   const [details, setDetails] = useState<TripDetails>({
     startDate: null,
@@ -20,13 +39,14 @@ export const useTripDetails = () => {
   const tripDuration = useMemo(() => {
     if (!details.startDate || !details.endDate) return null;
     
-    // 날짜 차이 계산 (밀리초 -> 일)
     const diffTime = details.endDate.getTime() - details.startDate.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     
-    // 총 박수 계산 (1일 여행이면 0박, 2일 여행이면 1박, ...)
     return Math.max(0, diffDays);
   }, [details.startDate, details.endDate]);
+
+  const startDatetime = useMemo(() => formatDateTime(details.startDate, details.startTime), [details.startDate, details.startTime]);
+  const endDatetime = useMemo(() => formatDateTime(details.endDate, details.endTime), [details.endDate, details.endTime]);
 
   const setStartDate = (date: Date | null) => {
     setDetails((prev) => ({ ...prev, startDate: date }));
@@ -44,7 +64,6 @@ export const useTripDetails = () => {
     setDetails((prev) => ({ ...prev, endTime: time }));
   };
 
-  // Add a function to set all dates at once
   const setDates = (dates: TripDetails) => {
     setDetails(dates);
   };
@@ -66,8 +85,9 @@ export const useTripDetails = () => {
     setStartTime,
     setEndTime,
     setDates,
-    // For use in use-left-panel.tsx
     dates: details,
+    startDatetime, // Export new ISO string
+    endDatetime,   // Export new ISO string
     accomodationDirectInput,
     setAccomodationDirectInput,
     landmarkDirectInput,
@@ -78,3 +98,4 @@ export const useTripDetails = () => {
     setCafeDirectInput,
   };
 };
+
