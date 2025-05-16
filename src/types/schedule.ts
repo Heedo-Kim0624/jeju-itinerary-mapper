@@ -60,24 +60,30 @@ export interface SchedulePayload {
   end_datetime: string;   // ISO8601 타임스탬프
 }
 
-// 서버 경로 응답 (각 날짜별)
-export interface ServerRouteResponse {
-  nodeIds: (string | number)[];
-  linkIds: (string | number)[];
-  interleaved_route?: (string | number)[]; // 요청사항 4, 5 - 추가됨
-  // 여기에 다른 경로 관련 필드가 있다면 추가
+// 서버 응답의 개별 일정 항목 (새로운 명세 기준)
+export interface ServerScheduleItem {
+  time_block: string;
+  place_type: string; // 실제로는 CategoryName과 매핑됨
+  place_name: string;
+  place_id?: string | number; // 장소 매칭을 위한 ID (서버에서 제공되길 기대)
+  // 서버 응답에 따라 추가될 수 있는 필드들 (예: arriveTime, departTime, stayDuration 등)
+  arriveTime?: string;
+  departTime?: string;
+  stayDuration?: number;
 }
 
-// 서버 전체 일정 응답
+// 서버 응답의 일자별 경로 요약 (새로운 명세 기준)
+export interface ServerRouteSummaryItem {
+  day: string; // "Tue", "Wed" 또는 일자 번호 문자열 "1", "2" 등. 파싱 필요.
+  status: string;
+  total_distance_m: number;
+  interleaved_route: (string | number)[];
+}
+
+// 서버 전체 일정 응답 (새로운 명세 기준)
 export interface ServerScheduleResponse {
-  itinerary: { // 각 날짜별 일정
-    day: number;
-    places: any[]; // 실제로는 서버에서 오는 장소 정보 타입 (예: PlaceId 또는 Place 객체 일부)
-    totalDistance?: number;
-    // 여기에 time_block 같은 정보가 포함될 수 있음
-  }[];
-  routes?: Record<string, ServerRouteResponse>; // key는 day (예: "1", "2")
-  // 여기에 다른 전체 일정 관련 필드가 있다면 추가
+  schedule: ServerScheduleItem[]; // 기존 itinerary에서 변경
+  route_summary: ServerRouteSummaryItem[]; // 기존 routes에서 변경
 }
 
 // 경로 데이터 인터페이스 추가
@@ -94,13 +100,16 @@ export interface SegmentRoute {
   linkIds: string[];
 }
 
-// ItineraryDay 인터페이스 확장
+// ItineraryDay 인터페이스는 유지하되, routeData와 interleaved_route의 관계를 명확히 합니다.
+// interleaved_route가 주 사용 데이터가 됩니다.
 export interface ItineraryDay {
-  day: number;
-  places: ItineraryPlaceWithTime[]; // Place[] 에서 ItineraryPlaceWithTime[] 으로 변경
-  totalDistance: number;
-  routeData?: RouteData;
-  interleaved_route?: (string | number)[]; // 요청사항 4, 5 - 추가
+  day: number; // 숫자 일차
+  places: ItineraryPlaceWithTime[];
+  totalDistance: number; // km 단위
+  interleaved_route?: (string | number)[]; // 우선 사용
+  routeData?: RouteData; // interleaved_route에서 파생되거나, 폴백용
+  // 서버 응답의 'day' 문자열 (예: "Tue") 원본 저장용 (선택적)
+  originalDayString?: string;
 }
 
 // Update ItineraryPlaceWithTime interface with correct property names

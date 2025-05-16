@@ -1,19 +1,20 @@
 
 import React from 'react';
-import { format } from 'date-fns';
+import { format, addDays } from 'date-fns'; // addDays 추가
 import { ko } from 'date-fns/locale';
 import { ItineraryDay, ItineraryPlaceWithTime } from '@/types/supabase';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
-import { Clock, Navigation } from 'lucide-react';
+import { Clock, Navigation, Tag, MapPin, Calendar } from 'lucide-react'; // Tag, MapPin, Calendar 아이콘 추가
+import { getCategoryName } from '@/utils/categoryColors'; // 카테고리 이름 변환 함수 사용
 
 interface ScheduleViewerProps {
   schedule?: ItineraryDay[];
   selectedDay?: number | null;
   onDaySelect?: (day: number) => void;
   onClose?: () => void;
-  startDate?: Date;
-  itineraryDay?: ItineraryDay;
+  startDate?: Date; // 일정 시작일 (필수 아님, fallback으로 new Date())
+  // itineraryDay prop은 제거하고 schedule과 selectedDay를 통해 현재 날짜 데이터 사용
 }
 
 const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
@@ -21,27 +22,48 @@ const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
   selectedDay,
   onDaySelect,
   onClose,
-  startDate = new Date(),
-  itineraryDay
+  startDate = new Date(), // startDate가 없으면 오늘 날짜 기준으로 계산
 }) => {
-  const categoryToKorean = (category: string): string => {
-    const categoryMap: Record<string, string> = {
-      'accommodation': '숙소',
-      'attraction': '관광지',
-      'restaurant': '음식점',
-      'cafe': '카페'
-    };
-    
-    return categoryMap[category] || category;
+  // itineraryDay prop 제거로 인한 currentDay 로직 수정
+  const currentDayData = selectedDay !== null && schedule 
+    ? schedule.find(d => d.day === selectedDay) 
+    : null;
+
+  const getFormattedDateForDay = (dayNumber: number): string => {
+    if (!currentDayData?.originalDayString) { // originalDayString (예: "Tue")이 없으면 날짜 계산
+        const date = addDays(startDate, dayNumber - 1);
+        return format(date, 'yyyy년 MM월 dd일 (eee)', { locale: ko });
+    }
+    // originalDayString이 있으면 그것과 함께 표시 (더 정확한 날짜 표기를 위해 startDate 필요)
+    const date = addDays(startDate, dayNumber - 1); // startDate 기준으로 날짜 계산
+    return `${format(date, 'yyyy년 MM월 dd일')} (${currentDayData.originalDayString})`;
   };
 
-  // If itineraryDay is provided, use it instead of finding one from schedule
-  const currentDay = itineraryDay || (selectedDay !== null && schedule ? 
-    schedule.find(d => d.day === selectedDay) : null);
+
+  if (!schedule || schedule.length === 0) {
+    return (
+      <div className="h-full flex flex-col">
+        <div className="flex items-center justify-between p-4 border-b">
+          <h2 className="text-lg font-semibold">여행 일정</h2>
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="text-sm text-blue-600 hover:underline"
+            >
+              ← 뒤로
+            </button>
+          )}
+        </div>
+        <div className="flex-1 flex items-center justify-center text-muted-foreground p-4 text-center">
+          <p>생성된 일정이 없습니다. 장소를 선택하고 일정을 생성해주세요.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="flex items-center justify-between p-4 border-b">
+    <div className="h-full flex flex-col bg-slate-50">
+      <div className="flex items-center justify-between p-4 border-b bg-white">
         <h2 className="text-lg font-semibold">생성된 여행 일정</h2>
         {onClose && (
           <button
@@ -53,69 +75,80 @@ const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
         )}
       </div>
 
-      {schedule && onDaySelect && (
-        <div className="flex overflow-x-auto p-2 border-b">
-          {schedule.map((day) => {
-            const dayDate = new Date(startDate);
-            dayDate.setDate(startDate.getDate() + day.day - 1);
-            const formattedDate = format(dayDate, 'MM/dd(eee)', { locale: ko });
-            
-            return (
-              <Button
-                key={day.day}
-                variant={selectedDay === day.day ? "default" : "outline"}
-                className="flex flex-col h-16 min-w-16 mx-1 whitespace-nowrap"
-                onClick={() => onDaySelect(day.day)}
-              >
-                <span className="font-bold text-sm">{day.day}일차</span>
-                <span className="text-xs">{formattedDate}</span>
-              </Button>
-            );
-          })}
-        </div>
-      )}
+      {/* 일자 선택 탭 */}
+      <div className="flex overflow-x-auto p-3 gap-2 border-b bg-white shadow-sm">
+        {schedule.map((dayItem) => {
+          const dayDate = addDays(new Date(startDate), dayItem.day - 1);
+          const formattedTabDate = format(dayDate, 'MM/dd(EEE)', { locale: ko });
+          
+          return (
+            <Button
+              key={dayItem.day}
+              variant={selectedDay === dayItem.day ? "default" : "outline"}
+              className={`flex flex-col h-auto min-w-[70px] p-2 whitespace-nowrap ${selectedDay === dayItem.day ? 'shadow-md' : 'hover:bg-slate-100'}`}
+              onClick={() => onDaySelect && onDaySelect(dayItem.day)}
+            >
+              <span className="font-bold text-sm">{dayItem.day}일차</span>
+              <span className="text-xs mt-0.5">{formattedTabDate}</span>
+            </Button>
+          );
+        })}
+      </div>
 
       <ScrollArea className="flex-1">
-        {currentDay ? (
+        {currentDayData ? (
           <div className="p-4">
-            <div className="mb-4">
-              <h3 className="text-md font-medium mb-2">{currentDay.day}일차 일정</h3>
-              <div className="text-sm text-muted-foreground mb-4">
-                총 이동 거리: {currentDay.totalDistance.toFixed(2)} km
+            <div className="mb-4 p-3 bg-white rounded-lg shadow">
+              <div className="flex items-center text-indigo-700 font-semibold">
+                <Calendar className="w-5 h-5 mr-2"/>
+                <h3 className="text-md">
+                  {currentDayData.day}일차: {getFormattedDateForDay(currentDayData.day)}
+                </h3>
+              </div>
+              <div className="text-sm text-muted-foreground mt-1 ml-7">
+                총 이동 거리: {currentDayData.totalDistance.toFixed(1)} km
               </div>
             </div>
             
-            <div className="space-y-4 relative">
-              {/* 일정 타임라인 가이드 라인 */}
-              <div className="absolute top-0 bottom-0 left-6 w-0.5 bg-gray-200 z-0"></div>
+            <div className="space-y-3 relative">
+              {/* 타임라인 가이드 라인 - 디자인 개선 */}
+              {currentDayData.places.length > 1 && (
+                <div className="absolute top-5 bottom-5 left-[22px] w-0.5 bg-slate-300 z-0"></div>
+              )}
               
-              {currentDay.places.map((place, idx) => (
-                <div key={place.id} className="flex relative z-10">
-                  {/* 숫자 원형 마커 */}
-                  <div className="h-12 w-12 rounded-full bg-blue-500 text-white font-bold flex items-center justify-center border-2 border-white shadow-md z-10">
-                    {idx + 1}
+              {currentDayData.places.map((place, idx) => (
+                <div key={place.id || `place-${idx}`} className="flex items-start relative z-10">
+                  {/* 시간 블록 또는 순번 마커 */}
+                  <div className="flex flex-col items-center mr-3">
+                     <div className="h-11 w-11 rounded-full bg-indigo-500 text-white font-bold flex items-center justify-center border-2 border-white shadow-md z-10 text-lg">
+                        {idx + 1}
+                     </div>
+                     {/* 시간 정보가 있다면 아래에 표시 */}
+                     {place.timeBlock && place.timeBlock !== "시간 정보 없음" && (
+                        <span className="text-xs text-indigo-600 mt-1 whitespace-nowrap">{place.timeBlock}</span>
+                     )}
                   </div>
                   
-                  {/* 장소 정보 카드 */}
-                  <div className="ml-4 flex-1 border rounded-lg p-3 bg-white">
-                    <div className="font-medium">{place.name}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {categoryToKorean(place.category)}
+                  <div className="flex-1 border rounded-lg p-3 bg-white shadow-sm min-w-0"> {/* min-w-0 for flex truncation */}
+                    <div className="font-medium text-slate-800 truncate" title={place.name}>{place.name}</div>
+                    
+                    <div className="flex items-center mt-1 text-xs text-slate-500">
+                      <Tag className="w-3 h-3 mr-1.5 flex-shrink-0" />
+                      <span>{getCategoryName(place.category)}</span>
                     </div>
                     
-                    {/* 도착 시간 표시 */}
-                    {(place as ItineraryPlaceWithTime).arriveTime && (
-                      <div className="flex items-center mt-2 text-xs text-gray-600">
-                        <Clock className="w-3 h-3 mr-1" />
-                        <span>도착: {(place as ItineraryPlaceWithTime).arriveTime}</span>
-                      </div>
+                    {place.address && place.address !== "주소 정보 없음" && (
+                         <div className="flex items-center mt-1 text-xs text-slate-500">
+                            <MapPin className="w-3 h-3 mr-1.5 flex-shrink-0" />
+                            <span className="truncate" title={place.address}>{place.address}</span>
+                         </div>
                     )}
                     
-                    {/* 다음 장소까지의 이동 시간 */}
-                    {(place as ItineraryPlaceWithTime).travelTimeToNext && (place as ItineraryPlaceWithTime).travelTimeToNext !== "-" && (
-                      <div className="flex items-center mt-1 text-xs text-gray-600">
-                        <Navigation className="w-3 h-3 mr-1" />
-                        <span>다음 장소까지: {(place as ItineraryPlaceWithTime).travelTimeToNext}</span>
+                    {/* 이동 시간 등 추가 정보 (필요시) */}
+                    {idx < currentDayData.places.length - 1 && place.travelTimeToNext && place.travelTimeToNext !== "-" && (
+                      <div className="flex items-center mt-1.5 pt-1.5 border-t border-slate-100 text-xs text-sky-600">
+                        <Navigation className="w-3 h-3 mr-1.5 flex-shrink-0" />
+                        <span>다음 장소까지: {place.travelTimeToNext}</span>
                       </div>
                     )}
                   </div>
@@ -124,8 +157,8 @@ const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
             </div>
           </div>
         ) : (
-          <div className="h-full flex items-center justify-center text-muted-foreground">
-            일자를 선택해주세요
+          <div className="h-full flex items-center justify-center text-muted-foreground p-4 text-center">
+            일자를 선택하여 상세 일정을 확인하세요.
           </div>
         )}
       </ScrollArea>
