@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { useItineraryCreator } from './use-itinerary-creator';
 
 // 서버 URL 환경 변수에서 가져오기 (환경변수가 없으면 고정 URL 사용)
-const SERVER_URL = import.meta.env.VITE_SERVER_URL || "https://62e5-34-9-140-65.ngrok-free.app";
+const SERVER_URL = import.meta.env.VITE_SERVER_URL || "https://8011-34-91-44-214.ngrok-free.app";
 
 export const useScheduleGenerator = () => {
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
