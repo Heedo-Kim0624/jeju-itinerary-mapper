@@ -1,70 +1,105 @@
-import { definitions } from './supabaseGenerated'; // Assuming this is where raw Supabase types come from
 
-export type PlaceCategory = 'accommodation' | 'attraction' | 'restaurant' | 'cafe' | 'unknown';
+import { CategoryName } from '@/utils/categoryUtils';
 
-export interface Place {
-  id: string | number;
-  name: string;
-  category: PlaceCategory;
-  x: number; // longitude
-  y: number; // latitude
-  address?: string;
-  phone?: string;
-  description?: string;
-  rating?: number;
-  image_url?: string;
-  road_address?: string;
-  homepage?: string;
-  isSelected?: boolean;
-  isCandidate?: boolean; // True if this place was added by auto-completion logic
-  geoNodeId?: string; // For GeoJSON node mapping
-  geoNodeDistance?: number; // Distance to mapped GeoJSON node
-}
-
-export interface SelectedPlace extends Place {
-  // SelectedPlace might have additional properties if needed
-}
-
-// Server expects SchedulePlace with potentially numeric ID
+// 서버로 전송할 장소 데이터 간소화 구조
 export interface SchedulePlace {
   id: number | string;
   name: string;
 }
 
-export interface ItineraryPlaceWithTime extends Place {
-  arriveTime?: string; // e.g., "10:00"
-  travelTimeToNext?: string; // e.g., "30분"
-  time_block?: string; // Added for requirement e.g., "09:00"
-}
-
-export interface ItineraryDay {
-  day: number;
-  places: ItineraryPlaceWithTime[];
-  totalDistance: number;
-  routeData?: { // This is client-side representation of route data for a day
-    nodeIds?: (string | number)[];
-    linkIds?: (string | number)[];
-    interleaved_route?: (string | number)[];
-  };
-}
-
-export type KeywordRank = {
-  keyword: string;
-  count: number;
-};
-
-// Add any other types that might be in this file
-export interface Region {
+export interface Place {
   id: string;
   name: string;
-  // ... other properties
+  address: string;
+  phone: string;
+  category: string;
+  description: string;
+  rating: number;
+  x: number;
+  y: number;
+  image_url: string;
+  road_address: string;
+  homepage: string;
+  operationTimeData?: {
+    [key: string]: number;
+  };
+  isSelected?: boolean;
+  isRecommended?: boolean;
+  geoNodeId?: string;
+  geoNodeDistance?: number;
+  categoryDetail?: string;
+  reviewCount?: number;
+  naverLink?: string;
+  instaLink?: string;
+  operatingHours?: string;
+  weight?: number;
+  isCandidate?: boolean;  // 후보 장소 여부 필드 추가
+  raw?: any; // 원본 데이터 저장을 위한 필드
 }
 
-export type Tables<T extends keyof definitions> = definitions[T]['Row'];
-export type Views<T extends keyof definitions> = definitions[T]['Row'];
-export type Functions<T extends keyof definitions> = definitions[T]['Args'];
+export interface SelectedPlace extends Place {
+  category: CategoryName;
+  isSelected: boolean;
+  isCandidate: boolean;
+}
 
-// Example usage:
-// type ProfileData = Tables<'profiles'>;
-// type UserViewData = Views<'user_details_view'>;
-// type FunctionArgs = Functions<'my_rpc_function'>;
+// 새로운 타입 정의: 여행 날짜와 시간
+export interface TripDateTime {
+  startDate: Date;
+  endDate: Date;
+  startTime: string;
+  endTime: string;
+}
+
+// 수정된 타입 정의: 일정 생성 API 요청 페이로드
+export interface SchedulePayload {
+  selected_places: SchedulePlace[]; // Changed from SelectedPlace[]
+  candidate_places: SchedulePlace[]; // Changed from SelectedPlace[]
+  start_datetime: string; // ISO8601 타임스탬프
+  end_datetime: string;   // ISO8601 타임스탬프
+}
+
+// 경로 데이터 인터페이스 추가
+export interface RouteData {
+  nodeIds?: string[];
+  linkIds?: string[];
+  segmentRoutes?: SegmentRoute[];
+}
+
+export interface SegmentRoute {
+  fromIndex: number;
+  toIndex: number;
+  nodeIds: string[];
+  linkIds: string[];
+}
+
+// ItineraryDay 인터페이스 확장
+export interface ItineraryDay {
+  day: number;
+  places: Place[];
+  totalDistance: number;
+  routeData?: RouteData;
+}
+
+// Update ItineraryPlaceWithTime interface with correct property names
+export interface ItineraryPlaceWithTime extends Place {
+  arriveTime?: string;
+  departTime?: string;
+  stayDuration?: number;
+  travelTimeToNext?: string;
+  timeBlock?: string; // time_block 대신 camelCase로 추가
+}
+
+// 새로운 인터페이스: 서버에서 받은 경로 데이터 파싱을 위한 인터페이스
+export interface RouteSegment {
+  from: string; // 출발 노드 ID
+  to: string;   // 도착 노드 ID
+  links: string[]; // 링크 ID 배열
+}
+
+// 경로 응답에서 추출한 파싱된 경로 세그먼트
+export interface ParsedRouteData {
+  day: number;
+  segments: RouteSegment[];
+  totalDistanceMeters: number;
+}

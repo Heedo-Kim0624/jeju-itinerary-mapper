@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+
+import { useState, useEffect } from 'react';
 import { useSelectedPlaces } from './use-selected-places';
 import { useTripDetails } from './use-trip-details';
 import { useCategoryResults } from './use-category-results';
@@ -6,7 +7,7 @@ import { useItinerary } from './use-itinerary';
 import { useRegionSelection } from './use-region-selection';
 import { useCategorySelection } from './use-category-selection';
 import { useCategoryHandlers } from './left-panel/use-category-handlers';
-import { usePanelHandlers } from './use-panel-handlers';
+import { useItineraryHandlers } from './left-panel/use-itinerary-handlers';
 import { useInputState } from './left-panel/use-input-state';
 import { Place, SelectedPlace, SchedulePayload, ItineraryDay } from '@/types/supabase';
 import { CategoryName } from '@/utils/categoryUtils';
@@ -18,12 +19,11 @@ export const useLeftPanel = () => {
   // 지역 및 카테고리 선택 기능
   const regionSelection = useRegionSelection();
   const categorySelection = useCategorySelection();
-  const tripDetails = useTripDetails(); // This now has startDatetimeLocal, endDatetimeLocal
+  const tripDetails = useTripDetails();
   
   // 상태 관리
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  // showCategoryResultScreen seems unused, let's keep for now if it was there.
-  const [showCategoryResultScreen, setShowCategoryResultScreen] = useState(false); 
+  const [showCategoryResultScreen, setShowCategoryResultScreen] = useState(false);
   const [currentPanel, setCurrentPanel] = useState<'region' | 'date' | 'category' | 'itinerary'>('region');
   const [showCategoryResult, setShowCategoryResult] = useState<CategoryName | null>(null);
   
@@ -43,19 +43,43 @@ export const useLeftPanel = () => {
   };
 
   // 장소 관리 기능
-  const placesManagement = useSelectedPlaces(tripDetails.tripDuration); // Pass tripDuration
+  const {
+    selectedPlaces,
+    candidatePlaces,
+    selectedPlacesByCategory,
+    handleSelectPlace,
+    handleRemovePlace,
+    handleViewOnMap,
+    allCategoriesSelected,
+    prepareSchedulePayload,
+    isAccommodationLimitReached,
+    handleAutoCompletePlaces,
+    isPlaceSelected
+  } = useSelectedPlaces();
+
+  const placesManagement = {
+    selectedPlaces,
+    candidatePlaces,
+    selectedPlacesByCategory,
+    handleSelectPlace,
+    handleRemovePlace,
+    handleViewOnMap,
+    allCategoriesSelected,
+    isAccommodationLimitReached,
+    prepareSchedulePayload,
+    handleAutoCompletePlaces,
+    isPlaceSelected
+  };
 
   // 일정 관리 기능 (from useItinerary)
   const { 
     itinerary,
     selectedItineraryDay,
-    // showItinerary, // This is now in uiVisibility
-    // setShowItinerary, // This is now in uiVisibility
+    showItinerary,
     setSelectedItineraryDay,
+    setShowItinerary,
     handleSelectItineraryDay,
-    generateItinerary, // This is the function we need to ensure gets local datetimes
-    isLoading: isItineraryLoading, // from useItinerary
-    error: itineraryError, // from useItinerary
+    generateItinerary
   } = useItinerary();
 
   const itineraryManagement = {
@@ -63,16 +87,13 @@ export const useLeftPanel = () => {
     selectedItineraryDay,
     setSelectedItineraryDay,
     handleSelectItineraryDay,
-    generateItinerary, // Keep this here for now
-    isLoading: isItineraryLoading,
-    error: itineraryError,
+    generateItinerary
   };
 
-  // UI 가시성 관리 - showItinerary and setShowItinerary moved here
-  const [showItineraryState, setShowItineraryState] = useState(false);
+  // UI 가시성 관리
   const uiVisibility = {
-    showItinerary: showItineraryState,
-    setShowItinerary: setShowItineraryState,
+    showItinerary,
+    setShowItinerary,
     showCategoryResult,
     setShowCategoryResult
   };
@@ -94,7 +115,7 @@ export const useLeftPanel = () => {
   };
 
   // 카테고리 핸들러
-  const categoryHandlers = useCategoryHandlers(); // Assuming this is still used
+  const categoryHandlers = useCategoryHandlers();
   const handleCategorySelect = (category: string) => categoryHandlers.handleCategorySelect(category, refetch);
   const handleCloseCategoryResult = () => categoryHandlers.handleCloseCategoryResult(
     (value: CategoryName | null) => setShowCategoryResult(value)
@@ -102,30 +123,33 @@ export const useLeftPanel = () => {
   const handleConfirmCategoryFromButton = () => categoryHandlers.handleConfirmCategory(selectedCategory);
 
 
-  // Panel Handlers (includes itinerary creation/closing logic)
-  const panelHandlers = usePanelHandlers({
-    tripDetails, // Pass full tripDetails which includes local datetimes
-    selectedPlaces: placesManagement.selectedPlaces,
-    candidatePlaces: placesManagement.candidatePlaces, // Pass candidatePlaces
-    prepareSchedulePayload: placesManagement.prepareSchedulePayload, // from useSelectedPlaces
-    generateItinerary: itineraryManagement.generateItinerary, // from useItinerary
-    setShowItinerary: uiVisibility.setShowItinerary,
-    setCurrentPanel,
-    clearMarkersAndUiElements: () => { /* This should come from map context or be passed if needed */ },
-    setSelectedItineraryDay: itineraryManagement.setSelectedItineraryDay, // Pass this for panelHandlers
-    itinerary: itineraryManagement.itinerary, // Pass for panelHandlers
-  });
+  // 일정 핸들러
+  const itineraryHandlers = useItineraryHandlers();
   
-  // useEffect for when itinerary is generated
+  const handleCreateItinerary = async () => {
+    return itineraryHandlers.handleCreateItinerary(
+      tripDetails,
+      placesManagement.selectedPlaces as SelectedPlace[],
+      placesManagement.prepareSchedulePayload,
+      itineraryManagement.generateItinerary,
+      uiVisibility.setShowItinerary,
+      (panel: 'region' | 'date' | 'category' | 'itinerary') => setCurrentPanel(panel)
+    );
+  };
+  
+  const handleCloseItinerary = () => {
+    itineraryHandlers.handleCloseItinerary(
+      uiVisibility.setShowItinerary, 
+      (panel: 'region' | 'date' | 'category' | 'itinerary') => setCurrentPanel(panel)
+    );
+  };
+
+  // 일정이 생성되면 첫 번째 날짜 선택
   useEffect(() => {
-    if (itineraryManagement.itinerary && itineraryManagement.itinerary.length > 0 && uiVisibility.showItinerary) {
-      // Select the first valid day
-      const firstValidDay = itineraryManagement.itinerary.find(d => d.places.length > 0);
-      setSelectedItineraryDay(firstValidDay ? firstValidDay.day : (itineraryManagement.itinerary[0]?.day || 1));
-    } else if (!uiVisibility.showItinerary) {
-        setSelectedItineraryDay(null); // Clear selected day if itinerary is hidden
+    if (itinerary && itinerary.length > 0 && showItinerary) {
+      setSelectedItineraryDay(itinerary[0]?.day || 1);
     }
-  }, [itineraryManagement.itinerary, uiVisibility.showItinerary, setSelectedItineraryDay]);
+  }, [itinerary, showItinerary, setSelectedItineraryDay]);
 
   return {
     regionSelection,
@@ -135,16 +159,16 @@ export const useLeftPanel = () => {
     tripDetails,
     uiVisibility,
     itineraryManagement,
-    // handleCreateItinerary and handleCloseItinerary are now part of panelHandlers
+    handleCreateItinerary,
     selectedCategory,
-    showCategoryResultScreen, // Check if used
+    showCategoryResultScreen,
     currentPanel,
     isCategoryLoading,
     categoryError,
     categoryResults,
     handleCategorySelect,
     handleCloseCategoryResult,
-    handleConfirmCategory: handleConfirmCategoryFromButton, // This is category confirm, not date confirm
-    panelHandlers, // Export the new handlers
+    handleConfirmCategory: handleConfirmCategoryFromButton,
+    handleCloseItinerary
   };
 };

@@ -1,7 +1,7 @@
+
 import { useCallback, useRef } from 'react';
 import { Place, ItineraryDay } from '@/types/supabase';
 import { ServerRouteResponse, ExtractedRouteData } from '@/types/schedule';
-import { extractAllNodesFromRoute, extractAllLinksFromRoute } from '@/utils/routeParser'; // Ensure this import
 
 /**
  * 지도 특성(마커, 경로 등) 관리 훅
@@ -9,35 +9,20 @@ import { extractAllNodesFromRoute, extractAllLinksFromRoute } from '@/utils/rout
 export const useMapFeatures = (map: any) => {
   // 노드 ID로부터 링크 ID 추출 (서버 응답 형식에 따라 조정 필요)
   const extractNodeAndLinkIds = useCallback((response: ServerRouteResponse): ExtractedRouteData => {
-    // Prioritize interleaved_route for detailed path
-    if (response.interleaved_route && response.interleaved_route.length > 0) {
-      const nodes = extractAllNodesFromRoute(response.interleaved_route);
-      const links = extractAllLinksFromRoute(response.interleaved_route);
-      return {
-        nodeIds: nodes.map(id => id.toString()),
-        linkIds: links.map(id => id.toString())
-      };
-    }
-    
-    // Fallback if interleaved_route is not available
-    if (response.nodeIds && response.linkIds && response.linkIds.length > 0) {
-      console.warn('[MapFeatures] Falling back to nodeIds/linkIds from server response as interleaved_route is missing.');
+    // 서버가 이미 linkIds를 제공하는 경우
+    if (response.linkIds && response.linkIds.length > 0) {
       return {
         nodeIds: response.nodeIds.map(id => id.toString()),
         linkIds: response.linkIds.map(id => id.toString())
       };
     }
     
-    if (response.nodeIds) {
-      console.warn('[MapFeatures] Only nodeIds available from server response, links cannot be determined for detailed path.');
-      return {
-        nodeIds: response.nodeIds.map(id => id.toString()),
-        linkIds: [] 
-      };
-    }
-    
-    console.warn('[MapFeatures] No valid route data found in server response.');
-    return { nodeIds: [], linkIds: [] }; // Default empty
+    // linkIds가 없는 경우, nodeIds에서 추출 시도
+    const nodeIds = response.nodeIds.map(id => id.toString());
+    return {
+      nodeIds,
+      linkIds: [] // 서버 응답 형식에 따라 구현 필요
+    };
   }, []);
 
   // 하이라이트된 경로 참조
@@ -69,33 +54,36 @@ export const useMapFeatures = (map: any) => {
   const showRouteForPlaceIndex = useCallback((placeIndex: number, itineraryDay: ItineraryDay, serverRoutesData: Record<number, ServerRouteResponse>) => {
     if (!map || !itineraryDay || !itineraryDay.places) return;
     
+    // 인덱스 유효성 검사
     if (placeIndex <= 0 || placeIndex >= itineraryDay.places.length) {
       console.log('유효하지 않은 장소 인덱스:', placeIndex);
       return;
     }
     
+    const fromIndex = placeIndex - 1;
+    const toIndex = placeIndex;
+    
+    // 서버 경로 데이터 확인
     const serverRouteData = serverRoutesData[itineraryDay.day];
     
-    if (window.geoJsonLayer && serverRouteData && serverRouteData.interleaved_route) {
-      // This function is about highlighting a segment between two PLACES.
-      // The full interleaved_route is for the whole day.
-      // To highlight a segment, we'd need to identify which part of interleaved_route
-      // corresponds to the travel between place at (placeIndex-1) and place at placeIndex.
-      // This is complex and requires mapping place IDs to node IDs within the interleaved_route.
-      // For now, as a simplification, it re-highlights the whole day's route or a portion.
-      // The original logic for highlighting also seemed to re-render the whole route with a different color.
+    // GeoJSON 기반 경로 하이라이트
+    if (window.geoJsonLayer && serverRouteData) {
+      // 구현 필요: 서버 데이터에서 특정 구간에 해당하는 노드/링크 추출
       
-      const { nodeIds, linkIds } = extractNodeAndLinkIds(serverRouteData); // Gets full day's path
+      // 임시 구현: 전체 경로를 하이라이트
+      const { nodeIds, linkIds } = extractNodeAndLinkIds(serverRouteData);
       
+      // 기존 하이라이트 제거
       clearPreviousHighlightedPath();
       
-      console.log(`장소 ${itineraryDay.places[placeIndex-1]?.name}에서 ${itineraryDay.places[placeIndex]?.name}까지의 경로 하이라이트 (전체 일일 경로 표시)`);
+      console.log(`${fromIndex + 1}에서 ${toIndex + 1}까지의 경로 하이라이트`);
       
+      // 전체 경로 하이라이트
       const renderedFeatures = renderGeoJsonRoute(
         nodeIds,
         linkIds,
         {
-          strokeColor: '#FF3B30', // Highlight color
+          strokeColor: '#FF3B30',
           strokeWeight: 6,
           strokeOpacity: 0.9,
           zIndex: 200
@@ -104,55 +92,55 @@ export const useMapFeatures = (map: any) => {
       
       highlightedPathRef.current = renderedFeatures;
       
+      // 3초 후 하이라이트 제거
       setTimeout(() => {
         clearPreviousHighlightedPath();
       }, 3000);
-
-    } else {
-        console.log("GeoJSON 레이어 또는 서버 경로 데이터(interleaved_route)를 사용할 수 없어 경로 하이라이트를 건너<0xEB><0>니다.");
     }
   }, [map, extractNodeAndLinkIds, clearPreviousHighlightedPath, renderGeoJsonRoute]);
 
   // 일정 경로 렌더링 함수 - 서버 데이터 활용
-  const renderItineraryRoute = useCallback((itineraryDay: ItineraryDay | null, serverRoutesData: Record<number, ServerRouteResponse>, renderDayRouteFallback: (day: ItineraryDay) => void, clearAllRoutes: () => void) => {
+  const renderItineraryRoute = useCallback((itineraryDay: ItineraryDay | null, serverRoutesData: Record<number, ServerRouteResponse>, renderDayRoute: (day: ItineraryDay) => void, clearAllRoutes: () => void) => {
     if (!map || !itineraryDay) {
-      clearAllRoutes(); // Clear routes if no itineraryDay
       return;
     }
     
+    // 기존 경로 삭제
     clearAllRoutes();
     
+    // 서버 경로 데이터 확인
     const serverRouteData = serverRoutesData[itineraryDay.day];
     
-    if (window.geoJsonLayer && serverRouteData && (serverRouteData.interleaved_route || (serverRouteData.nodeIds && serverRouteData.linkIds))) {
+    // GeoJSON 기반 라우팅인지 확인
+    if (window.geoJsonLayer && serverRouteData) {
       console.log('서버 기반 GeoJSON 경로 렌더링 시도:', {
         일자: itineraryDay.day,
-        데이터유형: serverRouteData.interleaved_route ? 'interleaved' : 'node/link arrays',
         데이터: serverRouteData
       });
       
+      // 노드 ID와 링크 ID 추출
       const { nodeIds, linkIds } = extractNodeAndLinkIds(serverRouteData);
       
-      if (nodeIds.length > 0 || linkIds.length > 0) {
-        console.log("🗺️ 시각화 대상 노드/링크 ID:", { nodeIds, linkIds });
-        renderGeoJsonRoute(
-          nodeIds, 
-          linkIds,
-          {
-            strokeColor: '#3366FF', // Default route color
-            strokeWeight: 5,
-            strokeOpacity: 0.8
-          }
-        );
-      } else {
-        console.warn(`[MapFeatures] ${itineraryDay.day}일차 경로 데이터에서 노드/링크를 추출할 수 없습니다. 폴백 경로 렌더링 시도.`);
-        renderDayRouteFallback(itineraryDay);
-      }
+      // Log nodeIds/linkIds passed to visualization
+      console.log("🗺️ 시각화 대상 노드/링크 ID:", { nodeIds, linkIds });
+
+      // GeoJSON 기반 경로 렌더링
+      renderGeoJsonRoute(
+        nodeIds, 
+        linkIds,
+        {
+          strokeColor: '#3366FF',
+          strokeWeight: 5,
+          strokeOpacity: 0.8
+        }
+      );
+      
       return;
     }
     
-    console.warn(`[MapFeatures] ${itineraryDay.day}일차에 대한 서버 경로 데이터가 없거나 GeoJSON 레이어가 준비되지 않았습니다. 폴백 경로 렌더링.`);
-    renderDayRouteFallback(itineraryDay);
+    // 기존 방식으로 경로 렌더링 (폴백)
+    // GeoJSON이 로드되지 않았거나 서버 데이터가 없는 경우
+    renderDayRoute(itineraryDay);
   }, [map, extractNodeAndLinkIds, renderGeoJsonRoute]);
 
   return {
