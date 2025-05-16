@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useSelectedPlaces } from './use-selected-places';
 import { useTripDetails } from './use-trip-details';
@@ -124,10 +125,9 @@ export const useLeftPanel = () => {
   const handleCreateItinerary = async () => {
     return itineraryHandlers.handleCreateItinerary(
       tripDetails,
-      // SelectedPlace 배열 타입을 확실히 지정
       selectedPlaces as SelectedPlace[], 
-      (places: SelectedPlace[], dateTime) => prepareSchedulePayload(places, dateTime),
-      [],
+      (places: SelectedPlace[], startDatetime, endDatetime) => prepareSchedulePayload(places, startDatetime, endDatetime),
+      tripDetails.dates,
       generateItinerary,
       (showItinerary: boolean) => setShowItinerary(showItinerary),
       (panel: 'region' | 'date' | 'category' | 'itinerary') => setCurrentPanel(panel)

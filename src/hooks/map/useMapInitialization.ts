@@ -12,6 +12,7 @@ export const useMapInitialization = () => {
   const [loadAttempts, setLoadAttempts] = useState<number>(0);
   const [map, setMap] = useState<any>(null);
   const [isInitializing, setIsInitializing] = useState<boolean>(false);
+  const toastShownRef = useRef<boolean>(false);
 
   // 지도 API 초기화 상태 확인 헬퍼 함수
   const checkMapInitialized = () => {
@@ -92,7 +93,11 @@ export const useMapInitialization = () => {
               console.log("지도 초기화 타임아웃 후 완료 처리");
               setMap(newMap);
               setIsMapInitialized(true);
-              toast.success("지도가 준비되었습니다");
+              // Show toast only once
+              if (!toastShownRef.current) {
+                toast.success("지도가 준비되었습니다");
+                toastShownRef.current = true;
+              }
             }
           }, 5000);
           
@@ -101,12 +106,20 @@ export const useMapInitialization = () => {
             console.log("지도 초기화 완료 이벤트 발생");
             setMap(newMap);
             setIsMapInitialized(true);
-            toast.success("지도가 준비되었습니다");
+            // Show toast only once
+            if (!toastShownRef.current) {
+              toast.success("지도가 준비되었습니다");
+              toastShownRef.current = true;
+            }
           });
         } else {
           setMap(newMap);
           setIsMapInitialized(true);
-          toast.success("지도가 준비되었습니다");
+          // Show toast only once
+          if (!toastShownRef.current) {
+            toast.success("지도가 준비되었습니다");
+            toastShownRef.current = true;
+          }
         }
       } else {
         throw new Error("지도 초기화 실패");

@@ -30,10 +30,10 @@ export const initializeNaverMap = (mapContainer: HTMLDivElement | null) => {
     console.log("Creating new Naver Map instance");
     const map = new window.naver.maps.Map(mapContainer, mapOptions);
     
-    // Event listener for debugging map initialization
+    // Event listener for debugging map initialization - remove toast message
     window.naver.maps.Event.once(map, 'init_stylemap', () => {
       console.log("지도 초기화 완료 이벤트 발생");
-      toast.success("제주도 지도가 로드되었습니다");
+      // Toast removed to prevent duplication
     });
     
     return map;

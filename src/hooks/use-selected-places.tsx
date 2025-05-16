@@ -45,10 +45,11 @@ export const useSelectedPlaces = () => {
       if (checked) {
         if (placeCategory === '숙소') {
           const currentAccommodations = prev.filter(p => p.category === '숙소');
+          // Use tripDuration as the maximum number of accommodations allowed
           const maxAccommodations = tripDuration !== null && tripDuration >= 0 ? Math.max(tripDuration, 1) : 1;
           
           if (currentAccommodations.length >= maxAccommodations) {
-            toast.info(`숙소는 최대 ${maxAccommodations}개까지 선택할 수 있습니. 기존 숙소를 변경하려면 먼저 삭제해주세요.`);
+            toast.info(`숙소는 최대 ${maxAccommodations}개까지 선택할 수 있습니다. 기존 숙소를 변경하려면 먼저 삭제해주세요.`);
             return prev; 
           }
         }
@@ -159,9 +160,11 @@ export const useSelectedPlaces = () => {
           return [...filteredPrevCandidates, ...newCandidatesToAddState];
         });
         
-        toast.success(`${category}: ${placesToAutoAddAsCandidates.length}개의 장소가 자동으로 추천 목록에 추가되었습니다.`);
+        // Remove toast message to avoid notifying users about auto-completed places
+        // toast.success(`${category}: ${placesToAutoAddAsCandidates.length}개의 장소가 자동으로 추천 목록에 추가되었습니다.`);
         console.log(`[자동 보완] ${category}: ${placesToAutoAddAsCandidates.length}개 장소 자동 추가 완료 (후보 목록에만).`);
       } else if (shortfall > 0) {
+        // Keep this error message as it's important for users to know
         toast.error(`${category}: 추천할 장소가 부족하여 ${shortfall}개를 더 채우지 못했습니다.`);
         console.log(`[자동 보완] ${category}: 추천 장소 부족으로 ${shortfall}개 미보완.`);
       } else {

@@ -16,6 +16,7 @@ export const useJejuMap = () => {
   const [activeMarker, setActiveMarker] = useState<string | null>(null);
   const [showInfoPanel, setShowInfoPanel] = useState<boolean>(true);
   const [loadAttempts, setLoadAttempts] = useState<number>(0);
+  const toastShownRef = useRef<boolean>(false);
 
   useEffect(() => {
     const initNaverMaps = async () => {
@@ -125,7 +126,12 @@ export const useJejuMap = () => {
       window.naver.maps.Event.once(map.current, 'init_stylemap', function() {
         console.log("Jeju map initialized");
         setIsMapInitialized(true);
-        toast.success("제주도 지도가 로드되었습니다");
+        // Show toast only once
+        if (!toastShownRef.current) {
+          // Remove toast to prevent duplication
+          // toast.success("제주도 지도가 로드되었습니다");
+          toastShownRef.current = true;
+        }
       });
       
       window.naver.maps.Event.addListener(map.current, 'zoom_changed', (zoom: number) => {
