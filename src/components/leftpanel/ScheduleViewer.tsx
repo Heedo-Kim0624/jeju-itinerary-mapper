@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
@@ -13,7 +12,7 @@ interface ScheduleViewerProps {
   onDaySelect?: (day: number) => void;
   onClose?: () => void;
   startDate?: Date;
-  itineraryDay?: ItineraryDay;
+  itineraryDay?: ItineraryDay | null;
 }
 
 const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
@@ -36,7 +35,7 @@ const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
   };
 
   // If itineraryDay is provided, use it instead of finding one from schedule
-  const currentDay = itineraryDay || (selectedDay !== null && schedule ? 
+  const currentDayToDisplay = itineraryDay || (selectedDay !== null && schedule ? 
     schedule.find(d => d.day === selectedDay) : null);
 
   return (
@@ -53,21 +52,21 @@ const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
         )}
       </div>
 
-      {schedule && onDaySelect && (
+      {schedule && onDaySelect && !itineraryDay && (
         <div className="flex overflow-x-auto p-2 border-b">
-          {schedule.map((day) => {
+          {schedule.map((dayItem) => {
             const dayDate = new Date(startDate);
-            dayDate.setDate(startDate.getDate() + day.day - 1);
+            dayDate.setDate(startDate.getDate() + (typeof dayItem.day === 'number' ? dayItem.day - 1 : 0));
             const formattedDate = format(dayDate, 'MM/dd(eee)', { locale: ko });
             
             return (
               <Button
-                key={day.day}
-                variant={selectedDay === day.day ? "default" : "outline"}
+                key={dayItem.day}
+                variant={selectedDay === dayItem.day ? "default" : "outline"}
                 className="flex flex-col h-16 min-w-16 mx-1 whitespace-nowrap"
-                onClick={() => onDaySelect(day.day)}
+                onClick={() => typeof dayItem.day === 'number' && onDaySelect(dayItem.day)}
               >
-                <span className="font-bold text-sm">{day.day}일차</span>
+                <span className="font-bold text-sm">{dayItem.day}일차</span>
                 <span className="text-xs">{formattedDate}</span>
               </Button>
             );
@@ -76,12 +75,12 @@ const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
       )}
 
       <ScrollArea className="flex-1">
-        {currentDay ? (
+        {currentDayToDisplay ? (
           <div className="p-4">
             <div className="mb-4">
-              <h3 className="text-md font-medium mb-2">{currentDay.day}일차 일정</h3>
+              <h3 className="text-md font-medium mb-2">{currentDayToDisplay.day}일차 일정</h3>
               <div className="text-sm text-muted-foreground mb-4">
-                총 이동 거리: {currentDay.totalDistance.toFixed(2)} km
+                총 이동 거리: {currentDayToDisplay.totalDistance ? currentDayToDisplay.totalDistance.toFixed(2) : 'N/A'} km
               </div>
             </div>
             
@@ -89,8 +88,8 @@ const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
               {/* 일정 타임라인 가이드 라인 */}
               <div className="absolute top-0 bottom-0 left-6 w-0.5 bg-gray-200 z-0"></div>
               
-              {currentDay.places.map((place, idx) => (
-                <div key={place.id} className="flex relative z-10">
+              {currentDayToDisplay.places.map((place, idx) => (
+                <div key={place.id || `place-${idx}`} className="flex relative z-10">
                   {/* 숫자 원형 마커 */}
                   <div className="h-12 w-12 rounded-full bg-blue-500 text-white font-bold flex items-center justify-center border-2 border-white shadow-md z-10">
                     {idx + 1}
@@ -103,11 +102,11 @@ const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
                       {categoryToKorean(place.category)}
                     </div>
                     
-                    {/* 도착 시간 표시 */}
-                    {(place as ItineraryPlaceWithTime).arriveTime && (
+                    {/* 도착 시간 표시 - place.timeBlock을 사용할 수 있음 */}
+                    {place.timeBlock && (
                       <div className="flex items-center mt-2 text-xs text-gray-600">
                         <Clock className="w-3 h-3 mr-1" />
-                        <span>도착: {(place as ItineraryPlaceWithTime).arriveTime}</span>
+                        <span>{place.timeBlock}</span>
                       </div>
                     )}
                     

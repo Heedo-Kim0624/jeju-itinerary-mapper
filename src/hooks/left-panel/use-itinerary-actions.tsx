@@ -1,9 +1,9 @@
-
 import { useState } from 'react';
 import { Place, SchedulePayload } from '@/types/supabase';
 import { useItineraryCreator, ItineraryDay } from '../use-itinerary-creator';
 import { useScheduleGenerator } from '../use-schedule-generator';
 import { toast } from 'sonner';
+import { NewServerScheduleResponse, ServerScheduleItem, ServerRouteSummaryItem } from '@/types/schedule';
 
 export const useItineraryActions = () => {
   const [itinerary, setItinerary] = useState<ItineraryDay[] | null>(null);
@@ -70,43 +70,55 @@ export const useItineraryActions = () => {
   };
 
   // 서버로 일정 생성 요청하는 함수
-  const handleServerItineraryCreation = async (payload: SchedulePayload) => {
+  const handleServerItineraryCreation = async (payload: SchedulePayload, tripStartDate: Date) => {
     try {
       toast.loading("서버에 일정 생성 요청 중...");
       
       const serverResponse = await generateSchedule(payload);
       
-      if (!serverResponse || !serverResponse.itinerary || serverResponse.itinerary.length === 0) {
-        toast.error("서버에서 일정을 받아오지 못했습니다.");
+      if (!serverResponse || !serverResponse.schedule || serverResponse.schedule.length === 0 || !serverResponse.route_summary || serverResponse.route_summary.length === 0) {
+        toast.error("서버에서 일정을 받아오지 못했거나, 내용이 비어있습니다.");
         return null;
       }
       
-      // 서버 응답을 클라이언트 형식으로 변환
-      const formattedItinerary = serverResponse.itinerary.map((dayData: any) => {
+      const dayOfWeekMap: { [key: string]: number } = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+      const tripStartDayOfWeek = tripStartDate.getDay();
+
+      const formattedItinerary: ItineraryDay[] = serverResponse.route_summary.map(summary => {
+        const routeDayOfWeek = dayOfWeekMap[summary.day.substring(0, 3).charAt(0).toUpperCase() + summary.day.substring(1,3).toLowerCase()];
+        let tripDayNumber = routeDayOfWeek - tripStartDayOfWeek + 1;
+        if (tripDayNumber <= 0) tripDayNumber += 7;
+        
+        const dayPlaces = serverResponse.schedule
+            .map(item => ({
+                id: item.id?.toString() || item.place_name,
+                name: item.place_name,
+                category: item.place_type as CategoryName, // 직접 캐스팅
+                timeBlock: item.time_block,
+                x:0, y:0, address:'', phone:'', description:'', rating:0, image_url:'', road_address:'', homepage:'',
+                isSelected: false, isCandidate: false,
+            } as ItineraryPlaceWithTime));
+
         return {
-          day: dayData.day,
-          places: dayData.places,
-          totalDistance: dayData.total_distance || 0,
-          // 새로운 경로 데이터 포맷 추가
+          day: tripDayNumber,
+          places: dayPlaces,
+          totalDistance: summary.total_distance_m / 1000,
+          interleaved_route: summary.interleaved_route,
           routeData: {
-            nodeIds: dayData.route_data?.node_ids || [],
-            linkIds: dayData.route_data?.link_ids || [],
-            segmentRoutes: dayData.segment_routes || []
+            nodeIds: summary.interleaved_route.filter((_, idx) => idx % 2 === 0).map(String),
+            linkIds: summary.interleaved_route.filter((_, idx) => idx % 2 !== 0).map(String),
           }
         };
       });
       
-      console.log("서버로부터 일정 수신 완료:", {
+      console.log("서버로부터 일정 수신 완료 (useItineraryActions):", {
         일수: formattedItinerary.length,
-        경로정보포함: formattedItinerary.some(day => 
-          day.routeData && 
-          (day.routeData.nodeIds.length > 0 || day.routeData.linkIds.length > 0)
-        )
       });
       
-      // 일정 상태 업데이트
       setItinerary(formattedItinerary);
-      setSelectedItineraryDay(1); // 항상 첫 번째 일차 선택
+      if (formattedItinerary.length > 0) {
+        setSelectedItineraryDay(formattedItinerary[0].day as number);
+      }
       
       toast.success(`${formattedItinerary.length}일 일정이 생성되었습니다!`);
       return formattedItinerary;
@@ -146,9 +158,9 @@ export const useItineraryActions = () => {
     });
     
     // 서버 API를 통한 일정 생성
-    if (payload) {
+    if (payload && dates?.startDate) {
       console.log("서버 API를 통한 일정 생성 시도");
-      return handleServerItineraryCreation(payload);
+      return handleServerItineraryCreation(payload, dates.startDate);
     }
     
     // 로컬 알고리즘을 통한 일정 생성 (기존 방식, 폴백)

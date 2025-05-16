@@ -54,10 +54,32 @@ export interface TripDateTime {
 
 // 수정된 타입 정의: 일정 생성 API 요청 페이로드
 export interface SchedulePayload {
-  selected_places: SchedulePlace[]; // Changed from SelectedPlace[]
-  candidate_places: SchedulePlace[]; // Changed from SelectedPlace[]
-  start_datetime: string; // ISO8601 타임스탬프
-  end_datetime: string;   // ISO8601 타임스탬프
+  selected_places: SchedulePlace[];
+  candidate_places: SchedulePlace[];
+  start_datetime: string; // ISO8601 타임스탬프 (로컬 시간 기준)
+  end_datetime: string;   // ISO8601 타임스탬프 (로컬 시간 기준)
+}
+
+// 새로운 서버 응답 구조 정의
+export interface ServerScheduleItem {
+  time_block: string;
+  place_type: string; // 서버에서 오는 카테고리 문자열 (e.g., "restaurant")
+  place_name: string;
+  id?: number | string; // 장소 ID (서버에서 제공한다면)
+  // 서버 응답에 따라 추가 필드 정의 가능
+}
+
+export interface ServerRouteSummaryItem {
+  day: string; // 예: "Mon", "Tue" (요일 문자열)
+  status: string;
+  total_distance_m: number;
+  interleaved_route: (string | number)[];
+}
+
+export interface NewServerScheduleResponse {
+  schedule: ServerScheduleItem[];
+  route_summary: ServerRouteSummaryItem[];
+  // 서버 응답에 다른 최상위 키가 있다면 여기에 추가
 }
 
 // 서버 경로 응답 (각 날짜별)
@@ -109,7 +131,7 @@ export interface ItineraryPlaceWithTime extends Place {
   departTime?: string;
   stayDuration?: number; // 분 단위
   travelTimeToNext?: string; // 다음 장소까지 이동 시간 (예: "30분")
-  timeBlock?: string; // 요청사항 7 - "09:00 - 10:00" 형식 또는 "09:00 도착" 등
+  timeBlock?: string; // "09:00 - 10:00" 형식 또는 "09:00 도착" 등
 }
 
 // 새로운 인터페이스: 서버에서 받은 경로 데이터 파싱을 위한 인터페이스

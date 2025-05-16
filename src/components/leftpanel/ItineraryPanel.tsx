@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -21,8 +20,7 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
   onClose,
   selectedDay
 }) => {
-  // 현재 선택된 일자의 일정
-  const currentDayItinerary = selectedDay 
+  const currentDayItinerary = selectedDay !== null && selectedDay !== undefined
     ? itinerary.find(day => day.day === selectedDay) 
     : null;
 
@@ -43,17 +41,15 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
           startDate={startDate}
         />
         
-        {currentDayItinerary && (
-          <div className="p-4 pt-24">
-            <ScheduleViewer 
-              schedule={itinerary}
-              selectedDay={selectedDay}
-              onDaySelect={onSelectDay}
-              startDate={startDate}
-              itineraryDay={currentDayItinerary} 
-            />
-          </div>
-        )}
+        <div className="p-4 pt-2">
+          <ScheduleViewer 
+            schedule={itinerary}
+            selectedDay={selectedDay}
+            onDaySelect={onSelectDay}
+            startDate={startDate}
+            itineraryDay={currentDayItinerary} 
+          />
+        </div>
       </div>
     </div>
   );
