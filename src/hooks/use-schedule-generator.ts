@@ -6,7 +6,8 @@ import { SchedulePayload, ServerScheduleResponse, ParsedRoute } from '@/types/sc
 import { parseInterleavedRoute as parseInterleavedRouteUtil } from '@/utils/routeParser';
 
 // 서버 URL 환경 변수에서 가져오기 (환경변수가 없으면 고정 URL 사용)
-const SERVER_URL = "https://fa3f-34-91-44-214.ngrok-free.app";
+const SERVER_URL = import.meta.env.VITE_SCHEDULE_API;
+
 
 export const useScheduleGenerator = () => {
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
@@ -22,7 +23,7 @@ export const useScheduleGenerator = () => {
       console.log('[일정 생성] 서버 요청 URL:', SERVER_URL);
       console.log('[일정 생성] 서버에 일정 생성 요청 전송:', JSON.stringify(payload, null, 2));
       
-      const response = await fetch(`${SERVER_URL}/generate-schedule`, {
+      const response = await fetch(SERVER_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
