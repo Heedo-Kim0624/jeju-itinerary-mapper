@@ -1,6 +1,12 @@
 
 import { CategoryName } from '@/utils/categoryUtils';
 
+// 서버로 전송할 장소 데이터 간소화 구조
+export interface SchedulePlace {
+  id: number | string;
+  name: string;
+}
+
 export interface Place {
   id: string;
   name: string;
@@ -47,9 +53,8 @@ export interface TripDateTime {
 
 // 수정된 타입 정의: 일정 생성 API 요청 페이로드
 export interface SchedulePayload {
-  // 기존 필드 수정
-  selected_places: SelectedPlace[];
-  candidate_places: SelectedPlace[];
+  selected_places: SchedulePlace[]; // Changed from SelectedPlace[]
+  candidate_places: SchedulePlace[]; // Changed from SelectedPlace[]
   start_datetime: string; // ISO8601 타임스탬프
   end_datetime: string;   // ISO8601 타임스탬프
 }

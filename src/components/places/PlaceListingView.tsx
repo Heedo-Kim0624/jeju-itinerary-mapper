@@ -7,7 +7,7 @@ interface PlaceListingViewProps {
   places: Place[];
   title: string;
   isLoading: boolean;
-  selectedPlaces: Place[];
+  selectedPlaces: Place[]; // This prop might not be directly used if isPlaceSelected is sufficient
   onSelectPlace: (place: Place, checked: boolean) => void;
   onViewOnMap: (place: Place) => void;
   isPlaceSelected: (id: string | number) => boolean;
@@ -17,7 +17,7 @@ const PlaceListingView: React.FC<PlaceListingViewProps> = ({
   places,
   title,
   isLoading,
-  selectedPlaces,
+  selectedPlaces, // Keep for now, might be useful for other things or can be removed if truly unused
   onSelectPlace,
   onViewOnMap,
   isPlaceSelected
@@ -52,7 +52,9 @@ const PlaceListingView: React.FC<PlaceListingViewProps> = ({
           <PlaceCard
             key={place.id}
             place={place}
-            onSelect={(checked: boolean) => onSelectPlace(place, checked)}
+            onSelect={onSelectPlace} // Changed: Pass onSelectPlace directly
+                                     // This assumes PlaceCard's onSelect prop is (place: Place, checked: boolean) => void
+                                     // and PlaceCard calls it with its own place prop and the new checked state.
             onViewOnMap={() => onViewOnMap(place)}
             isSelected={isPlaceSelected(place.id)}
           />

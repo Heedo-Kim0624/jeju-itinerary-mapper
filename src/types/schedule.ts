@@ -1,11 +1,11 @@
 
-import { Place, SelectedPlace } from './supabase';
+import { SelectedPlace, SchedulePlace } from './supabase'; // Import SchedulePlace
 
-// 서버로 전송할 장소 데이터 간소화 구조
-export interface SchedulePlace {
-  id: number | string;
-  name: string;
-}
+// 서버로 전송할 장소 데이터 간소화 구조 - This is now imported from supabase.ts
+// export interface SchedulePlace {
+//   id: number | string;
+//   name: string;
+// }
 
 // 서버에 전송할 일정 생성 요청 Payload
 export interface SchedulePayload {
@@ -17,8 +17,8 @@ export interface SchedulePayload {
 
 // 서버로부터 받은 경로 응답 구조
 export interface ServerRouteResponse {
-  nodeIds?: string[];
-  linkIds?: string[];
+  nodeIds?: (string | number)[]; // Changed to allow numbers too, as per interleaved_route
+  linkIds?: (string | number)[]; // Changed to allow numbers too
   status?: string;
   total_distance_m?: number;
   interleaved_route?: (string | number)[];
@@ -53,4 +53,10 @@ export interface ServerScheduleResponse {
   route_summary?: RouteSummary[];
   itinerary?: any[]; // 서버가 반환하는 일정 정보
   routes?: Record<number | string, ServerRouteResponse>; // 일자별 경로 정보
+}
+
+// For useMapFeatures hook
+export interface ExtractedRouteData {
+  nodeIds: string[];
+  linkIds: string[];
 }
