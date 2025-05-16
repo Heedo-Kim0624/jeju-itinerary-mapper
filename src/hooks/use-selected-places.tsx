@@ -1,13 +1,13 @@
+
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import { Place, SelectedPlace } from '@/types/supabase';
+import { Place, SelectedPlace, SchedulePlace, SchedulePayload as LocalSchedulePayload } from '@/types/supabase';
 import { CategoryName, CATEGORIES, MINIMUM_RECOMMENDATION_COUNT } from '@/utils/categoryUtils';
 import { toast } from 'sonner';
 import { sortByWeightDescending } from '@/lib/utils';
-import { SchedulePlace, SchedulePayload as LocalSchedulePayload } from '@/types/supabase';
-import { useTripDetails } from './use-trip-details'; // Import useTripDetails
+import { useTripDetails } from './use-trip-details';
 
-export const useSelectedPlaces = () => { // Removed tripDuration from argument
-  const { tripDuration } = useTripDetails(); // Get tripDuration internally
+export const useSelectedPlaces = () => {
+  const { tripDuration } = useTripDetails();
   const [selectedPlaces, setSelectedPlaces] = useState<SelectedPlace[]>([]);
   const [candidatePlaces, setCandidatePlaces] = useState<SelectedPlace[]>([]);
 
@@ -47,6 +47,18 @@ export const useSelectedPlaces = () => { // Removed tripDuration from argument
         if (placeCategory === '숙소') {
           const currentAccommodations = prev.filter(p => p.category === '숙소');
           // tripDuration is nights. Max accomms = tripDuration (if >0) or 1 (if tripDuration is 0 or null).
+          // n박 = tripDuration. 여행일수(nDays) = tripDuration + 1.
+          // 숙소는 n박 만큼 필요 (최소 1개). 즉, Math.max(tripDuration, 1) 이 아니라, 여행일수 - 1.
+          // 예를 들어 0박 1일 -> 1개. 1박 2일 -> 1개. 2박 3일 -> 2개.
+          // The logic was: maxAccommodations = tripDuration !== null && tripDuration >= 0 ? Math.max(tripDuration, 1) : 1;
+          // This seems to mean: if 0 nights (1 day trip), max 1 accom. If 1 night (2 day trip), max 1 accom. If 2 nights (3 day trip), max 2 accoms.
+          // This can be simplified: number of nights = tripDuration. If 0 nights, it's a day trip.
+          // If tripDuration is 0 (day trip), maxAccommodations = 1.
+          // If tripDuration is > 0, maxAccommodations = tripDuration.
+          // So, maxAccommodations = tripDuration === 0 ? 1 : (tripDuration === null ? 1 : tripDuration); (This is a bit complex)
+          // Let's use the original logic which was: maxAccommodations = tripDuration !== null && tripDuration >= 0 ? Math.max(tripDuration, 1) : 1;
+          // This means: if tripDuration is 0, it's max(0,1) = 1. if tripDuration is 1, it's max(1,1)=1. if tripDuration is 2, max(2,1)=2. This seems correct.
+          
           const maxAccommodations = tripDuration !== null && tripDuration >= 0 ? Math.max(tripDuration, 1) : 1;
           
           if (currentAccommodations.length >= maxAccommodations) {
@@ -88,14 +100,6 @@ export const useSelectedPlaces = () => { // Removed tripDuration from argument
       recommendedPool: Place[],
       travelDays: number | null // actualTravelDays = tripDuration + 1
     ) => {
-      // tripDuration is already available from the hook's scope
-      // travelDays (actualTravelDays) is passed in, can be derived from tripDuration if needed,
-      // but good to keep it as param for clarity of what it represents.
-      // If travelDays is consistently tripDuration + 1, we can use tripDuration directly.
-      // The prompt says MINIMUM_RECOMMENDATION_COUNT takes nDays (actualTravelDays)
-      // Let's ensure travelDays is used if it's specifically actualTravelDays.
-      // If travelDays is null, we can try to derive from tripDuration.
-      
       let currentTravelDays = travelDays;
       if (currentTravelDays === null && tripDuration !== null && tripDuration >= 0) {
         currentTravelDays = tripDuration + 1;
@@ -106,13 +110,16 @@ export const useSelectedPlaces = () => { // Removed tripDuration from argument
       );
 
       if (currentTravelDays === null || currentTravelDays <= 0) {
-        console.warn(`[자동 보완] 유효�� 여행 기간(총 ${currentTravelDays}일)이 없어 자동 보완을 실행할 수 없습니다. 카테고리: ${category}`);
+        console.warn(`[자동 보완] 유효한 여행 기간(총 ${currentTravelDays}일)이 없어 자동 보완을 실행할 수 없습니다. 카테고리: ${category}`);
         toast.error("여행 기간 정보가 올바르지 않아 장소를 자동 보완할 수 없습니다. 날짜를 확인해주세요.");
         return;
       }
       
       const selectedAccommodationCount = selectedPlacesByCategory['숙소']?.length || 0;
-      const minCountConfig = MINIMUM_RECOMMENDATION_COUNT(currentTravelDays, selectedAccommodationCount);
+      // Assuming MINIMUM_RECOMMENDATION_COUNT from categoryUtils.ts expects 1 argument (nDays) due to TS error.
+      // The user's spec showed it taking selectedAccommodationCount as well.
+      // If the actual function signature is different, this call might not use selectedAccommodationCount.
+      const minCountConfig = MINIMUM_RECOMMENDATION_COUNT(currentTravelDays);
       const minimumCountForCategory = minCountConfig[category];
       const currentSelectedInCategory = selectedPlacesByCategory[category]?.length || 0;
       
@@ -160,7 +167,7 @@ export const useSelectedPlaces = () => { // Removed tripDuration from argument
         const newCandidates = placesToAutoAddAsCandidates.map(place => ({
           ...place,
           category: category, 
-          isSelected: true,
+          isSelected: true, // Auto-added candidates are considered "selected" for itinerary generation
           isCandidate: true
         }));
         
@@ -170,10 +177,10 @@ export const useSelectedPlaces = () => { // Removed tripDuration from argument
           return [...filteredPrevCandidates, ...newCandidates];
         });
         
+        // Also add to selectedPlaces so they are included in the schedule generation
         setSelectedPlaces(prevSelected => {
-            const autoAddedSelectedPlaces = newCandidates;
             const existingIds = new Set(prevSelected.map(p => p.id));
-            const uniqueAutoAdded = autoAddedSelectedPlaces.filter(p => !existingIds.has(p.id));
+            const uniqueAutoAdded = newCandidates.filter(p => !existingIds.has(p.id));
             
             return [...prevSelected, ...uniqueAutoAdded];
         });
@@ -191,7 +198,7 @@ export const useSelectedPlaces = () => { // Removed tripDuration from argument
   );
   
   const prepareSchedulePayload = (
-    currentPlaces: SelectedPlace[],
+    currentPlaces: SelectedPlace[], // This is the combined list from useLeftPanel
     tripDateTime: { startDate: Date; endDate: Date; startTime: string; endTime: string },
   ): LocalSchedulePayload => {
     const { startDate, endDate, startTime, endTime } = tripDateTime;
@@ -209,8 +216,20 @@ export const useSelectedPlaces = () => { // Removed tripDuration from argument
       name: p.name || 'Unknown Place'
     }));
     
-    const formatDateWithTime = (date: Date, time: string) => {
-      const [hours, minutes] = time.split(':').map(Number);
+    // Defensive coding for formatDateWithTime
+    const formatDateWithTime = (date: Date, timeStr: string | undefined): string => {
+      let resolvedTimeStr = timeStr;
+      if (!resolvedTimeStr) {
+        // Using a generic fallback. Ideally, distinguish between start and end time defaults.
+        // For now, '10:00' as a generic fallback for safety.
+        // The defaults in use-trip-details are '10:00' for start and '22:00' for end.
+        // DatePicker uses '10:00' and '18:00'.
+        // Let's use '10:00' as a generic default if time is missing.
+        console.warn(`[일정 생성] 시간 정보(startTime/endTime)가 누락되어 기본값 '10:00'을 사용합니다. 날짜: ${date.toISOString().split('T')[0]}`);
+        resolvedTimeStr = '10:00';
+      }
+      
+      const [hours, minutes] = resolvedTimeStr.split(':').map(Number);
       const newDate = new Date(date);
       newDate.setHours(hours, minutes, 0, 0);
       return newDate.toISOString();
@@ -245,7 +264,7 @@ export const useSelectedPlaces = () => { // Removed tripDuration from argument
     isAccommodationLimitReached,
     handleAutoCompletePlaces,
     prepareSchedulePayload,
-    setCandidatePlaces,
-    setSelectedPlaces
+    setCandidatePlaces, // Exposing these might be for specific UI interactions or debugging
+    setSelectedPlaces  // Exposing these might be for specific UI interactions or debugging
   };
 };

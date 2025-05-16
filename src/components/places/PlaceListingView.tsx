@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Place } from '@/types/supabase';
-import PlaceCard from '@/components/middlepanel/PlaceCard';
+import PlaceCard, { PlaceCardProps } from '@/components/middlepanel/PlaceCard'; // Assuming PlaceCardProps might be needed if we define a wrapper
 
 interface PlaceListingViewProps {
   places: Place[];
@@ -9,7 +9,7 @@ interface PlaceListingViewProps {
   isLoading: boolean;
   selectedPlaces: Place[];
   onSelectPlace: (place: Place, checked: boolean) => void;
-  onViewOnMap: (place: Place) => void; // This prop is kept on the interface for now
+  onViewOnMap: (place: Place) => void; // This is for onViewDetails
   isPlaceSelected: (id: string | number) => boolean;
 }
 
@@ -19,7 +19,7 @@ const PlaceListingView: React.FC<PlaceListingViewProps> = ({
   isLoading,
   selectedPlaces,
   onSelectPlace,
-  onViewOnMap, // Kept in destructuring, but not passed to PlaceCard if it doesn't accept it
+  onViewOnMap,
   isPlaceSelected
 }) => {
   if (isLoading) {
@@ -53,11 +53,7 @@ const PlaceListingView: React.FC<PlaceListingViewProps> = ({
             key={place.id}
             place={place}
             onSelect={onSelectPlace}
-            // onViewOnMap prop is removed as PlaceCard does not seem to accept it based on the error.
-            // If PlaceCard *should* have this, its own definition (read-only) needs an update.
-            // For now, to fix the build error, we don't pass it.
-            // The onViewOnMap function received by PlaceListingView can be used elsewhere if needed,
-            // for example, by adding a separate button within PlaceListingView itself if desired.
+            onViewDetails={onViewOnMap} // Added missing required prop
             isSelected={isPlaceSelected(place.id)}
           />
         ))}
