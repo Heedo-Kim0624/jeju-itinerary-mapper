@@ -11,6 +11,7 @@ import { useItineraryHandlers } from './left-panel/use-itinerary-handlers';
 import { useInputState } from './left-panel/use-input-state';
 import { Place, SelectedPlace, SchedulePayload, ItineraryDay } from '@/types/supabase';
 import { CategoryName } from '@/utils/categoryUtils';
+import { toast } from 'sonner';
 
 /**
  * 왼쪽 패널 기능 통합 훅
@@ -127,6 +128,15 @@ export const useLeftPanel = () => {
   const itineraryHandlers = useItineraryHandlers();
   
   const handleCreateItinerary = async () => {
+    console.log('[useLeftPanel] handleCreateItinerary 호출됨');
+    
+    // 날짜 정보 로깅
+    console.log('[useLeftPanel] 여행 날짜 정보:', {
+      dates: tripDetails.dates,
+      startDatetime: tripDetails.startDatetime,
+      endDatetime: tripDetails.endDatetime
+    });
+    
     return itineraryHandlers.handleCreateItinerary(
       tripDetails,
       placesManagement.selectedPlaces as SelectedPlace[],

@@ -1,9 +1,7 @@
 
 import { useState } from 'react';
-// import { Place, SelectedPlace } from '@/types/supabase'; // Not used
 import { toast } from 'sonner';
-// import { useItineraryCreator } from './use-itinerary-creator'; // Not used
-import { SchedulePayload, NewServerScheduleResponse } from '@/types/schedule'; // Changed to NewServerScheduleResponse
+import { SchedulePayload, NewServerScheduleResponse } from '@/types/schedule';
 import { parseInterleavedRoute as parseInterleavedRouteUtil } from '@/utils/routeParser';
 
 // 서버 URL 환경 변수에서 가져오기
@@ -13,7 +11,6 @@ const SCHEDULE_GENERATION_ENDPOINT = "/generate_schedule"; // 경로 추가
 export const useScheduleGenerator = () => {
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [generationError, setGenerationError] = useState<Error | null>(null);
-  // const { createItinerary } = useItineraryCreator(); // Not used here
 
   // 서버에 일정 생성 요청
   const generateSchedule = async (payload: SchedulePayload): Promise<NewServerScheduleResponse | null> => {
@@ -21,12 +18,17 @@ export const useScheduleGenerator = () => {
     setGenerationError(null);
     
     const fullApiUrl = `${SERVER_BASE_URL}${SCHEDULE_GENERATION_ENDPOINT}`;
-    console.log('[일정 생성] 서버 요청 URL:', fullApiUrl); // Check the full URL
-
+    console.log('[일정 생성] 환경 변수 확인:', {
+      VITE_SCHEDULE_API: import.meta.env.VITE_SCHEDULE_API,
+      SERVER_BASE_URL,
+      SCHEDULE_GENERATION_ENDPOINT,
+      fullApiUrl
+    });
+    console.log('[일정 생성] 서버 요청 URL:', fullApiUrl);
+    console.log('[일정 생성] 서버에 일정 생성 요청 전송 (use-schedule-generator):', JSON.stringify(payload, null, 2));
+    
     try {
-      console.log('[일정 생성] 서버에 일정 생성 요청 전송 (use-schedule-generator):', JSON.stringify(payload, null, 2));
-      
-      const response = await fetch(fullApiUrl, { // Use fullApiUrl
+      const response = await fetch(fullApiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -34,7 +36,7 @@ export const useScheduleGenerator = () => {
         body: JSON.stringify(payload)
       });
       
-      console.log('[일정 생성] Fetch 요청 보낸 후, 응답 상태 확인 전');
+      console.log('[일정 생성] Fetch 요청 보낸 후, 응답 상태:', response.status);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -45,8 +47,6 @@ export const useScheduleGenerator = () => {
       const data: NewServerScheduleResponse = await response.json();
       console.log('[일정 생성] 서버로부터 받은 일정 데이터 (NewServerScheduleResponse):', data);
       
-      // The following log block used data.routes which is part of ServerScheduleResponse, not NewServerScheduleResponse.
-      // NewServerScheduleResponse has route_summary. Let's adjust or simplify for now.
       if (data.route_summary && data.route_summary.length > 0) {
         console.log('[일정 생성] 경로 요약 데이터 포함:', 
           data.route_summary.length + '일치 경로 요약 데이터 수신');
@@ -83,4 +83,3 @@ export const useScheduleGenerator = () => {
     generationError
   };
 };
-

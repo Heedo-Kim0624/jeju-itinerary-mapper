@@ -13,8 +13,15 @@ export const useSchedulePayloadBuilder = (/* props: UseSchedulePayloadBuilderPro
     startDatetimeISO: string | null, 
     endDatetimeISO: string | null
   ): LocalSchedulePayload | null => {
+    console.log('[prepareSchedulePayload] 함수 호출됨, 인자:', {
+      userSelectedPlacesCount: userSelectedPlacesInput.length,
+      candidatePlacesCount: candidatePlacesInput.length,
+      startDatetimeISO,
+      endDatetimeISO
+    });
     
     if (!startDatetimeISO || !endDatetimeISO) {
+      console.warn('[prepareSchedulePayload] 날짜/시간 정보 누락');
       toast.error("날짜 및 시간을 먼저 선택해주세요.");
       return null;
     }
@@ -38,7 +45,7 @@ export const useSchedulePayloadBuilder = (/* props: UseSchedulePayloadBuilderPro
       end_datetime: endDatetimeISO
     };
 
-    console.log("[일정 생성] 최종 Payload 준비 (useSchedulePayloadBuilder):", JSON.stringify(payload, null, 2));
+    console.log("[일정 생성] 최종 Payload 준비 완료 (useSchedulePayloadBuilder):", JSON.stringify(payload, null, 2));
     return payload;
   };
 
