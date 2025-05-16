@@ -1,11 +1,10 @@
 
 import { useState, useEffect } from 'react';
 import { Place } from '@/types/supabase';
-import { autoCompleteCandidatePlaces, getCategoryKorean } from '@/lib/itinerary/place-recommendation-utils';
+import { autoCompleteCandidatePlaces, getCategoryKorean, getMinimumRecommendationCount } from '@/lib/itinerary/place-recommendation-utils';
 import { useMapContext } from '@/components/rightpanel/MapContext';
 import { toast } from 'sonner';
 import { useTripDetails } from './use-trip-details';
-import { getMinimumRecommendationCount } from '@/lib/itinerary/itinerary-utils';
 import type { SchedulePayload, SchedulePlace } from '@/types/schedule';
 
 export const useSelectedPlaces = () => {
@@ -133,14 +132,40 @@ export const useSelectedPlaces = () => {
     panTo({ lat: place.y, lng: place.x });
   };
 
-  // New function: Handle auto-completion of places when category is confirmed
+  // Enhanced auto-completion function with better trip duration handling
   const handleAutoCompletePlaces = (category: string, recommendedPlaces: Place[]) => {
     if (!tripDuration || tripDuration < 1) {
       console.warn('[자동 보완] 여행 기간이 설정되지 않아 자동 보완을 실행할 수 없습니다.');
+      toast.error('여행 일정을 먼저 설정해주세요!');
       return;
     }
     
-    console.log(`[자동 보완] ${category} 카테고리에 대한 자동 보완 시작`);
+    console.log(`[자동 보완] ${category} 카테고리에 대한 자동 보완 시작 (여행 기간: ${tripDuration}일)`);
+    
+    // Define minimum recommended count based on trip duration
+    const minRecommendationCount = getMinimumRecommendationCount(tripDuration);
+    console.log(`[자동 보완] 최소 추천 개수 (${category}): ${JSON.stringify(minRecommendationCount)}`);
+    
+    // Map Korean category to English
+    const categoryMap: Record<string, keyof typeof minRecommendationCount> = {
+      '숙소': 'accommodation',
+      '관광지': 'touristSpot',
+      '음식점': 'restaurant',
+      '카페': 'cafe'
+    };
+    
+    // Get the target count for current category
+    const englishCategory = categoryMap[category] || 'touristSpot';
+    const targetCount = minRecommendationCount[englishCategory];
+    const currentCount = selectedPlacesByCategory[category as keyof typeof selectedPlacesByCategory]?.length || 0;
+    
+    console.log(`[자동 보완] 현재 선택된 ${category} 개수: ${currentCount}, 목표 개수: ${targetCount}`);
+    
+    // If we already have enough places, don't add more
+    if (currentCount >= targetCount) {
+      console.log(`[자동 보완] ${category} 카테고리는 이미 충분한 장소가 선택되어 있습니다.`);
+      return;
+    }
     
     // Create a dictionary of recommended places by category
     const recommendedByCategory: Record<string, Place[]> = {
@@ -161,16 +186,26 @@ export const useSelectedPlaces = () => {
     );
     
     if (addedPlaces.length > 0) {
+      // Mark added places as candidates
+      const markedAddedPlaces = addedPlaces.map(place => ({
+        ...place,
+        isCandidate: true  // Mark as auto-added candidate
+      }));
+      
       // Update the candidate places list
-      setCandidatePlaces(prev => [...prev, ...addedPlaces]);
+      setCandidatePlaces(prev => [...prev, ...markedAddedPlaces]);
       
       // Update the selected places list with all combined places
-      setSelectedPlaces(finalPlaces);
+      setSelectedPlaces(finalPlaces.map(p => 
+        addedPlaces.some(ap => ap.id === p.id) 
+          ? { ...p, isCandidate: true } 
+          : p
+      ));
       
       // Also update the category-specific selected places
       const updatedSelectedPlacesByCategory = { ...selectedPlacesByCategory };
       
-      addedPlaces.forEach(place => {
+      markedAddedPlaces.forEach(place => {
         const placeCategory = getCategoryKorean(place.category);
         if (placeCategory in updatedSelectedPlacesByCategory) {
           updatedSelectedPlacesByCategory[placeCategory as keyof typeof updatedSelectedPlacesByCategory].push(place);
@@ -181,8 +216,12 @@ export const useSelectedPlaces = () => {
       
       // Notify the user about added places
       toast.info(`${category} 카테고리에서 ${addedPlaces.length}개의 추천 장소가 자동으로 추가되었습니다.`);
+      
+      console.log(`[자동 보완] ${category} 카테고리에 ${addedPlaces.length}개 장소 자동 추가 완료`, 
+        addedPlaces.map(p => p.name));
     } else {
       console.log(`[자동 보완] ${category} 카테고리에 추가할 장소가 없습니다.`);
+      toast.warning(`${category} 카테고리에 추가할 적합한 추천 장소가 없습니다.`);
     }
   };
 
@@ -201,11 +240,11 @@ export const useSelectedPlaces = () => {
     
     const userSelected: SchedulePlace[] = placesToSchedule
       .filter(p => !p.isCandidate)
-      .map(p => ({ id: Number(p.id), name: p.name }));
+      .map(p => ({ id: typeof p.id === 'string' ? parseInt(p.id, 10) : p.id, name: p.name }));
 
     const autoCandidates: SchedulePlace[] = placesToSchedule
       .filter(p => p.isCandidate)
-      .map(p => ({ id: Number(p.id), name: p.name }));
+      .map(p => ({ id: typeof p.id === 'string' ? parseInt(p.id, 10) : p.id, name: p.name }));
 
     console.log('[일정 생성] 일정 생성 데이터 (prepareSchedulePayload):', {
       사용자선택_장소수: userSelected.length,

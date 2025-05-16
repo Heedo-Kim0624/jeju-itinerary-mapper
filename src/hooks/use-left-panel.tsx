@@ -103,7 +103,7 @@ export const useLeftPanel = () => {
     recommendedPlaces,
     normalPlaces,
     refetch
-  } = useCategoryResults(showCategoryResult as any, 
+  } = useCategoryResults(showCategoryResult, 
     showCategoryResult ? categorySelection.selectedKeywordsByCategory[showCategoryResult] || [] : [], 
     regionSelection.selectedRegions);
 
@@ -115,7 +115,9 @@ export const useLeftPanel = () => {
   // 카테고리 핸들러
   const categoryHandlers = useCategoryHandlers();
   const handleCategorySelect = (category: string) => categoryHandlers.handleCategorySelect(category, refetch);
-  const handleCloseCategoryResult = () => categoryHandlers.handleCloseCategoryResult(setShowCategoryResult);
+  const handleCloseCategoryResult = () => categoryHandlers.handleCloseCategoryResult(
+    (value: CategoryName | null) => setShowCategoryResult(value)
+  );
   const handleConfirmCategory = () => categoryHandlers.handleConfirmCategory(selectedCategory);
 
   // 일정 핸들러
@@ -128,7 +130,7 @@ export const useLeftPanel = () => {
       recommendedPlaces,
       generateItinerary,
       setShowItinerary,
-      (panel: string) => setCurrentPanel(panel as 'region' | 'date' | 'category' | 'itinerary')
+      (panel: 'region' | 'date' | 'category' | 'itinerary') => setCurrentPanel(panel)
     );
   };
   

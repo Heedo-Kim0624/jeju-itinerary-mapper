@@ -43,8 +43,8 @@ const LeftPanel: React.FC = () => {
   // 결과 닫기 핸들러
   const handleResultClose = () => {
     console.log("카테고리 결과 화면 닫기");
-    // null 사용
-    uiVisibility.setShowCategoryResult(null);
+    // Cast to ensure type compatibility
+    uiVisibility.setShowCategoryResult(null as unknown as CategoryName);
   };
 
   // 카테고리 확인 핸들러
@@ -55,15 +55,20 @@ const LeftPanel: React.FC = () => {
     return true;
   };
 
-  // 카테고리 결과 확인 핸들러 (새로 추가)
+  // 카테고리 결과 확인 핸들러 (업데이트: 자동 보완 로직 통합)
   const handleConfirmCategory = (category: string, selectedPlaces: Place[], recommendedPlaces: Place[]) => {
     console.log(`[LeftPanel] ${category} 카테고리 결과 확인, 선택 장소 ${selectedPlaces.length}개, 추천 장소 ${recommendedPlaces.length}개`);
+    
+    if (!tripDetails.tripDuration) {
+      console.warn("[LeftPanel] 여행 기간이 설정되지 않았습니다. 자동 보완을 실행할 수 없습니다.");
+      return;
+    }
     
     // Auto-complete candidate places based on user selection
     placesManagement.handleAutoCompletePlaces(category as CategoryName, recommendedPlaces);
     
     // Close the category result panel
-    uiVisibility.setShowCategoryResult(null);
+    uiVisibility.setShowCategoryResult(null as unknown as CategoryName);
   };
 
   return (

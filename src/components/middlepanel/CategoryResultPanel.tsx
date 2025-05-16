@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Place } from '@/types/supabase';
 import { useMapContext } from '../rightpanel/MapContext';
@@ -6,7 +5,6 @@ import PlaceDetailDialog from '../places/PlaceDetailDialog';
 import { useCategoryResults } from '@/hooks/use-category-results';
 import PlaceListingView from '../places/PlaceListingView';
 import ResultHeader from './category-result/ResultHeader';
-import ResultFooter from './category-result/ResultFooter';
 import LoadingState from './category-result/LoadingState';
 import ErrorState from './category-result/ErrorState';
 import { Button } from '@/components/ui/button';
@@ -64,6 +62,14 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
     }
   }, [recommendedPlaces, normalPlaces, safeRegions, clearMarkersAndUiElements, panTo, addMarkers]);
 
+  useEffect(() => {
+    // Keep track of selected places when isPlaceSelected changes
+    const selected = [...recommendedPlaces, ...normalPlaces].filter(
+      place => isPlaceSelected(place.id)
+    );
+    setUserSelectedPlaces(selected);
+  }, [recommendedPlaces, normalPlaces, isPlaceSelected]);
+
   const handleViewDetails = (place: Place) => {
     setSelectedPlace(place);
     if (place.x && place.y) {
@@ -85,14 +91,16 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
     onSelectPlace(place, checked);
   };
 
-  const handleConfirmPlaces = () => {
-    console.log(`[카테고리 확인] ${category} 카테고리 선택 완료: ${userSelectedPlaces.length}개 장소`);
+  const handleConfirm = () => {
+    console.log(`[카테고리 확인] ${category} 카테고리 선택 완료 및 자동 보완 시작: ${userSelectedPlaces.length}개 장소`);
     
     if (onConfirm) {
       // Pass the category, user-selected places, and all recommended places for auto-completion
       onConfirm(category, userSelectedPlaces, recommendedPlaces);
-      onClose();
     }
+    
+    // Close the panel after confirmation
+    onClose();
   };
 
   return (
@@ -132,18 +140,16 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
           )}
         </div>
 
-        {/* Add confirmation button */}
+        {/* Replace "Select Complete" and "Confirm" buttons with a single "Confirm" button */}
         <div className="p-4 border-t border-gray-200">
           <Button 
-            onClick={handleConfirmPlaces}
+            onClick={handleConfirm}
             className="w-full" 
             variant="default"
           >
-            <CheckIcon className="mr-2 h-4 w-4" /> 선택 완료
+            <CheckIcon className="mr-2 h-4 w-4" /> 확인
           </Button>
         </div>
-
-        <ResultFooter onClose={onClose} />
       </div>
 
       {selectedPlace && (

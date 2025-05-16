@@ -1,4 +1,3 @@
-
 /**
  * Naver Maps API를 동적으로 로드하는 유틸리티 함수
  */
@@ -10,8 +9,8 @@ const NAVER_CLIENT_ID = import.meta.env.VITE_NAVER_CLIENT_ID || '';
 // 전역 window 객체에 naver 프로퍼티 추가
 declare global {
   interface Window {
-    naver: any;
-    N: any;
+    naver?: any;
+    N?: any;
   }
 }
 

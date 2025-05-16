@@ -36,7 +36,7 @@ const CategoryResultHandler: React.FC<CategoryResultHandlerProps> = ({
   };
 
   const handleConfirm = (category: string, selectedPlaces: Place[], recommendedPlaces: Place[]) => {
-    console.log(`[CategoryResultHandler] ${category} 카테고리 확인됨, 선택된 장소: ${selectedPlaces.length}개`);
+    console.log(`[CategoryResultHandler] ${category} 카테고리 확인됨 및 자동 보완 시작, 선택된 장소: ${selectedPlaces.length}개`);
     if (onConfirmCategory) {
       onConfirmCategory(category, selectedPlaces, recommendedPlaces);
     }

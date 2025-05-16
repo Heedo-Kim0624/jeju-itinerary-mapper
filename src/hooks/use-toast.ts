@@ -35,7 +35,14 @@ export const toast = (props: ToastProps | string) => {
     return sonnerToast(props);
   }
   
-  return sonnerToast(convertToSonnerProps(props));
+  // Fix the type error by directly passing props to sonnerToast
+  // sonnerToast accepts ReactNode which is more general than our specific ToastProps
+  return sonnerToast(props.title || "", {
+    description: props.description,
+    action: props.action,
+    duration: props.duration,
+    className: props.variant === "destructive" ? "destructive" : undefined
+  });
 };
 
 // useToast 훅은 toast 함수를 반환
