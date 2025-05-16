@@ -1,5 +1,5 @@
-
-import { Place, ItineraryPlace } from '@/types/supabase';
+import { Place } from '@/types/supabase';
+import { ItineraryPlace } from '@/types/itinerary';
 
 // Define common locations in Jeju
 export const JEJU_LOCATIONS: Record<string, { lat: number; lng: number }> = {

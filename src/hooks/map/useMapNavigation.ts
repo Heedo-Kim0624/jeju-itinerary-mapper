@@ -1,6 +1,7 @@
 
 import { useCallback } from 'react';
-import { Place, ItineraryPlace } from '@/types/supabase';
+import { Place } from '@/types/supabase';
+import { ItineraryPlace } from '@/types/itinerary'; // Corrected import path
 import { JEJU_LOCATIONS, resolveLocationToCoordinates } from '@/utils/map/mapNavigation';
 
 // Default center of Jeju Island
