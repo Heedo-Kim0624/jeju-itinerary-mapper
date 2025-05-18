@@ -1,7 +1,5 @@
-
 import React from 'react';
-// Ensure ItineraryDay matches the one used in use-itinerary.tsx (CreatorItineraryDay)
-import type { ItineraryDay } from '@/hooks/use-itinerary'; 
+import { ItineraryDay, ItineraryPlaceWithTime, RouteData } from '@/types'; // Updated import
 
 interface DebugPanelProps {
   isVisible: boolean;
@@ -11,23 +9,31 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({ isVisible }) => {
   if (!isVisible) return null;
   
   const createMockItinerary = () => {
-    const startDate = new Date();
-    // This mockItinerary needs to conform to the ItineraryDay type from use-itinerary
+    // const startDate = new Date(); // Not used in this mock
     const mockItineraryData: ItineraryDay[] = [
       {
         day: 1,
-        dayOfWeek: '목', // Example, derive properly if needed
-        date: '05/22', // Example, derive properly
+        dayOfWeek: '목', 
+        date: '05/22', 
         places: [
-          { id: "4060188202", name: '제주국제공항', category: 'attraction', geoNodeId: "4060188202", x: 126.49, y: 33.51, timeBlock: '09:00' } as any,
-          { id: "4060020100", name: '항해진미', category: 'restaurant', geoNodeId: "4060020100", x: 126.52, y: 33.49, timeBlock: '12:00' } as any
+          // Ensure these mock places satisfy ItineraryPlaceWithTime
+          { 
+            id: "4060188202", name: '제주국제공항', category: 'attraction', geoNodeId: "4060188202", 
+            x: 126.49, y: 33.51, timeBlock: '09:00',
+            phone: '', description: '', rating: 0, image_url: '', road_address: '', homepage: ''
+          } as ItineraryPlaceWithTime,
+          { 
+            id: "4060020100", name: '항해진미', category: 'restaurant', geoNodeId: "4060020100", 
+            x: 126.52, y: 33.49, timeBlock: '12:00',
+            phone: '', description: '', rating: 0, image_url: '', road_address: '', homepage: ''
+          } as ItineraryPlaceWithTime
         ],
         totalDistance: 10.5,
-        interleaved_route: [4060188202, 4060539403, 4060020100], // Numbers
-        routeData: {
-          nodeIds: [4060188202, 4060020100], // Numbers
-          linkIds: [4060539403] // Numbers
-        }
+        interleaved_route: [4060188202, 4060539403, 4060020100],
+        routeData: { // Ensure RouteData matches the type (string IDs)
+          nodeIds: ["4060188202", "4060020100"], 
+          linkIds: ["4060539403"] 
+        } as RouteData
       }
     ];
     
@@ -54,13 +60,22 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({ isVisible }) => {
     // @ts-ignore
     const isGenerating = window.__IS_GENERATING__ || false;
     
+    // Example of accessing new properties if itinerary has ItineraryDay structure
+    const dayInfo = (itinerary as ItineraryDay[]).map(day => ({
+      day: day.day,
+      dayOfWeek: day.dayOfWeek || '알 수 없음', // Access dayOfWeek safely
+      date: day.date || '날짜 없음',         // Access date safely
+      places: day.places.length,
+    }));
+
     console.log('현재 일정 상태 (DebugPanel):', {
       itinerary,
       showItinerary,
       selectedDay,
       isGenerating,
       // @ts-ignore
-      일정길이: itinerary.length
+      일정길이: itinerary.length,
+      일자정보: dayInfo // Log derived day info
     });
   };
   

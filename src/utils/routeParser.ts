@@ -1,5 +1,4 @@
-
-import { ParsedRoute } from '@/types/schedule';
+import { ParsedRoute } from '@/types'; // Updated import
 
 /**
  * 서버에서 받은 interleaved_route 배열에서 장소 간 경로 세그먼트를 추출

@@ -1,13 +1,12 @@
 
 import { useCallback } from 'react';
-import { SelectedPlace } from '@/types/supabase';
-import { SchedulePayload } from '@/types/schedule'; // Ensure this is the correct SchedulePayload
+import { SelectedPlace } from '@/types'; // Updated import
+import { SchedulePayload } from '@/types'; // Updated import, ensure this is the correct SchedulePayload
 
 interface UseSchedulePayloadProps {
   selectedPlaces: SelectedPlace[];
   startDatetimeISO: string | null;
   endDatetimeISO: string | null;
-  // Optional: start/end location if you have them
   startLocationName?: string; 
   endLocationName?: string;
 }
@@ -16,8 +15,8 @@ export const useSchedulePayload = ({
   selectedPlaces,
   startDatetimeISO,
   endDatetimeISO,
-  startLocationName = "제주국제공항", // Default start location
-  endLocationName = "제주국제공항",   // Default end location
+  startLocationName = "제주국제공항",
+  endLocationName = "제주국제공항",
 }: UseSchedulePayloadProps) => {
   const preparePayload = useCallback((): SchedulePayload | null => {
     if (!startDatetimeISO || !endDatetimeISO) {
@@ -27,19 +26,18 @@ export const useSchedulePayload = ({
 
     if (selectedPlaces.length === 0) {
       console.warn('[useSchedulePayload] No places selected.');
-      // Depending on logic, might still want to generate payload for server to handle empty places
     }
 
     const placesForPayload = selectedPlaces.map(p => ({
-      id: p.id?.toString() || '', // Ensure id is string
+      id: p.id?.toString() || '', 
       name: p.name,
-      category: p.category, // This should be the internal category string like 'restaurant'
+      category: p.category, 
       x: p.x || 0,
       y: p.y || 0,
       address: p.address || '',
-      // place_type is important for the server
-      place_type: p.category, // Assuming p.category is the same as place_type server expects
-      isRequired: p.isRequired === undefined ? true : p.isRequired, // Default to true
+      place_type: p.category, 
+      // isRequired is now optional in SelectedPlace, provide default if undefined
+      isRequired: p.isRequired === undefined ? true : p.isRequired, 
     }));
 
     return {
@@ -47,7 +45,7 @@ export const useSchedulePayload = ({
       end_timestamp: endDatetimeISO,
       start_location: startLocationName,
       end_location: endLocationName,
-      places: placesForPayload, // Correct field name
+      places: placesForPayload,
     };
   }, [selectedPlaces, startDatetimeISO, endDatetimeISO, startLocationName, endLocationName]);
 

@@ -1,31 +1,16 @@
-
 import { useCallback } from 'react';
-// Ensure ItineraryDay and ItineraryPlaceWithTime are what your new parser expects/produces.
-// These types might need to align with what use-itinerary (and use-itinerary-creator) defines.
-// For now, using the ones from supabase as a reference, but your parser redefines the structure.
-import type { ItineraryDay, ItineraryPlaceWithTime, CategoryName } from '@/types/supabase'; 
-import { NewServerScheduleResponse, ServerScheduleItem, ServerRouteSummaryItem } from '@/types/schedule';
-import { extractAllNodesFromRoute, extractAllLinksFromRoute } from '@/utils/routeParser'; // Keep if still needed after parser update
+import { ItineraryDay, ItineraryPlaceWithTime, CategoryName, NewServerScheduleResponse, ServerScheduleItem, ServerRouteSummaryItem, Place } from '@/types'; // Updated imports
+import { extractAllNodesFromRoute, extractAllLinksFromRoute } from '@/utils/routeParser';
 
 interface UseScheduleParserProps {
-  currentSelectedPlaces: { // Assuming this structure for currentSelectedPlaces
-    id: string | number;
-    name: string;
-    category: string;
-    x?: number;
-    y?: number;
-    address?: string;
-    // Add other fields if your parser uses them from currentSelectedPlaces
-  }[];
+  currentSelectedPlaces: Place[]; // Use the base Place type or a specific one if needed
 }
 
-// Helper interface for GeoJSON nodes expected from MapContext
 interface MapContextGeoNode {
-  id: string | number; // This should be the NODE_ID
-  coordinates: [number, number]; // [longitude, latitude]
+  id: string | number;
+  coordinates: [number, number];
 }
 
-// Function to find coordinates from MapContext's GeoJSON nodes
 export const findCoordinatesFromMapContextNodes = (
   nodeIdToFind: string | number,
   mapContextGeoNodes: MapContextGeoNode[] | null
@@ -41,9 +26,8 @@ export const findCoordinatesFromMapContextNodes = (
   return null;
 };
 
-// Function to update itinerary places with coordinates
 export const updateItineraryWithCoordinates = (
-  itineraryDays: ItineraryDay[], // This ItineraryDay should match the output of your new parser
+  itineraryDays: ItineraryDay[],
   mapContextGeoNodes: MapContextGeoNode[] | null
 ): ItineraryDay[] => {
   if (!mapContextGeoNodes || !itineraryDays.length) {
@@ -55,7 +39,6 @@ export const updateItineraryWithCoordinates = (
 
   return itineraryDays.map(day => {
     const updatedPlaces = day.places.map(place => {
-      // Ensure place.id is suitable for lookup in mapContextGeoNodes
       const coordinates = findCoordinatesFromMapContextNodes(place.geoNodeId || place.id, mapContextGeoNodes);
       if (coordinates) {
         return {
@@ -70,13 +53,11 @@ export const updateItineraryWithCoordinates = (
   });
 };
 
-
 export const useScheduleParser = ({ currentSelectedPlaces }: UseScheduleParserProps) => {
-  // Your provided parseServerResponse function
   const parseServerResponse = useCallback((
-    serverResponse: NewServerScheduleResponse, // Use the specific type
+    serverResponse: NewServerScheduleResponse,
     startDate: Date
-  ): ItineraryDay[] => { // ItineraryDay should be the structure your app expects
+  ): ItineraryDay[] => {
     console.log("[parseServerResponse] 서버 응답 파싱 시작:", serverResponse);
     
     if (!serverResponse || !serverResponse.schedule || !serverResponse.route_summary) {
@@ -95,94 +76,114 @@ export const useScheduleParser = ({ currentSelectedPlaces }: UseScheduleParserPr
         console.warn("[parseServerResponse] time_block이 없는 항목:", item);
         return;
       }
-      const day = item.time_block.split('_')[0];
-      if (!dayMap.has(day)) {
-        dayMap.set(day, []);
+      const dayKey = item.time_block.split('_')[0];
+      if (!dayMap.has(dayKey)) {
+        dayMap.set(dayKey, []);
       }
-      dayMap.get(day)?.push(item);
+      dayMap.get(dayKey)?.push(item);
     });
     
     console.log("[parseServerResponse] 날짜별 그룹화 결과:", Object.fromEntries(dayMap));
     
-    // This dayToNumber mapping should align with how server sends 'day' (e.g., 'Mon', 'Tue')
-    // The example used Thu, Fri, Sat. Ensure this is comprehensive or derived.
-    // A more robust way would be to parse these day strings relative to startDate.
-    const dayOrder = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const dayOrder = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']; // Full week for robustness
     const dayToNumber: Record<string, number> = {};
-    route_summary.forEach((routeInfo, index) => {
-        // Assuming route_summary is sorted by day by the server or should be sorted before this.
-        // Assign day number based on order in route_summary if not inferable otherwise.
+    
+    // Sort route_summary by day according to dayOrder to ensure correct day numbering
+    const sortedRouteSummary = [...route_summary].sort((a, b) => {
+        const aIndex = dayOrder.indexOf(a.day);
+        const bIndex = dayOrder.indexOf(b.day);
+        // Handle days not in dayOrder (e.g., put them at the end or error)
+        if (aIndex === -1) return 1;
+        if (bIndex === -1) return -1;
+        return aIndex - bIndex;
+    });
+
+    sortedRouteSummary.forEach((routeInfo, index) => {
         dayToNumber[routeInfo.day] = index + 1; 
     });
 
     const dateStrings: Record<string, string> = {};
-    const dayOfWeekStrings: Record<string, string> = {};
+    const dayOfWeekStrings: Record<string, string> = {}; // For full day name e.g. "목요일"
+    const dayOfWeekAbbrev: Record<string, string> = {}; // For abbreviation e.g. "목"
 
-    route_summary.forEach((routeInfo) => {
-        const dayKey = routeInfo.day; // 'Thu', 'Fri', etc.
+    const dayNamesFull = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
+    const dayNamesAbbrev = ['일', '월', '화', '수', '목', '금', '토'];
+
+    sortedRouteSummary.forEach((routeInfo) => {
+        const dayKey = routeInfo.day; 
         const dayNum = dayToNumber[dayKey];
         if (dayNum !== undefined) {
-            const date = new Date(startDate);
-            date.setDate(startDate.getDate() + dayNum -1); // dayNum is 1-indexed
+            const currentDayDate = new Date(startDate);
+            currentDayDate.setDate(startDate.getDate() + dayNum - 1); 
 
-            const month = date.getMonth() + 1;
-            const dayOfMonth = date.getDate();
+            const month = currentDayDate.getMonth() + 1;
+            const dayOfMonth = currentDayDate.getDate();
             dateStrings[dayKey] = `${month.toString().padStart(2, '0')}/${dayOfMonth.toString().padStart(2, '0')}`;
             
-            const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
-            dayOfWeekStrings[dayKey] = dayNames[date.getDay()];
+            const dayOfWeekIndex = currentDayDate.getDay();
+            dayOfWeekStrings[dayKey] = dayNamesFull[dayOfWeekIndex]; // Full name
+            dayOfWeekAbbrev[dayKey] = dayNamesAbbrev[dayOfWeekIndex]; // Abbreviation for ItineraryDay.dayOfWeek
         }
     });
     
     console.log("[parseServerResponse] 날짜 문자열:", dateStrings);
+    console.log("[parseServerResponse] 요일 문자열 (축약):", dayOfWeekAbbrev);
     
     const result: ItineraryDay[] = [];
     
-    route_summary.forEach((routeInfo: ServerRouteSummaryItem) => {
+    sortedRouteSummary.forEach((routeInfo: ServerRouteSummaryItem) => {
       const dayKey = routeInfo.day; 
-      const dayNumber = dayToNumber[dayKey] || 0; // Fallback to 0 if not found, though it should be.
+      const dayNumber = dayToNumber[dayKey] || 0;
       const placesForDayKey = dayMap.get(dayKey) || [];
       
       const placesWithTime: ItineraryPlaceWithTime[] = placesForDayKey.map((placeItem: ServerScheduleItem, index: number) => {
-        const timeBlock = placeItem.time_block.split('_')[1] || "0000"; // '0900', '1200', etc. or default
-        const hour = timeBlock.substring(0, 2);
-        const minute = timeBlock.substring(2, 4);
-        const formattedTime = (timeBlock === "시작" || timeBlock === "끝") ? timeBlock : `${hour}:${minute}`;
+        const timeBlockContent = placeItem.time_block.split('_')[1] || "0000";
+        const hour = timeBlockContent.substring(0, 2);
+        const minute = timeBlockContent.substring(2, 4);
+        const formattedTime = (timeBlockContent === "시작" || timeBlockContent === "끝") ? timeBlockContent : `${hour}:${minute}`;
         
         const originalPlace = currentSelectedPlaces.find(p => p.name === placeItem.place_name);
 
+        // Ensure all fields for ItineraryPlaceWithTime are populated
         return {
-          // ServerScheduleItem now has 'id', let's use it. If not present, fallback.
-          id: placeItem.id || `temp_${dayKey}_${index}`, 
+          id: String(placeItem.id || `temp_${dayKey}_${index}`), 
           name: placeItem.place_name || `장소 ${placeItem.id || index}`,
           category: (placeItem.place_type || 'unknown') as CategoryName,
           x: originalPlace?.x || 0, 
           y: originalPlace?.y || 0,
           address: originalPlace?.address || '',
-          // phone, description, rating, image_url, road_address, homepage from originalPlace if needed
-          timeBlock: formattedTime,
-          // geoNodeId should be the ID that MapContext uses for GeoJSON nodes.
-          // If placeItem.id from server is the GeoJSON node ID, use it.
+          phone: originalPlace?.phone || '',
+          description: originalPlace?.description || '',
+          rating: originalPlace?.rating || 0,
+          image_url: originalPlace?.image_url || '',
+          road_address: originalPlace?.road_address || '',
+          homepage: originalPlace?.homepage || '',
+          operationTimeData: originalPlace?.operationTimeData,
           geoNodeId: String(placeItem.id || `temp_${dayKey}_${index}`), 
-        } as ItineraryPlaceWithTime; // Cast to ensure all fields of ItineraryPlaceWithTime are considered
+          timeBlock: formattedTime,
+          // Populate other fields from originalPlace if they exist on ItineraryPlaceWithTime
+        } as ItineraryPlaceWithTime; // Cast to ensure all fields are considered
       });
       
+      const currentInterleavedRoute = routeInfo.interleaved_route || [];
+
       const itineraryDay: ItineraryDay = {
         day: dayNumber,
-        dayOfWeek: dayOfWeekStrings[dayKey] || dayKey, // Use formatted day of week string
+        dayOfWeek: dayOfWeekAbbrev[dayKey] || dayKey, // Use abbrev as per user's type
         date: dateStrings[dayKey] || '',
         places: placesWithTime,
         totalDistance: routeInfo.total_distance_m / 1000,
-        interleaved_route: routeInfo.interleaved_route,
-        routeData: { // These should be number[] as per ServerRouteResponse and interleaved_route
-          nodeIds: routeInfo.interleaved_route.filter((_, i) => i % 2 === 0),
-          linkIds: routeInfo.interleaved_route.filter((_, i) => i % 2 !== 0)
+        interleaved_route: currentInterleavedRoute, // number[]
+        routeData: { 
+          nodeIds: extractAllNodesFromRoute(currentInterleavedRoute).map(String), // Convert numbers to strings
+          linkIds: extractAllLinksFromRoute(currentInterleavedRoute).map(String)  // Convert numbers to strings
         }
       };
       result.push(itineraryDay);
     });
     
-    result.sort((a, b) => a.day - b.day);
+    // result is already sorted if sortedRouteSummary was used. If not, sort here.
+    // result.sort((a, b) => a.day - b.day); // Already sorted if using sortedRouteSummary
     console.log("[parseServerResponse] 최종 변환 결과:", JSON.parse(JSON.stringify(result)));
     return result;
   }, [currentSelectedPlaces]);
