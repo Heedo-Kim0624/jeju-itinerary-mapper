@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { ResizablePanel, ResizablePanelGroup, ResizableHandle } from '@/components/ui/resizable';
 import RegionSelector from './RegionSelector';
@@ -63,6 +62,13 @@ const LeftPanel: React.FC = () => {
     }
   };
 
+
+  // If LeftPanelContainer is meant to wrap everything including conditional rendering:
+  // This component might just be setting up data and passing it to LeftPanelContent
+  // or LeftPanelContainer might be a simpler structural wrapper used elsewhere.
+  // Based on previous user message, LeftPanelContainer wraps LeftPanel.
+  // So, this LeftPanel component is the main logic holder.
+
   if (isGeneratingSchedule) {
     return (
       <ScheduleLoadingIndicator
@@ -89,7 +95,12 @@ const LeftPanel: React.FC = () => {
     );
   }
   
-  // Fix the object literals to use English keys instead of Korean keys
+  // Object literals causing TS2353 are likely for props to CategoryPanels or similar.
+  // The fix is to use the English keys that the target type expects.
+  // The error type was: '{ accomodation: string; landmark: string; restaurant: string; cafe: string; }'
+  // So '숙소' maps to 'accomodation', '관광지' to 'landmark', etc.
+  // Ensure `keywordsAndInputs.directInputValues` itself has these English keys.
+
   const directInputValuesForPanels = {
     accomodation: keywordsAndInputs.directInputValues.accomodation,
     landmark: keywordsAndInputs.directInputValues.touristSpot, // Assuming touristSpot maps to landmark contextually here

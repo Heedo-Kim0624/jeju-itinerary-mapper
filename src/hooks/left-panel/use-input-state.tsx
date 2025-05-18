@@ -7,24 +7,34 @@ import { useState } from 'react';
 export const useInputState = () => {
   // 직접 입력 상태 관리
   const [accommodationDirectInput, setAccommodationDirectInput] = useState('');
-  const [touristSpotDirectInput, setTouristSpotDirectInput] = useState('');
+  const [landmarkDirectInput, setLandmarkDirectInput] = useState('');
   const [restaurantDirectInput, setRestaurantDirectInput] = useState('');
   const [cafeDirectInput, setCafeDirectInput] = useState('');
 
   // 직접 입력값 관리 객체
   const directInputValues = {
-    'accomodation': accommodationDirectInput,
-    'touristSpot': touristSpotDirectInput,
+    'accommodation': accommodationDirectInput,
+    'landmark': landmarkDirectInput,
     'restaurant': restaurantDirectInput,
     'cafe': cafeDirectInput
   };
 
   // 직접 입력값 변경 핸들러
-  const onDirectInputChange = {
-    'accommodation': setAccommodationDirectInput,
-    'touristSpot': setTouristSpotDirectInput,
-    'restaurant': setRestaurantDirectInput,
-    'cafe': setCafeDirectInput
+  const onDirectInputChange = (category: string, value: string) => {
+    switch (category) {
+      case 'accommodation':
+        setAccommodationDirectInput(value);
+        break;
+      case 'landmark':
+        setLandmarkDirectInput(value);
+        break;
+      case 'restaurant':
+        setRestaurantDirectInput(value);
+        break;
+      case 'cafe':
+        setCafeDirectInput(value);
+        break;
+    }
   };
 
   return {

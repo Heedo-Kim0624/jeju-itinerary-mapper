@@ -44,7 +44,7 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
         
         <div className="p-4 pt-2">
           <ScheduleViewer 
-            itinerary={itinerary}
+            itinerary={itinerary} {/* Changed from schedule={itinerary} */}
             selectedDay={selectedDay}
             onDaySelect={onSelectDay}
             startDate={startDate}

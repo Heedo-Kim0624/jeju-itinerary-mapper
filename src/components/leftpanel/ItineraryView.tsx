@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { Calendar, Clock, MapPin, Navigation } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -108,7 +107,7 @@ const ItineraryView: React.FC<ItineraryViewProps> = ({
       </div>
       
       <ScheduleViewer
-        itinerary={itinerary}
+        itinerary={itinerary} // Changed from schedule={itinerary}
         selectedDay={selectedDay}
         onDaySelect={onSelectDay} 
         startDate={startDate}
