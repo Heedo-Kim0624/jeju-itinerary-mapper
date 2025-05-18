@@ -14,6 +14,7 @@ export const useItinerary = () => {
   const { createItinerary } = useItineraryCreator();
 
   const handleSelectItineraryDay = (day: number) => {
+    console.log(`[useItinerary] 일자 선택: ${day}일차`);
     setSelectedItineraryDay(day);
   };
 
@@ -43,6 +44,12 @@ export const useItinerary = () => {
         return null;
       }
       
+      // 메모리에 데이터 저장 확인
+      console.log("[useItinerary] 일정 데이터 저장:", {
+        일수: generatedItinerary.length,
+        첫날장소수: generatedItinerary[0]?.places.length || 0
+      });
+      
       setItinerary(generatedItinerary);
       setSelectedItineraryDay(1); // Default to day 1
       setShowItinerary(true);
@@ -61,20 +68,39 @@ export const useItinerary = () => {
     }
   };
 
-  // 서버 응답 처리 함수 (from user's Part 1, ensuring it's kept)
-  const handleServerItineraryResponse = (serverItinerary: ItineraryDay[]) => {
+  // 서버 응답 처리 함수 개선
+  const handleServerItineraryResponse = (serverItinerary: ItineraryDay[]): ItineraryDay[] => {
     console.log("서버 일정 응답 처리 (useItinerary):", {
       일수: serverItinerary.length,
       첫날장소수: serverItinerary[0]?.places.length || 0
     });
     
-    setItinerary(serverItinerary);
-    
-    if (serverItinerary.length > 0) {
-      setSelectedItineraryDay(serverItinerary[0].day);
+    if (!serverItinerary || serverItinerary.length === 0) {
+      console.error("[useItinerary] 서버 일정 데이터가 비어있습니다.");
+      toast.error("서버에서 받은 일정 데이터가 비어있습니다.");
+      return [];
     }
     
+    // 메모리에 일정 데이터 저장
+    setItinerary(serverItinerary);
+    
+    // 첫 번째 일자 선택
+    if (serverItinerary.length > 0) {
+      setSelectedItineraryDay(serverItinerary[0].day);
+      console.log(`[useItinerary] 첫 번째 일자(${serverItinerary[0].day}일차) 선택 완료`);
+    }
+    
+    // 일정 패널 표시
     setShowItinerary(true);
+    console.log("[useItinerary] 일정 패널 표시 설정 완료 (showItinerary = true)");
+    
+    console.log("[useItinerary] 일정 데이터가 메모리에 저장되었습니다:", {
+      일수: serverItinerary.length,
+      각일자장소수: serverItinerary.map(day => ({
+        일자: day.day,
+        장소수: day.places.length
+      }))
+    });
     
     return serverItinerary;
   };
@@ -88,7 +114,6 @@ export const useItinerary = () => {
     setShowItinerary,
     handleSelectItineraryDay,
     generateItinerary,
-    handleServerItineraryResponse // Keep this function
+    handleServerItineraryResponse
   };
 };
-
