@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import ItineraryPanel from './ItineraryPanel';
 import { ScheduleLoadingIndicator } from './ScheduleLoadingIndicator';
 import { useScheduleManagement } from '@/hooks/useScheduleManagement';
+import { Button } from '@/components/ui/button'; // Button 임포트 추가
 
 interface ScheduleGeneratorProps {
   selectedPlaces: SelectedPlace[];

@@ -1,7 +1,7 @@
 
 import { useCallback } from 'react';
 import { toast } from 'sonner';
-import { SelectedPlace, ItineraryPlaceWithTime } from '@/types/supabase';
+import { SelectedPlace } from '@/types/supabase'; // ItineraryPlaceWithTime 제거 (선언되었으나 사용되지 않음)
 import { NewServerScheduleResponse, ServerRouteResponse, isNewServerScheduleResponse } from '@/types/schedule';
 import { useScheduleGenerator as useScheduleGeneratorHook } from '@/hooks/use-schedule-generator';
 import { useItineraryCreator, ItineraryDay as CreatorItineraryDay } from '@/hooks/use-itinerary-creator';
@@ -31,21 +31,25 @@ interface UseScheduleGenerationRunnerProps {
 export const useScheduleGenerationRunner = ({
   selectedPlaces,
   dates,
-  startDatetime,
-  endDatetime,
+  startDatetime, // useScheduleManagement에서 전달된 prop 이름 (ISO 문자열이어야 함)
+  endDatetime,   // useScheduleManagement에서 전달된 prop 이름 (ISO 문자열이어야 함)
   setItinerary,
   setSelectedDay,
   setIsLoadingState,
 }: UseScheduleGenerationRunnerProps) => {
-  const { generateSchedule: generateScheduleViaHook, isGenerating } = useScheduleGeneratorHook();
+  const { generateSchedule: generateScheduleViaHook } = useScheduleGeneratorHook(); // isGenerating 제거 (선언되었으나 사용되지 않음)
   const { createItinerary } = useItineraryCreator();
   const { setServerRoutes } = useMapContext();
   
-  const { preparePayload } = useSchedulePayload({ selectedPlaces, startDatetime, endDatetime });
+  // useSchedulePayload에 ISO 문자열 prop 이름으로 전달
+  const { preparePayload } = useSchedulePayload({ 
+    selectedPlaces, 
+    startDatetimeISO: startDatetime, 
+    endDatetimeISO: endDatetime 
+  });
   const { parseServerResponse } = useScheduleParser({ currentSelectedPlaces: selectedPlaces });
 
   const runScheduleGenerationProcess = useCallback(async () => {
-    // 로딩 상태를 먼저 설정하여 UI가 즉시 반응하도록 함
     setIsLoadingState(true);
     
     let finalItineraryForEvent: CreatorItineraryDay[] = [];
@@ -56,11 +60,10 @@ export const useScheduleGenerationRunner = ({
       
       if (!payload) {
         toast.error("일정 생성에 필요한 정보가 부족합니다.");
-        setIsLoadingState(false);
+        // setIsLoadingState(false); // finally 블록에서 처리
         return;
       }
 
-      // 서버에 일정 생성 요청
       const serverResponse = await generateScheduleViaHook(payload);
       debugLog('서버 원본 응답 (useScheduleGenerationRunner):', serverResponse);
       debugLog('서버 응답 타입 검사 (useScheduleGenerationRunner):', {
@@ -78,11 +81,9 @@ export const useScheduleGenerationRunner = ({
         const parsedItinerary = parseServerResponse(serverResponse, dates?.startDate || new Date());
         console.log("[useScheduleGenerationRunner] 파싱된 일정:", parsedItinerary);
         
-        // itinerary 상태 업데이트 - 이 시점에서 로딩 상태가 false로 되어야 함
         setItinerary(parsedItinerary);
         finalItineraryForEvent = parsedItinerary;
         
-        // 지도에 표시할 경로 데이터 구성
         const routesForMapContext: Record<number, ServerRouteResponse> = {};
         const dayOfWeekMap: { [key: string]: number } = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
         const tripStartDayOfWeek = (dates?.startDate || new Date()).getDay();
@@ -100,17 +101,15 @@ export const useScheduleGenerationRunner = ({
             };
         });
         
-        // 지도 컨텍스트에 경로 데이터 설정
         console.log("[useScheduleGenerationRunner] 지도에 경로 데이터 설정:", routesForMapContext);
         setServerRoutes(routesForMapContext);
         
         if (parsedItinerary.length > 0) {
-          // 첫 번째 일차 선택 (UI에 표시할 기본 일차)
           setSelectedDay(parsedItinerary[0].day as number);
           toast.success(`${parsedItinerary.length}일 일정이 성공적으로 생성되었습니다!`);
         } else {
           toast.error("서버에서 경로를 받았으나, 일정에 포함할 장소 정보가 부족합니다.");
-          setIsLoadingState(false); // 오류 발생 시 명시적으로 로딩 상태 해제
+          // setIsLoadingState(false); // finally 블록에서 처리
         }
       } else {
         toast.error("⚠️ 서버 응답이 없거나, 경로 정보가 부족하여 일정을 생성하지 못했습니다.");
@@ -131,13 +130,13 @@ export const useScheduleGenerationRunner = ({
             }
             toast.info("클라이언트에서 기본 일정이 생성되었습니다. (서버 응답 부족)");
         } else {
-            setIsLoadingState(false); // 날짜 정보가 없어 일정 생성이 불가능한 경우 로딩 상태 해제
+            // setIsLoadingState(false); // finally 블록에서 처리 (날짜 정보 없는 경우)
         }
       }
     } catch (error) {
       console.error("일정 생성 오류 (useScheduleGenerationRunner):", error);
       toast.error("⚠️ 일정 생성 중 오류가 발생했습니다.");
-      setIsLoadingState(false); // 오류 발생 시 명시적으로 로딩 상태 해제
+      // setIsLoadingState(false); // finally 블록에서 처리
       
       if (dates) {
         console.warn("오류 발생으로 클라이언트 측 일정을 생성합니다 (useScheduleGenerationRunner).");
@@ -156,11 +155,12 @@ export const useScheduleGenerationRunner = ({
         }
       }
     } finally {
-      // 일정 생성 프로세스가 완료된 후, 이벤트 발생 시키기 위한 코드
+      // 프로세스 완료 후 로딩 상태 해제
+      setIsLoadingState(false);
+      console.log("[useScheduleGenerationRunner] setIsLoadingState(false) 호출됨 in finally");
+
       if (finalItineraryForEvent.length > 0) {
         console.log("일정 생성 완료 이벤트 발생:", finalItineraryForEvent);
-        
-        // CustomEvent 생성 및 디스패치
         const event = new CustomEvent('itineraryCreated', { 
           detail: { 
             itinerary: finalItineraryForEvent,
@@ -168,9 +168,6 @@ export const useScheduleGenerationRunner = ({
           } 
         });
         window.dispatchEvent(event);
-        
-        // 로딩 상태는 이벤트 핸들러에서 useEffect를 통해 처리되도록 함
-        // setIsLoadingState(false); // 주석 처리 - useScheduleStateAndEffects의 useEffect에서 처리
       } else {
         console.log("빈 일정으로 이벤트 발생");
         const event = new CustomEvent('itineraryCreated', {
@@ -180,9 +177,6 @@ export const useScheduleGenerationRunner = ({
           }
         });
         window.dispatchEvent(event);
-        
-        // 빈 일정인 경우 여기서 명시적으로 로딩 상태 해제
-        setIsLoadingState(false);
       }
     }
   }, [
@@ -200,6 +194,6 @@ export const useScheduleGenerationRunner = ({
 
   return { 
     runScheduleGenerationProcess,
-    isGenerating 
+    // isGenerating // isGeneratingFromHook을 isGenerating으로 사용하려면 여기서 반환해야 하지만, 현재 사용되지 않음
   };
 };

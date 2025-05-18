@@ -39,15 +39,14 @@ export const useScheduleManagement = ({
     setIsLoadingState,
   });
 
-  // isLoading 상태를 명확히 정의: 서버 요청 중이거나 내부 로딩 상태일 때
   const isLoading = isGenerating || isLoadingState;
 
   console.log("[useScheduleManagement] 상태 업데이트:", { 
-    itinerary: itinerary.length > 0 ? `${itinerary.length}일 일정` : "없음", 
+    itineraryLength: itinerary.length, 
     selectedDay, 
-    isLoadingState, 
-    isGenerating, 
-    isLoading 
+    isLoadingStateFromEffects: isLoadingState, 
+    isGeneratingFromGenerator: isGenerating, 
+    combinedIsLoading: isLoading 
   });
 
   return {
