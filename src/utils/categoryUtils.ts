@@ -1,36 +1,36 @@
 
-export type CategoryName = '숙소' | '관광지' | '음식점' | '카페';
+export type CategoryName = 'accommodation' | 'touristSpot' | 'restaurant' | 'cafe';
 
 // 카테고리 별 키워드 타입 정의 추가
 export type CategoryKeywords = {
-  '숙소': string[];
-  '관광지': string[];
-  '음식점': string[];
-  '카페': string[];
+  'accommodation': string[];
+  'touristSpot': string[];
+  'restaurant': string[];
+  'cafe': string[];
 };
 
 export const categoryKeywords = {
-  '숙소': ['ocean_view', 'breakfast', 'pool'],
-  '관광지': ['nature', 'culture', 'history'],
-  '음식점': ['seafood', 'korean', 'vegetarian'],
-  '카페': ['coffee', 'cake', 'view']
+  'accommodation': ['ocean_view', 'breakfast', 'pool'],
+  'touristSpot': ['nature', 'culture', 'history'],
+  'restaurant': ['seafood', 'korean', 'vegetarian'],
+  'cafe': ['coffee', 'cake', 'view']
 };
 
-export const categoryToEnglish = (koreanName: CategoryName): string => {
-  const mapping: Record<CategoryName, string> = {
+export const categoryToEnglish = (koreanName: string): CategoryName | null => {
+  const mapping: Record<string, CategoryName> = {
     '숙소': 'accommodation',
-    '관광지': 'attraction',
+    '관광지': 'touristSpot',
     '음식점': 'restaurant',
     '카페': 'cafe'
   };
   
-  return mapping[koreanName] || 'other';
+  return mapping[koreanName] || null;
 };
 
-export const englishToKorean = (englishName: string): CategoryName | null => {
+export const englishToKorean = (englishName: string): string | null => {
   switch(englishName.toLowerCase()) {
     case 'accommodation': return '숙소';
-    case 'attraction': return '관광지';
+    case 'touristspot': return '관광지';
     case 'restaurant': return '음식점';
     case 'cafe': return '카페';
     default: return null;
@@ -38,15 +38,16 @@ export const englishToKorean = (englishName: string): CategoryName | null => {
 };
 
 // Add missing constants
-export const CATEGORIES: CategoryName[] = ['숙소', '관광지', '음식점', '카페'];
+export const CATEGORIES: string[] = ['숙소', '관광지', '음식점', '카페'];
+export const CATEGORY_NAMES: CategoryName[] = ['accommodation', 'touristSpot', 'restaurant', 'cafe'];
 
 // 카테고리별 최소 추천 개수 계산 함수
 export const getMinimumRecommendationsByCategory = (days: number) => {
   return {
-    '숙소': days > 1 ? days - 1 : 1,
-    '관광지': Math.max(4, Math.ceil(4 * days)),
-    '음식점': Math.max(3, Math.ceil(3 * days)),
-    '카페': Math.max(3, Math.ceil(3 * days))
+    'accommodation': days > 1 ? days - 1 : 1,
+    'touristSpot': Math.max(4, Math.ceil(4 * days)),
+    'restaurant': Math.max(3, Math.ceil(3 * days)),
+    'cafe': Math.max(3, Math.ceil(3 * days))
   };
 };
 
@@ -55,25 +56,25 @@ export const MINIMUM_RECOMMENDATION_COUNT = getMinimumRecommendationsByCategory;
 
 // 카테고리별 시간대 추천 가중치
 export const timeOfDayWeights = {
-  '숙소': {
+  'accommodation': {
     morning: 0.2,
-    afternoon: 0.3,
+    afternoon: 0.3,  
     evening: 1.0,
     night: 0.8
   },
-  '관광지': {
+  'touristSpot': {
     morning: 1.0,
     afternoon: 0.9,
     evening: 0.5,
     night: 0.2
   },
-  '음식점': {
+  'restaurant': {
     morning: 0.7,
     afternoon: 0.3,
     evening: 1.0,
     night: 0.6
   },
-  '카페': {
+  'cafe': {
     morning: 0.8,
     afternoon: 1.0,
     evening: 0.8,

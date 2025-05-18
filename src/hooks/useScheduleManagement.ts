@@ -1,10 +1,8 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
-import { ItineraryDay, Place, SelectedPlace, ItineraryPlaceWithTime } from '@/types/supabase'; // Removed ServerRouteResponse
+import { ItineraryDay, Place, SelectedPlace, ItineraryPlaceWithTime } from '@/types/supabase';
 import { useMapContext } from '@/components/rightpanel/MapContext';
-// Removed createItinerary import, createItineraryClientSide is kept if used, otherwise should be removed too.
-// Assuming createItineraryClientSide is still used elsewhere or intended.
 import { createItinerary as createItineraryClientSide } from '@/lib/itinerary/itinerary-utils'; 
 import { useScheduleGenerator as useScheduleGeneratorHook } from '@/hooks/use-schedule-generator';
 import { useScheduleStateAndEffects } from './schedule/useScheduleStateAndEffects';
