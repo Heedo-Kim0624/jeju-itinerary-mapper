@@ -169,35 +169,50 @@ export const useScheduleGenerationRunner = ({
       }
     } finally {
       console.log("[useScheduleGenerationRunner] Entering finally block. Attempting to set isLoadingState to false.");
+      
+      // 명시적으로 로딩 상태 해제
       setIsLoadingState(false);
       console.log("[useScheduleGenerationRunner] setIsLoadingState(false) has been called in finally block.");
 
       // 일정 생성 완료 후 LeftPanel 강제 업데이트를 위한 이벤트 발생
       if (finalItineraryForEvent.length > 0) {
         console.log("[useScheduleGenerationRunner] Dispatching 'itineraryCreated' event with itinerary:", finalItineraryForEvent);
-        const event = new CustomEvent('itineraryCreated', { 
-          detail: { 
-            itinerary: finalItineraryForEvent,
-            selectedDay: finalItineraryForEvent[0].day
-          } 
-        });
-        window.dispatchEvent(event);
         
-        // 추가: 강제 리렌더링 이벤트 발생
-        console.log("[useScheduleGenerationRunner] Dispatching 'forceRerender' event for LeftPanel update");
-        window.dispatchEvent(new Event('forceRerender'));
+        // 이벤트 발생 전 약간의 지연 추가 (상태 업데이트 완료 보장)
+        setTimeout(() => {
+          const event = new CustomEvent('itineraryCreated', { 
+            detail: { 
+              itinerary: finalItineraryForEvent,
+              selectedDay: finalItineraryForEvent[0].day
+            } 
+          });
+          window.dispatchEvent(event);
+          
+          // 추가: 강제 리렌더링 이벤트 발생 (약간 지연)
+          setTimeout(() => {
+            console.log("[useScheduleGenerationRunner] Dispatching 'forceRerender' event for LeftPanel update");
+            window.dispatchEvent(new Event('forceRerender'));
+          }, 100);
+        }, 100);
       } else {
         console.log("[useScheduleGenerationRunner] Dispatching 'itineraryCreated' event with empty itinerary.");
-        const event = new CustomEvent('itineraryCreated', {
-          detail: {
-            itinerary: [],
-            selectedDay: null
-          }
-        });
-        window.dispatchEvent(event);
-        // Also dispatch forceRerender even if itinerary is empty to update UI
-        console.log("[useScheduleGenerationRunner] Dispatching 'forceRerender' event for LeftPanel update (empty itinerary)");
-        window.dispatchEvent(new Event('forceRerender'));
+        
+        // 이벤트 발생 전 약간의 지연 추가 (상태 업데이트 완료 보장)
+        setTimeout(() => {
+          const event = new CustomEvent('itineraryCreated', {
+            detail: {
+              itinerary: [],
+              selectedDay: null
+            }
+          });
+          window.dispatchEvent(event);
+          
+          // 추가: 강제 리렌더링 이벤트 발생 (약간 지연)
+          setTimeout(() => {
+            console.log("[useScheduleGenerationRunner] Dispatching 'forceRerender' event after empty itinerary");
+            window.dispatchEvent(new Event('forceRerender'));
+          }, 100);
+        }, 100);
       }
     }
   }, [
