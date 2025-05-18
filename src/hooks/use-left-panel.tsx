@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react'; // Added useCallback
 import { useSelectedPlaces } from './use-selected-places';
 import { useTripDetails } from './use-trip-details';
 import { useCategoryResults } from './use-category-results';
-import { useItinerary, ItineraryDay } from './use-itinerary'; // ItineraryDay is now exported
+import { useItinerary, ItineraryDay } from './use-itinerary';
 import { useRegionSelection } from './use-region-selection';
 import { useCategorySelection } from './use-category-selection';
 import { useCategoryHandlers } from './left-panel/use-category-handlers';
@@ -128,7 +128,7 @@ export const useLeftPanel = () => {
   const itineraryHandlers = useItineraryHandlers();
   
   const handleCreateItinerary = async () => {
-    console.log('[useLeftPanel] handleCreateItinerary 호출됨');
+    console.log("[use-left-panel] 일정 생성 요청 시작");
     
     // 날짜 정보 로깅
     console.log('[useLeftPanel] 여행 날짜 정보:', {
@@ -137,14 +137,38 @@ export const useLeftPanel = () => {
       endDatetime: tripDetails.endDatetime
     });
     
-    return itineraryHandlers.handleCreateItinerary(
-      tripDetails,
-      placesManagement.selectedPlaces as SelectedPlace[], // Cast if selectedPlaces is Place[]
-      placesManagement.prepareSchedulePayload,
-      itineraryManagement.generateItinerary, // Pass the one from useItinerary
-      uiVisibility.setShowItinerary, // Pass down setShowItinerary
-      (panel: 'region' | 'date' | 'category' | 'itinerary') => setCurrentPanel(panel)
-    );
+    try {
+      const success = await itineraryHandlers.handleCreateItinerary(
+        tripDetails,
+        placesManagement.selectedPlaces as SelectedPlace[],
+        placesManagement.prepareSchedulePayload,
+        itineraryManagement.generateItinerary,
+        uiVisibility.setShowItinerary, // Pass down setShowItinerary
+        (panel: 'region' | 'date' | 'category' | 'itinerary') => setCurrentPanel(panel)
+      );
+      
+      console.log(`[use-left-panel] 일정 생성 ${success ? '성공' : '실패'}`);
+      
+      if (success) {
+        // 일정 생성 성공 시 명시적으로 UI 상태 업데이트
+        console.log("[use-left-panel] 일정 패널로 전환 시작");
+        
+        // 상태 업데이트 순서 보장을 위한 타임아웃 사용
+        // The event 'itineraryCreated' already calls setShowItinerary(true).
+        // We are adding setCurrentPanel here.
+        setTimeout(() => {
+          uiVisibility.setShowItinerary(true); // May be redundant if event handles it, but ensures it.
+          setCurrentPanel('itinerary');
+          console.log("[use-left-panel] 일정 패널로 전환 완료 (showItinerary=true, currentPanel=itinerary)");
+        }, 200); // A small delay to ensure other state updates might have settled.
+      }
+      
+      return success;
+    } catch (error) {
+      console.error("[use-left-panel] 일정 생성 중 오류 발생:", error);
+      toast.error("일정 생성 처리 중 내부 오류가 발생했습니다.");
+      return false;
+    }
   };
   
   const handleCloseItinerary = () => {
@@ -152,32 +176,31 @@ export const useLeftPanel = () => {
       uiVisibility.setShowItinerary, 
       (panel: 'region' | 'date' | 'category' | 'itinerary') => setCurrentPanel(panel)
     );
+    // Reset to a default panel when closing itinerary, e.g., category selection
+    setCurrentPanel('category'); 
   };
 
   // Listen for itineraryCreated custom event
   useEffect(() => {
     const handleItineraryCreated = (event: Event) => {
-      // Type assertion for CustomEvent
       const customEvent = event as CustomEvent<{ itinerary: ItineraryDay[], selectedDay: number | null }>;
       
       console.log("[useLeftPanel] 'itineraryCreated' event received:", customEvent.detail);
       
       if (customEvent.detail.itinerary) {
-        // Use the setItinerary from useItinerary directly or via itineraryManagement
         setItinerary(customEvent.detail.itinerary); 
       }
       
       if (customEvent.detail.selectedDay !== null) {
         setSelectedItineraryDay(customEvent.detail.selectedDay);
       } else if (customEvent.detail.itinerary && customEvent.detail.itinerary.length > 0) {
-        // Fallback to first day of itinerary if selectedDay is null but itinerary exists
         setSelectedItineraryDay(customEvent.detail.itinerary[0].day);
       } else {
         setSelectedItineraryDay(null);
       }
       
-      // Show the itinerary panel if itinerary is created (even if empty, to show potential messages)
       setShowItinerary(true); 
+      // setCurrentPanel('itinerary'); // Consider if this should also be here
     };
 
     window.addEventListener('itineraryCreated', handleItineraryCreated);
@@ -185,25 +208,28 @@ export const useLeftPanel = () => {
     return () => {
       window.removeEventListener('itineraryCreated', handleItineraryCreated);
     };
-  }, [setItinerary, setSelectedItineraryDay, setShowItinerary]); // Dependencies for the state setters from useItinerary
+  }, [setItinerary, setSelectedItineraryDay, setShowItinerary]);
 
   // 일정 상태 변경 시 UI 갱신을 위한 useEffect 추가 (from user's Part 2)
   useEffect(() => {
-    // 일정이 생성되었지만 showItinerary가 false인 경우 자동으로 활성화
     if (itinerary && itinerary.length > 0 && !showItinerary) {
       console.log("useLeftPanel: 일정이 생성되었으나 패널이 표시되지 않아 자동으로 활성화합니다.");
       setShowItinerary(true);
     }
-    
-    // 일정이 생성되었지만 선택된 날짜가 없는 경우 첫 번째 날짜 선택
     if (itinerary && itinerary.length > 0 && selectedItineraryDay === null) {
       console.log("useLeftPanel: 일정이 생성되었으나 날짜가 선택되지 않아 첫 번째 날짜를 선택합니다.");
-      // Ensure itinerary[0].day is valid before setting
       if (itinerary[0] && typeof itinerary[0].day === 'number') {
         setSelectedItineraryDay(itinerary[0].day);
       }
     }
-  }, [itinerary, showItinerary, selectedItineraryDay, setShowItinerary, setSelectedItineraryDay]);
+    // If itinerary is shown, ensure panel is set to itinerary
+    if (showItinerary && currentPanel !== 'itinerary') {
+        // This might conflict if user is trying to navigate away while itinerary is shown.
+        // For now, let's assume if showItinerary is true, panel should be 'itinerary'.
+        // setCurrentPanel('itinerary'); // This line was causing issues by constantly setting panel
+    }
+
+  }, [itinerary, showItinerary, selectedItineraryDay, setShowItinerary, setSelectedItineraryDay, currentPanel]);
 
   return {
     regionSelection,
@@ -217,6 +243,7 @@ export const useLeftPanel = () => {
     selectedCategory,
     showCategoryResultScreen,
     currentPanel,
+    setCurrentPanel, // Expose setCurrentPanel
     isCategoryLoading,
     categoryError,
     categoryResults,
