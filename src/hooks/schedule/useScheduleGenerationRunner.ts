@@ -1,4 +1,3 @@
-
 import { useCallback } from 'react';
 import { toast } from 'sonner';
 import { SelectedPlace, ItineraryPlaceWithTime } from '@/types/supabase';
@@ -46,6 +45,7 @@ export const useScheduleGenerationRunner = ({
 
   const runScheduleGenerationProcess = useCallback(async () => {
     setIsLoadingState(true);
+    let finalItineraryForEvent: CreatorItineraryDay[] = [];
     try {
       const payload = preparePayload();
       debugLog('서버 요청 페이로드 (useScheduleGenerationRunner):', payload);
@@ -72,6 +72,7 @@ export const useScheduleGenerationRunner = ({
         
         const parsedItinerary = parseServerResponse(serverResponse, dates?.startDate || new Date());
         setItinerary(parsedItinerary);
+        finalItineraryForEvent = parsedItinerary;
         
         const routesForMapContext: Record<number, ServerRouteResponse> = {};
         const dayOfWeekMap: { [key: string]: number } = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
@@ -93,7 +94,7 @@ export const useScheduleGenerationRunner = ({
         
         if (parsedItinerary.length > 0) {
           setSelectedDay(parsedItinerary[0].day as number);
-          toast.success("서버로부터 일정을 성공적으로 생성했습니다!");
+          toast.success(`${parsedItinerary.length}일 일정이 성공적으로 생성했습니다!`);
         } else {
           toast.error("서버에서 경로를 받았으나, 일정에 포함할 장소 정보가 부족합니다.");
         }
@@ -108,14 +109,11 @@ export const useScheduleGenerationRunner = ({
               dates.startTime,
               dates.endTime
             );
-            const domainItinerary = generatedItinerary.map(day => ({
-                ...day,
-                places: day.places.map(p => ({...p, timeBlock: "시간 정보 없음"}) as ItineraryPlaceWithTime),
-            }));
-            setItinerary(domainItinerary);
+            setItinerary(generatedItinerary);
+            finalItineraryForEvent = generatedItinerary;
 
-            if (domainItinerary.length > 0) {
-              setSelectedDay(domainItinerary[0].day);
+            if (generatedItinerary.length > 0) {
+              setSelectedDay(generatedItinerary[0].day);
             }
             toast.info("클라이언트에서 기본 일정이 생성되었습니다. (서버 응답 부족)");
         }
@@ -132,17 +130,34 @@ export const useScheduleGenerationRunner = ({
           dates.startTime,
           dates.endTime
         );
-        const domainItinerary = generatedItinerary.map(day => ({
-            ...day,
-            places: day.places.map(p => ({...p, timeBlock: "시간 정보 없음"}) as ItineraryPlaceWithTime),
-        }));
-        setItinerary(domainItinerary);
-        if (domainItinerary.length > 0) {
-          setSelectedDay(domainItinerary[0].day);
+        setItinerary(generatedItinerary);
+        finalItineraryForEvent = generatedItinerary;
+
+        if (generatedItinerary.length > 0) {
+          setSelectedDay(generatedItinerary[0].day);
         }
       }
     } finally {
       setIsLoadingState(false);
+      if (finalItineraryForEvent.length > 0) {
+        console.log("Dispatching itineraryCreated event with:", finalItineraryForEvent);
+        const event = new CustomEvent('itineraryCreated', { 
+          detail: { 
+            itinerary: finalItineraryForEvent,
+            selectedDay: finalItineraryForEvent[0].day
+          } 
+        });
+        window.dispatchEvent(event);
+      } else {
+         console.log("Dispatching itineraryCreated event (empty itinerary)");
+         const event = new CustomEvent('itineraryCreated', {
+           detail: {
+             itinerary: [],
+             selectedDay: null
+           }
+         });
+         window.dispatchEvent(event);
+      }
     }
   }, [
     preparePayload,

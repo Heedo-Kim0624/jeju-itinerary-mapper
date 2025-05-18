@@ -1,15 +1,14 @@
-
 import { useState, useEffect } from 'react';
 import { useSelectedPlaces } from './use-selected-places';
 import { useTripDetails } from './use-trip-details';
 import { useCategoryResults } from './use-category-results';
-import { useItinerary } from './use-itinerary'; 
+import { useItinerary, ItineraryDay as CreatorItineraryDay } from './use-itinerary'; // Import ItineraryDay as CreatorItineraryDay
 import { useRegionSelection } from './use-region-selection';
 import { useCategorySelection } from './use-category-selection';
 import { useCategoryHandlers } from './left-panel/use-category-handlers';
 import { useItineraryHandlers } from './left-panel/use-itinerary-handlers';
 import { useInputState } from './left-panel/use-input-state';
-import { Place, SelectedPlace, SchedulePayload, ItineraryDay } from '@/types/supabase';
+import { Place, SelectedPlace, SchedulePayload } from '@/types/supabase'; // Removed ItineraryDay from here to avoid conflict if different
 import { CategoryName } from '@/utils/categoryUtils';
 import { toast } from 'sonner';
 
@@ -77,6 +76,7 @@ export const useLeftPanel = () => {
     itinerary,
     selectedItineraryDay,
     showItinerary,
+    setItinerary, // Added setItinerary for direct use
     setSelectedItineraryDay,
     setShowItinerary,
     handleSelectItineraryDay,
@@ -86,6 +86,7 @@ export const useLeftPanel = () => {
   const itineraryManagement = {
     itinerary,
     selectedItineraryDay,
+    setItinerary, // Expose setItinerary via itineraryManagement
     setSelectedItineraryDay,
     handleSelectItineraryDay,
     generateItinerary
@@ -154,12 +155,38 @@ export const useLeftPanel = () => {
     );
   };
 
-  // 일정이 생성되면 첫 번째 날짜 선택
+  // Listen for itineraryCreated custom event
   useEffect(() => {
-    if (itinerary && itinerary.length > 0 && showItinerary) {
-      setSelectedItineraryDay(itinerary[0]?.day || 1);
-    }
-  }, [itinerary, showItinerary, setSelectedItineraryDay]);
+    const handleItineraryCreated = (event: Event) => {
+      // Type assertion for CustomEvent
+      const customEvent = event as CustomEvent<{ itinerary: CreatorItineraryDay[], selectedDay: number | null }>;
+      
+      console.log("[useLeftPanel] 'itineraryCreated' event received:", customEvent.detail);
+      
+      if (customEvent.detail.itinerary) {
+        // Use the setItinerary from useItinerary directly or via itineraryManagement
+        setItinerary(customEvent.detail.itinerary); 
+      }
+      
+      if (customEvent.detail.selectedDay !== null) {
+        setSelectedItineraryDay(customEvent.detail.selectedDay);
+      } else if (customEvent.detail.itinerary && customEvent.detail.itinerary.length > 0) {
+        // Fallback to first day of itinerary if selectedDay is null but itinerary exists
+        setSelectedItineraryDay(customEvent.detail.itinerary[0].day);
+      } else {
+        setSelectedItineraryDay(null);
+      }
+      
+      // Show the itinerary panel if itinerary is created (even if empty, to show potential messages)
+      setShowItinerary(true); 
+    };
+
+    window.addEventListener('itineraryCreated', handleItineraryCreated);
+    
+    return () => {
+      window.removeEventListener('itineraryCreated', handleItineraryCreated);
+    };
+  }, [setItinerary, setSelectedItineraryDay, setShowItinerary]); // Dependencies for the state setters from useItinerary
 
   return {
     regionSelection,
@@ -178,7 +205,7 @@ export const useLeftPanel = () => {
     categoryResults,
     handleCategorySelect,
     handleCloseCategoryResult,
-    handleConfirmCategory: handleConfirmCategoryFromButton,
+    handleConfirmCategory: handleConfirmCategoryFromButton, // Renamed for clarity from user's snippet
     handleCloseItinerary
   };
 };
