@@ -3,6 +3,7 @@ import { useScheduleGenerator as useScheduleGeneratorHook } from '@/hooks/use-sc
 import { useScheduleStateAndEffects } from './schedule/useScheduleStateAndEffects';
 import { useScheduleGenerationRunner } from './schedule/useScheduleGenerationRunner';
 import { SelectedPlace } from '@/types/supabase';
+import { useEffect } from 'react'; // useEffect 추가
 
 interface UseScheduleManagementProps {
   selectedPlaces: SelectedPlace[];
@@ -22,12 +23,12 @@ export const useScheduleManagement = ({
     setItinerary,
     selectedDay,
     setSelectedDay,
-    isLoadingState,
+    isLoadingState: isLoadingStateFromEffects, // 이름 변경하여 명확화
     setIsLoadingState,
     handleSelectDay,
   } = useScheduleStateAndEffects();
 
-  const { isGenerating } = useScheduleGeneratorHook();
+  const { isGenerating: isGeneratingFromGenerator } = useScheduleGeneratorHook(); // 이름 변경하여 명확화
 
   const { runScheduleGenerationProcess } = useScheduleGenerationRunner({
     selectedPlaces,
@@ -36,21 +37,25 @@ export const useScheduleManagement = ({
     endDatetime,
     setItinerary,
     setSelectedDay,
-    setIsLoadingState,
+    setIsLoadingState, // This setIsLoadingState is from useScheduleStateAndEffects
   });
 
-  const isLoading = isGenerating || isLoadingState;
+  const combinedIsLoading = isGeneratingFromGenerator || isLoadingStateFromEffects;
 
-  console.log(`[useScheduleManagement] Loading State Update:
-    - isGenerating (from use-schedule-generator): ${isGenerating}
-    - isLoadingState (from useScheduleStateAndEffects): ${isLoadingState}
-    - Combined isLoading for UI: ${isLoading}
-    - Itinerary length: ${itinerary.length}`);
+  // Log all relevant states whenever they change
+  useEffect(() => {
+    console.log(`[useScheduleManagement] State Update:
+      - isGenerating (from use-schedule-generator): ${isGeneratingFromGenerator}
+      - isLoadingState (from useScheduleStateAndEffects): ${isLoadingStateFromEffects}
+      - Combined isLoading for UI: ${combinedIsLoading}
+      - Itinerary length: ${itinerary.length}
+      - Selected Day: ${selectedDay}`);
+  }, [isGeneratingFromGenerator, isLoadingStateFromEffects, combinedIsLoading, itinerary, selectedDay]);
 
   return {
     itinerary,
     selectedDay,
-    isLoading,
+    isLoading: combinedIsLoading, // UI에 전달되는 최종 로딩 상태
     handleSelectDay,
     runScheduleGenerationProcess,
   };

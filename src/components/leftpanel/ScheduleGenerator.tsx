@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import ItineraryPanel from './ItineraryPanel';
 import { ScheduleLoadingIndicator } from './ScheduleLoadingIndicator';
 import { useScheduleManagement } from '@/hooks/useScheduleManagement';
-import { Button } from '@/components/ui/button'; // Button 임포트 추가
+import { Button } from '@/components/ui/button';
 
 interface ScheduleGeneratorProps {
   selectedPlaces: SelectedPlace[];
@@ -30,7 +30,7 @@ export const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({
   const {
     itinerary,
     selectedDay,
-    isLoading,
+    isLoading, // This is combinedIsLoading from useScheduleManagement
     handleSelectDay,
     runScheduleGenerationProcess
   } = useScheduleManagement({
@@ -53,19 +53,19 @@ export const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({
       return;
     }
     
-    console.log("[ScheduleGenerator] 일정 생성 프로세스 시작");
+    console.log("[ScheduleGenerator] 일정 생성 프로세스 시작 (useEffect dependency changed or initial run)");
     runScheduleGenerationProcess();
-  }, [startDatetimeLocal, endDatetimeLocal, selectedPlaces, onClose, runScheduleGenerationProcess]);
+  }, [startDatetimeLocal, endDatetimeLocal, selectedPlaces, onClose, runScheduleGenerationProcess]); // runScheduleGenerationProcess는 useCallback으로 memoized 되어있으므로, 의존성 변경 시에만 재실행됨
 
-  // 로딩 중이면 로딩 인디케이터 표시
   if (isLoading) {
-    console.log("[ScheduleGenerator] 로딩 인디케이터 표시 중");
+    console.log("[ScheduleGenerator] Rendering loading indicator because isLoading is true.");
     return <ScheduleLoadingIndicator text="일정을 생성하는 중..." subtext="잠시만 기다려주세요" />;
   }
 
-  // 일정이 없으면 오류 메시지와 함께 빈 상태 표시
+  console.log("[ScheduleGenerator] isLoading is false. Proceeding to check itinerary.");
+
   if (!itinerary || itinerary.length === 0) {
-    console.log("[ScheduleGenerator] 일정이 없음");
+    console.log("[ScheduleGenerator] Rendering empty state because itinerary is empty and isLoading is false.");
     return (
       <div className="h-full flex flex-col items-center justify-center p-4">
         <p className="text-lg font-medium text-center">일정이 생성되지 않았습니다.</p>
@@ -79,9 +79,9 @@ export const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({
 
   const panelStartDate = dates?.startDate || new Date();
 
-  console.log("[ScheduleGenerator] 일정 패널 렌더링:", { 
-    일수: itinerary.length, 
-    선택된날짜: selectedDay 
+  console.log("[ScheduleGenerator] Rendering ItineraryPanel:", { 
+    itineraryLength: itinerary.length, 
+    selectedDay: selectedDay 
   });
 
   return (
