@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useRef } from 'react';
 import { Place, ItineraryDay } from '@/types/supabase';
 import useMapCore from './useMapCore';
@@ -41,6 +40,7 @@ interface MapContextType {
   renderGeoJsonRoute: (nodeIds: string[], linkIds: string[], style?: any) => any[];
   geoJsonNodes: any[];
   geoJsonLinks: any[];
+  // 서버 경로 관련 기능 수정 - Aligning with error message for useMapCore's provided type
   setServerRoutes: (
     dayRoutes: Record<number, ServerRouteResponse> | 
                ((prevRoutes: Record<number, ServerRouteResponse>) => Record<number, ServerRouteResponse>)
@@ -90,18 +90,6 @@ export const useMapContext = () => useContext(MapContext);
 // Create a provider component that uses the useMapCore hook
 export const MapProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
   const mapCore = useMapCore();
-  
-  // 서버 경로 데이터가 설정될 때 로그
-  React.useEffect(() => {
-    if (Object.keys(mapCore.serverRoutesData).length > 0) {
-      console.log('[MapProvider] Server routes data is set:', {
-        days: Object.keys(mapCore.serverRoutesData).length,
-        day1NodeIds: mapCore.serverRoutesData[1]?.nodeIds?.length || 'N/A',
-        day1LinkIds: mapCore.serverRoutesData[1]?.linkIds?.length || 'N/A',
-        day1HasInterleaved: !!mapCore.serverRoutesData[1]?.interleaved_route
-      });
-    }
-  }, [mapCore.serverRoutesData]);
   
   return (
     <MapContext.Provider value={mapCore}>
