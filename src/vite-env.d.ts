@@ -4,7 +4,7 @@
 interface ImportMetaEnv {
   readonly VITE_NAVER_CLIENT_ID: string;
   readonly VITE_SERVER_URL: string;
-  readonly VITE_SCHEDULE_API: string; // VITE_SCHEDULE_API 타입 추가
+  readonly VITE_SCHEDULE_API: string;
 }
 
 interface ImportMeta {

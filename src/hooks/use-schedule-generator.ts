@@ -1,4 +1,3 @@
-
 import { useCallback, useState } from 'react';
 import { SchedulePayload, NewServerScheduleResponse } from '@/types/schedule';
 import { toast } from 'sonner';
@@ -18,12 +17,15 @@ export const useScheduleGenerator = () => {
 
     // 서버 호출 로직
     try {
-      // const API_URL = process.env.REACT_APP_SCHEDULE_API_URL || '/api/generate_schedule';
-      // TODO: API_URL 환경변수 설정 또는 직접 URL 입력
-      // 현재 API URL이 없으므로, 환경 변수 사용 예시를 주석 처리하고 임시 URL을 사용합니다.
-      // 실제 배포 시에는 올바른 API URL로 교체해야 합니다.
-      // VITE_SCHEDULE_API 환경 변수를 사용하도록 수정
-      const API_URL = import.meta.env.VITE_SCHEDULE_API
+      // VITE_SCHEDULE_API 환경 변수를 사용하고 '/generate_schedule' 경로를 추가합니다.
+      const baseApiUrl = import.meta.env.VITE_SCHEDULE_API;
+      if (!baseApiUrl) {
+        console.error('[use-schedule-generator] VITE_SCHEDULE_API 환경 변수가 설정되지 않았습니다.');
+        toast.error('API 설정 오류. 관리자에게 문의하세요.');
+        setIsGenerating(false);
+        return null;
+      }
+      const API_URL = `${baseApiUrl}/generate_schedule`;
 
       console.log(`[use-schedule-generator] Sending request to: ${API_URL}`);
       
