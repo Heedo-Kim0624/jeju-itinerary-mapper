@@ -9,7 +9,7 @@ interface CategoryResultHandlerProps {
   selectedRegions: string[];
   selectedKeywordsByCategory: Record<string, string[]>;
   onClose: () => void;
-  onSelectPlace: (place: Place, checked: boolean, category: string | null) => void;
+  onSelectPlace: (place: Place) => void;
   selectedPlaces: Place[];
   onConfirmCategory?: (category: string, selectedPlaces: Place[], recommendedPlaces: Place[]) => void;
 }
@@ -31,8 +31,9 @@ const CategoryResultHandler: React.FC<CategoryResultHandlerProps> = ({
     selectedPlaces.some(p => p.id === id);
 
   const handlePlaceSelection = (place: Place, checked: boolean) => {
-    // 카테고리 정보를 함께 전달하여 장소 선택 처리
-    onSelectPlace(place, checked, currentCategory);
+    // We don't pass the category since we're now using the adapter function
+    // which doesn't expect the category parameter
+    onSelectPlace(place);
   };
 
   const handleConfirm = (category: string, selectedPlaces: Place[], recommendedPlaces: Place[]) => {

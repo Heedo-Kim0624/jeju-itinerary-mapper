@@ -88,6 +88,12 @@ const LeftPanel: React.FC = () => {
     uiVisibility.setShowCategoryResult(null);
   };
 
+  // Create an adapter function for handleSelectPlace
+  const handleSelectPlaceAdapter = (place: Place) => {
+    // Call the original function with default values for the additional parameters
+    placesManagement.handleSelectPlace(place, true);
+  };
+
   return (
     <div className="relative h-full">
       {/* 일정 패널 (showItinerary가 true일 때) */}
@@ -168,7 +174,7 @@ const LeftPanel: React.FC = () => {
         showCategoryResult={uiVisibility.showCategoryResult}
         selectedKeywordsByCategory={categorySelection.selectedKeywordsByCategory}
         handleResultClose={handleResultClose}
-        handleSelectPlace={placesManagement.handleSelectPlace}
+        handleSelectPlace={handleSelectPlaceAdapter}
         selectedPlaces={placesManagement.selectedPlaces}
         handleConfirmCategory={handleConfirmCategory}
       />
