@@ -1,11 +1,11 @@
 
-import React, { useState, useEffect } from 'react'; // useState, useEffect 추가
+import React from 'react'; // Removed useEffect, useState
 import { useLeftPanel } from '@/hooks/use-left-panel';
 import RegionPanelHandler from './RegionPanelHandler';
 import CategoryResultHandler from './CategoryResultHandler';
-import CurrentItineraryView from './CurrentItineraryView';
-import LeftPanelCoreContent from './LeftPanelCoreContent';
-// import DevelopmentDebugInfo from './DevelopmentDebugInfo'; // DevelopmentDebugInfo 는 JSX 내부에서 직접 처리
+import CurrentItineraryView from './CurrentItineraryView'; // New component
+import LeftPanelCoreContent from './LeftPanelCoreContent'; // New component
+import DevelopmentDebugInfo from './DevelopmentDebugInfo'; // New component
 import { CategoryName } from '@/utils/categoryUtils';
 import { Place } from '@/types/supabase';
 import { toast } from 'sonner';
@@ -19,14 +19,12 @@ const LeftPanel: React.FC = () => {
     tripDetails,
     uiVisibility,
     itineraryManagement,
-    handleCreateItinerary, // This is the original from useLeftPanel
+    handleCreateItinerary,
     handleCloseItinerary,
-    // categoryResults, // Passed to CategoryResultHandler via props
+    // currentPanel, // Not directly used in LeftPanel's render, but part of the hook's state
     // isCategoryLoading, // Passed to CategoryResultHandler via props
     // categoryError, // Passed to CategoryResultHandler via props
-    // currentPanel, // Not directly used in LeftPanel's render
-    isGenerating, // 로딩 상태 from useLeftPanel
-    setIsGenerating, // 로딩 상태 설정 함수 from useLeftPanel
+    // categoryResults, // Passed to CategoryResultHandler via props
   } = useLeftPanel();
 
   // The useEffect for logging and auto-showing itinerary, and the forceRerender listener,
@@ -45,14 +43,14 @@ const LeftPanel: React.FC = () => {
   // This is for the LeftPanelContent's confirm category (keyword confirmation)
   const handleConfirmCategoryForContent = (category: CategoryName, finalKeywords: string[]): boolean => {
     console.log(`컨텐츠 내 카테고리 '${category}' 확인, 키워드: ${finalKeywords.join(', ')}`);
-    keywordsAndInputs.handleConfirmCategory(category, finalKeywords, true); 
+    keywordsAndInputs.handleConfirmCategory(category, finalKeywords, true); // true for clearSelection / show result
     return true;
   };
 
   // This is for the CategoryResultHandler's confirm category (place selection confirmation)
   const handleConfirmCategoryFromResult = (
     category: CategoryName,
-    userSelectedInPanel: Place[], 
+    userSelectedInPanel: Place[], // These are places selected within the CategoryResultPanel itself
     recommendedPoolForCategory: Place[]
   ) => {
     const nDaysInNights = tripDetails.tripDuration;
@@ -77,6 +75,13 @@ const LeftPanel: React.FC = () => {
       return;
     }
     
+    // Important: userSelectedInPanel are NEW selections from the result panel.
+    // These need to be added to selectedPlaces if not already.
+    // The current `placesManagement.handleSelectPlace` expects one place and a boolean.
+    // We might need a batch selection handler or iterate.
+    // For now, assuming CategoryResultHandler calls handleSelectPlace for each selection.
+    // Then, call handleAutoCompletePlaces.
+    
     placesManagement.handleAutoCompletePlaces(
       category,
       recommendedPoolForCategory,
@@ -86,62 +91,27 @@ const LeftPanel: React.FC = () => {
     uiVisibility.setShowCategoryResult(null);
   };
 
-  // 일정 생성 함수 수정 (로딩 상태 관리 포함)
-  const handleCreateItineraryWithLoading = () => {
-    if (setIsGenerating) { // setIsGenerating이 useLeftPanel에서 제공되는지 확인
-      setIsGenerating(true);
-    }
-    console.log("[LeftPanel] 일정 생성 시작, isGenerating:", true);
-    
-    // useLeftPanel에서 가져온 handleCreateItinerary 호출
-    return handleCreateItinerary().then((success) => {
-      if (success) {
-        console.log("[LeftPanel] 일정 생성 성공");
-        // 성공 시 로딩 상태 해제는 useLeftPanelSideEffects의 이벤트 핸들러에서 처리
-      } else {
-        console.log("[LeftPanel] 일정 생성 실패");
-        if (setIsGenerating) {
-          setIsGenerating(false); // 실패 시 로딩 상태 즉시 해제
-        }
-      }
-      return success;
-    }).catch(error => {
-      console.error("[LeftPanel] 일정 생성 중 오류:", error);
-      if (setIsGenerating) {
-        setIsGenerating(false); // 오류 발생 시 로딩 상태 즉시 해제
-      }
-      return false;
-    });
-  };
-  
-  // forceRerender 이벤트 리스너 추가: useLeftPanelSideEffects에서 처리하므로 여기서는 중복. 삭제.
-  // itineraryCreated 이벤트 리스너 추가: useLeftPanelSideEffects에서 처리하므로 여기서는 중복. 삭제.
-  
-  const shouldShowItineraryView = 
-    uiVisibility.showItinerary && 
-    itineraryManagement.itinerary && 
-    itineraryManagement.itinerary.length > 0 && 
-    !isGenerating; // 로딩 중이 아닐 때만 일정 뷰 표시
+  const shouldShowItineraryView = uiVisibility.showItinerary && itineraryManagement.itinerary && itineraryManagement.itinerary.length > 0;
 
   return (
     <div className="relative h-full">
       {shouldShowItineraryView ? (
         <CurrentItineraryView
-          itinerary={itineraryManagement.itinerary!}
+          itinerary={itineraryManagement.itinerary!} // Checked by shouldShowItineraryView
           startDate={tripDetails.dates?.startDate || new Date()}
           onSelectDay={itineraryManagement.handleSelectItineraryDay}
           selectedItineraryDay={itineraryManagement.selectedItineraryDay}
           onClose={handleCloseItinerary}
           debugInfo={{
-            itineraryLength: itineraryManagement.itinerary!.length,
+            itineraryLength: itineraryManagement.itinerary!.length, // Checked
             selectedDay: itineraryManagement.selectedItineraryDay,
             showItinerary: uiVisibility.showItinerary,
           }}
         />
       ) : (
         <LeftPanelCoreContent
-          // Props for LeftPanelContainer part (passed through LeftPanelCoreContent)
-          showItinerary={uiVisibility.showItinerary}
+          // Props for LeftPanelContainer part
+          showItinerary={uiVisibility.showItinerary} // Will be false here
           onSetShowItinerary={uiVisibility.setShowItinerary}
           selectedPlaces={placesManagement.selectedPlaces}
           onRemovePlace={placesManagement.handleRemovePlace}
@@ -153,17 +123,17 @@ const LeftPanel: React.FC = () => {
             startTime: tripDetails.dates?.startTime || "09:00",
             endTime: tripDetails.dates?.endTime || "21:00",
           }}
-          onCreateItinerary={() => { // 이 부분은 LeftPanelCoreContent로 전달되어 ItineraryButton에서 사용됨
-            handleCreateItineraryWithLoading().then((success) => {
-              // 성공/실패 로깅은 handleCreateItineraryWithLoading 내부에서 처리
+          onCreateItinerary={() => {
+            handleCreateItinerary().then((success) => {
+              if (success) console.log("일정 생성 성공 후 LeftPanelCoreContent 업데이트");
+              else console.log("일정 생성 실패 후 LeftPanelCoreContent 업데이트");
             });
             return true; 
           }}
-          itinerary={itineraryManagement.itinerary} 
+          itinerary={itineraryManagement.itinerary} // Can be null or empty
           selectedItineraryDay={itineraryManagement.selectedItineraryDay}
           onSelectDay={itineraryManagement.handleSelectItineraryDay}
-          
-          // Props for LeftPanelContent part (passed through LeftPanelCoreContent)
+          // Props for LeftPanelContent part
           onDateSelect={tripDetails.setDates}
           onOpenRegionPanel={() => regionSelection.setRegionSlidePanelOpen(true)}
           hasSelectedDates={!!tripDetails.dates.startDate && !!tripDetails.dates.endDate}
@@ -186,7 +156,7 @@ const LeftPanel: React.FC = () => {
             restaurant: (value: string) => keywordsAndInputs.onDirectInputChange('음식점', value),
             cafe: (value: string) => keywordsAndInputs.onDirectInputChange('카페', value),
           }}
-          onConfirmCategoryInContent={{ 
+          onConfirmCategoryInContent={{ // Pass the correct handler
             accomodation: (finalKeywords: string[]) => handleConfirmCategoryForContent('숙소', finalKeywords),
             landmark: (finalKeywords: string[]) => handleConfirmCategoryForContent('관광지', finalKeywords),
             restaurant: (finalKeywords: string[]) => handleConfirmCategoryForContent('음식점', finalKeywords),
@@ -199,7 +169,6 @@ const LeftPanel: React.FC = () => {
             cafe: () => handlePanelBackByCategory('카페'),
           }}
           isCategoryButtonEnabled={categorySelection.isCategoryButtonEnabled}
-          isGenerating={isGenerating} // 로딩 상태 전달
         />
       )}
 
@@ -221,25 +190,24 @@ const LeftPanel: React.FC = () => {
       <CategoryResultHandler
         showCategoryResult={uiVisibility.showCategoryResult}
         selectedRegions={regionSelection.selectedRegions}
+        // selectedKeywordsByCategory is needed by useCategoryResults, not directly here
+        // but CategoryResultHandler might need it if it re-fetches or shows keywords.
+        // The original CategoryResultHandler props did include it.
         selectedKeywordsByCategory={categorySelection.selectedKeywordsByCategory}
         onClose={handleResultClose}
         onSelectPlace={placesManagement.handleSelectPlace}
         selectedPlaces={placesManagement.selectedPlaces}
-        onConfirmCategory={handleConfirmCategoryFromResult}
+        onConfirmCategory={handleConfirmCategoryFromResult} // Pass the correct handler
       />
       
-      {/* 디버깅용 상태 표시 (개발 중에만 사용) */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="fixed bottom-4 left-4 bg-black bg-opacity-70 text-white p-2 rounded text-xs z-50">
-          showItinerary: {uiVisibility.showItinerary ? 'true' : 'false'}<br />
-          itinerary: {itineraryManagement.itinerary ? `${itineraryManagement.itinerary.length}일` : 'null'}<br />
-          selectedDay: {itineraryManagement.selectedItineraryDay || 'null'}<br />
-          isGenerating: {isGenerating ? 'true' : 'false'} {/* 로딩 상태 표시 */}
-        </div>
-      )}
+      <DevelopmentDebugInfo
+        showItinerary={uiVisibility.showItinerary}
+        itinerary={itineraryManagement.itinerary}
+        selectedItineraryDay={itineraryManagement.selectedItineraryDay}
+        // isGenerating={...} // isGenerating is not directly available from useLeftPanel hook's return
+      />
     </div>
   );
 };
 
 export default LeftPanel;
-

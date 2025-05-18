@@ -1,4 +1,5 @@
-import { useCallback, useState } from 'react'; // useState 추가
+
+import { useCallback } from 'react'; // Removed useState, useEffect as they are moved
 import { useSelectedPlaces } from './use-selected-places';
 import { useTripDetails } from './use-trip-details';
 import { useCategoryResults } from './use-category-results';
@@ -8,8 +9,8 @@ import { useCategorySelection } from './use-category-selection';
 import { useCategoryHandlers } from './left-panel/use-category-handlers';
 import { useItineraryHandlers } from './left-panel/use-itinerary-handlers';
 import { useInputState } from './left-panel/use-input-state';
-import { usePanelState } from './left-panel/usePanelState';
-import { useLeftPanelSideEffects } from './left-panel/useLeftPanelSideEffects';
+import { usePanelState } from './left-panel/usePanelState'; // New hook
+import { useLeftPanelSideEffects } from './left-panel/useLeftPanelSideEffects'; // New hook
 import { SelectedPlace } from '@/types/supabase';
 import { CategoryName } from '@/utils/categoryUtils';
 // toast is not used directly in this refactored version, it's used by sub-hooks.
@@ -119,50 +120,33 @@ export const useLeftPanel = () => {
 
   const handleCreateItinerary = useCallback(async () => {
     console.log('[useLeftPanel] handleCreateItinerary 호출됨');
-    
-    // 로딩 상태 활성화
-    setIsGenerating(true);
-    console.log('[useLeftPanel] Setting isGenerating to true');
-    
     console.log('[useLeftPanel] 여행 날짜 정보:', {
       dates: tripDetails.dates,
       startDatetime: tripDetails.startDatetime,
       endDatetime: tripDetails.endDatetime
     });
     
-    try {
-      const success = await itineraryHandlers.handleCreateItinerary(
-        tripDetails,
-        placesManagement.selectedPlaces as SelectedPlace[], 
-        placesManagement.prepareSchedulePayload,
-        itineraryManagement.generateItinerary, 
-        uiVisibility.setShowItinerary, // Pass setShowItinerary
-        (panel: 'region' | 'date' | 'category' | 'itinerary') => setCurrentPanel(panel) // Pass setCurrentPanel
-      );
-      
-      if (success) {
-        console.log('[useLeftPanel] 일정 생성 성공. 강제 리렌더링 이벤트 발생');
-        // The forceRerender event is dispatched by useScheduleGenerationRunner or useItineraryHandlers
-        // and listened to by useLeftPanelSideEffects.
-        // A slight delay might still be useful here if direct state changes need to propagate before listener acts.
-        setTimeout(() => {
-          window.dispatchEvent(new Event('forceRerender'));
-        }, 100);
-      } else {
-        // 실패 시 로딩 상태 해제
-        setIsGenerating(false);
-        console.log('[useLeftPanel] 일정 생성 실패. isGenerating 상태 해제');
-      }
-      
-      return success;
-    } catch (error) {
-      console.error('[useLeftPanel] 일정 생성 중 오류:', error);
-      // 오류 발생 시 로딩 상태 해제
-      setIsGenerating(false);
-      console.log('[useLeftPanel] 일정 생성 중 오류 발생. isGenerating 상태 해제');
-      return false;
+    const success = await itineraryHandlers.handleCreateItinerary(
+      tripDetails,
+      placesManagement.selectedPlaces as SelectedPlace[], 
+      placesManagement.prepareSchedulePayload,
+      itineraryManagement.generateItinerary, 
+      uiVisibility.setShowItinerary, // Pass setShowItinerary
+      (panel: 'region' | 'date' | 'category' | 'itinerary') => setCurrentPanel(panel) // Pass setCurrentPanel
+    );
+    
+    if (success) {
+      console.log('[useLeftPanel] 일정 생성 성공. 강제 리렌더링 이벤트 발생');
+      // The forceRerender event is dispatched by useScheduleGenerationRunner or useItineraryHandlers
+      // and listened to by useLeftPanelSideEffects.
+      // A slight delay might still be useful here if direct state changes need to propagate before listener acts.
+      setTimeout(() => {
+        window.dispatchEvent(new Event('forceRerender'));
+      }, 100);
     }
-  }, [tripDetails, placesManagement, itineraryHandlers, itineraryManagement.generateItinerary, uiVisibility.setShowItinerary, setCurrentPanel, setIsGenerating]); // setIsGenerating 추가
+    
+    return success;
+  }, [tripDetails, placesManagement, itineraryHandlers, itineraryManagement.generateItinerary, uiVisibility.setShowItinerary, setCurrentPanel]);
   
   const handleCloseItinerary = () => {
     itineraryHandlers.handleCloseItinerary(
@@ -179,8 +163,6 @@ export const useLeftPanel = () => {
     setItinerary,
     setSelectedItineraryDay,
     setShowItinerary,
-    isGenerating, // isGenerating 전달
-    setIsGenerating, // setIsGenerating 전달
   });
 
   return {
@@ -202,7 +184,5 @@ export const useLeftPanel = () => {
     handleCloseCategoryResult, // Uses setShowCategoryResult from usePanelState
     // handleConfirmCategory is now primarily LeftPanel.tsx's local handler
     handleCloseItinerary,
-    isGenerating, // isGenerating 반환
-    setIsGenerating, // setIsGenerating 반환
   };
 };
