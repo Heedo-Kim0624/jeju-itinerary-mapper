@@ -1,48 +1,55 @@
 
 import { useCallback } from 'react';
 import { SelectedPlace } from '@/types/supabase';
-import { SchedulePayload } from '@/types/schedule';
+import { SchedulePayload } from '@/types/schedule'; // Ensure this is the correct SchedulePayload
 
 interface UseSchedulePayloadProps {
   selectedPlaces: SelectedPlace[];
   startDatetimeISO: string | null;
   endDatetimeISO: string | null;
+  // Optional: start/end location if you have them
+  startLocationName?: string; 
+  endLocationName?: string;
 }
 
 export const useSchedulePayload = ({
   selectedPlaces,
   startDatetimeISO,
   endDatetimeISO,
+  startLocationName = "제주국제공항", // Default start location
+  endLocationName = "제주국제공항",   // Default end location
 }: UseSchedulePayloadProps) => {
   const preparePayload = useCallback((): SchedulePayload | null => {
     if (!startDatetimeISO || !endDatetimeISO) {
-      console.error("[useSchedulePayload] Start or end datetime is missing.");
+      console.error('[useSchedulePayload] Start or end datetime is missing.');
       return null;
     }
 
-    const directlySelectedPlaces = selectedPlaces.filter(p => !p.isCandidate);
-    const autoCompletedPlaces = selectedPlaces.filter(p => p.isCandidate);
+    if (selectedPlaces.length === 0) {
+      console.warn('[useSchedulePayload] No places selected.');
+      // Depending on logic, might still want to generate payload for server to handle empty places
+    }
 
-    const selectedPlacesPayload = directlySelectedPlaces.map(p => ({
-      id: typeof p.id === 'string' ? parseInt(p.id, 10) || p.id : p.id,
-      name: p.name || 'Unknown Place',
+    const placesForPayload = selectedPlaces.map(p => ({
+      id: p.id?.toString() || '', // Ensure id is string
+      name: p.name,
+      category: p.category, // This should be the internal category string like 'restaurant'
+      x: p.x || 0,
+      y: p.y || 0,
+      address: p.address || '',
+      // place_type is important for the server
+      place_type: p.category, // Assuming p.category is the same as place_type server expects
+      isRequired: p.isRequired === undefined ? true : p.isRequired, // Default to true
     }));
 
-    const candidatePlacesPayload = autoCompletedPlaces.map(p => ({
-      id: typeof p.id === 'string' ? parseInt(p.id, 10) || p.id : p.id,
-      name: p.name || 'Unknown Place',
-    }));
-
-    const payload: SchedulePayload = {
-      selected_places: selectedPlacesPayload,
-      candidate_places: candidatePlacesPayload,
-      start_datetime: startDatetimeISO,
-      end_datetime: endDatetimeISO,
+    return {
+      start_timestamp: startDatetimeISO,
+      end_timestamp: endDatetimeISO,
+      start_location: startLocationName,
+      end_location: endLocationName,
+      places: placesForPayload, // Correct field name
     };
-
-    console.log("📤 서버 요청 payload (from useSchedulePayload):", JSON.stringify(payload, null, 2));
-    return payload;
-  }, [selectedPlaces, startDatetimeISO, endDatetimeISO]);
+  }, [selectedPlaces, startDatetimeISO, endDatetimeISO, startLocationName, endLocationName]);
 
   return { preparePayload };
 };
