@@ -1,7 +1,6 @@
-
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { toast } from 'sonner';
-import { SelectedPlace, ItineraryPlaceWithTime, ItineraryDay as DomainItineraryDay } from '@/types/supabase'; // Renamed to avoid conflict
+import { SelectedPlace, ItineraryPlaceWithTime } from '@/types/supabase';
 import { NewServerScheduleResponse, ServerRouteResponse, isNewServerScheduleResponse } from '@/types/schedule';
 import { useScheduleGenerator as useScheduleGeneratorHook } from '@/hooks/use-schedule-generator';
 import { useItineraryCreator, ItineraryDay as CreatorItineraryDay } from '@/hooks/use-itinerary-creator';
@@ -23,7 +22,7 @@ interface UseScheduleGenerationRunnerProps {
   dates: { startDate: Date; endDate: Date; startTime: string; endTime: string; } | null;
   startDatetimeISO: string | null;
   endDatetimeISO: string | null;
-  setItinerary: (itinerary: DomainItineraryDay[]) => void; // Use DomainItineraryDay
+  setItinerary: (itinerary: CreatorItineraryDay[]) => void;
   setSelectedDay: (day: number | null) => void;
   setIsLoadingState: (loading: boolean) => void;
 }
@@ -44,30 +43,20 @@ export const useScheduleGenerationRunner = ({
   const { preparePayload } = useSchedulePayload({ selectedPlaces, startDatetimeISO, endDatetimeISO });
   const { parseServerResponse } = useScheduleParser({ currentSelectedPlaces: selectedPlaces });
 
-  const [lastServerResponse, setLastServerResponse] = useState<any>(null);
-  const [lastError, setLastError] = useState<any>(null);
-
   const runScheduleGenerationProcess = useCallback(async () => {
-    console.log("🚀 일정 생성 프로세스 시작 (useScheduleGenerationRunner)");
     setIsLoadingState(true);
-    setLastError(null);
-    setLastServerResponse(null);
-    let finalItineraryForEvent: DomainItineraryDay[] = [];
-
+    let finalItineraryForEvent: CreatorItineraryDay[] = [];
     try {
       const payload = preparePayload();
       debugLog('서버 요청 페이로드 (useScheduleGenerationRunner):', payload);
       
       if (!payload) {
         toast.error("일정 생성에 필요한 정보가 부족합니다.");
-        // setIsLoadingState(false); // Moved to finally
-        return; // Return early, finally will handle loading state
+        setIsLoadingState(false);
+        return;
       }
 
-      console.log("📤 서버에 일정 생성 요청 전송 (useScheduleGenerationRunner)");
       const serverResponse = await generateScheduleViaHook(payload);
-      console.log("📥 서버 응답 수신 (useScheduleGenerationRunner):", serverResponse);
-      setLastServerResponse(serverResponse);
       debugLog('서버 원본 응답 (useScheduleGenerationRunner):', serverResponse);
       debugLog('서버 응답 타입 검사 (useScheduleGenerationRunner):', {
         isNull: serverResponse === null,
@@ -77,50 +66,11 @@ export const useScheduleGenerationRunner = ({
         hasRouteSummary: !!serverResponse?.route_summary,
         isNewServerScheduleResponse: isNewServerScheduleResponse(serverResponse)
       });
-      
-      if (!serverResponse) {
-        throw new Error("서버 응답이 없습니다 (null or undefined).");
-      }
-      
-      if (!isNewServerScheduleResponse(serverResponse) || !serverResponse.route_summary || serverResponse.route_summary.length === 0) {
-        console.warn("서버 응답이 없거나, 경로 정보가 부족하여 클라이언트 측 일정 생성을 시도합니다.", serverResponse);
-        toast.error("⚠️ 서버 응답이 없거나, 경로 정보가 부족하여 일정을 생성하지 못했습니다.");
-        if (dates) {
-             const clientGeneratedItinerary: CreatorItineraryDay[] = createItinerary(
-              selectedPlaces,
-              dates.startDate,
-              dates.endDate,
-              dates.startTime,
-              dates.endTime
-            );
-            // Adapt CreatorItineraryDay[] to DomainItineraryDay[]
-            const domainClientItinerary: DomainItineraryDay[] = clientGeneratedItinerary.map(day => ({
-              ...day,
-              places: day.places.map(p => ({...p, timeBlock: p.timeBlock || "시간 정보 없음"}) as ItineraryPlaceWithTime),
-            }));
 
-            setItinerary(domainClientItinerary);
-            finalItineraryForEvent = domainClientItinerary;
-
-            if (domainClientItinerary.length > 0) {
-              setSelectedDay(domainClientItinerary[0].day);
-              toast.info("클라이언트에서 기본 일정이 생성되었습니다. (서버 응답 부족)");
-            } else {
-              toast.error("클라이언트에서도 일정을 생성하지 못했습니다.");
-            }
-        } else {
-          throw new Error("날짜 정보가 없어 클라이언트 측 일정도 생성할 수 없습니다.");
-        }
-      } else {
-        console.log("🔄 서버 응답 파싱 시작 (useScheduleGenerationRunner)");
-        // parseServerResponse returns DomainItineraryDay[] already
+      if (serverResponse && isNewServerScheduleResponse(serverResponse) &&
+          serverResponse.route_summary && serverResponse.route_summary.length > 0) {
+        
         const parsedItinerary = parseServerResponse(serverResponse, dates?.startDate || new Date());
-        
-        if (!parsedItinerary || parsedItinerary.length === 0) {
-          throw new Error("서버 응답에서 유효한 일정을 파싱할 수 없습니다.");
-        }
-        
-        console.log("✅ 파싱된 일정 (useScheduleGenerationRunner):", parsedItinerary);
         setItinerary(parsedItinerary);
         finalItineraryForEvent = parsedItinerary;
         
@@ -129,7 +79,7 @@ export const useScheduleGenerationRunner = ({
         const tripStartDayOfWeek = (dates?.startDate || new Date()).getDay();
 
         serverResponse.route_summary.forEach(summaryItem => {
-            const routeDayOfWeekString = summaryItem.day.substring(0, 3); // Mon, Tue, etc.
+            const routeDayOfWeekString = summaryItem.day.substring(0, 3);
             const routeDayOfWeek = dayOfWeekMap[routeDayOfWeekString];
             let tripDayNumber = routeDayOfWeek - tripStartDayOfWeek + 1;
             if (tripDayNumber <= 0) tripDayNumber += 7;
@@ -140,78 +90,74 @@ export const useScheduleGenerationRunner = ({
                 interleaved_route: summaryItem.interleaved_route,
             };
         });
-        console.log("🗺️ 지도 컨텍스트 업데이트 (useScheduleGenerationRunner):", Object.keys(routesForMapContext).length);
         setServerRoutes(routesForMapContext);
         
         if (parsedItinerary.length > 0) {
-          console.log("📅 첫 번째 일자 선택 (useScheduleGenerationRunner):", parsedItinerary[0].day);
           setSelectedDay(parsedItinerary[0].day as number);
-          toast.success(`${parsedItinerary.length}일 일정이 성공적으로 생성되었습니다!`);
+          toast.success(`${parsedItinerary.length}일 일정이 성공적으로 생성했습니다!`);
         } else {
-           // This case should be caught by earlier check, but as a safeguard
-          throw new Error("파싱 후 생성된 일정이 없습니다.");
+          toast.error("서버에서 경로를 받았으나, 일정에 포함할 장소 정보가 부족합니다.");
+        }
+      } else {
+        toast.error("⚠️ 서버 응답이 없거나, 경로 정보가 부족하여 일정을 생성하지 못했습니다.");
+        console.warn("서버 응답이 없거나 형식이 맞지 않아 클라이언트 측 일정을 생성 시도합니다 (useScheduleGenerationRunner).");
+        if (dates) {
+             const generatedItinerary: CreatorItineraryDay[] = createItinerary(
+              selectedPlaces,
+              dates.startDate,
+              dates.endDate,
+              dates.startTime,
+              dates.endTime
+            );
+            setItinerary(generatedItinerary);
+            finalItineraryForEvent = generatedItinerary;
+
+            if (generatedItinerary.length > 0) {
+              setSelectedDay(generatedItinerary[0].day);
+            }
+            toast.info("클라이언트에서 기본 일정이 생성되었습니다. (서버 응답 부족)");
         }
       }
-    } catch (error: any) {
-      console.error("❌ 일정 생성 오류 (useScheduleGenerationRunner):", error);
-      setLastError(error);
-      toast.error(`일정 생성 중 오류: ${error.message || '알 수 없는 문제'}`);
-      // Fallback to client-side itinerary generation on error
+    } catch (error) {
+      console.error("일정 생성 오류 (useScheduleGenerationRunner):", error);
+      toast.error("⚠️ 일정 생성 중 오류가 발생했습니다.");
       if (dates) {
-        console.warn("⚠️ 오류 발생으로 클라이언트 측 일정을 생성합니다 (useScheduleGenerationRunner).");
-        try {
-          const clientGeneratedItinerary: CreatorItineraryDay[] = createItinerary(
-            selectedPlaces,
-            dates.startDate,
-            dates.endDate,
-            dates.startTime,
-            dates.endTime
-          );
-          const domainClientItinerary: DomainItineraryDay[] = clientGeneratedItinerary.map(day => ({
-            ...day,
-            places: day.places.map(p => ({...p, timeBlock: p.timeBlock || "시간 정보 없음"}) as ItineraryPlaceWithTime),
-          }));
-          setItinerary(domainClientItinerary);
-          finalItineraryForEvent = domainClientItinerary;
+        console.warn("오류 발생으로 클라이언트 측 일정을 생성합니다 (useScheduleGenerationRunner).");
+        const generatedItinerary: CreatorItineraryDay[] = createItinerary(
+          selectedPlaces,
+          dates.startDate,
+          dates.endDate,
+          dates.startTime,
+          dates.endTime
+        );
+        setItinerary(generatedItinerary);
+        finalItineraryForEvent = generatedItinerary;
 
-          if (domainClientItinerary.length > 0) {
-            setSelectedDay(domainClientItinerary[0].day);
-            toast.info("클라이언트에서 기본 일정이 생성되었습니다. (오류 발생)");
-          } else {
-             toast.error("오류 발생 후 클라이언트에서도 일정을 생성하지 못했습니다.");
-          }
-        } catch (fallbackError: any) {
-          console.error("❌ 클라이언트 측 일정 생성도 실패 (useScheduleGenerationRunner):", fallbackError);
-          toast.error(`클라이언트 일정 생성 실패: ${fallbackError.message || '알 수 없는 문제'}`);
+        if (generatedItinerary.length > 0) {
+          setSelectedDay(generatedItinerary[0].day);
         }
       }
     } finally {
-      console.log("🏁 일정 생성 프로세스 종료 (useScheduleGenerationRunner)");
       setIsLoadingState(false);
-      
-      // Dispatch event regardless of success, detail will indicate outcome
-      console.log("Dispatching itineraryCreated event with (useScheduleGenerationRunner):", finalItineraryForEvent);
-      const event = new CustomEvent('itineraryCreated', { 
-        detail: { 
-          itinerary: finalItineraryForEvent,
-          selectedDay: finalItineraryForEvent.length > 0 ? finalItineraryForEvent[0].day : null
-        } 
-      });
-      window.dispatchEvent(event);
-
-      // Final status logging
-      setTimeout(() => {
-        // Accessing state from hook closure, might not be latest if not re-evaluated.
-        // For accurate final state, this log might be better placed where states are directly accessible after update.
-        // However, for this structure, it shows state at the end of this specific execution.
-        console.log("📊 최종 상태 확인 (useScheduleGenerationRunner - async end):", {
-          // isLoading: isLoadingState, // This would be from props if passed back, not direct state here
-          itineraryLength: finalItineraryForEvent.length, // Use what was processed
-          selectedDay: finalItineraryForEvent.length > 0 ? finalItineraryForEvent[0].day : null,
-          hasServerResponse: !!lastServerResponse, // Shows if server call was made and responded
-          hasError: !!lastError // Shows if an error was caught
+      if (finalItineraryForEvent.length > 0) {
+        console.log("Dispatching itineraryCreated event with:", finalItineraryForEvent);
+        const event = new CustomEvent('itineraryCreated', { 
+          detail: { 
+            itinerary: finalItineraryForEvent,
+            selectedDay: finalItineraryForEvent[0].day
+          } 
         });
-      }, 0);
+        window.dispatchEvent(event);
+      } else {
+         console.log("Dispatching itineraryCreated event (empty itinerary)");
+         const event = new CustomEvent('itineraryCreated', {
+           detail: {
+             itinerary: [],
+             selectedDay: null
+           }
+         });
+         window.dispatchEvent(event);
+      }
     }
   }, [
     preparePayload,
@@ -224,8 +170,7 @@ export const useScheduleGenerationRunner = ({
     setItinerary,
     setSelectedDay,
     setIsLoadingState,
-    // lastServerResponse, lastError are not dependencies for useCallback itself
   ]);
 
-  return { runScheduleGenerationProcess, lastServerResponse, lastError };
+  return { runScheduleGenerationProcess };
 };

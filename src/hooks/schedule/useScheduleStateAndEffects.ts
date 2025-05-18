@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { ItineraryDay } from '@/types/supabase';
 import { useMapContext } from '@/components/rightpanel/MapContext';
@@ -6,7 +7,7 @@ import { extractAllNodesFromRoute, extractAllLinksFromRoute } from '@/utils/rout
 export const useScheduleStateAndEffects = () => {
   const [itinerary, setItinerary] = useState<ItineraryDay[]>([]);
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
-  const [isLoadingState, setIsLoadingState] = useState<boolean>(false); // Initial loading false
+  const [isLoadingState, setIsLoadingState] = useState<boolean>(true); // Initial loading true
 
   const { renderGeoJsonRoute, clearAllRoutes } = useMapContext();
 
