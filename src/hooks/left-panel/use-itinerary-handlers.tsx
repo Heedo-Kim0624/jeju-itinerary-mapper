@@ -1,17 +1,19 @@
+
 import { useCallback } from 'react';
 import { toast } from 'sonner';
-import type { Place, SchedulePayload, ItineraryDay as SupabaseItineraryDay } from '@/types/supabase';
-import type { ItineraryDay } from '@/hooks/use-itinerary';
-import { NewServerScheduleResponse, isNewServerScheduleResponse } from '@/types/schedule';
+import type { Place, SchedulePayload } from '@/types/supabase';
+// ItineraryDay from use-itinerary is CreatorItineraryDay
+import type { ItineraryDay } from '@/hooks/use-itinerary'; 
+// import { NewServerScheduleResponse, isNewServerScheduleResponse } from '@/types/schedule'; // No longer used directly here
 import { useMapContext } from '@/components/rightpanel/MapContext';
-import { useScheduleGenerator } from '@/hooks/use-schedule-generator';
+// import { useScheduleGenerator } from '@/hooks/use-schedule-generator'; // No longer used directly here
 
 /**
  * 일정 관련 핸들러 훅
  */
 export const useItineraryHandlers = () => {
   const { clearMarkersAndUiElements } = useMapContext();
-  const { generateSchedule } = useScheduleGenerator();
+  // const { generateSchedule } = useScheduleGenerator(); // Server call is now primarily in useScheduleManagement
 
   interface TripDetailsForItinerary {
     dates: {
@@ -24,15 +26,18 @@ export const useItineraryHandlers = () => {
     endDatetime: string | null;
   }
 
+  // This function now primarily handles client-side generation or acts as a fallback
+  // The main server-side generation is expected to be triggered via useScheduleManagement.runScheduleGenerationProcess
   const handleCreateItinerary = useCallback(async (
     tripDetails: TripDetailsForItinerary,
     selectedPlaces: Place[],
-    prepareSchedulePayloadFn: (places: Place[], startISO: string | null, endISO: string | null) => SchedulePayload | null,
+    // prepareSchedulePayloadFn is kept for signature but not used if only client-side
+    _prepareSchedulePayloadFn: (places: Place[], startISO: string | null, endISO: string | null) => SchedulePayload | null,
     generateItineraryFn: (placesToUse: Place[], startDate: Date, endDate: Date, startTime: string, endTime: string) => ItineraryDay[] | null,
     setShowItinerary: (show: boolean) => void,
-    setCurrentPanel: (panel: string) => void
+    setCurrentPanel: (panel: 'region' | 'date' | 'category' | 'itinerary') => void // Corrected panel type
   ): Promise<boolean> => {
-    console.log('[handleCreateItinerary] 함수 호출됨, 인자:', {
+    console.log('[use-itinerary-handlers/handleCreateItinerary] 함수 호출됨 (주로 클라이언트 또는 폴백용):', {
       tripDetails: tripDetails ? {
         startDatetime: tripDetails.startDatetime,
         endDatetime: tripDetails.endDatetime,
@@ -51,104 +56,67 @@ export const useItineraryHandlers = () => {
       return false;
     }
     
-    const payload = prepareSchedulePayloadFn(selectedPlaces, tripDetails.startDatetime, tripDetails.endDatetime);
+    // Server payload preparation is removed as this handler is now simplified
+    // const payload = prepareSchedulePayloadFn(selectedPlaces, tripDetails.startDatetime, tripDetails.endDatetime);
 
-    if (payload) {
-      console.log("[handleCreateItinerary] 서버 일정 생성 요청 시작, payload:", JSON.stringify(payload, null, 2));
+    // if (payload) { // Removed server call logic based on user's snippet
+    //   console.log("[handleCreateItinerary] 서버 일정 생성 요청 시작, payload:", JSON.stringify(payload, null, 2));
       
-      try {
-        const serverResponse = await generateSchedule(payload);
+    try {
+      // Directly call client-side generation based on user's snippet
+      console.log("[use-itinerary-handlers/handleCreateItinerary] 클라이언트 측 일정 생성 시도");
+      const result = generateItineraryFn(
+        selectedPlaces, 
+        tripDetails.dates.startDate, 
+        tripDetails.dates.endDate, 
+        tripDetails.dates.startTime, 
+        tripDetails.dates.endTime
+      );
+      
+      if (result && result.length > 0) {
+        console.log("[use-itinerary-handlers/handleCreateItinerary] 클라이언트 일정 생성 성공:", {
+          일수: result.length,
+          첫날장소수: result[0]?.places.length || 0
+        });
         
-        if (serverResponse && isNewServerScheduleResponse(serverResponse) && 
-            serverResponse.route_summary && serverResponse.route_summary.length > 0) {
-          console.log("[handleCreateItinerary] 서버 응답 성공:", serverResponse);
-          // setShowItinerary(true); // This is now handled by the 'itineraryCreated' event listener in useLeftPanel
-          // setCurrentPanel('itinerary'); // This is also handled by the event listener implicitly
-          // The event dispatch is in useScheduleGenerationRunner
-          return true; // Indicate success, event will trigger UI updates
-        } else {
-          console.warn("[handleCreateItinerary] 서버 응답 없거나 불완전함, 클라이언트 측 일정 생성으로 폴백. Response:", serverResponse);
-          // Fallback to client-side generation
-          const result = generateItineraryFn(
-            selectedPlaces, 
-            tripDetails.dates.startDate, 
-            tripDetails.dates.endDate, 
-            tripDetails.dates.startTime, 
-            tripDetails.dates.endTime
-          );
-          
-          if (result) {
-            toast.info("서버 일정 생성 실패. 클라이언트에서 기본 일정을 생성했습니다.");
-            // setShowItinerary(true); // Handled by useLeftPanel's useEffect listening to itinerary changes
-            // setCurrentPanel('itinerary'); // Handled by useLeftPanel's useEffect
-
-            // Dispatch 'itineraryCreated' event for client-side generated itinerary
-            const event = new CustomEvent('itineraryCreated', { 
-              detail: { 
-                itinerary: result,
-                selectedDay: result.length > 0 ? result[0].day : null
-              } 
-            });
-            window.dispatchEvent(event);
-            
-            // 강제 리렌더링을 위한 setTimeout 추가 (from user's Part 2)
-            setTimeout(() => {
-              console.log("클라이언트 일정 생성 후 강제 리렌더링 트리거");
-              const forceEvent = new Event('forceRerender');
-              window.dispatchEvent(forceEvent);
-            }, 100);
-
-          } else {
-            toast.error("서버 및 클라이언트 일정 생성 모두 실패했습니다.");
-          }
-          return !!result;
-        }
-      } catch (error) {
-        console.error("[handleCreateItinerary] 서버 요청 중 오류 발생:", error);
-        toast.error("서버 일정 생성 중 오류 발생. 클라이언트에서 기본 일정을 생성합니다.");
-        const result = generateItineraryFn(
-          selectedPlaces, 
-          tripDetails.dates.startDate, 
-          tripDetails.dates.endDate, 
-          tripDetails.dates.startTime, 
-          tripDetails.dates.endTime
-        );
+        // UI 상태 전환 (setTimeout for state update order)
+        // This assumes generateItineraryFn (from use-itinerary) already sets itinerary state
+        // and this handler's role is to ensure panel visibility.
+        // The 'itineraryCreated' event from useScheduleManagement should be the primary way to set itinerary state.
+        // This part might be redundant if generateItineraryFn itself triggers setShowItinerary via use-itinerary.
+        setTimeout(() => {
+          setShowItinerary(true);
+          setCurrentPanel('itinerary');
+          console.log("[use-itinerary-handlers/handleCreateItinerary] UI 상태 전환 완료 (showItinerary=true, currentPanel=itinerary)");
+        }, 100); // Timeout for state update order
         
-        if (result) {
-          // setShowItinerary(true); // Handled by useLeftPanel
-          // setCurrentPanel('itinerary'); // Handled by useLeftPanel
+        // Dispatch event if this client generation is a primary source
+        // However, if this is purely a fallback, the main process should dispatch its own event.
+        // Let's assume for now generateItineraryFn handles state and this is about visibility.
+        // If use-itinerary's generateItinerary already sets showItinerary, this might be extra.
+        // But it ensures the panel changes.
 
-          // Dispatch 'itineraryCreated' event for client-side generated itinerary
-          const event = new CustomEvent('itineraryCreated', { 
-            detail: { 
-              itinerary: result,
-              selectedDay: result.length > 0 ? result[0].day : null
-            } 
-          });
-          window.dispatchEvent(event);
-
-          // 강제 리렌더링을 위한 setTimeout 추가 (from user's Part 2)
-          setTimeout(() => {
-            console.log("오류 후 클라이언트 일정 생성 후 강제 리렌더링 트리거");
-            const forceEvent = new Event('forceRerender');
-            window.dispatchEvent(forceEvent);
-          }, 100);
-
-        } else {
-           toast.error("서버 및 클라��언트 일정 생성 모두 실패했습니다.");
-        }
-        return !!result;
+        return true; 
+      } else {
+        console.warn("[use-itinerary-handlers/handleCreateItinerary] 클라이언트 일정 생성 실패 또는 결과 없음.");
+        toast.error("클라이언트 일정 생성에 실패했습니다."); // More specific error
+        return false;
       }
-    } else {
-      console.error("[handleCreateItinerary] 페이로드 생성 실패");
-      toast.error("일정 생성에 필요한 정보가 부족합니다.");
+    } catch (error) {
+      console.error("[use-itinerary-handlers/handleCreateItinerary] 클라이언트 일정 생성 중 오류 발생:", error);
+      toast.error("클라이언트 일정 생성 중 오류가 발생했습니다.");
       return false;
     }
-  }, [generateSchedule]);
+    // } else {
+    //   console.error("[use-itinerary-handlers/handleCreateItinerary] 페이로드 생성 실패 (서버 로직 제거됨)");
+    //   toast.error("일정 생성에 필요한 정보가 부족합니다.");
+    //   return false;
+    // }
+  }, []); // Removed generateSchedule from dependencies
 
   const handleCloseItinerary = useCallback((
     setShowItinerary: (show: boolean) => void,
-    setCurrentPanel: (panel: string) => void
+    setCurrentPanel: (panel: 'region' | 'date' | 'category' | 'itinerary') => void // Corrected panel type
   ) => {
     setShowItinerary(false);
     clearMarkersAndUiElements(); 
