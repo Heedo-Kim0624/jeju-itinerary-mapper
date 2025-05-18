@@ -1,36 +1,33 @@
-import { useState, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useSelectedPlaces } from './use-selected-places';
 import { useTripDetails } from './use-trip-details';
 import { useCategoryResults } from './use-category-results';
-import { useItinerary, ItineraryDay } from './use-itinerary'; // ItineraryDay is now exported
+// useItinerary related imports are now mostly covered by useScheduleManagement or handled differently
+import { ItineraryDay as DomainItineraryDay, Place, SelectedPlace } from '@/types/supabase'; // Ensure ItineraryDay is DomainItineraryDay
+import { CategoryName } from '@/utils/categoryUtils';
+import { toast } from 'sonner';
 import { useRegionSelection } from './use-region-selection';
 import { useCategorySelection } from './use-category-selection';
 import { useCategoryHandlers } from './left-panel/use-category-handlers';
-import { useItineraryHandlers } from './left-panel/use-itinerary-handlers';
+import { useItineraryHandlers } from './left-panel/use-itinerary-handlers'; // Stays for close, etc.
 import { useInputState } from './left-panel/use-input-state';
-import { Place, SelectedPlace, SchedulePayload } from '@/types/supabase';
-import { CategoryName } from '@/utils/categoryUtils';
-import { toast } from 'sonner';
+import { useScheduleManagement } from './useScheduleManagement'; // Central for schedule generation logic
 
 /**
- * 왼쪽 패널 기능 통합 훅
+ * 왼쪽 패널 기능 통합 훅 
  */
 export const useLeftPanel = () => {
-  // 지역 및 카테고리 선택 기능
   const regionSelection = useRegionSelection();
   const categorySelection = useCategorySelection();
-  const tripDetails = useTripDetails();
+  const tripDetailsHook = useTripDetails(); // Renamed to avoid conflict with destructured tripDetails
   
-  // 상태 관리
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [showCategoryResultScreen, setShowCategoryResultScreen] = useState(false);
+  // const [showCategoryResultScreen, setShowCategoryResultScreen] = useState(false); // Keep if used
   const [currentPanel, setCurrentPanel] = useState<'region' | 'date' | 'category' | 'itinerary'>('region');
   const [showCategoryResult, setShowCategoryResult] = useState<CategoryName | null>(null);
   
-  // 입력값 관리
   const { directInputValues, onDirectInputChange } = useInputState();
 
-  // 키워드 및 입력 관련 기능
   const keywordsAndInputs = {
     directInputValues,
     onDirectInputChange,
@@ -42,11 +39,10 @@ export const useLeftPanel = () => {
     }
   };
 
-  // 장소 관리 기능
+  const placesManagementHook = useSelectedPlaces(); // Renamed
   const {
-    selectedPlaces,
-    candidatePlaces,
-    selectedPlacesByCategory,
+    selectedPlaces, // This is from useSelectedPlaces
+    candidatePlaces, // This is from useSelectedPlaces
     handleSelectPlace,
     handleRemovePlace,
     handleViewOnMap,
@@ -55,174 +51,198 @@ export const useLeftPanel = () => {
     isAccommodationLimitReached,
     handleAutoCompletePlaces,
     isPlaceSelected
-  } = useSelectedPlaces();
+  } = placesManagementHook;
 
-  const placesManagement = {
-    selectedPlaces,
-    candidatePlaces,
-    selectedPlacesByCategory,
-    handleSelectPlace,
-    handleRemovePlace,
-    handleViewOnMap,
-    allCategoriesSelected,
-    isAccommodationLimitReached,
-    prepareSchedulePayload,
-    handleAutoCompletePlaces,
-    isPlaceSelected
-  };
+  // Combine selected and candidate places for schedule generation
+  const allPlacesForSchedule = [...selectedPlaces, ...candidatePlaces];
 
-  // 일정 관리 기능 (from useItinerary)
-  const { 
-    itinerary,
-    selectedItineraryDay,
-    showItinerary,
-    setItinerary, // Added setItinerary for direct use
-    setSelectedItineraryDay,
-    setShowItinerary,
-    handleSelectItineraryDay,
-    generateItinerary
-  } = useItinerary();
 
-  const itineraryManagement = {
-    itinerary,
-    selectedItineraryDay,
-    setItinerary, // Expose setItinerary via itineraryManagement
-    setSelectedItineraryDay,
-    handleSelectItineraryDay,
-    generateItinerary
-  };
+  // Schedule Management via useScheduleManagement
+  const {
+    itinerary, // This is the generated itinerary data from useScheduleManagement
+    selectedDay: scheduleSelectedDay, // This is the selected day from useScheduleManagement
+    isLoading: isScheduleLoading, // Loading state from useScheduleManagement
+    handleSelectDay: handleScheduleSelectDay, // Day selection handler from useScheduleManagement
+    runScheduleGenerationProcess,
+  } = useScheduleManagement({
+    selectedPlaces: allPlacesForSchedule,
+    dates: tripDetailsHook.dates.startDate && tripDetailsHook.dates.endDate ? { 
+      startDate: tripDetailsHook.dates.startDate, 
+      endDate: tripDetailsHook.dates.endDate, 
+      startTime: tripDetailsHook.dates.startTime, 
+      endTime: tripDetailsHook.dates.endTime 
+    } : null,
+    startDatetimeISO: tripDetailsHook.startDatetimeISO,
+    endDatetimeISO: tripDetailsHook.endDatetimeISO,
+  });
 
-  // UI 가시성 관리
+  // Local UI states for itinerary panel
+  const [showItineraryPanel, setShowItineraryPanel] = useState<boolean>(false);
+  const [isGeneratingScheduleLocal, setIsGeneratingScheduleLocal] = useState<boolean>(false);
+  const [forceRefreshCounter, setForceRefreshCounter] = useState(0);
+
+  // Sync local loading state with schedule management's loading state
+  // Also, handle showing itinerary panel when loading finishes and itinerary is available
+  useEffect(() => {
+    console.log("[useLeftPanel] Syncing local loading state. isScheduleLoading:", isScheduleLoading, "Current local:", isGeneratingScheduleLocal);
+    setIsGeneratingScheduleLocal(isScheduleLoading);
+
+    if (!isScheduleLoading && itinerary && itinerary.length > 0) {
+      console.log("[useLeftPanel] Schedule loading finished, itinerary available. Showing panel.", { itineraryLength: itinerary.length, currentShowState: showItineraryPanel});
+      setShowItineraryPanel(true);
+      setForceRefreshCounter(prev => prev + 1); // Trigger refresh if needed
+    } else if (!isScheduleLoading && itinerary && itinerary.length === 0) {
+      // Handle case where generation finishes but no itinerary (e.g. error or no places)
+      console.log("[useLeftPanel] Schedule loading finished, but itinerary is empty. Not showing panel or hide if shown.");
+      // setShowItineraryPanel(false); // Optionally hide if it was shown due to old data
+    }
+  }, [isScheduleLoading, itinerary]);
+
+
+  // Listener for 'itineraryCreated' custom event (from useScheduleGenerationRunner)
+  // This event might be redundant if the useEffect above correctly handles state from useScheduleManagement
+  // However, keeping it as it was part of a previous fix and ensures direct reaction to event.
+  // This useEffect updates different state pieces (from the old useItinerary hook context)
+  // For now, let's assume the main state (itinerary, selectedDay) comes from useScheduleManagement
+  // and showItineraryPanel is the local UI toggle.
+  // The original `itineraryCreated` listener set `setItinerary` from `useItinerary`.
+  // Now `itinerary` directly comes from `useScheduleManagement`. So this event listener
+  // should primarily focus on `setShowItineraryPanel(true)` if the event signals success.
+  
+  useEffect(() => {
+    const handleItineraryCreated = (event: Event) => {
+      const customEvent = event as CustomEvent<{ itinerary: DomainItineraryDay[], selectedDay: number | null }>;
+      console.log("[useLeftPanel] 'itineraryCreated' event received:", customEvent.detail);
+      
+      // The itinerary data itself is now primarily sourced from useScheduleManagement.
+      // This event can act as a signal to show the panel.
+      if (customEvent.detail.itinerary && customEvent.detail.itinerary.length > 0) {
+        setShowItineraryPanel(true);
+        // setSelectedDay might be handled by useScheduleManagement, but event can update it too.
+        // handleScheduleSelectDay(customEvent.detail.selectedDay ?? (customEvent.detail.itinerary[0]?.day || null));
+      } else if (customEvent.detail.itinerary && customEvent.detail.itinerary.length === 0) {
+        // if event signals empty itinerary, perhaps hide panel or show empty state
+        // setShowItineraryPanel(false); // Example: hide if itinerary is empty
+        toast.info("일정은 생성되었으나 포함된 장소가 없습니다.");
+      }
+      // No need to call setItinerary or setSelectedItineraryDay here if they are managed by useScheduleManagement
+      // and its state is already consumed.
+    };
+
+    window.addEventListener('itineraryCreated', handleItineraryCreated);
+    return () => {
+      window.removeEventListener('itineraryCreated', handleItineraryCreated);
+    };
+  }, []); // Removed state setters that are now part of useScheduleManagement flow
+
+
   const uiVisibility = {
-    showItinerary,
-    setShowItinerary,
+    showItinerary: showItineraryPanel, // Use local state for panel visibility
+    setShowItinerary: setShowItineraryPanel,
     showCategoryResult,
     setShowCategoryResult
   };
 
-  // 카테고리 결과 관리
-  const { 
-    isLoading: isCategoryLoading,
-    error: categoryError,
-    recommendedPlaces,
-    normalPlaces,
-    refetch
-  } = useCategoryResults(showCategoryResult, 
+  const categoryResultsHook = useCategoryResults(showCategoryResult, 
     showCategoryResult ? categorySelection.selectedKeywordsByCategory[showCategoryResult] || [] : [], 
     regionSelection.selectedRegions);
 
   const categoryResults = {
-    recommendedPlaces: recommendedPlaces || [],
-    normalPlaces: normalPlaces || []
+    recommendedPlaces: categoryResultsHook.recommendedPlaces || [],
+    normalPlaces: categoryResultsHook.normalPlaces || []
   };
 
-  // 카테고리 핸들러
   const categoryHandlers = useCategoryHandlers();
-  const handleCategorySelect = (category: string) => categoryHandlers.handleCategorySelect(category, refetch);
+  const handleCategorySelect = (category: string) => categoryHandlers.handleCategorySelect(category, categoryResultsHook.refetch);
   const handleCloseCategoryResult = () => categoryHandlers.handleCloseCategoryResult(
     (value: CategoryName | null) => setShowCategoryResult(value)
   );
   const handleConfirmCategoryFromButton = () => categoryHandlers.handleConfirmCategory(selectedCategory);
 
-  // 일정 핸들러
-  const itineraryHandlers = useItineraryHandlers();
+  const itineraryHandlersOriginal = useItineraryHandlers(); // Original handlers for close, etc.
   
-  const handleCreateItinerary = async () => {
-    console.log('[useLeftPanel] handleCreateItinerary 호출됨');
-    
-    // 날짜 정보 로깅
-    console.log('[useLeftPanel] 여행 날짜 정보:', {
-      dates: tripDetails.dates,
-      startDatetime: tripDetails.startDatetime,
-      endDatetime: tripDetails.endDatetime
-    });
-    
-    return itineraryHandlers.handleCreateItinerary(
-      tripDetails,
-      placesManagement.selectedPlaces as SelectedPlace[], // Cast if selectedPlaces is Place[]
-      placesManagement.prepareSchedulePayload,
-      itineraryManagement.generateItinerary, // Pass the one from useItinerary
-      uiVisibility.setShowItinerary, // Pass down setShowItinerary
-      (panel: 'region' | 'date' | 'category' | 'itinerary') => setCurrentPanel(panel)
-    );
-  };
+  // New schedule generation handler
+  const handleGenerateSchedule = useCallback(async () => {
+    if (!tripDetailsHook.dates.startDate || !tripDetailsHook.dates.endDate) {
+      toast.error("여행 날짜를 먼저 선택해주세요.");
+      return false; // Indicate failure
+    }
+    if (allPlacesForSchedule.length === 0) {
+      toast.error("최소 1개 이상의 장소를 선택해주세요.");
+      return false; // Indicate failure
+    }
+
+    console.log("[useLeftPanel] Schedule generation initiated.");
+    setIsGeneratingScheduleLocal(true); // Start local loading indicator
+    setShowItineraryPanel(false); // Hide itinerary panel while generating new one
+
+    try {
+      await runScheduleGenerationProcess(); // This updates itinerary & selectedDay in useScheduleManagement
+      // The useEffect watching isScheduleLoading will handle setShowItineraryPanel(true)
+      console.log("[useLeftPanel] Schedule generation process completed (runScheduleGenerationProcess finished).");
+      return true; // Indicate success of initiating
+    } catch (error) {
+      console.error("[useLeftPanel] Error during schedule generation process:", error);
+      toast.error("일정 생성 중 오류가 발생했습니다.");
+      setIsGeneratingScheduleLocal(false); // Ensure loading stops on error
+      return false; // Indicate failure
+    }
+  }, [tripDetailsHook.dates, allPlacesForSchedule, runScheduleGenerationProcess]);
   
-  const handleCloseItinerary = () => {
-    itineraryHandlers.handleCloseItinerary(
-      uiVisibility.setShowItinerary, 
-      (panel: 'region' | 'date' | 'category' | 'itinerary') => setCurrentPanel(panel)
-    );
+  const handleCloseItinerary = useCallback(() => {
+    setShowItineraryPanel(false);
+    setCurrentPanel('category'); // Or whatever the previous panel was
+    // Call original handler if it does more, e.g., map cleanup
+    itineraryHandlersOriginal.handleCloseItinerary(setShowItineraryPanel, setCurrentPanel);
+  }, [itineraryHandlersOriginal, setCurrentPanel]);
+
+  const forceRefresh = useCallback(() => {
+    setForceRefreshCounter(prev => prev + 1);
+  }, []);
+
+  // Ensure selectedItineraryDay is correctly passed for ItineraryView
+  // It now comes from useScheduleManagement as scheduleSelectedDay
+  const selectedItineraryDayForView = scheduleSelectedDay;
+
+
+  // Retain original structure for placesManagement but use the hook's instance
+  const placesManagement = {
+    ...placesManagementHook, // Spread all properties from the hook
+    // selectedPlaces and candidatePlaces are already destructured above
   };
-
-  // Listen for itineraryCreated custom event
-  useEffect(() => {
-    const handleItineraryCreated = (event: Event) => {
-      // Type assertion for CustomEvent
-      const customEvent = event as CustomEvent<{ itinerary: ItineraryDay[], selectedDay: number | null }>;
-      
-      console.log("[useLeftPanel] 'itineraryCreated' event received:", customEvent.detail);
-      
-      if (customEvent.detail.itinerary) {
-        // Use the setItinerary from useItinerary directly or via itineraryManagement
-        setItinerary(customEvent.detail.itinerary); 
-      }
-      
-      if (customEvent.detail.selectedDay !== null) {
-        setSelectedItineraryDay(customEvent.detail.selectedDay);
-      } else if (customEvent.detail.itinerary && customEvent.detail.itinerary.length > 0) {
-        // Fallback to first day of itinerary if selectedDay is null but itinerary exists
-        setSelectedItineraryDay(customEvent.detail.itinerary[0].day);
-      } else {
-        setSelectedItineraryDay(null);
-      }
-      
-      // Show the itinerary panel if itinerary is created (even if empty, to show potential messages)
-      setShowItinerary(true); 
-    };
-
-    window.addEventListener('itineraryCreated', handleItineraryCreated);
-    
-    return () => {
-      window.removeEventListener('itineraryCreated', handleItineraryCreated);
-    };
-  }, [setItinerary, setSelectedItineraryDay, setShowItinerary]); // Dependencies for the state setters from useItinerary
-
-  // 일정 상태 변경 시 UI 갱신을 위한 useEffect 추가 (from user's Part 2)
-  useEffect(() => {
-    // 일정이 생성되었지만 showItinerary가 false인 경우 자동으로 활성화
-    if (itinerary && itinerary.length > 0 && !showItinerary) {
-      console.log("useLeftPanel: 일정이 생성되었으나 패널이 표시되지 않아 자동으로 활성화합니다.");
-      setShowItinerary(true);
-    }
-    
-    // 일정이 생성되었지만 선택된 날짜가 없는 경우 첫 번째 날짜 선택
-    if (itinerary && itinerary.length > 0 && selectedItineraryDay === null) {
-      console.log("useLeftPanel: 일정이 생성되었으나 날짜가 선택되지 않아 첫 번째 날짜를 선택합니다.");
-      // Ensure itinerary[0].day is valid before setting
-      if (itinerary[0] && typeof itinerary[0].day === 'number') {
-        setSelectedItineraryDay(itinerary[0].day);
-      }
-    }
-  }, [itinerary, showItinerary, selectedItineraryDay, setShowItinerary, setSelectedItineraryDay]);
 
   return {
     regionSelection,
     categorySelection,
     keywordsAndInputs,
-    placesManagement,
-    tripDetails,
-    uiVisibility,
-    itineraryManagement,
-    handleCreateItinerary,
+    placesManagement, // Use the full object from the hook
+    tripDetails: tripDetailsHook, // Pass the full tripDetailsHook object
+    uiVisibility, // Contains showItineraryPanel for UI
+    
+    // New/updated properties for schedule generation and display
+    isGeneratingSchedule: isGeneratingScheduleLocal, // Local loading state for UI
+    itinerary, // From useScheduleManagement
+    selectedItineraryDay: selectedItineraryDayForView, // From useScheduleManagement
+    handleSelectItineraryDay: handleScheduleSelectDay, // From useScheduleManagement
+    handleGenerateSchedule, // New handler
+    handleCloseItinerary, // Updated handler
+
+    // For ItineraryView's startDate prop
+    startDate: tripDetailsHook.dates.startDate, 
+
+    // Retained from original structure for LeftPanelContent/other panels
     selectedCategory,
-    showCategoryResultScreen,
+    // showCategoryResultScreen, // Keep if used
     currentPanel,
-    isCategoryLoading,
-    categoryError,
+    isCategoryLoading: categoryResultsHook.isLoading,
+    categoryError: categoryResultsHook.error,
     categoryResults,
     handleCategorySelect,
     handleCloseCategoryResult,
-    handleConfirmCategory: handleConfirmCategoryFromButton, // Renamed for clarity from user's snippet
-    handleCloseItinerary
+    handleConfirmCategory: handleConfirmCategoryFromButton,
+    
+    // Force refresh (as requested)
+    forceRefresh,
+    forceRefreshCounter // If needed by consumer
   };
 };
