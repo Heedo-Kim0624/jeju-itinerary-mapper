@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useLeftPanel } from '@/hooks/use-left-panel';
 import LeftPanelContainer from './LeftPanelContainer';
@@ -18,13 +19,16 @@ const LeftPanel: React.FC = () => {
     tripDetails,
     uiVisibility,
     itineraryManagement,
-    handleCreateItinerary,
-    handleCloseItinerary
+    handleCreateItinerary, // useLeftPanel에서 가져오는 handleCreateItinerary
+    handleCloseItinerary // ItineraryView에서 onClose가 필요하다면 이 함수를 전달해야 합니다. 현재 프롬프트에서는 사용되지 않습니다.
   } = useLeftPanel();
 
   // 로컬 로딩 상태 관리 추가
   const [isGenerating, setIsGenerating] = useState(false);
   
+  // Add a dummy state for forceRerender listener in case useLeftPanel doesn't cover all updates.
+  // const [, setForceUpdate] = useState(0); // This might be redundant if events cover updates
+
   // 일정 생성 후 UI 상태 변화를 디버깅
   useEffect(() => {
     console.log("LeftPanel - 일정 관련 상태 변화 감지:", {
@@ -32,27 +36,21 @@ const LeftPanel: React.FC = () => {
       일정패널표시: uiVisibility.showItinerary,
       선택된일자: itineraryManagement.selectedItineraryDay,
       일정길이: itineraryManagement.itinerary ? itineraryManagement.itinerary.length : 0,
-      로딩상태: isGenerating
+      로딩상태: isGenerating // 로딩 상태 로깅 추가
     });
     
     // 일정이 생성되었고 로딩 중이면 로딩 상태 해제
-    if (itineraryManagement.itinerary && itineraryManagement.itinerary.length > 0) {
-      if (isGenerating) {
-        console.log("LeftPanel - 일정이 생성되었으므로 로딩 상태 해제");
-        setIsGenerating(false);
-      }
-      
+    if (itineraryManagement.itinerary && itineraryManagement.itinerary.length > 0 && isGenerating) {
+      console.log("LeftPanel - 일정이 생성되었으므로 로딩 상태 해제");
+      setIsGenerating(false);
       // 일정이 생성되었으므로, 일정 뷰를 보여주도록 상태 업데이트
-      if (!uiVisibility.showItinerary) {
-        console.log("LeftPanel - 일정이 있지만 패널이 표시되지 않아 표시 상태로 변경");
-        uiVisibility.setShowItinerary(true);
-      }
+      uiVisibility.setShowItinerary(true);
     }
   }, [
     itineraryManagement.itinerary, 
     uiVisibility.showItinerary, 
     itineraryManagement.selectedItineraryDay,
-    isGenerating,
+    isGenerating, // 의존성 배열에 추가
     uiVisibility.setShowItinerary
   ]);
   
@@ -62,35 +60,36 @@ const LeftPanel: React.FC = () => {
       console.log("[LeftPanel] forceRerender 이벤트 수신, 로딩 상태 해제 시도");
       setIsGenerating(false);
       
-      // 일정이 있으면 일정 패널 표시
+      // 일정이 있으면 일정 패널 표시 (이미 위 useEffect에서 처리될 수 있음)
       if (itineraryManagement.itinerary && itineraryManagement.itinerary.length > 0 && !uiVisibility.showItinerary) {
         console.log("[LeftPanel] forceRerender 후 일정 패널 표시");
         uiVisibility.setShowItinerary(true);
       }
     };
     
-    const handleItineraryCreated = (event: CustomEvent) => {
-      console.log("[LeftPanel] itineraryCreated 이벤트 수신, 로딩 상태 해제", event.detail);
+    const handleItineraryCreated = () => {
+      console.log("[LeftPanel] itineraryCreated 이벤트 수신, 로딩 상태 해제");
       setIsGenerating(false);
       
-      // 이벤트 데이터에서 일정 정보 확인
-      const { itinerary } = event.detail;
-      
-      // 일정 데이터가 있으면 패널 표시
-      if (itinerary && itinerary.length > 0) {
-        console.log("[LeftPanel] itineraryCreated 후 일정 패널 표시");
-        uiVisibility.setShowItinerary(true);
-      }
+      // 일정 패널 표시 (이미 위 useEffect 또는 이벤트 핸들러 내부에서 처리될 수 있음)
+      // 약간의 지연을 주어 상태 반영 시간을 확보할 수 있습니다.
+      setTimeout(() => {
+        if (itineraryManagement.itinerary && itineraryManagement.itinerary.length > 0) {
+          console.log("[LeftPanel] itineraryCreated 후 일정 패널 표시");
+          uiVisibility.setShowItinerary(true);
+        }
+      }, 50); // 짧은 지연
     };
     
     window.addEventListener('forceRerender', handleForceRerender);
-    window.addEventListener('itineraryCreated', handleItineraryCreated as EventListener);
+    window.addEventListener('itineraryCreated', handleItineraryCreated);
     
     return () => {
       window.removeEventListener('forceRerender', handleForceRerender);
-      window.removeEventListener('itineraryCreated', handleItineraryCreated as EventListener);
+      window.removeEventListener('itineraryCreated', handleItineraryCreated);
     };
   }, [itineraryManagement.itinerary, uiVisibility.showItinerary, uiVisibility.setShowItinerary]);
+
 
   const handlePanelBackByCategory = (category: string) => {
     console.log(`${category} 카테고리 패널 뒤로가기`);
@@ -147,19 +146,15 @@ const LeftPanel: React.FC = () => {
   
   // 일정 생성 함수 - 로딩 상태 관리 포함
   const handleCreateItineraryWithLoading = async () => {
-    console.log("[LeftPanel] 일정 생성 시작, 로딩 상태 설정");
     setIsGenerating(true);
+    console.log("[LeftPanel] 일정 생성 시작, 로딩 상태:", true);
     
     try {
-      const success = await handleCreateItinerary();
+      const success = await handleCreateItinerary(); // useLeftPanel에서 가져온 원래 함수 호출
       
       if (success) {
         console.log("[LeftPanel] 일정 생성 성공 (handleCreateItineraryWithLoading)");
-        // 성공 시에도 명시적으로 일정 패널 표시 (추가 안전 장치)
-        if (itineraryManagement.itinerary && itineraryManagement.itinerary.length > 0) {
-          console.log("[LeftPanel] 일정 생성 성공 확인 - 일정 패널 표시");
-          uiVisibility.setShowItinerary(true);
-        }
+        // 성공 시, 일정 데이터가 있으면 itineraryManagement.itinerary useEffect에서 setShowItinerary(true) 및 setIsGenerating(false) 처리
       } else {
         console.log("[LeftPanel] 일정 생성 실패 (handleCreateItineraryWithLoading)");
         // 실패 시 로딩 상태 즉시 해제
@@ -174,25 +169,24 @@ const LeftPanel: React.FC = () => {
     }
   };
   
-  // 조건부 렌더링: 일정이 있고 일정 패널 표시 상태일 때만 일정 뷰를 표시
-  // 로딩 중이 아닐 때만 일정 뷰를 확실히 표시
+  // 조건부 렌더링: 로딩 중이 아닐 때만 일정 뷰를 확실히 표시
   const shouldShowItineraryView = 
     uiVisibility.showItinerary && 
     itineraryManagement.itinerary && 
     itineraryManagement.itinerary.length > 0 &&
-    !isGenerating;
+    !isGenerating; // 로딩 중이 아닐 때
 
   return (
     <div className="relative h-full">
       {shouldShowItineraryView ? (
         <div className="fixed top-0 left-0 w-[300px] h-full bg-white border-r border-gray-200 z-40 shadow-md">
           <ItineraryView
-            itinerary={itineraryManagement.itinerary!} // 안전한 non-null 단언 (shouldShowItineraryView에서 확인함)
+            itinerary={itineraryManagement.itinerary!} // Null 체크는 shouldShowItineraryView에서 이미 수행
             startDate={tripDetails.dates?.startDate || new Date()}
             onSelectDay={itineraryManagement.handleSelectItineraryDay}
             selectedDay={itineraryManagement.selectedItineraryDay}
-            onClose={handleCloseItinerary}
-            debug={{
+            onClose={handleCloseItinerary} // ItineraryView에 onClose prop 추가
+            debug={{ // ItineraryView의 debug prop이 있다면 전달
               itineraryLength: itineraryManagement.itinerary!.length,
               selectedDay: itineraryManagement.selectedItineraryDay,
               showItinerary: uiVisibility.showItinerary
@@ -204,8 +198,8 @@ const LeftPanel: React.FC = () => {
           showItinerary={uiVisibility.showItinerary}
           onSetShowItinerary={uiVisibility.setShowItinerary}
           selectedPlaces={placesManagement.selectedPlaces}
-          onRemovePlace={placesManagement.handleRemovePlace}
-          onViewOnMap={placesManagement.handleViewOnMap}
+          onRemovePlace={placesManagement.handleRemovePlace} // LeftPanelContainer가 이 prop을 사용하지 않더라도 전달 유지
+          onViewOnMap={placesManagement.handleViewOnMap}     // LeftPanelContainer가 이 prop을 사용하지 않더라도 전달 유지
           allCategoriesSelected={placesManagement.allCategoriesSelected}
           dates={{
             startDate: tripDetails.dates?.startDate || null,
@@ -214,13 +208,13 @@ const LeftPanel: React.FC = () => {
             endTime: tripDetails.dates?.endTime || "21:00"
           }}
           onCreateItinerary={() => {
-            handleCreateItineraryWithLoading();
-            return true;
+            handleCreateItineraryWithLoading(); // 수정된 함수 사용
+            return true; 
           }}
           itinerary={itineraryManagement.itinerary}
           selectedItineraryDay={itineraryManagement.selectedItineraryDay}
           onSelectDay={itineraryManagement.handleSelectItineraryDay}
-          isGenerating={isGenerating}
+          isGenerating={isGenerating} // 로딩 상태 전달
         >
           <LeftPanelContent
             onDateSelect={tripDetails.setDates}
@@ -258,7 +252,7 @@ const LeftPanel: React.FC = () => {
               cafe: () => handlePanelBackByCategory('카페')
             }}
             isCategoryButtonEnabled={categorySelection.isCategoryButtonEnabled}
-            isGenerating={isGenerating}
+            isGenerating={isGenerating} // 로딩 상태 전달
           />
         </LeftPanelContainer>
       )}
