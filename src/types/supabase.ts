@@ -27,6 +27,7 @@ export interface Place {
   isRecommended?: boolean;
   geoNodeId?: string;
   geoNodeDistance?: number;
+  node_id?: number | string; // Added to fix useScheduleParser error
   weight?: number;
   isCandidate?: boolean;
   raw?: any;
@@ -62,7 +63,7 @@ export interface SchedulePayload {
 // 경로 데이터 인터페이스 추가
 export interface RouteData {
   nodeIds?: string[];
-  linkIds?: string[];
+  linkIds?: string[]; // Changed from optional to required as per previous type
   segmentRoutes?: SegmentRoute[];
 }
 
