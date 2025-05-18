@@ -72,8 +72,8 @@ export const useLeftPanel = () => {
       startTime: tripDetailsHook.dates.startTime, 
       endTime: tripDetailsHook.dates.endTime 
     } : null,
-    startDatetimeISO: tripDetailsHook.startDatetime, // Corrected: Was tripDetailsHook.startDatetimeISO
-    endDatetimeISO: tripDetailsHook.endDatetime,     // Corrected: Was tripDetailsHook.endDatetimeISO
+    startDatetimeISO: tripDetailsHook.startDatetime, 
+    endDatetimeISO: tripDetailsHook.endDatetime,     
   });
 
   // Local UI states for itinerary panel
@@ -96,7 +96,7 @@ export const useLeftPanel = () => {
       console.log("[useLeftPanel] Schedule loading finished, but itinerary is empty. Not showing panel or hide if shown.");
       // setShowItineraryPanel(false); // Optionally hide if it was shown due to old data
     }
-  }, [isScheduleLoading, itinerary, showItineraryPanel]); // Added showItineraryPanel to deps as it's read
+  }, [isScheduleLoading, itinerary, showItineraryPanel]); 
 
 
   // Listener for 'itineraryCreated' custom event (from useScheduleGenerationRunner)
@@ -114,19 +114,11 @@ export const useLeftPanel = () => {
       const customEvent = event as CustomEvent<{ itinerary: DomainItineraryDay[], selectedDay: number | null }>;
       console.log("[useLeftPanel] 'itineraryCreated' event received:", customEvent.detail);
       
-      // The itinerary data itself is now primarily sourced from useScheduleManagement.
-      // This event can act as a signal to show the panel.
       if (customEvent.detail.itinerary && customEvent.detail.itinerary.length > 0) {
         setShowItineraryPanel(true);
-        // setSelectedDay might be handled by useScheduleManagement, but event can update it too.
-        // handleScheduleSelectDay(customEvent.detail.selectedDay ?? (customEvent.detail.itinerary[0]?.day || null));
       } else if (customEvent.detail.itinerary && customEvent.detail.itinerary.length === 0) {
-        // if event signals empty itinerary, perhaps hide panel or show empty state
-        // setShowItineraryPanel(false); // Example: hide if itinerary is empty
         toast.info("일정은 생성되었으나 포함된 장소가 없습니다.");
       }
-      // No need to call setItinerary or setSelectedItineraryDay here if they are managed by useScheduleManagement
-      // and its state is already consumed.
     };
 
     window.addEventListener('itineraryCreated', handleItineraryCreated);
@@ -191,16 +183,10 @@ export const useLeftPanel = () => {
   
   const handleCloseItinerary = useCallback(() => {
     setShowItineraryPanel(false);
-    // setCurrentPanel('category'); // Or whatever the previous panel was // This direct call was the issue.
-    
-    // Create a wrapper to satisfy the expected signature of the original handler
-    const wrappedSetCurrentPanel = (panelValue: string) => {
-      setCurrentPanel(panelValue as 'region' | 'date' | 'category' | 'itinerary');
-    };
-
     // Call original handler if it does more, e.g., map cleanup
-    itineraryHandlersOriginal.handleCloseItinerary(setShowItineraryPanel, wrappedSetCurrentPanel);
-  }, [itineraryHandlersOriginal, setCurrentPanel, setShowItineraryPanel]); // Added setCurrentPanel and setShowItineraryPanel to deps
+    // Now setCurrentPanel can be passed directly as its type matches the expected signature
+    itineraryHandlersOriginal.handleCloseItinerary(setShowItineraryPanel, setCurrentPanel);
+  }, [itineraryHandlersOriginal, setCurrentPanel, setShowItineraryPanel]);
 
   const forceRefresh = useCallback(() => {
     setForceRefreshCounter(prev => prev + 1);

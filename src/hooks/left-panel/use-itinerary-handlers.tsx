@@ -1,7 +1,11 @@
+
 import { useCallback } from 'react';
 import { toast } from 'sonner';
 import type { Place, SchedulePayload, ItineraryDay as SupabaseItineraryDay } from '@/types/supabase';
-import type { ItineraryDay } from '@/hooks/use-itinerary';
+// ItineraryDay from use-itinerary might be different, ensure types align or use a more generic one if possible.
+// For now, assuming ItineraryDay from use-itinerary is compatible or this hook defines its own needs.
+// import type { ItineraryDay } from '@/hooks/use-itinerary'; // This was ItineraryDay from the old hook
+import { ItineraryDay as DomainItineraryDay } from '@/types/supabase'; // Using DomainItineraryDay for clarity
 import { NewServerScheduleResponse, isNewServerScheduleResponse } from '@/types/schedule';
 import { useMapContext } from '@/components/rightpanel/MapContext';
 import { useScheduleGenerator } from '@/hooks/use-schedule-generator';
@@ -21,16 +25,16 @@ export const useItineraryHandlers = () => {
       endTime: string;
     } | null;
     startDatetime: string | null;
-    endDatetime: string | null;
+    endDatetime: string |null;
   }
 
   const handleCreateItinerary = useCallback(async (
     tripDetails: TripDetailsForItinerary,
     selectedPlaces: Place[],
     prepareSchedulePayloadFn: (places: Place[], startISO: string | null, endISO: string | null) => SchedulePayload | null,
-    generateItineraryFn: (placesToUse: Place[], startDate: Date, endDate: Date, startTime: string, endTime: string) => ItineraryDay[] | null,
+    generateItineraryFn: (placesToUse: Place[], startDate: Date, endDate: Date, startTime: string, endTime: string) => DomainItineraryDay[] | null, // Updated to DomainItineraryDay
     setShowItinerary: (show: boolean) => void,
-    setCurrentPanel: (panel: string) => void
+    setCurrentPanel: (panel: 'region' | 'date' | 'category' | 'itinerary') => void // <-- MODIFIED
   ): Promise<boolean> => {
     console.log('[handleCreateItinerary] 함수 호출됨, 인자:', {
       tripDetails: tripDetails ? {
@@ -85,7 +89,7 @@ export const useItineraryHandlers = () => {
             // Dispatch 'itineraryCreated' event for client-side generated itinerary
             const event = new CustomEvent('itineraryCreated', { 
               detail: { 
-                itinerary: result,
+                itinerary: result, // Ensure this result matches DomainItineraryDay[]
                 selectedDay: result.length > 0 ? result[0].day : null
               } 
             });
@@ -121,7 +125,7 @@ export const useItineraryHandlers = () => {
           // Dispatch 'itineraryCreated' event for client-side generated itinerary
           const event = new CustomEvent('itineraryCreated', { 
             detail: { 
-              itinerary: result,
+              itinerary: result, // Ensure this result matches DomainItineraryDay[]
               selectedDay: result.length > 0 ? result[0].day : null
             } 
           });
@@ -135,7 +139,7 @@ export const useItineraryHandlers = () => {
           }, 100);
 
         } else {
-           toast.error("서버 및 클라��언트 일정 생성 모두 실패했습니다.");
+           toast.error("서버 및 클라이언트 일정 생성 모두 실패했습니다.");
         }
         return !!result;
       }
@@ -148,7 +152,7 @@ export const useItineraryHandlers = () => {
 
   const handleCloseItinerary = useCallback((
     setShowItinerary: (show: boolean) => void,
-    setCurrentPanel: (panel: string) => void
+    setCurrentPanel: (panel: 'region' | 'date' | 'category' | 'itinerary') => void // <-- MODIFIED
   ) => {
     setShowItinerary(false);
     clearMarkersAndUiElements(); 
