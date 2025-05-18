@@ -1,8 +1,8 @@
-
 import { useCategoryOrder } from './use-category-order';
 import { useCategoryPanel } from './use-category-panel';
 import { useCategoryKeywords } from './use-category-keywords';
 import type { CategoryName } from '@/utils/categoryUtils';
+import { useCallback } from 'react';
 
 export const useCategorySelection = () => {
   const {
@@ -11,7 +11,7 @@ export const useCategorySelection = () => {
     setCategorySelectionConfirmed,
     stepIndex,
     setStepIndex,
-    handleCategoryClick,
+    handleCategoryClick: handleCategoryOrderClick,
   } = useCategoryOrder();
 
   const {
@@ -19,16 +19,17 @@ export const useCategorySelection = () => {
     confirmedCategories,
     setConfirmedCategories,
     handleCategoryButtonClick,
-    handlePanelBack,
+    handlePanelBack: handleCategoryPanelBack,
   } = useCategoryPanel();
 
   const {
     selectedKeywordsByCategory,
     setSelectedKeywordsByCategory,
     toggleKeyword,
+    clearKeywordsForCategory,
   } = useCategoryKeywords();
 
-  const handleConfirmCategory = (
+  const handleConfirmCategory = useCallback((
     categoryName: CategoryName, 
     finalKeywords: string[],
     clearSelection: boolean = false
@@ -38,37 +39,55 @@ export const useCategorySelection = () => {
         ...prev,
         [categoryName]: []
       }));
+    } else {
+      setSelectedKeywordsByCategory(prev => ({
+        ...prev,
+        [categoryName]: finalKeywords
+      }));
     }
     
     if (!confirmedCategories.includes(categoryName)) {
-      setConfirmedCategories([...confirmedCategories, categoryName]);
+      setConfirmedCategories(prev => [...prev, categoryName]);
       
       const currentIndex = categoryOrder.indexOf(categoryName);
-      if (currentIndex + 1 < categoryOrder.length) {
+      if (currentIndex !== -1 && currentIndex + 1 < categoryOrder.length) {
         setStepIndex(currentIndex + 1);
+        handleCategoryButtonClick(categoryOrder[currentIndex + 1]);
       }
     }
-    
-    handlePanelBack();
-  };
+  }, [categoryOrder, confirmedCategories, setConfirmedCategories, setSelectedKeywordsByCategory, setStepIndex]);
+
+  const handleCategoryClick = useCallback((categoryName: CategoryName) => {
+    handleCategoryOrderClick(categoryName);
+    handleCategoryButtonClick(categoryName);
+  }, [handleCategoryOrderClick, handleCategoryButtonClick]);
 
   const isCategoryButtonEnabled = (category: CategoryName) => {
     return confirmedCategories.includes(category) || categoryOrder[stepIndex] === category;
   };
+
+  const handlePanelBackByCategory = categoryOrder.reduce((acc, category) => {
+    acc[category] = handleCategoryPanelBack;
+    return acc;
+  }, {} as Record<CategoryName, () => void>);
 
   return {
     categoryOrder,
     categorySelectionConfirmed,
     setCategorySelectionConfirmed,
     stepIndex,
+    setStepIndex,
     activeMiddlePanelCategory,
     confirmedCategories,
+    setConfirmedCategories,
     selectedKeywordsByCategory,
-    handleCategoryClick,
-    handleCategoryButtonClick,
+    setSelectedKeywordsByCategory,
     toggleKeyword,
-    handlePanelBack,
+    clearKeywordsForCategory,
     handleConfirmCategory,
-    isCategoryButtonEnabled
+    isCategoryButtonEnabled,
+    handleCategoryClick,
+    handlePanelBack: handleCategoryPanelBack,
+    handlePanelBackByCategory,
   };
 };

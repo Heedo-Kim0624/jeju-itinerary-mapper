@@ -4,10 +4,10 @@ import { CategoryName, CategoryKeywords } from '@/utils/categoryUtils';
 
 export const useCategoryKeywords = () => {
   const [selectedKeywordsByCategory, setSelectedKeywordsByCategory] = useState<CategoryKeywords>({
-    '숙소': [],
-    '관광지': [],
-    '음식점': [],
-    '카페': [],
+    'accommodation': [],
+    'attraction': [],
+    'restaurant': [],
+    'cafe': [],
   });
 
   const toggleKeyword = (category: CategoryName, keyword: string) => {
@@ -28,9 +28,17 @@ export const useCategoryKeywords = () => {
     });
   };
 
+  const clearKeywordsForCategory = (category: CategoryName) => {
+    setSelectedKeywordsByCategory(prev => ({
+      ...prev,
+      [category]: []
+    }));
+  };
+
   return {
     selectedKeywordsByCategory,
     setSelectedKeywordsByCategory,
     toggleKeyword,
+    clearKeywordsForCategory, // Added this
   };
 };

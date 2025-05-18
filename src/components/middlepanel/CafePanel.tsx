@@ -1,7 +1,7 @@
-
 import React from 'react';
 import BaseKeywordPanel from './common/BaseKeywordPanel';
 import { KeywordOption } from '@/types/keyword';
+import { CategoryName } from '@/utils/categoryUtils'; // Assuming BaseKeywordPanel might need it
 
 const defaultKeywords: KeywordOption[] = [
   { eng: 'Tasty_drinks', kr: '음료가 맛있어요' },
@@ -18,17 +18,17 @@ const defaultKeywords: KeywordOption[] = [
 
 const CafePanel: React.FC<{
   selectedKeywords: string[];
-  onToggleKeyword: (keyword: string) => void;
+  onToggleKeyword: (keyword: string) => void; // Keyword is English
   directInputValue: string;
   onDirectInputChange: (value: string) => void;
-  onConfirmCafe: (finalKeywords: string[]) => void;
+  onConfirmCafe: (finalKeywords: string[]) => void; // This will be called with selected keywords
   onClose: () => void;
 }> = (props) => {
   return (
     <BaseKeywordPanel
       {...props}
-      onConfirm={props.onConfirmCafe}
-      categoryName="카페"
+      onConfirm={props.onConfirmCafe} // onConfirm in BaseKeywordPanel calls this
+      categoryName="카페" // Display name for BaseKeywordPanel header
       defaultKeywords={defaultKeywords}
     />
   );

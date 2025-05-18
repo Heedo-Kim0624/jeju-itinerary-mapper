@@ -1,13 +1,14 @@
 
-type CategoryColors = {
-  [key: string]: {
-    bg: string; // Background color
-    text: string; // Text color
-    marker: string; // Marker color
-  };
+import { CategoryName } from "./categoryUtils"; // Import English CategoryName
+
+type CategoryColorInfo = {
+  bg: string;
+  text: string;
+  marker: string;
 };
 
-export const categoryColors: CategoryColors = {
+// Keys are English CategoryName literals or general strings that match them.
+export const categoryColors: Record<CategoryName | string, CategoryColorInfo> = {
   restaurant: {
     bg: 'bg-jeju-orange',
     text: 'text-white',
@@ -24,43 +25,41 @@ export const categoryColors: CategoryColors = {
     marker: '#4CAF50', // 초록 - 관광지
   },
   accommodation: {
-    bg: 'bg-purple-500',
+    bg: 'bg-purple-500', // Using a generic purple, replace if specific Jeju purple exists
     text: 'text-white',
     marker: '#2196F3', // 파랑 - 숙소
   },
-};
-
-export const getCategoryName = (category: string): string => {
-  switch (category) {
-    case 'restaurant':
-      return '음식점';
-    case 'cafe':
-      return '카페';
-    case 'attraction':
-      return '관광지';
-    case 'accommodation':
-      return '숙소';
-    default:
-      return category;
+  // Default or other categories if any
+  default: {
+    bg: 'bg-gray-500',
+    text: 'text-white',
+    marker: '#1F1F1F',
   }
 };
 
-// 역방향 매핑 함수: 한글 카테고리명 -> 영문 키
-export const mapCategoryNameToKey = (categoryName: string): string => {
-  switch (categoryName) {
-    case '음식점':
-      return 'restaurant';
-    case '카페':
-      return 'cafe';
-    case '관광지':
-      return 'attraction';
-    case '숙소':
-      return 'accommodation';
-    default:
-      return 'attraction'; // 기본값
+// Takes English CategoryName or any string, returns Korean display name.
+export const getCategoryDisplayName = (categoryKey: CategoryName | string): string => {
+  switch (categoryKey) {
+    case 'restaurant': return '음식점';
+    case 'cafe': return '카페';
+    case 'attraction': return '관광지';
+    case 'accommodation': return '숙소';
+    default: return categoryKey; // Return original key if no mapping found
   }
 };
 
-export const getCategoryColor = (category: string): string => {
-  return categoryColors[category]?.marker || '#1F1F1F';
+// Takes Korean display name, returns English CategoryName key or a fallback.
+export const mapKoreanNameToEnglishKey = (koreanName: string): CategoryName | string => {
+  switch (koreanName) {
+    case '음식점': return 'restaurant';
+    case '카페': return 'cafe';
+    case '관광지': return 'attraction';
+    case '숙소': return 'accommodation';
+    default: return koreanName; // Fallback
+  }
+};
+
+// Get marker color, expects English CategoryName or a matching string key.
+export const getCategoryColor = (categoryKey: CategoryName | string): string => {
+  return categoryColors[categoryKey]?.marker || categoryColors.default.marker;
 };

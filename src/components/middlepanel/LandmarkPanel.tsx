@@ -1,7 +1,7 @@
-
 import React from 'react';
 import BaseKeywordPanel from './common/BaseKeywordPanel';
 import { KeywordOption } from '@/types/keyword';
+import { CategoryName } from '@/utils/categoryUtils';
 
 const defaultKeywords: KeywordOption[] = [
   { eng: 'Many_Attractions', kr: '볼거리가 많아요' },
@@ -28,7 +28,7 @@ const LandmarkPanel: React.FC<{
     <BaseKeywordPanel
       {...props}
       onConfirm={props.onConfirmLandmark}
-      categoryName="관광지"
+      categoryName="관광지" // Display name
       defaultKeywords={defaultKeywords}
     />
   );

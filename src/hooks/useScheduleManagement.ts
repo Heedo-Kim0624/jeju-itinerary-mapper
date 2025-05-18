@@ -1,17 +1,13 @@
-
 import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
-import { ItineraryDay, Place, SelectedPlace, ItineraryPlaceWithTime } from '@/types/supabase'; // Removed ServerRouteResponse
+import { ItineraryDay, Place, SelectedPlace, ItineraryPlaceWithTime } from '@/types/supabase'; 
 import { useMapContext } from '@/components/rightpanel/MapContext';
-// Removed createItinerary import, createItineraryClientSide is kept if used, otherwise should be removed too.
-// Assuming createItineraryClientSide is still used elsewhere or intended.
-import { createItinerary as createItineraryClientSide } from '@/lib/itinerary/itinerary-utils'; 
 import { useScheduleGenerator as useScheduleGeneratorHook } from '@/hooks/use-schedule-generator';
 import { useScheduleStateAndEffects } from './schedule/useScheduleStateAndEffects';
 import { useScheduleGenerationRunner } from './schedule/useScheduleGenerationRunner'; 
 
 interface UseScheduleManagementProps {
-  selectedPlaces: SelectedPlace[];
+  selectedPlaces: SelectedPlace[]; // Places here should have category as English CategoryName
   dates: { startDate: Date; endDate: Date; startTime: string; endTime: string; } | null;
   startDatetime: string | null; 
   endDatetime: string | null;   
@@ -59,7 +55,7 @@ export const useScheduleManagement = ({
 
 
   const { runScheduleGenerationProcess } = useScheduleGenerationRunner({
-    selectedPlaces,
+    selectedPlaces, // These places have English CategoryName
     dates,
     startDatetimeISO: startDatetime, 
     endDatetimeISO: endDatetime,     

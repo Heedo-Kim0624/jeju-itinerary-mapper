@@ -4,22 +4,23 @@ import { CategoryName } from '@/utils/categoryUtils';
 
 export const useCategoryOrder = () => {
   const [stepIndex, setStepIndex] = useState<number>(0);
-  // Add the missing properties
-  const categoryOrder: CategoryName[] = ["숙소", "관광지", "음식점", "카페"];
+  const categoryOrder: CategoryName[] = ["accommodation", "attraction", "restaurant", "cafe"];
   const [categorySelectionConfirmed, setCategorySelectionConfirmed] = useState<boolean>(true);
   
   const handleCategoryClick = (categoryName: CategoryName) => {
-    // No-op since we no longer need category ordering
+    // No-op since we no longer need category ordering, or find new index
+    const newIndex = categoryOrder.indexOf(categoryName);
+    if (newIndex !== -1) {
+      setStepIndex(newIndex);
+    }
   };
   
-  // Add the getRecommendedWeight method
-  const getRecommendedWeight = (category: string): number => {
-    // Default weight is 1.0
-    const weights: Record<string, number> = {
-      "숙소": 1.0,
-      "관광지": 1.0,
-      "음식점": 1.0, 
-      "카페": 1.0
+  const getRecommendedWeight = (category: CategoryName): number => {
+    const weights: Partial<Record<CategoryName, number>> = { // Use Partial if not all CategoryName will have weights
+      "accommodation": 1.0,
+      "attraction": 1.0,
+      "restaurant": 1.0, 
+      "cafe": 1.0
     };
     
     return weights[category] || 1.0;
@@ -29,7 +30,6 @@ export const useCategoryOrder = () => {
     stepIndex,
     setStepIndex,
     handleCategoryClick,
-    // Return the new properties
     categoryOrder,
     categorySelectionConfirmed,
     setCategorySelectionConfirmed,

@@ -6,14 +6,14 @@ import CategoryNavigation from './CategoryNavigation';
 import CategoryPanels from './CategoryPanels';
 import PlaceCart from './PlaceCart';
 import ItineraryButton from './ItineraryButton';
-import ScheduleLoadingIndicator from './ScheduleLoadingIndicator';
+import { ScheduleLoadingIndicator } from './ScheduleLoadingIndicator';
 import ItineraryView from './ItineraryView';
 import PanelHeader from './PanelHeader';
 import LeftPanelContainer from './LeftPanelContainer'; // Assuming this is the new container
 import LeftPanelContent from './LeftPanelContent'; // Manages content switching
 
 import { useLeftPanel } from '@/hooks/use-left-panel';
-import { CategoryName } from '@/utils/categoryUtils';
+import { CategoryName, koreanToEnglishCategoryName, englishCategoryNameToKorean } from '@/utils/categoryUtils';
 
 const LeftPanel: React.FC = () => {
   const {
@@ -36,38 +36,33 @@ const LeftPanel: React.FC = () => {
     // handleConfirmCategory, // from useLeftPanel
     isCategoryLoading, // from useLeftPanel
     categoryResults, // from useLeftPanel
-    forceRefreshCounter, // for debug or forcing updates
+    // forceRefreshCounter, // for debug or forcing updates
   } = useLeftPanel();
 
-  // Handler functions for category interactions, ensuring correct CategoryName type
-  const handleCategorySelect = (category: CategoryName) => {
-    keywordsAndInputs.handleConfirmCategory(category, [], true); // Example usage
+  // Handler functions for category interactions, ensuring correct CategoryName type (English)
+  const handleCategorySelectWrapper = (category: CategoryName) => {
+    // This function is passed to LeftPanelContent's onCategoryClick, which expects CategoryName (English)
+    // The original handleCategorySelect from useLeftPanel already takes CategoryName (English)
+    // So, directly use it or call the one from useLeftPanel if it has more logic.
+    // For now, assuming keywordsAndInputs.handleConfirmCategory is the intended action
+    // and that it expects an English CategoryName.
+    keywordsAndInputs.handleConfirmCategory(category, [], true);
   };
 
-  const handleDirectInputChange = (category: CategoryName, value: string) => {
-    const handler = keywordsAndInputs.onDirectInputChange[category as keyof typeof keywordsAndInputs.onDirectInputChange];
-    if (handler) {
-      handler(value);
-    }
+  const handleDirectInputChangeWrapper = (category: CategoryName, value: string) => {
+    // keywordsAndInputs.onDirectInputChange already expects CategoryName (English)
+    keywordsAndInputs.onDirectInputChange(category, value);
   };
   
-  const handleConfirmCategoryKeywords = (category: CategoryName, keywords: string[]) => {
+  const handleConfirmCategoryKeywordsWrapper = (category: CategoryName, keywords: string[]) => {
+    // keywordsAndInputs.handleConfirmCategory expects CategoryName (English)
      keywordsAndInputs.handleConfirmCategory(category, keywords, false);
   };
 
-  const handleClearSelection = (category: CategoryName) => {
-    const clearHandler = categorySelection.handleClearSelectionByCategory[category as keyof typeof categorySelection.handleClearSelectionByCategory];
-    if (clearHandler) {
-      clearHandler();
-    }
+  const handleClearSelectionWrapper = (category: CategoryName) => {
+    // Clears keywords for the category and triggers result panel show
+    keywordsAndInputs.handleConfirmCategory(category, [], true);
   };
-
-
-  // If LeftPanelContainer is meant to wrap everything including conditional rendering:
-  // This component might just be setting up data and passing it to LeftPanelContent
-  // or LeftPanelContainer might be a simpler structural wrapper used elsewhere.
-  // Based on previous user message, LeftPanelContainer wraps LeftPanel.
-  // So, this LeftPanel component is the main logic holder.
 
   if (isGeneratingSchedule) {
     return (
@@ -82,7 +77,7 @@ const LeftPanel: React.FC = () => {
     return (
       <ItineraryView
         itinerary={itinerary}
-        startDate={startDate || new Date()} // Fallback for startDate
+        startDate={startDate || new Date()} 
         onSelectDay={handleSelectItineraryDay}
         selectedDay={selectedItineraryDay}
         onClose={handleCloseItinerary}
@@ -95,38 +90,33 @@ const LeftPanel: React.FC = () => {
     );
   }
   
-  // Object literals causing TS2353 are likely for props to CategoryPanels or similar.
-  // The fix is to use the English keys that the target type expects.
-  // The error type was: '{ accomodation: string; landmark: string; restaurant: string; cafe: string; }'
-  // So '숙소' maps to 'accomodation', '관광지' to 'landmark', etc.
-  // Ensure `keywordsAndInputs.directInputValues` itself has these English keys.
-
-  const directInputValuesForPanels = {
-    accomodation: keywordsAndInputs.directInputValues.accomodation,
-    landmark: keywordsAndInputs.directInputValues.touristSpot, // Assuming touristSpot maps to landmark contextually here
+  // Prepare props for LeftPanelContent, ensuring keys are English CategoryName
+  const directInputValuesForPanels: Record<CategoryName, string> = {
+    accommodation: keywordsAndInputs.directInputValues.accommodation,
+    attraction: keywordsAndInputs.directInputValues.attraction,
     restaurant: keywordsAndInputs.directInputValues.restaurant,
     cafe: keywordsAndInputs.directInputValues.cafe,
   };
 
-  const onDirectInputChangeHandlers = {
-    accomodation: (value: string) => handleDirectInputChange('accommodation', value),
-    landmark: (value: string) => handleDirectInputChange('touristSpot', value),
-    restaurant: (value: string) => handleDirectInputChange('restaurant', value),
-    cafe: (value: string) => handleDirectInputChange('cafe', value),
+  const onDirectInputChangeHandlers: Record<CategoryName, (value: string) => void> = {
+    accommodation: (value: string) => handleDirectInputChangeWrapper('accommodation', value),
+    attraction: (value: string) => handleDirectInputChangeWrapper('attraction', value),
+    restaurant: (value: string) => handleDirectInputChangeWrapper('restaurant', value),
+    cafe: (value: string) => handleDirectInputChangeWrapper('cafe', value),
   };
   
-  const confirmCategoryHandlers = {
-    accomodation: (finalKeywords: string[]) => handleConfirmCategoryKeywords('accommodation', finalKeywords),
-    landmark: (finalKeywords: string[]) => handleConfirmCategoryKeywords('touristSpot', finalKeywords),
-    restaurant: (finalKeywords: string[]) => handleConfirmCategoryKeywords('restaurant', finalKeywords),
-    cafe: (finalKeywords: string[]) => handleConfirmCategoryKeywords('cafe', finalKeywords),
+  const confirmCategoryHandlers: Record<CategoryName, (finalKeywords: string[]) => void> = {
+    accommodation: (finalKeywords: string[]) => handleConfirmCategoryKeywordsWrapper('accommodation', finalKeywords),
+    attraction: (finalKeywords: string[]) => handleConfirmCategoryKeywordsWrapper('attraction', finalKeywords),
+    restaurant: (finalKeywords: string[]) => handleConfirmCategoryKeywordsWrapper('restaurant', finalKeywords),
+    cafe: (finalKeywords: string[]) => handleConfirmCategoryKeywordsWrapper('cafe', finalKeywords),
   };
 
-  const clearSelectionHandlers = {
-    accomodation: () => handleClearSelection('accommodation'),
-    landmark: () => handleClearSelection('touristSpot'),
-    restaurant: () => handleClearSelection('restaurant'),
-    cafe: () => handleClearSelection('cafe'),
+  const clearSelectionHandlers: Record<CategoryName, () => void> = {
+    accommodation: () => handleClearSelectionWrapper('accommodation'),
+    attraction: () => handleClearSelectionWrapper('attraction'),
+    restaurant: () => handleClearSelectionWrapper('restaurant'),
+    cafe: () => handleClearSelectionWrapper('cafe'),
   };
   
   return (
@@ -135,14 +125,26 @@ const LeftPanel: React.FC = () => {
       regionSelection={regionSelection}
       tripDetails={tripDetails}
       categorySelection={categorySelection}
-      keywordsAndInputs={keywordsAndInputs} // Pass the original hooked version
+      keywordsAndInputs={keywordsAndInputs}
       placesManagement={placesManagement}
       uiVisibility={uiVisibility}
       handleGenerateSchedule={handleGenerateSchedule}
-      directInputValuesForPanels={directInputValuesForPanels}
-      onDirectInputChangeHandlers={onDirectInputChangeHandlers}
-      confirmCategoryHandlers={confirmCategoryHandlers}
-      clearSelectionHandlers={clearSelectionHandlers}
+      // Props for LeftPanelContent structure
+      onDateSelect={tripDetails.handleDateChange} // Example, adjust as per PanelHeader needs
+      onOpenRegionPanel={() => currentPanel === 'region'} // Example, adjust
+      hasSelectedDates={!!tripDetails.dates.startDate && !!tripDetails.dates.endDate}
+      onCategoryClick={handleCategorySelectWrapper} // This expects English CategoryName
+      regionConfirmed={regionSelection.selectedRegions.length > 0} // Example
+      categoryStepIndex={categorySelection.stepIndex}
+      activeMiddlePanelCategory={categorySelection.activeMiddlePanelCategory} // This should be English CategoryName
+      confirmedCategories={categorySelection.confirmedCategories} // This should be English CategoryName[]
+      selectedKeywordsByCategory={keywordsAndInputs.selectedKeywordsByCategory} // This is Record<CategoryName, string[]>
+      toggleKeyword={keywordsAndInputs.toggleKeyword} // toggleKeyword(category: CategoryName, keyword: string)
+      directInputValues={directInputValuesForPanels}
+      onDirectInputChange={onDirectInputChangeHandlers}
+      onConfirmCategory={confirmCategoryHandlers}
+      handlePanelBack={categorySelection.handlePanelBackByCategory} // Assuming this is Record<CategoryName, () => void>
+      isCategoryButtonEnabled={categorySelection.isCategoryButtonEnabled} // Expects English CategoryName
     />
   );
 };
