@@ -1,13 +1,14 @@
+
 import React, { useEffect } from 'react';
 import { useLeftPanel } from '@/hooks/use-left-panel';
-import LeftPanelContainer from './LeftPanelContainer';
 import LeftPanelContent from './LeftPanelContent';
-import RegionPanelHandler from './RegionPanelHandler';
-import CategoryResultHandler from './CategoryResultHandler';
-import ItineraryView from './ItineraryView';
 import { CategoryName } from '@/utils/categoryUtils';
 import { Place } from '@/types/supabase';
 import { toast } from 'sonner';
+import ItineraryPanel from './panels/ItineraryPanel';
+import SelectionPanel from './panels/SelectionPanel';
+import ResultPanelHandlers from './panels/ResultPanelHandlers';
+import DebugPanel from './panels/DebugPanel';
 
 const LeftPanel: React.FC = () => {
   const {
@@ -20,8 +21,6 @@ const LeftPanel: React.FC = () => {
     itineraryManagement,
     handleCreateItinerary,
     handleCloseItinerary,
-    // currentPanel, // Not directly used for ItineraryView vs LeftPanelContainer visibility
-    // setCurrentPanel // Not directly used for ItineraryView vs LeftPanelContainer visibility
   } = useLeftPanel();
 
   useEffect(() => {
@@ -89,128 +88,97 @@ const LeftPanel: React.FC = () => {
     uiVisibility.setShowCategoryResult(null);
   };
 
-
   return (
     <div className="relative h-full">
-      {/* 일정 패널 표시 조건: showItinerary가 true일 때 itinerary 데이터가 없더라도 일단 패널을 보여주고,
-          ItineraryView 내부에서 "일정 없음" 메시지 등을 처리하도록 변경 */}
-      {uiVisibility.showItinerary ? (
-        <div className="fixed top-0 left-0 w-[300px] h-full bg-white border-r border-gray-200 z-40 shadow-md">
-          <ItineraryView
-            itinerary={itineraryManagement.itinerary || []} // itinerary가 null일 경우 빈 배열 전달
-            startDate={tripDetails.dates?.startDate || new Date()}
-            onSelectDay={itineraryManagement.handleSelectItineraryDay}
-            selectedDay={itineraryManagement.selectedItineraryDay}
-            onClose={handleCloseItinerary} // onClose prop 유지
-            debug={{ // debug prop 유지
-              itineraryLength: itineraryManagement.itinerary?.length || 0,
-              selectedDay: itineraryManagement.selectedItineraryDay,
-              showItinerary: uiVisibility.showItinerary
-            }}
-          />
-        </div>
-      ) : (
-        <LeftPanelContainer
-          showItinerary={uiVisibility.showItinerary} // This will be false here
-          onSetShowItinerary={uiVisibility.setShowItinerary}
-          selectedPlaces={placesManagement.selectedPlaces}
-          onRemovePlace={placesManagement.handleRemovePlace}
-          onViewOnMap={placesManagement.handleViewOnMap}
-          allCategoriesSelected={placesManagement.allCategoriesSelected}
-          dates={{
-            startDate: tripDetails.dates?.startDate || null,
-            endDate: tripDetails.dates?.endDate || null,
-            startTime: tripDetails.dates?.startTime || "09:00",
-            endTime: tripDetails.dates?.endTime || "21:00"
-          }}
-          onCreateItinerary={() => {
-            console.log("[LeftPanel] 일정 생성 버튼 클릭 (컨테이너 내부에서)"); // 요청된 로그 추가
-            handleCreateItinerary().then((success) => {
-              // 로그 메시지 업데이트
-              console.log(`[LeftPanel] 일정 생성 시도 ${success ? '성공' : '실패'} 후 UI 업데이트 로직 실행됨 (컨테이너 내부)`);
-              // 성공 시 추가 로직이 필요하면 여기에 구현 (예: 토스트 메시지)
-              // if (success) { toast.success("일정 생성 완료!"); } // 이미 useScheduleManagement 등에서 처리할 수 있음
-            });
-            return true; 
-          }}
-          itinerary={itineraryManagement.itinerary}
-          selectedItineraryDay={itineraryManagement.selectedItineraryDay}
-          onSelectDay={itineraryManagement.handleSelectDay}
-        >
-          <LeftPanelContent
-            onDateSelect={tripDetails.setDates}
-            onOpenRegionPanel={() => regionSelection.setRegionSlidePanelOpen(true)}
-            hasSelectedDates={!!tripDetails.dates.startDate && !!tripDetails.dates.endDate}
-            onCategoryClick={categorySelection.handleCategoryButtonClick}
-            regionConfirmed={regionSelection.regionConfirmed}
-            categoryStepIndex={categorySelection.stepIndex}
-            activeMiddlePanelCategory={categorySelection.activeMiddlePanelCategory}
-            confirmedCategories={categorySelection.confirmedCategories}
-            selectedKeywordsByCategory={categorySelection.selectedKeywordsByCategory}
-            toggleKeyword={categorySelection.toggleKeyword}
-            directInputValues={{
-              accomodation: keywordsAndInputs.directInputValues['숙소'] || '',
-              landmark: keywordsAndInputs.directInputValues['관광지'] || '',
-              restaurant: keywordsAndInputs.directInputValues['음식점'] || '',
-              cafe: keywordsAndInputs.directInputValues['카페'] || ''
-            }}
-            onDirectInputChange={{
-              accomodation: (value: string) => keywordsAndInputs.onDirectInputChange('숙소', value),
-              landmark: (value: string) => keywordsAndInputs.onDirectInputChange('관광지', value),
-              restaurant: (value: string) => keywordsAndInputs.onDirectInputChange('음식점', value),
-              cafe: (value: string) => keywordsAndInputs.onDirectInputChange('카페', value)
-            }}
-            onConfirmCategory={{
-              accomodation: (finalKeywords: string[]) => handleConfirmByCategory('숙소', finalKeywords),
-              landmark: (finalKeywords: string[]) => handleConfirmByCategory('관광지', finalKeywords),
-              restaurant: (finalKeywords: string[]) => handleConfirmByCategory('음식점', finalKeywords),
-              cafe: (finalKeywords: string[]) => handleConfirmByCategory('카페', finalKeywords)
-            }}
-            handlePanelBack={{
-              accomodation: () => handlePanelBackByCategory('숙소'),
-              landmark: () => handlePanelBackByCategory('관광지'),
-              restaurant: () => handlePanelBackByCategory('음식점'),
-              cafe: () => handlePanelBackByCategory('카페')
-            }}
-            isCategoryButtonEnabled={categorySelection.isCategoryButtonEnabled}
-          />
-        </LeftPanelContainer>
-      )}
-
-      <RegionPanelHandler
-        open={regionSelection.regionSlidePanelOpen}
-        onClose={() => regionSelection.setRegionSlidePanelOpen(false)}
-        selectedRegions={regionSelection.selectedRegions}
-        onToggle={regionSelection.handleRegionToggle}
-        onConfirm={() => {
-          regionSelection.setRegionSlidePanelOpen(false);
-          if (regionSelection.selectedRegions.length > 0) {
-            regionSelection.setRegionConfirmed(true);
-          } else {
-             toast.info('지역을 선택해주세요.');
-          }
-        }}
+      {/* 일정 패널 (showItinerary가 true일 때) */}
+      <ItineraryPanel
+        itinerary={itineraryManagement.itinerary}
+        selectedItineraryDay={itineraryManagement.selectedItineraryDay}
+        startDate={tripDetails.dates?.startDate}
+        handleSelectItineraryDay={itineraryManagement.handleSelectItineraryDay}
+        handleCloseItinerary={handleCloseItinerary}
+        showItinerary={uiVisibility.showItinerary}
       />
-
-      <CategoryResultHandler
-        showCategoryResult={uiVisibility.showCategoryResult}
-        selectedRegions={regionSelection.selectedRegions}
-        selectedKeywordsByCategory={categorySelection.selectedKeywordsByCategory}
-        onClose={handleResultClose}
-        onSelectPlace={placesManagement.handleSelectPlace}
+      
+      {/* 선택 패널 (showItinerary가 false일 때) */}
+      <SelectionPanel
+        showItinerary={uiVisibility.showItinerary}
+        setShowItinerary={uiVisibility.setShowItinerary}
         selectedPlaces={placesManagement.selectedPlaces}
-        onConfirmCategory={handleConfirmCategory}
+        handleRemovePlace={placesManagement.handleRemovePlace}
+        handleViewOnMap={placesManagement.handleViewOnMap}
+        allCategoriesSelected={placesManagement.allCategoriesSelected}
+        dates={{
+          startDate: tripDetails.dates?.startDate || null,
+          endDate: tripDetails.dates?.endDate || null,
+          startTime: tripDetails.dates?.startTime || "09:00",
+          endTime: tripDetails.dates?.endTime || "21:00"
+        }}
+        handleCreateItinerary={handleCreateItinerary}
+        itinerary={itineraryManagement.itinerary}
+        selectedItineraryDay={itineraryManagement.selectedItineraryDay}
+        handleSelectItineraryDay={itineraryManagement.handleSelectItineraryDay}
+      >
+        <LeftPanelContent
+          onDateSelect={tripDetails.setDates}
+          onOpenRegionPanel={() => regionSelection.setRegionSlidePanelOpen(true)}
+          hasSelectedDates={!!tripDetails.dates.startDate && !!tripDetails.dates.endDate}
+          onCategoryClick={categorySelection.handleCategoryButtonClick}
+          regionConfirmed={regionSelection.regionConfirmed}
+          categoryStepIndex={categorySelection.stepIndex}
+          activeMiddlePanelCategory={categorySelection.activeMiddlePanelCategory}
+          confirmedCategories={categorySelection.confirmedCategories}
+          selectedKeywordsByCategory={categorySelection.selectedKeywordsByCategory}
+          toggleKeyword={categorySelection.toggleKeyword}
+          directInputValues={{
+            accomodation: keywordsAndInputs.directInputValues['숙소'] || '',
+            landmark: keywordsAndInputs.directInputValues['관광지'] || '',
+            restaurant: keywordsAndInputs.directInputValues['음식점'] || '',
+            cafe: keywordsAndInputs.directInputValues['카페'] || ''
+          }}
+          onDirectInputChange={{
+            accomodation: (value: string) => keywordsAndInputs.onDirectInputChange('숙소', value),
+            landmark: (value: string) => keywordsAndInputs.onDirectInputChange('관광지', value),
+            restaurant: (value: string) => keywordsAndInputs.onDirectInputChange('음식점', value),
+            cafe: (value: string) => keywordsAndInputs.onDirectInputChange('카페', value)
+          }}
+          onConfirmCategory={{
+            accomodation: (finalKeywords: string[]) => handleConfirmByCategory('숙소', finalKeywords),
+            landmark: (finalKeywords: string[]) => handleConfirmByCategory('관광지', finalKeywords),
+            restaurant: (finalKeywords: string[]) => handleConfirmByCategory('음식점', finalKeywords),
+            cafe: (finalKeywords: string[]) => handleConfirmByCategory('카페', finalKeywords)
+          }}
+          handlePanelBack={{
+            accomodation: () => handlePanelBackByCategory('숙소'),
+            landmark: () => handlePanelBackByCategory('관광지'),
+            restaurant: () => handlePanelBackByCategory('음식점'),
+            cafe: () => handlePanelBackByCategory('카페')
+          }}
+          isCategoryButtonEnabled={categorySelection.isCategoryButtonEnabled}
+        />
+      </SelectionPanel>
+
+      {/* 결과 패널 핸들러 */}
+      <ResultPanelHandlers
+        regionSlidePanelOpen={regionSelection.regionSlidePanelOpen}
+        setRegionSlidePanelOpen={regionSelection.setRegionSlidePanelOpen}
+        selectedRegions={regionSelection.selectedRegions}
+        handleRegionToggle={regionSelection.handleRegionToggle}
+        setRegionConfirmed={regionSelection.setRegionConfirmed}
+        showCategoryResult={uiVisibility.showCategoryResult}
+        selectedKeywordsByCategory={categorySelection.selectedKeywordsByCategory}
+        handleResultClose={handleResultClose}
+        handleSelectPlace={placesManagement.handleSelectPlace}
+        selectedPlaces={placesManagement.selectedPlaces}
+        handleConfirmCategory={handleConfirmCategory}
       />
 
-      {/* 디버깅용 상태 표시 (개발 중에만 사용) */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="fixed bottom-4 left-4 bg-black bg-opacity-70 text-white p-2 rounded text-xs z-50">
-          showItinerary: {uiVisibility.showItinerary ? 'true' : 'false'}<br />
-          itinerary: {itineraryManagement.itinerary ? `${itineraryManagement.itinerary.length}일` : 'null'}<br />
-          selectedDay: {itineraryManagement.selectedItineraryDay || 'null'} <br />
-          {/* currentPanel: {currentPanel} Uncomment if currentPanel is returned and needed for debug */}
-        </div>
-      )}
+      {/* 디버깅용 상태 패널 */}
+      <DebugPanel
+        showItinerary={uiVisibility.showItinerary}
+        itinerary={itineraryManagement.itinerary}
+        selectedItineraryDay={itineraryManagement.selectedItineraryDay}
+      />
     </div>
   );
 };
