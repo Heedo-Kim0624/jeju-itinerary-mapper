@@ -1,12 +1,10 @@
-
 import React, { useEffect } from 'react';
 import { useLeftPanel } from '@/hooks/use-left-panel';
-import LeftPanelContainer from './LeftPanelContainer'; // 수정: 중괄호 제거
-import LeftPanelContent from './LeftPanelContent'; // 수정: 중괄호 제거
+import LeftPanelContainer from './LeftPanelContainer';
+import LeftPanelContent from './LeftPanelContent';
 import RegionPanelHandler from './RegionPanelHandler';
 import CategoryResultHandler from './CategoryResultHandler';
-// import ItineraryPanel from './ItineraryPanel'; // ItineraryView를 사용하므로 주석 처리 또는 확인 필요
-import ItineraryView from './ItineraryView'; // ItineraryView를 사용
+import ItineraryView from './ItineraryView';
 import { CategoryName } from '@/utils/categoryUtils';
 import { Place } from '@/types/supabase';
 import { toast } from 'sonner';
@@ -20,7 +18,8 @@ const LeftPanel: React.FC = () => {
     tripDetails,
     uiVisibility,
     itineraryManagement,
-    handleCreateItinerary
+    handleCreateItinerary,
+    handleCloseItinerary
   } = useLeftPanel();
 
   // 일정 생성 후 UI 상태 변화를 디버깅
@@ -87,7 +86,7 @@ const LeftPanel: React.FC = () => {
     }
     
     // 사용자가 패널에서 선택한 장소는 이미 onSelectPlace를 통해 placesManagement.selectedPlaces에 반영되었을 것입니다.
-    // handleAutoCompletePlaces는 부족한 장소를 추가하는 역할을 합니다.
+    // handleAutoCompletePlaces는 ���족한 장소를 추가하는 역할을 합니다.
     placesManagement.handleAutoCompletePlaces(
       category,
       recommendedPoolForCategory, // 자동 보완 시 사용할 추천 장소 풀
@@ -107,6 +106,12 @@ const LeftPanel: React.FC = () => {
             startDate={tripDetails.dates?.startDate || new Date()}
             onSelectDay={itineraryManagement.handleSelectItineraryDay}
             selectedDay={itineraryManagement.selectedItineraryDay}
+            onClose={handleCloseItinerary}
+            debug={{
+              itineraryLength: itineraryManagement.itinerary.length,
+              selectedDay: itineraryManagement.selectedItineraryDay,
+              showItinerary: uiVisibility.showItinerary
+            }}
           />
         </div>
       ) : (
@@ -201,6 +206,15 @@ const LeftPanel: React.FC = () => {
         selectedPlaces={placesManagement.selectedPlaces}
         onConfirmCategory={handleConfirmCategory}
       />
+
+      {/* 디버깅용 상태 표시 (개발 중에만 사용) */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="fixed bottom-4 left-4 bg-black bg-opacity-70 text-white p-2 rounded text-xs z-50">
+          showItinerary: {uiVisibility.showItinerary ? 'true' : 'false'}<br />
+          itinerary: {itineraryManagement.itinerary ? `${itineraryManagement.itinerary.length}일` : 'null'}<br />
+          selectedDay: {itineraryManagement.selectedItineraryDay || 'null'}
+        </div>
+      )}
     </div>
   );
 };

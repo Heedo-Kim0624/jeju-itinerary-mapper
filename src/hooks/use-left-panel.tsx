@@ -2,13 +2,13 @@ import { useState, useEffect } from 'react';
 import { useSelectedPlaces } from './use-selected-places';
 import { useTripDetails } from './use-trip-details';
 import { useCategoryResults } from './use-category-results';
-import { useItinerary, ItineraryDay as CreatorItineraryDay } from './use-itinerary'; // Import ItineraryDay as CreatorItineraryDay
+import { useItinerary, ItineraryDay } from './use-itinerary'; // ItineraryDay is now exported
 import { useRegionSelection } from './use-region-selection';
 import { useCategorySelection } from './use-category-selection';
 import { useCategoryHandlers } from './left-panel/use-category-handlers';
 import { useItineraryHandlers } from './left-panel/use-itinerary-handlers';
 import { useInputState } from './left-panel/use-input-state';
-import { Place, SelectedPlace, SchedulePayload } from '@/types/supabase'; // Removed ItineraryDay from here to avoid conflict if different
+import { Place, SelectedPlace, SchedulePayload } from '@/types/supabase';
 import { CategoryName } from '@/utils/categoryUtils';
 import { toast } from 'sonner';
 
@@ -124,7 +124,6 @@ export const useLeftPanel = () => {
   );
   const handleConfirmCategoryFromButton = () => categoryHandlers.handleConfirmCategory(selectedCategory);
 
-
   // 일정 핸들러
   const itineraryHandlers = useItineraryHandlers();
   
@@ -140,10 +139,10 @@ export const useLeftPanel = () => {
     
     return itineraryHandlers.handleCreateItinerary(
       tripDetails,
-      placesManagement.selectedPlaces as SelectedPlace[],
+      placesManagement.selectedPlaces as SelectedPlace[], // Cast if selectedPlaces is Place[]
       placesManagement.prepareSchedulePayload,
-      itineraryManagement.generateItinerary,
-      uiVisibility.setShowItinerary,
+      itineraryManagement.generateItinerary, // Pass the one from useItinerary
+      uiVisibility.setShowItinerary, // Pass down setShowItinerary
       (panel: 'region' | 'date' | 'category' | 'itinerary') => setCurrentPanel(panel)
     );
   };
@@ -159,7 +158,7 @@ export const useLeftPanel = () => {
   useEffect(() => {
     const handleItineraryCreated = (event: Event) => {
       // Type assertion for CustomEvent
-      const customEvent = event as CustomEvent<{ itinerary: CreatorItineraryDay[], selectedDay: number | null }>;
+      const customEvent = event as CustomEvent<{ itinerary: ItineraryDay[], selectedDay: number | null }>;
       
       console.log("[useLeftPanel] 'itineraryCreated' event received:", customEvent.detail);
       
@@ -187,6 +186,24 @@ export const useLeftPanel = () => {
       window.removeEventListener('itineraryCreated', handleItineraryCreated);
     };
   }, [setItinerary, setSelectedItineraryDay, setShowItinerary]); // Dependencies for the state setters from useItinerary
+
+  // 일정 상태 변경 시 UI 갱신을 위한 useEffect 추가 (from user's Part 2)
+  useEffect(() => {
+    // 일정이 생성되었지만 showItinerary가 false인 경우 자동으로 활성화
+    if (itinerary && itinerary.length > 0 && !showItinerary) {
+      console.log("useLeftPanel: 일정이 생성되었으나 패널이 표시되지 않아 자동으로 활성화합니다.");
+      setShowItinerary(true);
+    }
+    
+    // 일정이 생성되었지만 선택된 날짜가 없는 경우 첫 번째 날짜 선택
+    if (itinerary && itinerary.length > 0 && selectedItineraryDay === null) {
+      console.log("useLeftPanel: 일정이 생성되었으나 날짜가 선택되지 않아 첫 번째 날짜를 선택합니다.");
+      // Ensure itinerary[0].day is valid before setting
+      if (itinerary[0] && typeof itinerary[0].day === 'number') {
+        setSelectedItineraryDay(itinerary[0].day);
+      }
+    }
+  }, [itinerary, showItinerary, selectedItineraryDay, setShowItinerary, setSelectedItineraryDay]);
 
   return {
     regionSelection,

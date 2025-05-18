@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { toast } from 'sonner';
-import { Place, SchedulePayload, ItineraryDay } from '@/types/supabase';
+import type { Place, SchedulePayload, ItineraryDay as SupabaseItineraryDay } from '@/types/supabase';
+import type { ItineraryDay } from '@/hooks/use-itinerary';
 import { NewServerScheduleResponse, isNewServerScheduleResponse } from '@/types/schedule';
 import { useMapContext } from '@/components/rightpanel/MapContext';
 import { useScheduleGenerator } from '@/hooks/use-schedule-generator';
@@ -12,19 +13,17 @@ export const useItineraryHandlers = () => {
   const { clearMarkersAndUiElements } = useMapContext();
   const { generateSchedule } = useScheduleGenerator();
 
-  // Define a more specific type for tripDetails based on useTripDetails hook structure
   interface TripDetailsForItinerary {
     dates: {
       startDate: Date;
       endDate: Date;
       startTime: string;
       endTime: string;
-    } | null; // Ensure dates can be null initially
+    } | null;
     startDatetime: string | null;
     endDatetime: string | null;
   }
 
-  // 일정 생성 핸들러
   const handleCreateItinerary = useCallback(async (
     tripDetails: TripDetailsForItinerary,
     selectedPlaces: Place[],
@@ -63,11 +62,13 @@ export const useItineraryHandlers = () => {
         if (serverResponse && isNewServerScheduleResponse(serverResponse) && 
             serverResponse.route_summary && serverResponse.route_summary.length > 0) {
           console.log("[handleCreateItinerary] 서버 응답 성공:", serverResponse);
-          setShowItinerary(true);
-          setCurrentPanel('itinerary');
-          return true;
+          // setShowItinerary(true); // This is now handled by the 'itineraryCreated' event listener in useLeftPanel
+          // setCurrentPanel('itinerary'); // This is also handled by the event listener implicitly
+          // The event dispatch is in useScheduleGenerationRunner
+          return true; // Indicate success, event will trigger UI updates
         } else {
           console.warn("[handleCreateItinerary] 서버 응답 없거나 불완전함, 클라이언트 측 일정 생성으로 폴백. Response:", serverResponse);
+          // Fallback to client-side generation
           const result = generateItineraryFn(
             selectedPlaces, 
             tripDetails.dates.startDate, 
@@ -78,8 +79,25 @@ export const useItineraryHandlers = () => {
           
           if (result) {
             toast.info("서버 일정 생성 실패. 클라이언트에서 기본 일정을 생성했습니다.");
-            setShowItinerary(true);
-            setCurrentPanel('itinerary');
+            // setShowItinerary(true); // Handled by useLeftPanel's useEffect listening to itinerary changes
+            // setCurrentPanel('itinerary'); // Handled by useLeftPanel's useEffect
+
+            // Dispatch 'itineraryCreated' event for client-side generated itinerary
+            const event = new CustomEvent('itineraryCreated', { 
+              detail: { 
+                itinerary: result,
+                selectedDay: result.length > 0 ? result[0].day : null
+              } 
+            });
+            window.dispatchEvent(event);
+            
+            // 강제 리렌더링을 위한 setTimeout 추가 (from user's Part 2)
+            setTimeout(() => {
+              console.log("클라이언트 일정 생성 후 강제 리렌더링 트리거");
+              const forceEvent = new Event('forceRerender');
+              window.dispatchEvent(forceEvent);
+            }, 100);
+
           } else {
             toast.error("서버 및 클라이언트 일정 생성 모두 실패했습니다.");
           }
@@ -97,10 +115,27 @@ export const useItineraryHandlers = () => {
         );
         
         if (result) {
-          setShowItinerary(true);
-          setCurrentPanel('itinerary');
+          // setShowItinerary(true); // Handled by useLeftPanel
+          // setCurrentPanel('itinerary'); // Handled by useLeftPanel
+
+          // Dispatch 'itineraryCreated' event for client-side generated itinerary
+          const event = new CustomEvent('itineraryCreated', { 
+            detail: { 
+              itinerary: result,
+              selectedDay: result.length > 0 ? result[0].day : null
+            } 
+          });
+          window.dispatchEvent(event);
+
+          // 강제 리렌더링을 위한 setTimeout 추가 (from user's Part 2)
+          setTimeout(() => {
+            console.log("오류 후 클라이언트 일정 생성 후 강제 리렌더링 트리거");
+            const forceEvent = new Event('forceRerender');
+            window.dispatchEvent(forceEvent);
+          }, 100);
+
         } else {
-           toast.error("서버 및 클라이언트 일정 생성 모두 실패했습니다.");
+           toast.error("서버 및 클라��언트 일정 생성 모두 실패했습니다.");
         }
         return !!result;
       }
@@ -111,14 +146,13 @@ export const useItineraryHandlers = () => {
     }
   }, [generateSchedule]);
 
-  // 일정 닫기 핸들러
   const handleCloseItinerary = useCallback((
     setShowItinerary: (show: boolean) => void,
     setCurrentPanel: (panel: string) => void
   ) => {
     setShowItinerary(false);
-    clearMarkersAndUiElements(); // 지도 마커와 경로 제거
-    setCurrentPanel('category'); // 또는 마지막 관련 패널로
+    clearMarkersAndUiElements(); 
+    setCurrentPanel('category'); 
   }, [clearMarkersAndUiElements]);
 
   return {
