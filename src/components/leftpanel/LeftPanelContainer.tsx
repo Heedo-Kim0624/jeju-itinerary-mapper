@@ -1,14 +1,15 @@
+
 import React, { useState, useEffect } from 'react';
 import { Place } from '@/types/supabase';
 import { ItineraryDay } from '@/hooks/use-itinerary';
-import PlaceCart from './PlaceCart';
+import PlaceCart from './PlaceCart'; // PlaceCart 컴포넌트 import 주석 해제
 import ScheduleViewer from './ScheduleViewer';
 
 interface LeftPanelContainerProps {
   showItinerary: boolean;
   onSetShowItinerary: (show: boolean) => void;
   selectedPlaces: Place[];
-  onRemovePlace: (id: string) => void;
+  onRemovePlace: (id: string) => void; // 기존 타입 유지
   onViewOnMap: (place: Place) => void;
   allCategoriesSelected: boolean;
   children: React.ReactNode;
@@ -118,3 +119,4 @@ const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
 };
 
 export default LeftPanelContainer;
+

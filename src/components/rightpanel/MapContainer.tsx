@@ -1,12 +1,12 @@
+
 import React from 'react';
 import Map from './Map';
-import { Place } from '@/types/supabase';
-import { ItineraryDay } from '@/types/schedule'; // Changed to use ItineraryDay from schedule.ts
+import { Place, ItineraryDay } from '@/types/supabase';
 
 interface MapContainerProps {
   places: Place[];
   selectedPlace: Place | null;
-  itinerary: ItineraryDay[] | null; // Now uses schedule.ts ItineraryDay
+  itinerary: ItineraryDay[] | null;
   selectedDay: number | null;
   selectedPlaces?: Place[];
 }
@@ -23,7 +23,7 @@ const MapContainer: React.FC<MapContainerProps> = ({
       <Map
         places={places}
         selectedPlace={selectedPlace}
-        itinerary={itinerary} // itinerary is now schedule.ItineraryDay[]
+        itinerary={itinerary}
         selectedDay={selectedDay}
         selectedPlaces={selectedPlaces}
       />
