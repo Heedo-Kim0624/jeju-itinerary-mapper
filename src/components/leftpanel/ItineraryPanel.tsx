@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -43,7 +44,7 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
         
         <div className="p-4 pt-2">
           <ScheduleViewer 
-            schedule={itinerary}
+            itinerary={itinerary} {/* Changed from schedule={itinerary} */}
             selectedDay={selectedDay}
             onDaySelect={onSelectDay}
             startDate={startDate}

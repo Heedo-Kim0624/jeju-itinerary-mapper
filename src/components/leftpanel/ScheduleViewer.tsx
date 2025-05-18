@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { ItineraryDay, ItineraryPlaceWithTime } from '@/types/supabase';
 import { Button } from '@/components/ui/button';
@@ -5,9 +6,10 @@ import { format, addDays } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { Clock, MapPin, Navigation, Phone } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { toast } from 'sonner'; // Added toast import
 
 interface ScheduleViewerProps {
-  itinerary: ItineraryDay[];
+  itinerary: ItineraryDay[]; // Changed from schedule to itinerary (already done in provided code, confirming)
   startDate: Date | null;
   selectedDay: number | null;
   onSelectDay: (day: number) => void;
@@ -16,12 +18,12 @@ interface ScheduleViewerProps {
 }
 
 const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
-  itinerary, // Full itinerary, used for day buttons if this component renders them
+  itinerary, 
   startDate,
   selectedDay,
   onSelectDay,
   onClose,
-  itineraryDay // Specific day's data, preferred for display
+  itineraryDay 
 }) => {
   useEffect(() => {
     console.log("ScheduleViewer 마운트/업데이트:", {
@@ -31,10 +33,6 @@ const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
       selectedDay
     });
 
-    // This auto-selection logic might be better placed in ItineraryView
-    // if ScheduleViewer is only meant to display a given itineraryDay.
-    // If itineraryDay is provided, it's the source of truth for display.
-    // If not, and full itinerary is, then auto-select.
     if (!itineraryDay && itinerary?.length > 0 && selectedDay === null && itinerary[0]?.day) {
       console.log("ScheduleViewer: 첫 번째 일자 자동 선택 (via full itinerary):", itinerary[0].day);
       onSelectDay(itinerary[0].day);
@@ -44,15 +42,8 @@ const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
   const currentDayToDisplay = itineraryDay || 
     (selectedDay !== null && itinerary && itinerary.length > 0 ? 
       itinerary.find(d => d.day === selectedDay) : null);
-
-  if (!currentDayToDisplay && selectedDay === null && itinerary && itinerary.length > 0) {
-     // If no day is selected yet, but we have an itinerary, show a prompt or the first day.
-     // The useEffect above tries to select the first day.
-     // This could be a loading state or a "select a day" prompt.
-  }
   
   if (!itinerary || itinerary.length === 0) {
-    // This case is when the component receives an empty or null itinerary prop overall.
     return (
       <div className="h-full flex flex-col items-center justify-center p-4">
         <p className="text-lg font-medium">일정 데이터가 없습니다</p>
@@ -67,9 +58,7 @@ const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
     return format(date, 'MM/dd (EEE)', { locale: ko });
   };
 
-  // Category to display name and color
   const getCategoryStyle = (category: string | undefined) => {
-    // Matching user's new direct category names
     if (category === 'accommodation') return { name: '숙소', color: 'bg-blue-500', textColor: 'bg-blue-100 text-blue-800' };
     if (category === 'touristSpot' || category === 'attraction') return { name: '관광지', color: 'bg-green-500', textColor: 'bg-green-100 text-green-800' };
     if (category === 'restaurant') return { name: '음식점', color: 'bg-red-500', textColor: 'bg-red-100 text-red-800' };
@@ -77,31 +66,21 @@ const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
     return { name: category || '기타', color: 'bg-gray-500', textColor: 'bg-gray-100 text-gray-800' };
   };
 
-  // IMPORTANT: The user's design for ScheduleViewer includes day selector buttons.
-  // ItineraryView ALSO has day selector buttons. This will lead to duplication.
-  // For now, implementing as per user's ScheduleViewer.tsx content.
-  // This component should ideally just display one day's details passed via `itineraryDay`.
-  // The day selection buttons are being rendered by ItineraryView.tsx already.
-  // To avoid duplication, the day buttons here could be removed if ItineraryView always provides them.
-  // For now, I'll keep them as per user's provided code for *this* file.
-
   return (
     <div className="h-full flex flex-col">
-      {/* This header is similar to ItineraryView's header. Consider consolidating. */}
       <div className="p-4 border-b">
         <div className="flex justify-between items-center mb-2">
           <h2 className="text-lg font-semibold">
             {currentDayToDisplay ? `${currentDayToDisplay.day}일차 상세 일정` : "일정 상세"}
           </h2>
-          {onClose && ( // onClose is for the entire itinerary view, typically handled by ItineraryView
+          {onClose && (
             <Button variant="ghost" size="sm" onClick={onClose}>
               닫기
             </Button>
           )}
         </div>
 
-        {/* Day selector buttons - these might be redundant if ItineraryView handles day selection */}
-        {itinerary && itinerary.length > 1 && ( // Show only if more than one day
+        {itinerary && itinerary.length > 1 && (
              <ScrollArea className="pb-2">
                 <div className="flex gap-2">
                     {itinerary.map(dayItem => {
@@ -138,7 +117,6 @@ const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
             </div>
             
             <div className="space-y-4 relative">
-              {/* Timeline bar (optional) */}
               {currentDayToDisplay.places.length > 1 && (
                  <div className="absolute top-5 bottom-5 left-[1.45rem] w-0.5 bg-gray-200 z-0"></div>
               )}
@@ -210,8 +188,6 @@ const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
             className="w-full"
             onClick={() => {
               console.log(`지도에 ${selectedDay}일차 경로 표시 요청 (ScheduleViewer)`);
-              // This event should be handled by a component that controls the map.
-              // Example: window.dispatchEvent(new CustomEvent('showRouteOnMap', { detail: { day: selectedDay } }));
               toast.info(`${selectedDay}일차 경로를 지도에 표시합니다. (구현 필요)`);
             }}
           >
