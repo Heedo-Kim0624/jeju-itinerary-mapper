@@ -33,7 +33,8 @@ const Map: React.FC<MapProps> = ({
     toggleGeoJsonVisibility,
     handleGeoJsonLoaded,
     isGeoJsonLoaded,
-    checkGeoJsonMapping
+    checkGeoJsonMapping,
+    serverRoutesData
   } = useMapContext();
 
   // GeoJSON이 로드되면 사용자에게 알림
@@ -54,6 +55,24 @@ const Map: React.FC<MapProps> = ({
       }
     }
   }, [itinerary, selectedDay, isGeoJsonLoaded, showGeoJson, toggleGeoJsonVisibility]);
+
+  // 서버 경로 데이터가 변경될 때마다 로그 출력
+  useEffect(() => {
+    if (Object.keys(serverRoutesData).length > 0) {
+      console.log("지도: 서버 경로 데이터가 업데이트됨:", {
+        일수: Object.keys(serverRoutesData).length,
+        첫날_노드: serverRoutesData[1]?.nodeIds?.length || 0,
+        첫날_링크: serverRoutesData[1]?.linkIds?.length || 0,
+        첫날_인터리브드: !!serverRoutesData[1]?.interleaved_route
+      });
+      
+      // GeoJSON이 로드되었고 표시가 활성화되어 있지 않다면 활성화
+      if (isGeoJsonLoaded && !showGeoJson) {
+        console.log("지도: 서버 경로 데이터가 있어 GeoJSON 표시를 활성화합니다.");
+        toggleGeoJsonVisibility();
+      }
+    }
+  }, [serverRoutesData, isGeoJsonLoaded, showGeoJson, toggleGeoJsonVisibility]);
 
   // 장소와 GeoJSON 매핑 검사
   useEffect(() => {

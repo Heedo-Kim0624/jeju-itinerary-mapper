@@ -8,22 +8,22 @@ import { useScheduleManagement } from '@/hooks/useScheduleManagement';
 
 interface ScheduleGeneratorProps {
   selectedPlaces: SelectedPlace[];
-  dates: { // 이 dates는 startDate, endDate, startTime, endTime 객체여야 함
+  dates: {
     startDate: Date;
     endDate: Date;
     startTime: string;
     endTime: string;
   } | null;
-  startDatetimeLocal: string | null; // ISO 대신 local 추가, 또는 startDatetimeISO 이름 유지하고 값을 로컬 포맷으로
-  endDatetimeLocal: string | null;   // ISO 대신 local 추가
+  startDatetimeLocal: string | null;
+  endDatetimeLocal: string | null;
   onClose: () => void;
 }
 
 export const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({
   selectedPlaces,
   dates,
-  startDatetimeLocal, // props 이름 변경 또는 값 형식 변경
-  endDatetimeLocal,   // props 이름 변경 또는 값 형식 변경
+  startDatetimeLocal,
+  endDatetimeLocal,
   onClose
 }) => {
   const {
@@ -34,13 +34,12 @@ export const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({
     runScheduleGenerationProcess
   } = useScheduleManagement({
     selectedPlaces,
-    dates, // useScheduleManagement가 이 dates 객체를 받아서 내부적으로 start/end datetime 문자열 생성하도록 수정할 수도 있음
-    startDatetimeISO: startDatetimeLocal, // useScheduleManagement에는 startDatetimeISO로 전달
-    endDatetimeISO: endDatetimeLocal,     // useScheduleManagement에는 endDatetimeISO로 전달
+    dates,
+    startDatetime: startDatetimeLocal,
+    endDatetime: endDatetimeLocal,
   });
 
   useEffect(() => {
-    // startDatetimeLocal과 endDatetimeLocal로 조건 변경
     if (!startDatetimeLocal || !endDatetimeLocal) {
       toast.error("여행 날짜와 시간 정보가 올바르지 않아 일정을 생성할 수 없습니다.");
       onClose();
@@ -52,14 +51,37 @@ export const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({
       onClose();
       return;
     }
+    
+    console.log("[ScheduleGenerator] 일정 생성 프로세스 시작");
     runScheduleGenerationProcess();
-  }, [startDatetimeLocal, endDatetimeLocal, selectedPlaces, onClose, runScheduleGenerationProcess]); // 의존성 배열 업데이트
+  }, [startDatetimeLocal, endDatetimeLocal, selectedPlaces, onClose, runScheduleGenerationProcess]);
 
+  // 로딩 중이면 로딩 인디케이터 표시
   if (isLoading) {
-    return <ScheduleLoadingIndicator />;
+    console.log("[ScheduleGenerator] 로딩 인디케이터 표시 중");
+    return <ScheduleLoadingIndicator text="일정을 생성하는 중..." subtext="잠시만 기다려주세요" />;
+  }
+
+  // 일정이 없으면 오류 메시지와 함께 빈 상태 표시
+  if (!itinerary || itinerary.length === 0) {
+    console.log("[ScheduleGenerator] 일정이 없음");
+    return (
+      <div className="h-full flex flex-col items-center justify-center p-4">
+        <p className="text-lg font-medium text-center">일정이 생성되지 않았습니다.</p>
+        <p className="text-sm text-muted-foreground mt-2 text-center">다른 장소나 날짜를 선택해보세요.</p>
+        <Button onClick={onClose} variant="outline" className="mt-4">
+          돌아가기
+        </Button>
+      </div>
+    );
   }
 
   const panelStartDate = dates?.startDate || new Date();
+
+  console.log("[ScheduleGenerator] 일정 패널 렌더링:", { 
+    일수: itinerary.length, 
+    선택된날짜: selectedDay 
+  });
 
   return (
     <ItineraryPanel 

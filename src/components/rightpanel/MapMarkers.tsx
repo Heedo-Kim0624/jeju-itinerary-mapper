@@ -2,15 +2,14 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useMapContext } from './MapContext';
 import { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/supabase';
-import { toast } from 'sonner';
 import { extractAllNodesFromRoute } from '@/utils/routeParser';
 
 interface MapMarkersProps {
-  places: Place[]; // 일반 장소 목록 (선택 전)
-  selectedPlace: Place | null; // 단일 선택된 장소
-  itinerary: ItineraryDay[] | null; // 생성된 전체 일정
-  selectedDay: number | null; // 현재 선택된 일정 일자
-  selectedPlaces?: Place[]; // 왼쪽 패널에서 사용자가 선택한 장소들 (일정 생성 전)
+  places: Place[]; 
+  selectedPlace: Place | null;
+  itinerary: ItineraryDay[] | null;
+  selectedDay: number | null;
+  selectedPlaces?: Place[];
   onPlaceClick?: (place: Place, index: number) => void;
 }
 
@@ -34,7 +33,6 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
   } = useMapContext();
   
   const [markerRefs, setMarkerRefs] = useState<any[]>([]);
-  const [geoJsonMappingChecked, setGeoJsonMappingChecked] = useState<boolean>(false);
 
   const handleMarkerClick = useCallback((place: Place, index: number) => {
     console.log(`마커 클릭: ${place.name} (${index + 1}번)`);
@@ -46,13 +44,11 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
     if (itinerary && selectedDay !== null) {
       const currentDayItinerary = itinerary.find(day => day.day === selectedDay);
       if (currentDayItinerary) {
-        // ItineraryDay의 places 배열에서 실제 index를 찾아야 함.
-        // 현재 place 객체가 currentDayItinerary.places 중 몇 번째인지 확인
         const placeItineraryIndex = currentDayItinerary.places.findIndex(p => p.id === place.id);
         if (placeItineraryIndex !== -1) {
           showRouteForPlaceIndex(placeItineraryIndex, currentDayItinerary);
         } else {
-           console.warn(`클릭된 장소 ${place.name}를 현재 일정에서 찾을 수 없습니다.`);
+          console.warn(`클릭된 장소 ${place.name}를 현재 일정에서 찾을 수 없습니다.`);
         }
       }
     }
@@ -62,30 +58,7 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
     }
   }, [itinerary, selectedDay, onPlaceClick, isGeoJsonLoaded, showRouteForPlaceIndex]);
 
-  useEffect(() => {
-    if (!isMapInitialized) return;
-
-    console.log("MapMarkers: 데이터 변경 감지", {
-      placesCount: places.length,
-      selectedPlaceExists: !!selectedPlace,
-      itineraryDays: itinerary?.length || 0,
-      selectedDay,
-      selectedPlacesCount: selectedPlaces.length
-    });
-
-    renderMapData();
-    
-  }, [
-    places, 
-    selectedPlace, 
-    itinerary, 
-    selectedDay, 
-    selectedPlaces, 
-    isMapInitialized,
-    isGeoJsonLoaded 
-  ]);
-
-  const renderMapData = () => {
+  const renderMapData = useCallback(() => {
     if (!isMapInitialized) {
       console.warn("지도가 초기화되지 않았습니다. (MapMarkers)");
       return;
@@ -115,11 +88,17 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
         let placesForMarkers: ItineraryPlaceWithTime[] = currentDayItinerary.places;
         
         if (currentDayItinerary.interleaved_route) {
+            // 로그를 추가하여 interleaved_route 데이터 확인
+            console.log(`[MapMarkers] ${selectedDay}일차 interleaved_route:`, {
+              length: currentDayItinerary.interleaved_route.length,
+              sample: currentDayItinerary.interleaved_route.slice(0, 10)
+            });
+            
             const placeNodeIdsFromRoute = extractAllNodesFromRoute(currentDayItinerary.interleaved_route)
-                .filter((_, index) => index % 2 === 0) // 장소 노드만 (노드-링크-노드 구조에서 짝수 인덱스)
+                .filter((_, index) => index % 2 === 0) 
                 .map(String); 
             
-            console.log(`[MapMarkers] ${selectedDay}일차 interleaved_route 기반 마커 표시 준비`);
+            console.log(`[MapMarkers] ${selectedDay}일차 경로에서 추출한 장소 노드 ID:`, placeNodeIdsFromRoute);
         }
         
         const markers = addMarkers(placesForMarkers, { 
@@ -129,6 +108,7 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
         });
         setMarkerRefs(markers);
         
+        console.log(`[MapMarkers] ${selectedDay}일차 경로 렌더링 시작`);
         renderItineraryRoute(currentDayItinerary);
         
         if (placesForMarkers.length > 0 && placesForMarkers[0].x && placesForMarkers[0].y) {
@@ -146,7 +126,45 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
       const markers = addMarkers(placesToDisplay, { useColorByCategory: true, onClick: handleMarkerClick });
       setMarkerRefs(markers);
     }
-  };
+  }, [
+    isMapInitialized, 
+    selectedPlace, 
+    itinerary, 
+    selectedDay, 
+    selectedPlaces, 
+    places, 
+    isGeoJsonLoaded, 
+    clearMarkersAndUiElements, 
+    mapPlacesWithGeoNodes, 
+    addMarkers, 
+    panTo, 
+    renderItineraryRoute,
+    handleMarkerClick
+  ]);
+
+  useEffect(() => {
+    if (!isMapInitialized) return;
+
+    console.log("MapMarkers: 데이터 변경 감지", {
+      placesCount: places.length,
+      selectedPlaceExists: !!selectedPlace,
+      itineraryDays: itinerary?.length || 0,
+      selectedDay,
+      selectedPlacesCount: selectedPlaces.length
+    });
+
+    renderMapData();
+    
+  }, [
+    places, 
+    selectedPlace, 
+    itinerary, 
+    selectedDay, 
+    selectedPlaces, 
+    isMapInitialized,
+    isGeoJsonLoaded,
+    renderMapData
+  ]);
 
   return null; 
 };
