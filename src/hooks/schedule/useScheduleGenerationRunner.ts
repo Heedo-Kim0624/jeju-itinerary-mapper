@@ -64,10 +64,12 @@ export const useScheduleGenerationRunner = ({
         return;
       }
 
+      // 서버에 일정 생성 요청을 보내고 응답을 받습니다
       const serverResponse = await generateScheduleViaHook(payload);
+      console.log('[useScheduleGenerationRunner] 서버 원본 응답:', serverResponse);
       debugLog('Raw server response (useScheduleGenerationRunner):', serverResponse);
       
-      // 서버 응답 로그에 상세 정보 추가
+      // 서버 응답 상세 정보 로깅
       console.log('[useScheduleGenerationRunner] 서버 응답 타입 분석:', {
         응답존재: !!serverResponse,
         객체타입: typeof serverResponse === 'object',
@@ -80,7 +82,7 @@ export const useScheduleGenerationRunner = ({
         isNewResponse: isNewServerScheduleResponse(serverResponse)
       });
 
-      // 서버 응답 검증을 위한 별도의 조건 추가
+      // 서버 응답 검증 로직 추가 - 더 명확하고 강력하게
       if (serverResponse && 
           typeof serverResponse === 'object' && 
           !Array.isArray(serverResponse) &&
@@ -90,15 +92,16 @@ export const useScheduleGenerationRunner = ({
         
         console.log('[useScheduleGenerationRunner] 서버 응답이 유효합니다. 일정 파싱을 시작합니다.');
         
-        // 서버 응답을 ItineraryDay 배열로 변환
+        // 저장해둔 서버 응답을 ItineraryDay 배열로 변환
         let parsedItinerary = parseServerResponse(serverResponse, dates?.startDate || new Date());
         console.log("[useScheduleGenerationRunner] 파싱된 일정 (좌표 업데이트 전):", JSON.parse(JSON.stringify(parsedItinerary)));
         
+        // 유효성 검사: 빈 일정이 아닌지 확인
         if (parsedItinerary.length === 0) {
           console.error('[useScheduleGenerationRunner] 서버 응답 파싱 결과가 빈 배열입니다.');
           toast.error('서버 응답을 처리할 수 없습니다. 다시 시도해 주세요.');
           
-          // 대체 일정 생성 시도
+          // 대체 일정 생성 로직
           if (dates && selectedPlaces.length > 0) {
             const fallbackItinerary = createItinerary(
               selectedPlaces,
@@ -109,6 +112,7 @@ export const useScheduleGenerationRunner = ({
             );
             
             if (fallbackItinerary.length > 0) {
+              // 대체 일정 저장 및 이벤트 발생을 위한 설정
               setItinerary(fallbackItinerary);
               finalItineraryForEvent = fallbackItinerary;
               setSelectedDay(fallbackItinerary[0].day);
@@ -124,7 +128,7 @@ export const useScheduleGenerationRunner = ({
         const itineraryWithCoords = updateItineraryWithCoordinates(parsedItinerary, geoJsonNodes as any);
         console.log("[useScheduleGenerationRunner] 좌표가 추가된 일정:", JSON.parse(JSON.stringify(itineraryWithCoords)));
         
-        // 상태 업데이트
+        // 상태에 일정 데이터를 저장
         setItinerary(itineraryWithCoords);
         finalItineraryForEvent = itineraryWithCoords;
         
@@ -195,8 +199,8 @@ export const useScheduleGenerationRunner = ({
       }
     } finally {
       console.log("[useScheduleGenerationRunner] finally 블록 진입. isLoadingState를 false로 설정합니다.");
-      setIsLoadingState(false);
       
+      // 로딩 상태 해제는 이벤트 발생 후에 하도록 지연시킵니다
       // 일정 생성 이벤트 발생
       if (finalItineraryForEvent.length > 0) {
         console.log("[useScheduleGenerationRunner] 'itineraryCreated' 이벤트 발생:", JSON.parse(JSON.stringify(finalItineraryForEvent)));
@@ -209,7 +213,7 @@ export const useScheduleGenerationRunner = ({
         });
         window.dispatchEvent(event);
         
-        // 강제 리렌더링 이벤트 발생
+        // 일정 데이터 보존을 확인한 후 로딩 상태 해제
         setTimeout(() => {
           console.log("[useScheduleGenerationRunner] 'forceRerender' 이벤트 발생");
           window.dispatchEvent(new Event('forceRerender'));
@@ -220,6 +224,9 @@ export const useScheduleGenerationRunner = ({
           });
           console.log("[useScheduleGenerationRunner] 'itineraryWithCoordinatesReady' 이벤트 발생");
           window.dispatchEvent(coordsEvent);
+          
+          // 이벤트 발생 후 로딩 상태를 해제
+          setIsLoadingState(false);
         }, 100);
       } else {
         console.log("[useScheduleGenerationRunner] 'itineraryCreated' 이벤트 발생 (빈 일정)");
@@ -230,6 +237,11 @@ export const useScheduleGenerationRunner = ({
           }
         });
         window.dispatchEvent(event);
+        
+        // 이벤트 발생 후 로딩 상태를 해제
+        setTimeout(() => {
+          setIsLoadingState(false);
+        }, 100);
       }
     }
   }, [

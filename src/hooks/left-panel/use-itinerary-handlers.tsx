@@ -1,3 +1,4 @@
+
 import { useCallback } from 'react';
 import { toast } from 'sonner';
 import type { Place, SchedulePayload, ItineraryDay as SupabaseItineraryDay } from '@/types/supabase';
@@ -59,16 +60,75 @@ export const useItineraryHandlers = () => {
       try {
         const serverResponse = await generateSchedule(payload);
         
-        if (serverResponse && isNewServerScheduleResponse(serverResponse) && 
-            serverResponse.route_summary && serverResponse.route_summary.length > 0) {
+        if (serverResponse) {
           console.log("[handleCreateItinerary] 서버 응답 성공:", serverResponse);
-          // setShowItinerary(true); // This is now handled by the 'itineraryCreated' event listener in useLeftPanel
-          // setCurrentPanel('itinerary'); // This is also handled by the event listener implicitly
-          // The event dispatch is in useScheduleGenerationRunner
-          return true; // Indicate success, event will trigger UI updates
+          
+          // 이 시점에 서버 응답이 유효한지 확인하기 위해 로그를 추가합니다
+          console.log("[handleCreateItinerary] 서버 응답 로그 (세부):", {
+            응답타입: typeof serverResponse,
+            객체여부: typeof serverResponse === 'object',
+            널여부: serverResponse === null,
+            배열여부: Array.isArray(serverResponse),
+            schedule존재: !!serverResponse?.schedule,
+            route_summary존재: !!serverResponse?.route_summary,
+            유효성검사결과: isNewServerScheduleResponse(serverResponse)
+          });
+          
+          if (isNewServerScheduleResponse(serverResponse) && 
+              serverResponse.route_summary && 
+              serverResponse.route_summary.length > 0) {
+            
+            // 명시적으로 일정 처리를 위한 이벤트를 발생시킵니다 (dispatch 전에 로그를 추가)
+            console.log("[handleCreateItinerary] 유효한 응답입니다. 이벤트를 발생시킵니다.");
+            
+            // itineraryCreated 이벤트는 useScheduleGenerationRunner.ts에서 처리합니다
+            // 이 훅에서는 성공 여부만 반환합니다
+            return true;
+          } else {
+            console.warn("[handleCreateItinerary] 서버 응답은 있지만 형식이 맞지 않습니다. 클라이언트 측 일정 생성으로 폴백.", {
+              isNewServerScheduleResponse: isNewServerScheduleResponse(serverResponse),
+              hasRouteSummary: !!serverResponse?.route_summary,
+              routeSummaryLength: serverResponse?.route_summary?.length
+            });
+            
+            // 클라이언트 측 일정 생성으로 폴백
+            const result = generateItineraryFn(
+              selectedPlaces, 
+              tripDetails.dates.startDate, 
+              tripDetails.dates.endDate, 
+              tripDetails.dates.startTime, 
+              tripDetails.dates.endTime
+            );
+            
+            if (result) {
+              toast.info("서버 일정 생성 실패. 클라이언트에서 기본 일정을 생성했습니다.");
+              
+              // Dispatch 'itineraryCreated' event for client-side generated itinerary
+              const event = new CustomEvent('itineraryCreated', { 
+                detail: { 
+                  itinerary: result,
+                  selectedDay: result.length > 0 ? result[0].day : null
+                } 
+              });
+              window.dispatchEvent(event);
+              
+              // 강제 리렌더링을 위한 setTimeout 추가
+              setTimeout(() => {
+                console.log("클라이언트 일정 생성 후 강제 리렌더링 트리거");
+                const forceEvent = new Event('forceRerender');
+                window.dispatchEvent(forceEvent);
+              }, 100);
+
+            } else {
+              toast.error("서버 및 클라이언트 일정 생성 모두 실패했습니다.");
+            }
+            return !!result;
+          }
         } else {
-          console.warn("[handleCreateItinerary] 서버 응답 없거나 불완전함, 클라이언트 측 일정 생성으로 폴백. Response:", serverResponse);
-          // Fallback to client-side generation
+          console.warn("[handleCreateItinerary] 서버 응답이 null 또는 undefined입니다.");
+          toast.error("서버로부터 응답을 받지 못했습니다. 클라이언트에서 기본 일정을 생성합니다.");
+          
+          // 클라이언트 측 일정 생성으로 폴백
           const result = generateItineraryFn(
             selectedPlaces, 
             tripDetails.dates.startDate, 
@@ -78,10 +138,6 @@ export const useItineraryHandlers = () => {
           );
           
           if (result) {
-            toast.info("서버 일정 생성 실패. 클라이언트에서 기본 일정을 생성했습니다.");
-            // setShowItinerary(true); // Handled by useLeftPanel's useEffect listening to itinerary changes
-            // setCurrentPanel('itinerary'); // Handled by useLeftPanel's useEffect
-
             // Dispatch 'itineraryCreated' event for client-side generated itinerary
             const event = new CustomEvent('itineraryCreated', { 
               detail: { 
@@ -91,17 +147,18 @@ export const useItineraryHandlers = () => {
             });
             window.dispatchEvent(event);
             
-            // 강제 리렌더링을 위한 setTimeout 추가 (from user's Part 2)
+            // 강제 리렌더링을 위한 setTimeout 추가
             setTimeout(() => {
-              console.log("클라이언트 일정 생성 후 강제 리렌더링 트리거");
+              console.log("클라이언트 일정 생성(서버 응답 없음) 후 강제 리렌더링 트리거");
               const forceEvent = new Event('forceRerender');
               window.dispatchEvent(forceEvent);
             }, 100);
-
+            
+            return true;
           } else {
-            toast.error("서버 및 클라이언트 일정 생성 모두 실패했습니다.");
+            toast.error("클라이언트 일정 생성에 실패했습니다.");
+            return false;
           }
-          return !!result;
         }
       } catch (error) {
         console.error("[handleCreateItinerary] 서버 요청 중 오류 발생:", error);
@@ -115,9 +172,6 @@ export const useItineraryHandlers = () => {
         );
         
         if (result) {
-          // setShowItinerary(true); // Handled by useLeftPanel
-          // setCurrentPanel('itinerary'); // Handled by useLeftPanel
-
           // Dispatch 'itineraryCreated' event for client-side generated itinerary
           const event = new CustomEvent('itineraryCreated', { 
             detail: { 
@@ -127,7 +181,7 @@ export const useItineraryHandlers = () => {
           });
           window.dispatchEvent(event);
 
-          // 강제 리렌더링을 위한 setTimeout 추가 (from user's Part 2)
+          // 강제 리렌더링을 위한 setTimeout 추가
           setTimeout(() => {
             console.log("오류 후 클라이언트 일정 생성 후 강제 리렌더링 트리거");
             const forceEvent = new Event('forceRerender');
@@ -135,7 +189,7 @@ export const useItineraryHandlers = () => {
           }, 100);
 
         } else {
-           toast.error("서버 및 클라��언트 일정 생성 모두 실패했습니다.");
+           toast.error("서버 및 클라이언트 일정 생성 모두 실패했습니다.");
         }
         return !!result;
       }

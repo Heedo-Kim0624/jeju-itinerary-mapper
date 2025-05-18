@@ -61,32 +61,34 @@ export const useItinerary = () => {
     }
   };
 
-  // 서버 응답 처리 함수
+  // 서버 응답 처리 함수 - 개선된 로직
   const handleServerItineraryResponse = (serverItinerary: ItineraryDay[]) => {
-    console.log("서버 일정 응답 처리 (useItinerary):", {
-      일수: serverItinerary.length,
-      첫날장소수: serverItinerary[0]?.places.length || 0
+    console.log("서버 일정 응답 처리 시작 (useItinerary):", {
+      일수: serverItinerary?.length || 0,
+      첫날장소수: serverItinerary?.[0]?.places?.length || 0
     });
 
     if (!serverItinerary || serverItinerary.length === 0) {
       console.warn("[useItinerary] handleServerItineraryResponse: 빈 일정이 전달되었습니다.");
-      return serverItinerary;
+      return [];
     }
 
     try {
+      // 먼저 일정 데이터 설정
       setItinerary(serverItinerary);
-
-      // 명시적으로 일정 패널 표시 활성화
+      
+      // 명시적으로 일정 패널 표시 활성화 - 이 부분은 중요합니다!
       console.log("[useItinerary] handleServerItineraryResponse: 일정 패널 표시 활성화");
       setShowItinerary(true);
-
+      
+      // 첫 번째 일자 선택
       if (serverItinerary.length > 0) {
-        // 항상 첫 번째 일자를 선택하도록 함
         console.log(`[useItinerary] handleServerItineraryResponse: 첫 번째 일자(${serverItinerary[0].day}) 선택`);
         setSelectedItineraryDay(serverItinerary[0].day);
       }
 
-      // 강제 렌더링을 위한 이벤트 발생
+      // 강제 렌더링 및 이벤트 발생을 위해 setTimeout 사용
+      // 이렇게 하면 상태 업데이트가 먼저 적용된 후 이벤트가 발생합니다
       setTimeout(() => {
         console.log("[useItinerary] handleServerItineraryResponse: forceRerender 이벤트 발생");
         window.dispatchEvent(new Event('forceRerender'));
@@ -97,6 +99,16 @@ export const useItinerary = () => {
         });
         console.log("[useItinerary] handleServerItineraryResponse: itineraryWithCoordinatesReady 이벤트 발생");
         window.dispatchEvent(event);
+
+        // 새로운 일정 생성 완료 이벤트 발생
+        const itineraryCreatedEvent = new CustomEvent('itineraryCreated', {
+          detail: { 
+            itinerary: serverItinerary,
+            selectedDay: serverItinerary.length > 0 ? serverItinerary[0].day : null
+          }
+        });
+        console.log("[useItinerary] handleServerItineraryResponse: itineraryCreated 이벤트 발생");
+        window.dispatchEvent(itineraryCreatedEvent);
       }, 100);
 
       return serverItinerary;
