@@ -1,7 +1,7 @@
+
 import React from 'react';
 import BaseKeywordPanel from './common/BaseKeywordPanel';
 import { KeywordOption } from '@/types/keyword';
-import { CategoryName } from '@/utils/categoryUtils';
 
 const defaultKeywords: KeywordOption[] = [
   { eng: 'Good_value_for_money', kr: '가성비가 좋아요' },
@@ -31,7 +31,7 @@ const RestaurantPanel: React.FC<{
     <BaseKeywordPanel
       {...props}
       onConfirm={props.onConfirmRestaurant}
-      categoryName="음식점" // Display name
+      categoryName="음식점"
       defaultKeywords={defaultKeywords}
     />
   );

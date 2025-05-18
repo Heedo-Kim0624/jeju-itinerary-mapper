@@ -1,6 +1,5 @@
 
 import { useState } from 'react';
-import { CategoryName } from '@/utils/categoryUtils';
 
 /**
  * 입력값 관리 훅
@@ -8,26 +7,26 @@ import { CategoryName } from '@/utils/categoryUtils';
 export const useInputState = () => {
   // 직접 입력 상태 관리
   const [accommodationDirectInput, setAccommodationDirectInput] = useState('');
-  const [attractionDirectInput, setAttractionDirectInput] = useState(''); // Changed from landmark
+  const [landmarkDirectInput, setLandmarkDirectInput] = useState('');
   const [restaurantDirectInput, setRestaurantDirectInput] = useState('');
   const [cafeDirectInput, setCafeDirectInput] = useState('');
 
   // 직접 입력값 관리 객체
-  const directInputValues: Record<CategoryName, string> = {
+  const directInputValues = {
     'accommodation': accommodationDirectInput,
-    'attraction': attractionDirectInput, // Changed from landmark
+    'landmark': landmarkDirectInput,
     'restaurant': restaurantDirectInput,
     'cafe': cafeDirectInput
   };
 
   // 직접 입력값 변경 핸들러
-  const onDirectInputChange = (category: CategoryName, value: string) => {
+  const onDirectInputChange = (category: string, value: string) => {
     switch (category) {
       case 'accommodation':
         setAccommodationDirectInput(value);
         break;
-      case 'attraction': // Changed from landmark
-        setAttractionDirectInput(value);
+      case 'landmark':
+        setLandmarkDirectInput(value);
         break;
       case 'restaurant':
         setRestaurantDirectInput(value);

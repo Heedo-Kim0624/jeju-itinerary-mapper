@@ -1,10 +1,10 @@
+
 import React, { useState } from 'react';
 import BaseKeywordPanel from './common/BaseKeywordPanel';
 import { KeywordOption } from '@/types/keyword';
 import { Button } from '@/components/ui/button';
 import { Hotel } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CategoryName } from '@/utils/categoryUtils';
 
 type AccommodationType = 'hotel' | 'pension' | null;
 type HotelStarRating = '3star' | '4star' | '5star';
@@ -58,13 +58,9 @@ const AccommodationPanel: React.FC<{
   };
 
   const handleConfirm = () => {
-    let finalKeywords = [...selectedKeywords];
-    if (selectedAccommodationType) {
-      finalKeywords.push(selectedAccommodationType === 'hotel' ? 'hotel_type' : 'pension_type');
-    }
-    selectedStarRatings.forEach(rating => {
-      finalKeywords.push(`star_${rating}`);
-    });
+    const typeKeyword = selectedAccommodationType === 'hotel' ? 'hotel_type' : 'pension_type';
+    const starKeywords = selectedStarRatings.map(rating => `star_${rating}`);
+    const finalKeywords = [...selectedKeywords, typeKeyword, ...starKeywords];
     onConfirmAccomodation(finalKeywords);
   };
 
@@ -93,23 +89,21 @@ const AccommodationPanel: React.FC<{
                   호텔
                 </Button>
               </PopoverTrigger>
-              {selectedAccommodationType === 'hotel' && (
-                <PopoverContent className="w-48">
-                  <div className="space-y-2">
-                    <h4 className="font-medium text-sm mb-2">호텔 등급 선택</h4>
-                    {(['3star', '4star', '5star'] as HotelStarRating[]).map((rating) => (
-                      <Button
-                        key={rating}
-                        variant={selectedStarRatings.includes(rating) ? 'default' : 'outline'}
-                        onClick={() => handleStarRatingToggle(rating)}
-                        className="w-full justify-start text-sm"
-                      >
-                        {rating === '3star' ? '3성급 이하' : `${rating[0]}성급`} 호텔
-                      </Button>
-                    ))}
-                  </div>
-                </PopoverContent>
-              )}
+              <PopoverContent className="w-48">
+                <div className="space-y-2">
+                  <h4 className="font-medium text-sm mb-2">호텔 등급 선택</h4>
+                  {['3star', '4star', '5star'].map((rating) => (
+                    <Button
+                      key={rating}
+                      variant={selectedStarRatings.includes(rating as HotelStarRating) ? 'default' : 'outline'}
+                      onClick={() => handleStarRatingToggle(rating as HotelStarRating)}
+                      className="w-full justify-start text-sm"
+                    >
+                      {rating === '3star' ? '3성급 이하' : `${rating[0]}성급`} 호텔
+                    </Button>
+                  ))}
+                </div>
+              </PopoverContent>
             </Popover>
             <Button
               variant={selectedAccommodationType === 'pension' ? 'default' : 'outline'}

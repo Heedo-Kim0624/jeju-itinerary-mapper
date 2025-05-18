@@ -9,8 +9,8 @@ export const usePanelHandlers = () => {
   const {
     showItinerary,
     setShowItinerary,
-    showCategoryResult, // This will be CategoryName | null (English)
-    setShowCategoryResult, // This expects CategoryName | null (English)
+    showCategoryResult,
+    setShowCategoryResult,
   } = usePanelVisibility();
 
   const [isItineraryMode, setIsItineraryMode] = useState(false);
@@ -22,34 +22,33 @@ export const usePanelHandlers = () => {
   };
 
   // Generate category-specific confirmation handlers
-  // These handlers are keyed by English CategoryName
-  const handleConfirmByCategory: Record<CategoryName, (finalKeywords: string[], clearSelection?: boolean) => void> = {
-    accommodation: (finalKeywords: string[], clearSelection: boolean = false) => {
-      handleConfirmCategory('accommodation', finalKeywords, clearSelection); // Pass English CategoryName
-      setShowCategoryResult('accommodation'); // Pass English CategoryName
+  const handleConfirmByCategory = {
+    accomodation: (finalKeywords: string[], clearSelection: boolean = false) => {
+      handleConfirmCategory('숙소', finalKeywords, clearSelection);
+      setShowCategoryResult('숙소');
       if (selectedRegions.length > 0) panTo(selectedRegions[0]);
     },
-    attraction: (finalKeywords: string[], clearSelection: boolean = false) => {
-      handleConfirmCategory('attraction', finalKeywords, clearSelection);
-      setShowCategoryResult('attraction');
+    landmark: (finalKeywords: string[], clearSelection: boolean = false) => {
+      handleConfirmCategory('관광지', finalKeywords, clearSelection);
+      setShowCategoryResult('관광지');
       if (selectedRegions.length > 0) panTo(selectedRegions[0]);
     },
     restaurant: (finalKeywords: string[], clearSelection: boolean = false) => {
-      handleConfirmCategory('restaurant', finalKeywords, clearSelection);
-      setShowCategoryResult('restaurant');
+      handleConfirmCategory('음식점', finalKeywords, clearSelection);
+      setShowCategoryResult('음식점');
       if (selectedRegions.length > 0) panTo(selectedRegions[0]);
     },
     cafe: (finalKeywords: string[], clearSelection: boolean = false) => {
-      handleConfirmCategory('cafe', finalKeywords, clearSelection);
-      setShowCategoryResult('cafe');
+      handleConfirmCategory('카페', finalKeywords, clearSelection);
+      setShowCategoryResult('카페');
       if (selectedRegions.length > 0) panTo(selectedRegions[0]);
     }
   };
 
-  // Panel back handlers by category, keyed by English CategoryName
-  const handlePanelBackByCategory: Record<CategoryName, () => void> = {
-    accommodation: () => handlePanelBack(),
-    attraction: () => handlePanelBack(),
+  // Panel back handlers by category
+  const handlePanelBackByCategory = {
+    accomodation: () => handlePanelBack(),
+    landmark: () => handlePanelBack(),
     restaurant: () => handlePanelBack(),
     cafe: () => handlePanelBack()
   };
@@ -58,19 +57,20 @@ export const usePanelHandlers = () => {
   const setItineraryMode = (value: boolean) => {
     setIsItineraryMode(value);
     
+    // 일정 모드가 활성화되면 일정 화면을 자동으로 표시
     if (value && !showItinerary) {
       setShowItinerary(true);
     }
   };
 
   // These functions will be provided by props from use-left-panel
-  let selectedRegions: string[] = []; // Changed from any[]
-  let handleConfirmCategory: (category: CategoryName, keywords: string[], clear?: boolean) => void = () => {};
-  let handlePanelBack: () => void = () => {};
+  let selectedRegions: any[] = [];
+  let handleConfirmCategory = (category: CategoryName, keywords: string[], clear?: boolean) => {};
+  let handlePanelBack = () => {};
 
   // Setup function to inject dependencies from parent hook
   const setup = (
-    regions: string[], // Changed from any[]
+    regions: any[],
     confirmCategoryFn: (category: CategoryName, keywords: string[], clear?: boolean) => void,
     panelBackFn: () => void
   ) => {

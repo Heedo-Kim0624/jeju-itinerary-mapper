@@ -2,16 +2,16 @@
 import React from 'react';
 import CategoryResultPanel from '../middlepanel/CategoryResultPanel';
 import { Place } from '@/types/supabase';
-import type { CategoryName, englishCategoryNameToKorean } from '@/utils/categoryUtils'; // Added englishCategoryNameToKorean
+import type { CategoryName } from '@/utils/categoryUtils';
 
 interface CategoryResultHandlerProps {
-  showCategoryResult: CategoryName | null; // This is English CategoryName
+  showCategoryResult: CategoryName | null;
   selectedRegions: string[];
-  selectedKeywordsByCategory: Record<CategoryName, string[]>; // Keys are English CategoryName
+  selectedKeywordsByCategory: Record<string, string[]>;
   onClose: () => void;
-  onSelectPlace: (place: Place, checked: boolean, category: CategoryName | null) => void; // category is English CategoryName
-  selectedPlaces: Place[]; // Assuming Place type here, not SelectedPlace
-  onConfirmCategory?: (category: CategoryName, selectedPlaces: Place[], recommendedPlaces: Place[]) => void; // category is English
+  onSelectPlace: (place: Place, checked: boolean, category: string | null) => void;
+  selectedPlaces: Place[];
+  onConfirmCategory?: (category: string, selectedPlaces: Place[], recommendedPlaces: Place[]) => void;
 }
 
 const CategoryResultHandler: React.FC<CategoryResultHandlerProps> = ({
@@ -25,33 +25,20 @@ const CategoryResultHandler: React.FC<CategoryResultHandlerProps> = ({
 }) => {
   if (!showCategoryResult) return null;
   
-  const currentCategoryEnglish = showCategoryResult; // This is English CategoryName
-  // CategoryResultPanel prop 'category' might expect Korean for display.
-  // Let's assume CategoryResultPanel's 'category' prop is for internal logic or display.
-  // If it's for display, it should be converted. If for logic, it should be English.
-  // For now, we pass the English name. The panel might use englishCategoryNameToKorean internally.
-  const currentCategoryForPanel = currentCategoryEnglish; 
-
-  const selectedKeywords = selectedKeywordsByCategory[currentCategoryEnglish] || [];
+  const currentCategory = showCategoryResult;
+  const selectedKeywords = selectedKeywordsByCategory[currentCategory] || [];
   const isPlaceSelected = (id: string | number) => 
     selectedPlaces.some(p => p.id === id);
 
   const handlePlaceSelection = (place: Place, checked: boolean) => {
-    // Pass English CategoryName to onSelectPlace
-    onSelectPlace(place, checked, currentCategoryEnglish);
+    // 카테고리 정보를 함께 전달하여 장소 선택 처리
+    onSelectPlace(place, checked, currentCategory);
   };
 
-  const handleConfirm = (
-    // CategoryResultPanel onConfirm might pass the category it knows (e.g. from its 'category' prop)
-    // Assuming it passes the same category it received, which is currentCategoryForPanel (English)
-    categoryFromPanel: CategoryName, 
-    confirmedSelectedPlaces: Place[], // Assuming Place[]
-    recommendedPlacesFromPanel: Place[] // Assuming Place[]
-    ) => {
-    console.log(`[CategoryResultHandler] ${englishCategoryNameToKorean(categoryFromPanel)} (${categoryFromPanel}) 카테고리 확인됨, 선택된 장소: ${confirmedSelectedPlaces.length}개`);
+  const handleConfirm = (category: string, selectedPlaces: Place[], recommendedPlaces: Place[]) => {
+    console.log(`[CategoryResultHandler] ${category} 카테고리 확인됨 및 자동 보완 시작, 선택된 장소: ${selectedPlaces.length}개`);
     if (onConfirmCategory) {
-      // Pass English CategoryName to onConfirmCategory
-      onConfirmCategory(categoryFromPanel, confirmedSelectedPlaces, recommendedPlacesFromPanel);
+      onConfirmCategory(category, selectedPlaces, recommendedPlaces);
     }
   };
 
@@ -59,7 +46,7 @@ const CategoryResultHandler: React.FC<CategoryResultHandlerProps> = ({
     <CategoryResultPanel
       isOpen={!!showCategoryResult}
       onClose={onClose}
-      category={currentCategoryForPanel} // Pass English CategoryName
+      category={currentCategory}
       regions={selectedRegions}
       keywords={selectedKeywords}
       onSelectPlace={handlePlaceSelection}

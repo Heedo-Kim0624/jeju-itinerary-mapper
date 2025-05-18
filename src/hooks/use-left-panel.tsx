@@ -2,250 +2,253 @@ import { useState, useCallback, useEffect } from 'react';
 import { useSelectedPlaces } from './use-selected-places';
 import { useTripDetails } from './use-trip-details';
 import { useCategoryResults } from './use-category-results';
-import { ItineraryDay as DomainItineraryDay, Place, SelectedPlace } from '@/types/supabase';
-import { CategoryName, englishCategoryNameToKorean, koreanToEnglishCategoryName } from '@/utils/categoryUtils';
+// useItinerary related imports are now mostly covered by useScheduleManagement or handled differently
+import { ItineraryDay as DomainItineraryDay, Place, SelectedPlace } from '@/types/supabase'; // Ensure ItineraryDay is DomainItineraryDay
+import { CategoryName } from '@/utils/categoryUtils';
 import { toast } from 'sonner';
 import { useRegionSelection } from './use-region-selection';
 import { useCategorySelection } from './use-category-selection';
 import { useCategoryHandlers } from './left-panel/use-category-handlers';
-import { useItineraryHandlers } from './left-panel/use-itinerary-handlers';
+import { useItineraryHandlers } from './left-panel/use-itinerary-handlers'; // Stays for close, etc.
 import { useInputState } from './left-panel/use-input-state';
-import { useScheduleManagement } from './useScheduleManagement';
+import { useScheduleManagement } from './useScheduleManagement'; // Central for schedule generation logic
 
 /**
  * 왼쪽 패널 기능 통합 훅 
  */
 export const useLeftPanel = () => {
   const regionSelection = useRegionSelection();
-  const categorySelection = useCategorySelection(); // Returns English CategoryName based values
-  const tripDetailsHook = useTripDetails();
+  const categorySelection = useCategorySelection();
+  const tripDetailsHook = useTripDetails(); // Renamed to avoid conflict with destructured tripDetails
   
-  const [selectedCategoryForConfirmation, setSelectedCategoryForConfirmation] = useState<CategoryName | null>(null); // Stores English CategoryName
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  // const [showCategoryResultScreen, setShowCategoryResultScreen] = useState(false); // Keep if used
   const [currentPanel, setCurrentPanel] = useState<'region' | 'date' | 'category' | 'itinerary'>('region');
-  const [showCategoryResult, setShowCategoryResult] = useState<CategoryName | null>(null); // Stores English CategoryName
+  const [showCategoryResult, setShowCategoryResult] = useState<CategoryName | null>(null);
   
-  const { directInputValues, onDirectInputChange } = useInputState(); // Uses English CategoryName keys
+  const { directInputValues, onDirectInputChange } = useInputState();
 
   const keywordsAndInputs = {
-    directInputValues, // Record<CategoryName (Eng), string>
-    onDirectInputChange, // (category: CategoryName (Eng), value: string) => void
-    // selectedKeywordsByCategory is from useCategoryKeywords via useCategorySelection, keys are English
-    selectedKeywordsByCategory: categorySelection.selectedKeywordsByCategory, 
-    toggleKeyword: categorySelection.toggleKeyword, // (category: CategoryName (Eng), keyword: string) => void
-    // This function confirms keywords for a category and triggers showing the result panel for it.
-    handleConfirmCategory: (category: CategoryName, finalKeywords: string[], clearCurrentKeywords: boolean = false) => {
-      // categorySelection.handleConfirmCategory updates keywords and confirmed status
-      categorySelection.handleConfirmCategory(category, finalKeywords, clearCurrentKeywords);
-      // Always show the result panel for the category whose keywords were just confirmed/cleared.
-      setShowCategoryResult(category); 
+    directInputValues,
+    onDirectInputChange,
+    handleConfirmCategory: (category: string, finalKeywords: string[], clearSelection: boolean = false) => {
+      categorySelection.handleConfirmCategory(category as CategoryName, finalKeywords, clearSelection);
+      if (clearSelection) {
+        setShowCategoryResult(category as CategoryName);
+      }
     }
   };
 
-  const placesManagementHook = useSelectedPlaces();
-  const allPlacesForSchedule = [...placesManagementHook.selectedPlaces, ...placesManagementHook.candidatePlaces];
-
+  const placesManagementHook = useSelectedPlaces(); // Renamed
   const {
-    itinerary,
-    selectedDay: scheduleSelectedDay,
-    isLoading: isScheduleLoading,
-    handleSelectDay: handleScheduleSelectDay,
+    selectedPlaces, // This is from useSelectedPlaces
+    candidatePlaces, // This is from useSelectedPlaces
+    handleSelectPlace,
+    handleRemovePlace,
+    handleViewOnMap,
+    allCategoriesSelected,
+    prepareSchedulePayload,
+    isAccommodationLimitReached,
+    handleAutoCompletePlaces,
+    isPlaceSelected
+  } = placesManagementHook;
+
+  // Combine selected and candidate places for schedule generation
+  const allPlacesForSchedule = [...selectedPlaces, ...candidatePlaces];
+
+
+  // Schedule Management via useScheduleManagement
+  const {
+    itinerary, // This is the generated itinerary data from useScheduleManagement
+    selectedDay: scheduleSelectedDay, // This is the selected day from useScheduleManagement
+    isLoading: isScheduleLoading, // Loading state from useScheduleManagement
+    handleSelectDay: handleScheduleSelectDay, // Day selection handler from useScheduleManagement
     runScheduleGenerationProcess,
   } = useScheduleManagement({
-    selectedPlaces: allPlacesForSchedule, // These have CategoryName as English
+    selectedPlaces: allPlacesForSchedule,
     dates: tripDetailsHook.dates.startDate && tripDetailsHook.dates.endDate ? { 
       startDate: tripDetailsHook.dates.startDate, 
       endDate: tripDetailsHook.dates.endDate, 
       startTime: tripDetailsHook.dates.startTime, 
       endTime: tripDetailsHook.dates.endTime 
     } : null,
-    startDatetime: tripDetailsHook.startDatetime, 
-    endDatetime: tripDetailsHook.endDatetime,     
+    startDatetimeISO: tripDetailsHook.startDatetime, // Corrected: Was tripDetailsHook.startDatetimeISO
+    endDatetimeISO: tripDetailsHook.endDatetime,     // Corrected: Was tripDetailsHook.endDatetimeISO
   });
 
+  // Local UI states for itinerary panel
   const [showItineraryPanel, setShowItineraryPanel] = useState<boolean>(false);
   const [isGeneratingScheduleLocal, setIsGeneratingScheduleLocal] = useState<boolean>(false);
   const [forceRefreshCounter, setForceRefreshCounter] = useState(0);
 
+  // Sync local loading state with schedule management's loading state
+  // Also, handle showing itinerary panel when loading finishes and itinerary is available
   useEffect(() => {
     console.log("[useLeftPanel] Syncing local loading state. isScheduleLoading:", isScheduleLoading, "Current local:", isGeneratingScheduleLocal);
     setIsGeneratingScheduleLocal(isScheduleLoading);
 
     if (!isScheduleLoading && itinerary && itinerary.length > 0) {
-      console.log("[useLeftPanel] Schedule loading finished, itinerary available. Preparing to show panel.", { itineraryLength: itinerary.length, currentShowState: showItineraryPanel});
-      
-      setTimeout(() => {
-        setShowItineraryPanel(true);
-        setForceRefreshCounter(prev => prev + 1);
-        console.log("[useLeftPanel] Itinerary panel shown after delay:", {
-          itineraryLength: itinerary.length,
-          selectedDay: scheduleSelectedDay, 
-        });
-        toast.success(`${itinerary.length}일에 대한 일정이 생성되었습니다.`);
-      }, 500); 
-
-    } else if (!isScheduleLoading && itinerary && itinerary.length === 0) {
-      console.log("[useLeftPanel] Schedule loading finished, but itinerary is empty.");
-    }
-  }, [isScheduleLoading, itinerary, scheduleSelectedDay]);
-
-  useEffect(() => {
-    if (itinerary && itinerary.length > 0 && !showItineraryPanel && !isGeneratingScheduleLocal) {
-      console.log("[useLeftPanel] Itinerary data detected while panel is hidden and not loading. Auto-showing panel.");
+      console.log("[useLeftPanel] Schedule loading finished, itinerary available. Showing panel.", { itineraryLength: itinerary.length, currentShowState: showItineraryPanel});
       setShowItineraryPanel(true);
-      setForceRefreshCounter(prev => prev + 1); 
+      setForceRefreshCounter(prev => prev + 1); // Trigger refresh if needed
+    } else if (!isScheduleLoading && itinerary && itinerary.length === 0) {
+      // Handle case where generation finishes but no itinerary (e.g. error or no places)
+      console.log("[useLeftPanel] Schedule loading finished, but itinerary is empty. Not showing panel or hide if shown.");
+      // setShowItineraryPanel(false); // Optionally hide if it was shown due to old data
     }
-  }, [itinerary, showItineraryPanel, isGeneratingScheduleLocal]);
+  }, [isScheduleLoading, itinerary, showItineraryPanel]); // Added showItineraryPanel to deps as it's read
 
 
+  // Listener for 'itineraryCreated' custom event (from useScheduleGenerationRunner)
+  // This event might be redundant if the useEffect above correctly handles state from useScheduleManagement
+  // However, keeping it as it was part of a previous fix and ensures direct reaction to event.
+  // This useEffect updates different state pieces (from the old useItinerary hook context)
+  // For now, let's assume the main state (itinerary, selectedDay) comes from useScheduleManagement
+  // and showItineraryPanel is the local UI toggle.
+  // The original `itineraryCreated` listener set `setItinerary` from `useItinerary`.
+  // Now `itinerary` directly comes from `useScheduleManagement`. So this event listener
+  // should primarily focus on `setShowItineraryPanel(true)` if the event signals success.
+  
   useEffect(() => {
     const handleItineraryCreated = (event: Event) => {
       const customEvent = event as CustomEvent<{ itinerary: DomainItineraryDay[], selectedDay: number | null }>;
-      console.log("[useLeftPanel] 'itineraryCreated' event received (may be redundant):", customEvent.detail);
+      console.log("[useLeftPanel] 'itineraryCreated' event received:", customEvent.detail);
       
+      // The itinerary data itself is now primarily sourced from useScheduleManagement.
+      // This event can act as a signal to show the panel.
       if (customEvent.detail.itinerary && customEvent.detail.itinerary.length > 0) {
-        if (!showItineraryPanel) setShowItineraryPanel(true);
+        setShowItineraryPanel(true);
+        // setSelectedDay might be handled by useScheduleManagement, but event can update it too.
+        // handleScheduleSelectDay(customEvent.detail.selectedDay ?? (customEvent.detail.itinerary[0]?.day || null));
+      } else if (customEvent.detail.itinerary && customEvent.detail.itinerary.length === 0) {
+        // if event signals empty itinerary, perhaps hide panel or show empty state
+        // setShowItineraryPanel(false); // Example: hide if itinerary is empty
+        toast.info("일정은 생성되었으나 포함된 장소가 없습니다.");
       }
+      // No need to call setItinerary or setSelectedItineraryDay here if they are managed by useScheduleManagement
+      // and its state is already consumed.
     };
 
     window.addEventListener('itineraryCreated', handleItineraryCreated);
     return () => {
       window.removeEventListener('itineraryCreated', handleItineraryCreated);
     };
-  }, [showItineraryPanel]);
+  }, []); // Removed state setters that are now part of useScheduleManagement flow
 
 
   const uiVisibility = {
-    showItinerary: showItineraryPanel,
+    showItinerary: showItineraryPanel, // Use local state for panel visibility
     setShowItinerary: setShowItineraryPanel,
-    showCategoryResult, // English CategoryName | null
-    setShowCategoryResult // Expects English CategoryName | null
+    showCategoryResult,
+    setShowCategoryResult
   };
 
-  const categoryResultsHook = useCategoryResults(
-    showCategoryResult, // English CategoryName | null
+  const categoryResultsHook = useCategoryResults(showCategoryResult, 
     showCategoryResult ? categorySelection.selectedKeywordsByCategory[showCategoryResult] || [] : [], 
-    regionSelection.selectedRegions
-  );
+    regionSelection.selectedRegions);
 
   const categoryResults = {
     recommendedPlaces: categoryResultsHook.recommendedPlaces || [],
     normalPlaces: categoryResultsHook.normalPlaces || []
   };
 
-  const categoryHandlers = useCategoryHandlers(); // Expects/handles English CategoryName
-
-  const handleCategorySelect = (categoryName: CategoryName) => { // categoryName is English
-    categoryHandlers.handleCategorySelect(categoryName, categoryResultsHook.refetch);
-    // This sets the category for which results should be shown
-    setShowCategoryResult(categoryName); 
-    // Also update the active middle panel in categorySelection
-    categorySelection.handleCategoryClick(categoryName);
-    setSelectedCategoryForConfirmation(categoryName); // Store for confirmation button
-  };
-
+  const categoryHandlers = useCategoryHandlers();
+  const handleCategorySelect = (category: string) => categoryHandlers.handleCategorySelect(category, categoryResultsHook.refetch);
   const handleCloseCategoryResult = () => categoryHandlers.handleCloseCategoryResult(
     (value: CategoryName | null) => setShowCategoryResult(value)
   );
+  const handleConfirmCategoryFromButton = () => categoryHandlers.handleConfirmCategory(selectedCategory);
 
-  // This is for a generic "Confirm Category" button, if one exists outside specific panels
-  const handleConfirmCategoryFromButton = () => {
-    if (selectedCategoryForConfirmation) { // selectedCategoryForConfirmation is English
-        categoryHandlers.handleConfirmCategory(selectedCategoryForConfirmation); // Expects English
-        // This might mean keyword selection is done, and we move to next step or close result panel.
-        // The original logic was setShowCategoryResult(null).
-        // Depending on flow, it could also be keywordsAndInputs.handleConfirmCategory(...)
-        setShowCategoryResult(null); // Close the result panel
-    } else {
-        toast.error("선택된 카테고리가 없습니다.");
-    }
-  };
-
-  const itineraryHandlersOriginal = useItineraryHandlers();
+  const itineraryHandlersOriginal = useItineraryHandlers(); // Original handlers for close, etc.
   
+  // New schedule generation handler
   const handleGenerateSchedule = useCallback(async () => {
     if (!tripDetailsHook.dates.startDate || !tripDetailsHook.dates.endDate) {
       toast.error("여행 날짜를 먼저 선택해주세요.");
-      return false;
+      return false; // Indicate failure
     }
     if (allPlacesForSchedule.length === 0) {
       toast.error("최소 1개 이상의 장소를 선택해주세요.");
-      return false;
+      return false; // Indicate failure
     }
 
-    console.log("[useLeftPanel] Schedule generation initiated by user.");
-    setIsGeneratingScheduleLocal(true);
-    setShowItineraryPanel(false); 
+    console.log("[useLeftPanel] Schedule generation initiated.");
+    setIsGeneratingScheduleLocal(true); // Start local loading indicator
+    setShowItineraryPanel(false); // Hide itinerary panel while generating new one
 
     try {
-      await runScheduleGenerationProcess();
+      await runScheduleGenerationProcess(); // This updates itinerary & selectedDay in useScheduleManagement
+      // The useEffect watching isScheduleLoading will handle setShowItineraryPanel(true)
       console.log("[useLeftPanel] Schedule generation process completed (runScheduleGenerationProcess finished).");
-      return true;
+      return true; // Indicate success of initiating
     } catch (error) {
       console.error("[useLeftPanel] Error during schedule generation process:", error);
-      toast.error("일정 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
-      setIsGeneratingScheduleLocal(false);
-      return false;
+      toast.error("일정 생성 중 오류가 발생했습니다.");
+      setIsGeneratingScheduleLocal(false); // Ensure loading stops on error
+      return false; // Indicate failure
     }
   }, [tripDetailsHook.dates, allPlacesForSchedule, runScheduleGenerationProcess]);
   
   const handleCloseItinerary = useCallback(() => {
-    itineraryHandlersOriginal.handleCloseItinerary(setShowItineraryPanel, setCurrentPanel);
-  }, [itineraryHandlersOriginal, setCurrentPanel, setShowItineraryPanel]);
+    setShowItineraryPanel(false);
+    // setCurrentPanel('category'); // Or whatever the previous panel was // This direct call was the issue.
+    
+    // Create a wrapper to satisfy the expected signature of the original handler
+    const wrappedSetCurrentPanel = (panelValue: string) => {
+      setCurrentPanel(panelValue as 'region' | 'date' | 'category' | 'itinerary');
+    };
+
+    // Call original handler if it does more, e.g., map cleanup
+    itineraryHandlersOriginal.handleCloseItinerary(setShowItineraryPanel, wrappedSetCurrentPanel);
+  }, [itineraryHandlersOriginal, setCurrentPanel, setShowItineraryPanel]); // Added setCurrentPanel and setShowItineraryPanel to deps
 
   const forceRefresh = useCallback(() => {
     setForceRefreshCounter(prev => prev + 1);
   }, []);
 
+  // Ensure selectedItineraryDay is correctly passed for ItineraryView
+  // It now comes from useScheduleManagement as scheduleSelectedDay
   const selectedItineraryDayForView = scheduleSelectedDay;
 
+
+  // Retain original structure for placesManagement but use the hook's instance
   const placesManagement = {
-    ...placesManagementHook,
-    // Override or add methods if needed, ensuring CategoryName consistency (English)
-    // For example, onConfirmCategory in CategoryResultHandler expects English CategoryName.
-    // If placesManagementHook.handleConfirmCategory is used, ensure it aligns.
-    // The CategoryResultHandler's onConfirmCategory is now wired to this:
-    onConfirmCategoryCompletion: (
-        category: CategoryName, // English
-        selectedCatPlaces: Place[],
-        recommendedCatPlaces: Place[]
-      ) => {
-        placesManagementHook.handleAutoCompletePlaces(
-            category, // English
-            [...selectedCatPlaces, ...recommendedCatPlaces], // Pool for auto-completion
-            tripDetailsHook.tripDuration !== null ? tripDetailsHook.tripDuration + 1 : null
-        );
-        // After auto-completion, can close the category result panel or move to next step
-        setShowCategoryResult(null); 
-      }
+    ...placesManagementHook, // Spread all properties from the hook
+    // selectedPlaces and candidatePlaces are already destructured above
   };
 
   return {
     regionSelection,
-    categorySelection, // Contains English CategoryName based states/handlers
-    keywordsAndInputs, // Contains English CategoryName based states/handlers
-    placesManagement,
-    tripDetails: tripDetailsHook,
-    uiVisibility,
+    categorySelection,
+    keywordsAndInputs,
+    placesManagement, // Use the full object from the hook
+    tripDetails: tripDetailsHook, // Pass the full tripDetailsHook object
+    uiVisibility, // Contains showItineraryPanel for UI
     
-    isGeneratingSchedule: isGeneratingScheduleLocal,
-    itinerary,
-    selectedItineraryDay: selectedItineraryDayForView,
-    handleSelectItineraryDay: handleScheduleSelectDay,
-    handleGenerateSchedule,
-    handleCloseItinerary,
+    // New/updated properties for schedule generation and display
+    isGeneratingSchedule: isGeneratingScheduleLocal, // Local loading state for UI
+    itinerary, // From useScheduleManagement
+    selectedItineraryDay: selectedItineraryDayForView, // From useScheduleManagement
+    handleSelectItineraryDay: handleScheduleSelectDay, // From useScheduleManagement
+    handleGenerateSchedule, // New handler
+    handleCloseItinerary, // Updated handler
 
+    // For ItineraryView's startDate prop
     startDate: tripDetailsHook.dates.startDate, 
 
-    selectedCategory: selectedCategoryForConfirmation, // English CategoryName | null
+    // Retained from original structure for LeftPanelContent/other panels
+    selectedCategory,
+    // showCategoryResultScreen, // Keep if used
     currentPanel,
     isCategoryLoading: categoryResultsHook.isLoading,
     categoryError: categoryResultsHook.error,
-    categoryResults, // Contains places for the showCategoryResult (English)
-    handleCategorySelect, // Expects English CategoryName
+    categoryResults,
+    handleCategorySelect,
     handleCloseCategoryResult,
-    handleConfirmCategory: handleConfirmCategoryFromButton, // For a generic confirm button
+    handleConfirmCategory: handleConfirmCategoryFromButton,
     
+    // Force refresh (as requested)
     forceRefresh,
-    forceRefreshCounter
+    forceRefreshCounter // If needed by consumer
   };
 };

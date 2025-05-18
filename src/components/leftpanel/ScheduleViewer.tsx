@@ -1,144 +1,131 @@
-import React from 'react';
-import { ItineraryDay, ItineraryPlaceWithTime } from '@/types/supabase';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { MapPin, Clock, Edit3, Trash2, Info } from 'lucide-react';
+import React, { useEffect } from 'react';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-// import { toast } from 'sonner'; // This was an error, toast is not used here. If needed, import from 'sonner'
+import { ItineraryDay, ItineraryPlaceWithTime } from '@/types/supabase';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from '@/components/ui/button';
+import { Clock, Navigation } from 'lucide-react';
 
 interface ScheduleViewerProps {
-  itinerary?: ItineraryDay[];
+  schedule?: ItineraryDay[];
   selectedDay?: number | null;
   onDaySelect?: (day: number) => void;
   onClose?: () => void;
   startDate?: Date;
-  itineraryDay?: ItineraryDay | null; // Specific day's data if passed directly
-  onEditPlace?: (placeId: string | number, day: number) => void; // Placeholder
-  onRemovePlace?: (placeId: string | number, day: number) => void; // Placeholder
-  onViewPlaceInfo?: (placeId: string | number) => void; // Placeholder
+  itineraryDay?: ItineraryDay | null;
 }
 
 const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
-  itinerary,
+  schedule,
   selectedDay,
   onDaySelect,
   onClose,
   startDate = new Date(),
-  itineraryDay, // if a specific day's itinerary is passed
-  onEditPlace,
-  onRemovePlace,
-  onViewPlaceInfo,
+  itineraryDay
 }) => {
+  useEffect(() => {
+    console.log("ScheduleViewer 마운트/업데이트:", {
+      scheduleLength: schedule?.length || 0,
+      selectedDay,
+      itineraryDayPresent: !!itineraryDay,
+      startDate: startDate.toISOString()
+    });
+  }, [schedule, selectedDay, itineraryDay, startDate]);
 
-  const getDayDate = (dayOffset: number): Date => {
-    const newDate = new Date(startDate);
-    newDate.setDate(startDate.getDate() + dayOffset -1); // day 1 is offset 0 from startDate
-    return newDate;
+  const categoryToKorean = (category: string): string => {
+    const categoryMap: Record<string, string> = {
+      'accommodation': '숙소',
+      'attraction': '관광지',
+      'restaurant': '음식점',
+      'cafe': '카페'
+    };
+    
+    return categoryMap[category] || category;
   };
 
-  const currentDayToDisplay = itineraryDay || (selectedDay !== null && itinerary ? 
-    itinerary.find(d => d.day === selectedDay) : null);
+  // If itineraryDay is provided, use it. Otherwise, find from schedule if schedule and selectedDay are present.
+  const currentDayToDisplay = itineraryDay || 
+    (selectedDay !== null && schedule && schedule.length > 0 ? 
+      schedule.find(d => d.day === selectedDay) : null);
 
-  if (!currentDayToDisplay) {
-    return (
-      <div className="p-4 text-center text-gray-500">
-        {itinerary && itinerary.length > 0 ? '날짜를 선택해주세요.' : '표시할 일정이 없습니다.'}
-      </div>
-    );
+  if (!currentDayToDisplay && selectedDay !== null) {
+    // This log is helpful if a day is selected but no data is found for it
+    console.warn(`ScheduleViewer: 선택된 날짜(${selectedDay})에 해당하는 일정 데이터가 없습니다.`, {
+      scheduleAvailable: !!schedule,
+      scheduleDays: schedule?.map(d => d.day)
+    });
   }
   
-  const dayDate = getDayDate(currentDayToDisplay.day);
+  // The DaySelector (horizontal day buttons) is now in ItineraryView.
+  // ScheduleViewer is now primarily for displaying the details of the *selected* day.
+  // So, the part that renders the day buttons in ScheduleViewer itself can be removed if ItineraryView always provides them.
+  // However, keeping it allows ScheduleViewer to be more versatile if used elsewhere.
+  // For now, based on user's Part 2 for ItineraryView, the day buttons are there. ScheduleViewer will just display details.
 
   return (
-    <Card className="w-full shadow-lg">
-      <CardHeader className="bg-gray-50 dark:bg-gray-800 p-4">
-        <div className="flex justify-between items-center">
-          <div>
-            <CardTitle className="text-xl font-semibold text-gray-800 dark:text-gray-100">
-              Day {currentDayToDisplay.day}
-            </CardTitle>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              {format(dayDate, 'yyyy년 MM월 dd일 (EEE)', { locale: ko })}
-            </p>
-          </div>
-          {onClose && (
-             <Button variant="ghost" size="sm" onClick={onClose}>닫기</Button>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent className="p-0">
-        <ScrollArea className="h-[calc(100vh-280px)]"> {/* Adjust height as needed */}
-          <Accordion type="single" collapsible className="w-full">
-            {currentDayToDisplay.places && currentDayToDisplay.places.length > 0 ? (
-              currentDayToDisplay.places.map((p, index) => (
-                <AccordionItem value={`item-${index}`} key={p.id || index} className="border-b last:border-b-0">
-                  <AccordionTrigger className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 w-full text-left">
-                    <div className="flex items-center space-x-3">
-                      <MapPin className="h-5 w-5 text-blue-500" />
-                      <div>
-                        <p className="font-medium text-sm text-gray-800 dark:text-gray-200">{p.name}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {p.start_time && p.end_time 
-                            ? `${p.start_time.substring(0,5)} - ${p.end_time.substring(0,5)}` 
-                            : '시간 미정'}
-                        </p>
-                      </div>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="px-4 py-3 bg-gray-50 dark:bg-gray-700/50">
-                    <div className="space-y-2 text-xs">
-                      <div className="flex items-center space-x-2 text-gray-600 dark:text-gray-300">
-                        <Clock className="h-3.5 w-3.5" />
-                        <span>
-                          {p.start_time && p.end_time 
-                            ? `예정 시간: ${p.start_time.substring(0,5)} ~ ${p.end_time.substring(0,5)}`
-                            : '방문 시간: 미정'}
-                          {p.duration && ` (예상 소요: ${p.duration}분)`}
-                        </span>
-                      </div>
-                       {p.address_name && ( // Use address_name instead of formatted_address
-                        <div className="flex items-center space-x-2 text-gray-600 dark:text-gray-300">
-                          <MapPin className="h-3.5 w-3.5" />
-                          <span>{p.address_name}</span>
-                        </div>
-                      )}
-                      {p.memo && (
-                        <p className="italic text-gray-500 dark:text-gray-400">메모: {p.memo}</p>
-                      )}
-                    </div>
-                    {/* Action buttons (optional) */}
-                    <div className="mt-3 flex space-x-2">
-                      {onViewPlaceInfo && (
-                        <Button variant="outline" size="xs" onClick={() => onViewPlaceInfo(p.id)}>
-                          <Info className="h-3 w-3 mr-1" /> 정보
-                        </Button>
-                      )}
-                       {onEditPlace && (
-                        <Button variant="outline" size="xs" onClick={() => onEditPlace(p.id, currentDayToDisplay.day)}>
-                           <Edit3 className="h-3 w-3 mr-1" /> 수정
-                        </Button>
-                      )}
-                      {onRemovePlace && (
-                        <Button variant="destructive" size="xs" onClick={() => onRemovePlace(p.id, currentDayToDisplay.day)}>
-                           <Trash2 className="h-3 w-3 mr-1" /> 삭제
-                        </Button>
-                      )}
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-              ))
-            ) : (
-              <div className="p-6 text-center text-sm text-gray-500 dark:text-gray-400">
-                이 날짜에 추가된 장소가 없습니다.
+    <div className="h-full flex flex-col">
+      {/* The header with "생성된 여행 일정" and "뒤로" button is now in ItineraryView */}
+      {/* The day selector buttons are also now in ItineraryView */}
+      {/* This component now focuses solely on displaying the details of currentDayToDisplay */}
+
+      <ScrollArea className="flex-1">
+        {currentDayToDisplay ? (
+          <div className="p-4">
+            <div className="mb-4">
+              <h3 className="text-md font-medium mb-2">{currentDayToDisplay.day}일차 일정</h3>
+              <div className="text-sm text-muted-foreground mb-4">
+                총 이동 거리: {currentDayToDisplay.totalDistance ? currentDayToDisplay.totalDistance.toFixed(2) : 'N/A'} km
               </div>
-            )}
-          </Accordion>
-        </ScrollArea>
-      </CardContent>
-    </Card>
+            </div>
+            
+            <div className="space-y-4 relative">
+              <div className="absolute top-0 bottom-0 left-6 w-0.5 bg-gray-200 z-0"></div>
+              
+              {currentDayToDisplay.places.map((place, idx) => (
+                <div key={place.id || `place-${idx}`} className="flex relative z-10">
+                  <div className="h-12 w-12 rounded-full bg-blue-500 text-white font-bold flex items-center justify-center border-2 border-white shadow-md z-10">
+                    {idx + 1}
+                  </div>
+                  
+                  <div className="ml-4 flex-1 border rounded-lg p-3 bg-white">
+                    <div className="font-medium">{place.name}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {categoryToKorean(place.category)}
+                    </div>
+                    
+                    {place.timeBlock && (
+                      <div className="flex items-center mt-2 text-xs text-gray-600">
+                        <Clock className="w-3 h-3 mr-1" />
+                        <span>{place.timeBlock}</span>
+                      </div>
+                    )}
+                    
+                    {(place as ItineraryPlaceWithTime).travelTimeToNext && (place as ItineraryPlaceWithTime).travelTimeToNext !== "-" && (
+                      <div className="flex items-center mt-1 text-xs text-gray-600">
+                        <Navigation className="w-3 h-3 mr-1" />
+                        <span>다음 장소까지: {(place as ItineraryPlaceWithTime).travelTimeToNext}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="h-full flex items-center justify-center text-muted-foreground">
+            {selectedDay ? `선택된 ${selectedDay}일차의 일정을 불러오는 중이거나 데이터가 없습니다.` : '일자를 선택해주세요'}
+          </div>
+        )}
+      </ScrollArea>
+      {/* 디버깅용 상태 표시 (개발 중에만 사용) */}
+      {process.env.NODE_ENV === 'development' && !currentDayToDisplay && selectedDay !== null && (
+        <div className="p-4 bg-yellow-100 text-yellow-800 text-sm">
+          디버깅 (ScheduleViewer): 선택된 날짜({selectedDay})에 해당하는 일정 데이터가 없습니다.<br />
+          schedule prop: {schedule ? `${schedule.length}일 (${schedule.map(d=>d.day).join(',')})` : 'undefined'}<br />
+          itineraryDay prop: {itineraryDay ? '제공됨' : '제공되지 않음'}
+        </div>
+      )}
+    </div>
   );
 };
 

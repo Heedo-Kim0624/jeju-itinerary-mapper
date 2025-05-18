@@ -1,7 +1,7 @@
 
 import { useCallback } from 'react';
 import { Place, SelectedPlace } from '@/types/supabase';
-import { CategoryName, CATEGORIES, englishCategoryNameToKorean, koreanToEnglishCategoryName } from '@/utils/categoryUtils';
+import { CategoryName, CATEGORIES } from '@/utils/categoryUtils';
 import { toast } from 'sonner';
 
 interface UsePlaceSelectionLogicProps {
@@ -14,38 +14,26 @@ export const usePlaceSelectionLogic = ({
   tripDuration,
 }: UsePlaceSelectionLogicProps) => {
   const handleSelectPlace = useCallback((place: Place, checked: boolean, categoryOverride?: CategoryName) => {
-    // place.category could be Korean or English from source. Normalize to English CategoryName.
-    // categoryOverride is already English CategoryName.
-    let placeCategoryEnglish: CategoryName | null = categoryOverride || null;
+    const placeCategory = categoryOverride || place.category as CategoryName;
 
-    if (!placeCategoryEnglish && place.category) {
-        // Try to convert if place.category is Korean
-        placeCategoryEnglish = koreanToEnglishCategoryName(place.category);
-        // If it's already English and a valid CategoryName, it might pass through directly
-        if (!placeCategoryEnglish && CATEGORIES.includes(place.category as CategoryName)) {
-            placeCategoryEnglish = place.category as CategoryName;
-        }
-    }
-    
-    if (!placeCategoryEnglish) {
-      console.warn(`[장소 선택] 유효하지 않은 카테고리 (${place.category}) 또는 장소 정보 부족:`, place);
+    if (!placeCategory || !CATEGORIES.includes(placeCategory)) {
+      console.warn(`[장소 선택] 유효하지 않은 카테고리 (${placeCategory}) 또는 장소 정보 부족:`, place);
       toast.error("장소 정보에 오류가 있어 선택할 수 없습니다.");
       return;
     }
 
-    const finalCategory = placeCategoryEnglish; // Ensure it's English CategoryName
-
     setSelectedPlaces(prev => {
       const newSelectedPlace: SelectedPlace = {
         ...place,
-        category: finalCategory, // Store English CategoryName
+        category: placeCategory,
         isSelected: checked,
         isCandidate: false,
       };
 
       if (checked) {
-        if (finalCategory === 'accommodation') { // Compare with English CategoryName
-          const currentAccommodations = prev.filter(p => p.category === 'accommodation'); // Compare with English
+        if (placeCategory === '숙소') {
+          const currentAccommodations = prev.filter(p => p.category === '숙소');
+          // n박 -> n개 숙소. 0박 (당일치기) -> 1개 숙소
           const maxAccommodations = tripDuration !== null && tripDuration >= 0 ? Math.max(tripDuration, 1) : 1;
 
           if (currentAccommodations.length >= maxAccommodations) {

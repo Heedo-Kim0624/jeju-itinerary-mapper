@@ -1,8 +1,7 @@
 
 import { useRef, useCallback } from 'react';
 import { Place } from '@/types/supabase';
-// Import mapKoreanNameToEnglishKey instead of mapCategoryNameToKey
-import { getCategoryColor, mapKoreanNameToEnglishKey } from '@/utils/categoryColors';
+import { getCategoryColor, mapCategoryNameToKey } from '@/utils/categoryColors';
 
 type MarkerOptions = {
   highlight?: boolean;
@@ -66,9 +65,8 @@ export const useMapMarkers = (map: any) => {
       const position = new window.naver.maps.LatLng(place.y, place.x);
 
       // 장소 카테고리에 따른 색상 결정
-      // Use mapKoreanNameToEnglishKey here
       const categoryColor = useColorByCategory && place.category 
-        ? getCategoryColor(mapKoreanNameToEnglishKey(place.category)) 
+        ? getCategoryColor(mapCategoryNameToKey(place.category)) 
         : (highlight ? '#FF3B30' : '#4CD964');
 
       // 마커 스타일 결정
