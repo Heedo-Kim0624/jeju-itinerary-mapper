@@ -76,10 +76,12 @@ export interface SegmentRoute {
 // ItineraryDay 인터페이스 확장
 export interface ItineraryDay {
   day: number;
-  places: ItineraryPlaceWithTime[]; // Place[] 에서 ItineraryPlaceWithTime[] 으로 변경
+  places: ItineraryPlaceWithTime[];
   totalDistance: number;
   routeData?: RouteData;
-  interleaved_route?: (string | number)[]; // 요청사항 4, 5 - 추가
+  interleaved_route?: (string | number)[];
+  dayOfWeek?: string; // 예: "Mon", "Tue"
+  date?: string;      // 예: "05/21" (MM/DD 형식)
 }
 
 // Update ItineraryPlaceWithTime interface with correct property names
@@ -88,7 +90,8 @@ export interface ItineraryPlaceWithTime extends Place {
   departTime?: string;
   stayDuration?: number; // 분 단위
   travelTimeToNext?: string; // 다음 장소까지 이동 시간 (예: "30분")
-  timeBlock?: string; // 요청사항 7 - "09:00 - 10:00" 형식 또는 "09:00 도착" 등
+  timeBlock?: string; // "09:00 - 10:00" 형식 또는 "09:00 도착" 등
+  geoNodeId?: string; // GeoJSON 노드 ID (매핑된 경우)
 }
 
 // 새로운 인터페이스: 서버에서 받은 경로 데이터 파싱을 위한 인터페이스
