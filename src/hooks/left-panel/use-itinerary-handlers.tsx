@@ -1,10 +1,11 @@
 import { useCallback } from 'react';
 import { toast } from 'sonner';
-import type { Place, SchedulePayload, ItineraryDay as SupabaseItineraryDay } from '@/types/supabase';
-import type { ItineraryDay } from '@/hooks/use-itinerary';
+import type { Place, SchedulePayload } from '@/types/supabase'; // SupabaseItineraryDay 제거
+import type { ItineraryDay } from '@/hooks/use-itinerary'; // use-itinerary에서 export된 타입 사용
 import { NewServerScheduleResponse, isNewServerScheduleResponse } from '@/types/schedule';
 import { useMapContext } from '@/components/rightpanel/MapContext';
 import { useScheduleGenerator } from '@/hooks/use-schedule-generator';
+
 
 /**
  * 일정 관련 핸들러 훅
@@ -27,6 +28,7 @@ export const useItineraryHandlers = () => {
   const handleCreateItinerary = useCallback(async (
     tripDetails: TripDetailsForItinerary,
     selectedPlaces: Place[],
+    // ItineraryDay 타입을 use-itinerary에서 가져온 것으로 사용
     prepareSchedulePayloadFn: (places: Place[], startISO: string | null, endISO: string | null) => SchedulePayload | null,
     generateItineraryFn: (placesToUse: Place[], startDate: Date, endDate: Date, startTime: string, endTime: string) => ItineraryDay[] | null,
     setShowItinerary: (show: boolean) => void,
@@ -135,7 +137,7 @@ export const useItineraryHandlers = () => {
           }, 100);
 
         } else {
-           toast.error("서버 및 클라��언트 일정 생성 모두 실패했습니다.");
+           toast.error("서버 및 클라이언트 일정 생성 모두 실패했습니다.");
         }
         return !!result;
       }
@@ -144,7 +146,7 @@ export const useItineraryHandlers = () => {
       toast.error("일정 생성에 필요한 정보가 부족합니다.");
       return false;
     }
-  }, [generateSchedule]);
+  }, [generateSchedule]); // generateItineraryFn 제거 (generateSchedule 사용)
 
   const handleCloseItinerary = useCallback((
     setShowItinerary: (show: boolean) => void,

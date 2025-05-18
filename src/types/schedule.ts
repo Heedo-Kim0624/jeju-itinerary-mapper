@@ -1,4 +1,5 @@
 import { Place } from './supabase'; // Assuming Place might be needed as a base
+import { CategoryName } from '@/utils/categoryUtils'; // Added this based on usage in useScheduleParser
 
 // 서버로 전송할 장소 데이터 간소화 구조 (기존 유지)
 export interface SchedulePlace {
@@ -61,39 +62,52 @@ export interface NewServerScheduleResponse {
   start_datetime?: string; // Added for typeCompatibility.ts
 }
 
-// Client-side Itinerary Place type
-export interface ItineraryPlace extends Place {
-  id: string;
-  name: string;
-  x: number;
-  y: number;
-  category: string;
+// Client-side Itinerary Place type (기존 ItineraryPlace에서 이름 변경 및 필드 유지)
+export interface ItineraryPlaceWithTime extends Place {
+  // id, name, x, y, category 등 Place에서 상속
   node_id?: number | string;
-  timeBlock?: string;
-  arriveTime?: string;
-  departTime?: string;
-  stayDuration?: number;
-  travelTimeToNext?: string;
+  timeBlock?: string; // 예: "10:00-12:00" 또는 "10:00 도착"
+  arriveTime?: string; // 예: "10:00"
+  departTime?: string; // 예: "12:00"
+  stayDuration?: number; // 분 단위
+  travelTimeToNext?: string; // 다음 장소까지 이동 시간 (문자열)
+  // Place에서 상속받으므로 road_address, homepage 등 포함
 }
 
-// Client-side Itinerary Day type
+// Client-side Itinerary Day type (사용자 제안에 따라 수정)
 export interface ItineraryDay {
   day: number;
-  dayOfWeek: string;
-  date: string;
-  places: ItineraryPlace[];
+  dayOfWeek: string; // 추가: 'Mon', 'Tue' 등
+  date: string;      // 추가: '05/21' 등
+  places: ItineraryPlaceWithTime[]; // ItineraryPlaceWithTime 사용
   totalDistance: number;
-  interleaved_route: (string | number)[];
-  routeData?: {
-    nodeIds: string[];
-    linkIds: string[];
-  };
+  interleaved_route?: (string | number)[]; // 옵셔널로 변경 및 유지
+  routeData?: RouteData; // 옵셔널로 변경 및 유지
 }
 
-// 서버 응답이 NewServerScheduleResponse 타입인지 확인하는 타입 가드
+// RouteData for ItineraryDay (기존 유지, 순서 변경)
+export interface RouteData {
+  nodeIds?: string[];
+  linkIds: string[];
+}
+
+// 누락된 타입 추가 (사용자 제안)
+export interface ExtractedRouteData {
+  nodeIds: string[];
+  linkIds: string[];
+}
+
+export interface ParsedRoute {
+  from: string | number;
+  to: string | number;
+  links: (string | number)[];
+}
+
+// 서버 응답이 NewServerScheduleResponse 타입인지 확인하는 타입 가드 (기존 유지)
 export function isNewServerScheduleResponse(
   response: any
 ): response is NewServerScheduleResponse {
+  // ... keep existing code (isNewServerScheduleResponse implementation)
   return (
     response &&
     typeof response === 'object' &&
@@ -113,7 +127,8 @@ export function isNewServerScheduleResponse(
   );
 }
 
-// PlannerServerRouteResponse 및 관련 타입 가드 (기존 코드에 있었다면 유지, 현재 프롬프트와 직접 관련 낮음)
+// PlannerServerRouteResponse 및 관련 타입 가드 (기존 코드에 있었다면 유지)
+// ... keep existing code (PlannerServerRouteResponse, isPlannerServerRouteResponseArray, convertPlannerResponseToNewResponse)
 export interface PlannerServerRouteResponse {
   date: string;
   nodeIds: number[];
@@ -174,10 +189,4 @@ export interface ServerRouteResponse {
   nodeIds: (string | number)[];
   linkIds: (string | number)[];
   interleaved_route?: (string | number)[];
-}
-
-// RouteData for ItineraryDay (기존 유지)
-export interface RouteData {
-  nodeIds?: string[];
-  linkIds: string[]; // Made linkIds required as per original definition
 }

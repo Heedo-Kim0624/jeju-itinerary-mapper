@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import LeftPanel from '@/components/leftpanel/LeftPanel';
 import RightPanel from '@/components/rightpanel/RightPanel';
@@ -23,13 +22,12 @@ const Index: React.FC = () => {
   const {
     itinerary,
     selectedItineraryDay,
-    showItinerary,
-    setShowItinerary,
     generateItinerary
   } = useItinerary();
 
   // selectedCategoriesCount 상태 추가하여 디버그
-  console.log('모든 카테고리 선택 여부:', allCategoriesSelected);
+  console.log('모든 카테고리 선택 여부 (Index.tsx):', allCategoriesSelected);
+  // console.log('generateItinerary 함수 존재 여부:', !!generateItinerary); // 디버깅 로그
 
   return (
     <div className="flex h-screen overflow-hidden bg-jeju-light-gray relative">

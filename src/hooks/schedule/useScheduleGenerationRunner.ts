@@ -6,7 +6,7 @@ import {
   ServerRouteResponse, 
   isNewServerScheduleResponse as serverResponseTypeGuard,
   ItineraryDay as ScheduleItineraryDay,
-  ItineraryPlace as ScheduleItineraryPlace
+  ItineraryPlaceWithTime as ScheduleItineraryPlaceWithTime
 } from '@/types/schedule';
 import { useScheduleGenerator as useScheduleGeneratorHook } from '@/hooks/use-schedule-generator';
 import { useItineraryCreator, ItineraryDay as CreatorItineraryDay } from '@/hooks/use-itinerary-creator';
@@ -35,38 +35,51 @@ interface UseScheduleGenerationRunnerProps {
 
 function convertCreatorToScheduleItinerary(creatorItinerary: CreatorItineraryDay[], tripStartDate?: Date): ScheduleItineraryDay[] {
   return creatorItinerary.map((creatorDay, index) => {
-    const schedulePlaces: ScheduleItineraryPlace[] = creatorDay.places.map(creatorPlace => {
-      // CreatorItineraryPlace extends supabase.Place. ScheduleItineraryPlace also extends supabase.Place.
-      // Perform a safe cast, assuming structure is compatible or default values cover missing fields.
-      const { ...restOfCreatorPlace } = creatorPlace;
+    const schedulePlaces: ScheduleItineraryPlaceWithTime[] = creatorDay.places.map(creatorPlace => {
+      // creatorPlace는 SupabasePlace를 확장하므로, ScheduleItineraryPlaceWithTime의 기본 속성은 대부분 호환됨
+      // 누락될 수 있는 ItineraryPlaceWithTime 고유 필드(timeBlock, arriveTime 등)는 undefined 또는 기본값 처리
+      const { 
+        // Place에서 상속받는 필드들은 그대로 사용 가능
+        // ItineraryPlaceWithTime에만 있거나, creatorPlace에 없을 수 있는 필드 처리
+        timeBlock, // use-itinerary-creator.ts의 ItineraryPlace에 timeBlock이 있는지 확인 필요
+        arriveTime, departTime, stayDuration, travelTimeToNext, // 이들은 use-itinerary-creator.ts의 ItineraryPlace에 없을 가능성 높음
+        ...restOfCreatorPlace // Place에서 온 나머지 속성들
+      } = creatorPlace as any; // SupabasePlace를 확장하므로, 일단 any로 캐스팅 후 필요한 필드 채움
+
       return {
-        ...restOfCreatorPlace, // Spread properties from creatorPlace (which is SupabasePlace based)
-        // Ensure specific ScheduleItineraryPlace fields are present
-        timeBlock: creatorPlace.timeBlock || '', 
-        node_id: creatorPlace.node_id || undefined,
-      } as ScheduleItineraryPlace; // Cast, ensure all fields of ScheduleItineraryPlace exist or are defaulted
+        ...(restOfCreatorPlace as SupabasePlace), // Place 기본 속성들
+        id: String(restOfCreatorPlace.id), // id는 string으로 통일
+        node_id: restOfCreatorPlace.node_id, // node_id 유지
+        category: restOfCreatorPlace.category || '기타', // category 기본값
+        // ItineraryPlaceWithTime에 필요한 추가/특화 필드
+        timeBlock: timeBlock || '', 
+        arriveTime: arriveTime || undefined,
+        departTime: departTime || undefined,
+        stayDuration: stayDuration || undefined,
+        travelTimeToNext: travelTimeToNext || undefined,
+      } as ScheduleItineraryPlaceWithTime;
     });
 
     let dayOfWeek = '';
     let date = '';
     if (tripStartDate) {
         const currentDayDate = new Date(tripStartDate);
-        currentDayDate.setDate(tripStartDate.getDate() + index); // index is 0-based day number for the map
+        currentDayDate.setDate(tripStartDate.getDate() + index);
         dayOfWeek = currentDayDate.toLocaleDateString('en-US', { weekday: 'short' });
         date = `${String(currentDayDate.getMonth() + 1).padStart(2, '0')}/${String(currentDayDate.getDate()).padStart(2, '0')}`;
     }
-
 
     return {
       day: creatorDay.day,
       dayOfWeek: dayOfWeek, 
       date: date,      
       places: schedulePlaces,
-      totalDistance: creatorDay.totalDistance,
-      interleaved_route: creatorDay.interleaved_route || [],
-      routeData: creatorDay.routeData ? {
-        nodeIds: creatorDay.routeData.nodeIds?.map(String) || [],
-        linkIds: creatorDay.routeData.linkIds?.map(String) || [],
+      totalDistance: creatorDay.totalDistance, // km 단위라고 가정
+      // ItineraryDay (from schedule.ts)에 interleaved_route와 routeData가 옵셔널로 있으므로 에러 발생 안 함
+      interleaved_route: (creatorDay as any).interleaved_route || [], // CreatorItineraryDay에 해당 필드가 없다면 any 캐스팅 필요
+      routeData: (creatorDay as any).routeData ? { // CreatorItineraryDay에 해당 필드가 없다면 any 캐스팅 필요
+        nodeIds: (creatorDay as any).routeData.nodeIds?.map(String) || [],
+        linkIds: (creatorDay as any).routeData.linkIds?.map(String) || [],
       } : undefined,
     };
   });
@@ -136,7 +149,7 @@ export const useScheduleGenerationRunner = ({
         
         const routesForMapContext: Record<number, ServerRouteResponse> = {};
         parsedItinerary.forEach(dayItem => {
-            if (dayItem.interleaved_route) {
+            if (dayItem.interleaved_route) { // Optional chaining으로 안전하게 접근
                  routesForMapContext[dayItem.day] = {
                     nodeIds: extractAllNodesFromRoute(dayItem.interleaved_route).map(String),
                     linkIds: extractAllLinksFromRoute(dayItem.interleaved_route).map(String),
@@ -157,7 +170,7 @@ export const useScheduleGenerationRunner = ({
         toast.error("⚠️ 서버 응답이 없거나, 경로 정보가 부족하여 일정을 생성하지 못했습니다. (VITE_SCHEDULE_API)");
         if (dates) {
             const clientFallbackItinerary = clientSideCreateItinerary(
-              selectedPlaces as SupabasePlace[], // Cast SelectedPlace[] to Place[]
+              selectedPlaces as SupabasePlace[], 
               dates.startDate,
               dates.endDate,
               dates.startTime,
