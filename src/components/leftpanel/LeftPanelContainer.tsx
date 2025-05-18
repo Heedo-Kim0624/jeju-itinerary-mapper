@@ -1,20 +1,16 @@
 
 import React, { useState, useEffect } from 'react';
-import { toast } from 'sonner';
 import { Place } from '@/types/supabase';
 import { ItineraryDay } from '@/hooks/use-itinerary';
-// PlaceCart는 더 이상 사용되지 않으므로 주석 처리하거나 삭제합니다.
-// import PlaceCart from './PlaceCart'; 
-// ItineraryButton은 새로운 로딩 버튼 로직으로 대체됩니다.
-// import ItineraryButton from './ItineraryButton';
+import PlaceCart from './PlaceCart'; // PlaceCart 컴포넌트 import 주석 해제
 import ScheduleViewer from './ScheduleViewer';
 
 interface LeftPanelContainerProps {
   showItinerary: boolean;
   onSetShowItinerary: (show: boolean) => void;
   selectedPlaces: Place[];
-  onRemovePlace: (id: string) => void; // PlaceCart가 제거되었으므로 이 prop은 LeftPanelContainer 내부에서 사용되지 않습니다.
-  onViewOnMap: (place: Place) => void; // PlaceCart가 제거되었으므로 이 prop은 LeftPanelContainer 내부에서 사용되지 않습니다.
+  onRemovePlace: (id: string) => void; // 기존 타입 유지
+  onViewOnMap: (place: Place) => void;
   allCategoriesSelected: boolean;
   children: React.ReactNode;
   dates: {
@@ -27,15 +23,15 @@ interface LeftPanelContainerProps {
   itinerary: ItineraryDay[] | null;
   selectedItineraryDay: number | null;
   onSelectDay: (day: number) => void;
-  isGenerating?: boolean; // 로딩 상태 prop 추가
+  isGenerating?: boolean;
 }
 
 const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
   showItinerary,
   onSetShowItinerary,
   selectedPlaces,
-  // onRemovePlace, // LeftPanelContainer 내부에서 사용되지 않음
-  // onViewOnMap,   // LeftPanelContainer 내부에서 사용되지 않음
+  onRemovePlace, // props 구조 분해 할당 확인
+  onViewOnMap,   // props 구조 분해 할당 확인
   allCategoriesSelected,
   children,
   dates,
@@ -43,7 +39,7 @@ const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
   itinerary,
   selectedItineraryDay,
   onSelectDay,
-  isGenerating = false, // 기본값 false
+  isGenerating = false,
 }) => {
   const [localIsGenerating, setLocalIsGenerating] = useState(isGenerating);
   
@@ -70,7 +66,7 @@ const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
   };
 
   if (showItinerary && itinerary) {
-    console.log("LeftPanelContainer: Rendering ScheduleViewer directly (this path might be taken if LeftPanel's ItineraryView condition is not met)");
+    console.log("LeftPanelContainer: Rendering ScheduleViewer directly");
     return (
       <div className="fixed top-0 left-0 w-[300px] h-full bg-white border-r border-gray-200 z-40 shadow-md">
         <ScheduleViewer
@@ -90,14 +86,12 @@ const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
         {children}
       </div>
       <div className="px-4 py-4 border-t">
-        {/* PlaceCart 컴포넌트 대신 선택된 장소 개수 표시 */}
-        <div className="mb-4">
-          {selectedPlaces && selectedPlaces.length > 0 && (
-            <div className="mb-2 text-sm font-medium">
-              선택된 장소: {selectedPlaces.length}개
-            </div>
-          )}
-        </div>
+        {/* 선택된 장소 목록 복구 - PlaceCart 컴포넌트 */}
+        <PlaceCart 
+          selectedPlaces={selectedPlaces} 
+          onRemovePlace={onRemovePlace}
+          onViewOnMap={onViewOnMap}
+        />
         
         {/* 일정 생성 버튼 - 로딩 상태에 따라 다르게 표시 */}
         {localIsGenerating ? (
@@ -125,3 +119,4 @@ const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
 };
 
 export default LeftPanelContainer;
+
