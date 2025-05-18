@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { useSelectedPlaces } from './use-selected-places';
 import { useTripDetails } from './use-trip-details';
@@ -23,7 +24,7 @@ export const useLeftPanel = () => {
   
   // 상태 관리
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [showCategoryResultScreen, setShowCategoryResultScreen] = useState(false);
+  // const [showCategoryResultScreen, setShowCategoryResultScreen] = useState(false); // This state seems unused in the provided code, commenting out. If needed, it can be restored.
   const [currentPanel, setCurrentPanel] = useState<'region' | 'date' | 'category' | 'itinerary'>('region');
   const [showCategoryResult, setShowCategoryResult] = useState<CategoryName | null>(null);
   
@@ -76,7 +77,7 @@ export const useLeftPanel = () => {
     itinerary,
     selectedItineraryDay,
     showItinerary,
-    setItinerary, // Added setItinerary for direct use
+    setItinerary, 
     setSelectedItineraryDay,
     setShowItinerary,
     handleSelectItineraryDay,
@@ -86,7 +87,7 @@ export const useLeftPanel = () => {
   const itineraryManagement = {
     itinerary,
     selectedItineraryDay,
-    setItinerary, // Expose setItinerary via itineraryManagement
+    setItinerary, 
     setSelectedItineraryDay,
     handleSelectItineraryDay,
     generateItinerary
@@ -130,7 +131,6 @@ export const useLeftPanel = () => {
   const handleCreateItinerary = useCallback(async () => {
     console.log('[useLeftPanel] handleCreateItinerary 호출됨');
     
-    // 날짜 정보 로깅
     console.log('[useLeftPanel] 여행 날짜 정보:', {
       dates: tripDetails.dates,
       startDatetime: tripDetails.startDatetime,
@@ -146,16 +146,15 @@ export const useLeftPanel = () => {
       (panel: 'region' | 'date' | 'category' | 'itinerary') => setCurrentPanel(panel)
     );
     
-    // 추가: 일정 생성 성공 후 강제 리렌더링 이벤트 발생
     if (success) {
       console.log('[useLeftPanel] 일정 생성 성공. 강제 리렌더링 이벤트 발생');
       setTimeout(() => {
         window.dispatchEvent(new Event('forceRerender'));
-      }, 100); // 약간의 지연을 두어 상태 업데이트가 완료되도록 함
+      }, 100); 
     }
     
     return success;
-  }, [tripDetails, placesManagement, itineraryManagement, itineraryHandlers, uiVisibility.setShowItinerary, setCurrentPanel]); // 의존성 배열 추가
+  }, [tripDetails, placesManagement, itineraryManagement, itineraryHandlers, uiVisibility.setShowItinerary, setCurrentPanel]);
   
   const handleCloseItinerary = () => {
     itineraryHandlers.handleCloseItinerary(
@@ -164,7 +163,6 @@ export const useLeftPanel = () => {
     );
   };
 
-  // Listen for itineraryCreated custom event
   useEffect(() => {
     const handleItineraryCreated = (event: Event) => {
       const customEvent = event as CustomEvent<{ itinerary: ItineraryDay[], selectedDay: number | null }>;
@@ -173,8 +171,6 @@ export const useLeftPanel = () => {
       
       if (customEvent.detail.itinerary) {
         setItinerary(customEvent.detail.itinerary); 
-        
-        // 추가: 일정이 생성되면 즉시 showItinerary를 true로 설정
         setShowItinerary(true);
         console.log("[useLeftPanel] Setting showItinerary to true after receiving itinerary");
       }
@@ -187,7 +183,6 @@ export const useLeftPanel = () => {
         setSelectedItineraryDay(null);
       }
       
-      // 추가: 상태 업데이트 후 강제 리렌더링을 위한 타임아웃 설정
       setTimeout(() => {
         console.log("[useLeftPanel] Forcing UI update after state changes from itineraryCreated event");
         window.dispatchEvent(new Event('forceRerender'));
@@ -201,15 +196,12 @@ export const useLeftPanel = () => {
     };
   }, [setItinerary, setSelectedItineraryDay, setShowItinerary]);
 
-  // 일정 상태 변경 시 UI 갱신을 위한 useEffect 추가
   useEffect(() => {
-    // 일정이 생성되었지만 showItinerary가 false인 경우 자동으로 활성화
     if (itinerary && itinerary.length > 0 && !showItinerary) {
       console.log("useLeftPanel: 일정이 생성되었으나 패널이 표시되지 않아 자동으로 활성화합니다.");
       setShowItinerary(true);
     }
     
-    // 일정이 생성되었지만 선택된 날짜가 없는 경우 첫 번째 날짜 선택
     if (itinerary && itinerary.length > 0 && selectedItineraryDay === null) {
       console.log("useLeftPanel: 일정이 생성되었으나 날짜가 선택되지 않아 첫 번째 날짜를 선택합니다.");
       if (itinerary[0] && typeof itinerary[0].day === 'number') {
@@ -218,7 +210,6 @@ export const useLeftPanel = () => {
     }
   }, [itinerary, showItinerary, selectedItineraryDay, setShowItinerary, setSelectedItineraryDay]);
 
-  // Add a listener for 'forceRerender' to potentially update a dummy state if needed for this hook
   const [, setForceUpdate] = useState(0);
   useEffect(() => {
     const forceRerenderListener = () => {
@@ -231,6 +222,8 @@ export const useLeftPanel = () => {
     };
   }, []);
 
+  // `showCategoryResultScreen` 상태가 사용되지 않는 것으로 보여 주석 처리했으므로, 반환 객체에서도 제거합니다.
+  // 만약 필요하다면 복원해야 합니다.
   return {
     regionSelection,
     categorySelection,
@@ -241,7 +234,7 @@ export const useLeftPanel = () => {
     itineraryManagement,
     handleCreateItinerary,
     selectedCategory,
-    showCategoryResultScreen,
+    // showCategoryResultScreen, 
     currentPanel,
     isCategoryLoading,
     categoryError,
@@ -252,3 +245,4 @@ export const useLeftPanel = () => {
     handleCloseItinerary
   };
 };
+
