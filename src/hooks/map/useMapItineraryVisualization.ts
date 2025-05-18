@@ -1,6 +1,6 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ItineraryDay, ItineraryPlaceWithTime } from '@/types/supabase';
+import { ItineraryDay, ItineraryPlaceWithTime } from '@/types/supabase'; // Ensure ItineraryPlaceWithTime is imported
 import { toast } from 'sonner';
 
 // Note: ROUTE_COLORS are defined but overridden for "연두색 Polyline" requirement below.
@@ -22,7 +22,6 @@ interface MapVisualizationOptions {
   strokeStyle?: 'solid' | 'dashed';
   zIndex?: number;
 }
-
 
 export const useMapItineraryVisualization = (map: any, nodeData: any, linkData: any) => {
   const [currentDay, setCurrentDay] = useState<number | null>(null);
@@ -87,13 +86,11 @@ export const useMapItineraryVisualization = (map: any, nodeData: any, linkData: 
     
     try {
       const newMarkers: any[] = [];
-      // 1. 장소 마커 표시
       day.places.forEach((place, index) => {
         let position = null;
-        // Use x,y from place if available (updated by updateItineraryWithCoordinates)
         if (place.x && place.y) {
           position = new window.naver.maps.LatLng(place.y, place.x);
-        } else if (place.geoNodeId) { // Fallback to geoNodeId if x,y somehow not populated
+        } else if (place.geoNodeId) {
           const coords = findNodeCoordinates(place.geoNodeId);
           if (coords) {
             position = new window.naver.maps.LatLng(coords.lat, coords.lng);
@@ -105,7 +102,7 @@ export const useMapItineraryVisualization = (map: any, nodeData: any, linkData: 
             position: position,
             map: map,
             title: place.name,
-            icon: { // Using existing numbered marker style
+            icon: {
               content: `
                 <div style="
                   background-color: #FF5A5A; /* Red marker */
@@ -124,7 +121,7 @@ export const useMapItineraryVisualization = (map: any, nodeData: any, linkData: 
               `,
               anchor: new window.naver.maps.Point(15, 15)
             },
-            zIndex: options?.zIndex !== undefined ? options.zIndex + 10 : 100 // 마커가 경로 위에 표시되도록 z-index 설정
+            zIndex: 100 
           });
           newMarkers.push(marker);
         }
@@ -133,15 +130,11 @@ export const useMapItineraryVisualization = (map: any, nodeData: any, linkData: 
       
       const newPolylines: any[] = [];
       const { interleaved_route } = day;
-      
-      // interleaved_route에서 NODE_ID와 LINK_ID 분리 (per user snippet)
-      // const placeNodeIds = interleaved_route.filter((_, i) => i % 2 === 0); // Not directly used in polyline loop below but requested
       const linkIds = interleaved_route.filter((_, i) => i % 2 === 1);
       
-      // Use lime green for polylines as requested by user
-      const strokeColor = options?.strokeColor || '#4CAF50'; // 연두색 (Green as per user snippet)
+      // Use lime green for polylines as requested
+      const strokeColor = options?.strokeColor || '#65A30D'; // Lime green (Tailwind lime-600)
       
-      // 2. 경로 Polyline 표시
       linkIds.forEach((linkId) => {
         const linkCoords = findLinkCoordinates(linkId);
         if (linkCoords && linkCoords.length > 0) {
@@ -151,26 +144,25 @@ export const useMapItineraryVisualization = (map: any, nodeData: any, linkData: 
             path: path,
             strokeColor: strokeColor,
             strokeWeight: options?.strokeWeight || 5,
-            strokeOpacity: options?.strokeOpacity || 0.7, // User snippet used 0.7
+            strokeOpacity: options?.strokeOpacity || 0.8,
             strokeStyle: options?.strokeStyle || 'solid',
-            zIndex: options?.zIndex !== undefined ? options.zIndex : 90 // 경로가 마커 아래에 표시되도록 z-index 설정
+            zIndex: options?.zIndex || 90 
           });
           newPolylines.push(polyline);
         }
       });
       polylinesRef.current = newPolylines;
       
-      // 3. 지도 뷰 조정
       if (newMarkers.length > 0) {
         const bounds = new window.naver.maps.LatLngBounds();
         newMarkers.forEach(marker => {
           bounds.extend(marker.getPosition());
         });
-        map.fitBounds(bounds, { top: 70, right: 70, bottom: 70, left: 70 });
+        map.fitBounds(bounds, { top: 70, right: 70, bottom: 70, left: 70 }); // Added padding
       }
       
       setCurrentDay(day.day);
-      setTotalDistance(day.totalDistance || 0); // Ensure totalDistance is updated
+      setTotalDistance(day.totalDistance || 0);
       
       console.log(`[visualizeDayRoute] ${day.day}일차 경로가 성공적으로 시각화되었습니다.`);
       if (newMarkers.length > 0 || newPolylines.length > 0) {
@@ -188,12 +180,9 @@ export const useMapItineraryVisualization = (map: any, nodeData: any, linkData: 
   }, [map, nodeData, linkData, findNodeCoordinates, findLinkCoordinates, clearAllVisualizations]);
   
   const setItineraryData = useCallback((newItinerary: ItineraryDay[]) => {
-    if (!newItinerary) { // Allow null to clear itinerary, or empty array
+    if (!newItinerary || newItinerary.length === 0) {
       setItinerary([]);
-      setCurrentDay(null);
-      setTotalDistance(0);
-      clearAllVisualizations();
-      console.log('[setItineraryData] 일정 데이터가 비워졌습니다.');
+      clearAllVisualizations(); // Clear map if new itinerary is empty
       return;
     }
     
@@ -201,51 +190,30 @@ export const useMapItineraryVisualization = (map: any, nodeData: any, linkData: 
     console.log('[setItineraryData] 일정 데이터가 설정되었습니다:', newItinerary);
     
     if (newItinerary.length > 0) {
-      visualizeDayRoute(newItinerary[0]); // Visualize first day by default
-    } else {
-      clearAllVisualizations(); // Clear map if new itinerary is empty
-      setCurrentDay(null);
-      setTotalDistance(0);
+      visualizeDayRoute(newItinerary[0]);
     }
   }, [visualizeDayRoute, clearAllVisualizations]);
   
   useEffect(() => {
     const handleItineraryReady = (event: CustomEvent) => {
-      // This event comes from useScheduleManagement -> useScheduleGenerationRunner
-      // It contains the final itinerary (server-processed or client-fallback)
-      const { itinerary: newItineraryData, selectedDay: newSelectedDay } = event.detail;
-      console.log('[useMapItineraryVisualization] itineraryCreated/Ready 이벤트 수신:', { newItineraryData, newSelectedDay });
-      if (newItineraryData) { 
-        setItineraryData(newItineraryData); // This calls visualizeDayRoute for the first day
-        // If a specific day needs to be visualized based on newSelectedDay:
-        if (newSelectedDay !== null && newItineraryData.length > 0) {
-            const dayToVisualize = newItineraryData.find(d => d.day === newSelectedDay);
-            if (dayToVisualize && dayToVisualize.day !== newItineraryData[0].day) { // Avoid re-visualizing if it's already the first day
-                visualizeDayRoute(dayToVisualize);
-            } else if (!dayToVisualize && newItineraryData.length > 0) {
-                // If selectedDay is somehow invalid, default to first day
-                visualizeDayRoute(newItineraryData[0]);
-            }
-        }
-      } else { // If event comes with null/undefined itinerary, clear visualization
-        setItineraryData([]);
+      const { itinerary: newItinerary } = event.detail;
+      if (newItinerary) { // Allow empty array to clear itinerary
+        setItineraryData(newItinerary);
       }
     };
     
-    // Listening to 'itineraryCreated' as dispatched by useScheduleGenerationRunner
-    window.addEventListener('itineraryCreated', handleItineraryReady as EventListener);
+    window.addEventListener('itineraryWithCoordinatesReady', handleItineraryReady as EventListener);
     
     return () => {
-      window.removeEventListener('itineraryCreated', handleItineraryReady as EventListener);
+      window.removeEventListener('itineraryWithCoordinatesReady', handleItineraryReady as EventListener);
     };
-  }, [setItineraryData, visualizeDayRoute]); // Added visualizeDayRoute
+  }, [setItineraryData]);
   
   return {
-    itinerary, // The itinerary data managed by this hook
-    currentDay, // The currently visualized day number
-    totalDistance, // Total distance for the currentDay
-    visualizeDayRoute, // Function to visualize a specific day's route
-    clearAllVisualizations // Function to clear all markers and polylines
-    // setItineraryData is internal, not usually exposed unless another part of app needs to push itinerary here directly
+    itinerary,
+    currentDay,
+    totalDistance,
+    visualizeDayRoute,
+    clearAllVisualizations
   };
 };
