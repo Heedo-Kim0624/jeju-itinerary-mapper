@@ -41,13 +41,11 @@ export const useScheduleManagement = ({
 
   const isLoading = isGenerating || isLoadingState;
 
-  console.log("[useScheduleManagement] 상태 업데이트:", { 
-    itineraryLength: itinerary.length, 
-    selectedDay, 
-    isLoadingStateFromEffects: isLoadingState, 
-    isGeneratingFromGenerator: isGenerating, 
-    combinedIsLoading: isLoading 
-  });
+  console.log(`[useScheduleManagement] Loading State Update:
+    - isGenerating (from use-schedule-generator): ${isGenerating}
+    - isLoadingState (from useScheduleStateAndEffects): ${isLoadingState}
+    - Combined isLoading for UI: ${isLoading}
+    - Itinerary length: ${itinerary.length}`);
 
   return {
     itinerary,
