@@ -1,13 +1,14 @@
+
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Place } from '@/types/supabase';
-import { ItineraryDay } from '@/hooks/use-itinerary';
+import { ItineraryDay } from '@/types/supabase'; // UPDATED IMPORT
 import PlaceCart from './PlaceCart';
 import ItineraryButton from './ItineraryButton';
-import ScheduleViewer from './ScheduleViewer';
+// ScheduleViewer import removed as LeftPanel.tsx handles ItineraryView directly
 
 interface LeftPanelContainerProps {
-  showItinerary: boolean;
+  showItinerary: boolean; // This prop will likely be false when this container is rendered by LeftPanel
   onSetShowItinerary: (show: boolean) => void;
   selectedPlaces: Place[];
   onRemovePlace: (id: string) => void;
@@ -20,30 +21,30 @@ interface LeftPanelContainerProps {
     startTime: string;
     endTime: string;
   } | null;
-  onCreateItinerary: () => boolean;
-  itinerary: ItineraryDay[] | null;
+  onCreateItinerary: () => boolean; // Changed from () => void to () => boolean based on LeftPanel's usage
+  itinerary: ItineraryDay[] | null; // Prop for itinerary data
   selectedItineraryDay: number | null;
   onSelectDay: (day: number) => void;
+  // Props needed for new debug UI (if passed from LeftPanel)
+  // For simplicity, debug UI will use props already available or make assumptions
 }
 
 const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
   showItinerary,
-  onSetShowItinerary,
+  // onSetShowItinerary, // Not directly used by this component's render if ScheduleViewer block is removed
   selectedPlaces,
   onRemovePlace,
   onViewOnMap,
   allCategoriesSelected,
   children,
-  dates,
+  // dates, // Not directly used by this component's render if ScheduleViewer block is removed
   onCreateItinerary,
-  itinerary,
-  selectedItineraryDay,
-  onSelectDay
+  itinerary, // Used in debug UI
+  // selectedItineraryDay, // Not directly used by this component's render
+  // onSelectDay, // Not directly used by this component's render
 }) => {
-  // 강제 리렌더링을 위한 상태 추가 (from user's Part 2)
   const [rerenderTrigger, setRerenderTrigger] = useState(0);
   
-  // 강제 리렌더링 이벤트 리스너 (from user's Part 2)
   useEffect(() => {
     const handleForceRerender = () => {
       console.log("LeftPanelContainer: 강제 리렌더링 이벤트 수신");
@@ -57,64 +58,44 @@ const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
     };
   }, []);
   
-  // 리렌더링 트리거 변경 시 로그 (from user's Part 2)
   useEffect(() => {
     if (rerenderTrigger > 0) {
       console.log("LeftPanelContainer: 강제 리렌더링 트리거됨:", rerenderTrigger);
     }
   }, [rerenderTrigger]);
 
-  const handleCloseItinerary = () => {
-    onSetShowItinerary(false);
-    // Potentially clear map elements here if MapContext is accessible or via another callback
-  };
+  // Debug UI state
+  const [uiState, setUiState] = useState({
+    lastUpdate: Date.now(),
+    // isGeneratingSchedule: false, // This state is in LeftPanel, not directly here
+    showItineraryProp: showItinerary, // Value of the showItinerary prop
+    hasItineraryProp: !!itinerary && itinerary.length > 0, // Based on itinerary prop
+  });
 
-  // The main display logic for LeftPanelContainer:
-  // If showItinerary is true AND itinerary data exists, it used to show ScheduleViewer.
-  // HOWEVER, LeftPanel.tsx now directly renders ItineraryView when showItinerary is true.
-  // So, LeftPanelContainer should only render its children (the selection panels)
-  // when showItinerary is FALSE.
-  // The user's original logic for LeftPanelContainer showed ScheduleViewer if showItinerary was true.
-  // Let's stick to the user's original logic for LeftPanelContainer IF ItineraryView in LeftPanel.tsx is not shown.
-  // The condition in LeftPanel.tsx is: `uiVisibility.showItinerary && itineraryManagement.itinerary`
-  // So, LeftPanelContainer is only rendered if that condition is false.
-  // Therefore, the `if (showItinerary && itinerary)` block inside LeftPanelContainer might be redundant
-  // if LeftPanel.tsx already handles this.
-  // Let's assume LeftPanelContainer is always the "non-itinerary view" part based on LeftPanel.tsx logic.
+  useEffect(() => {
+    const newUiState = {
+      lastUpdate: Date.now(),
+      showItineraryProp: showItinerary,
+      hasItineraryProp: !!itinerary && itinerary.length > 0,
+    };
+    setUiState(newUiState);
+    
+    console.log("LeftPanelContainer - Props & UI 상태:", {
+      showItineraryProp: showItinerary, // Log the prop value
+      itineraryPropLength: itinerary?.length || 0, // Log based on prop
+    });
 
-  // The user's provided `LeftPanel.tsx` structure is:
-  // if (showItinerary && itinerary) { <ItineraryView /> } else { <LeftPanelContainer> <LeftPanelContent/> </LeftPanelContainer> }
-  // This means LeftPanelContainer will NOT be rendered when showItinerary is true.
-  // Thus, the `if (showItinerary && itinerary)` block within `LeftPanelContainer` is effectively dead code.
-  // I will remove it for clarity, as `LeftPanelContainer` will only display its children (the regular panels).
-  
-  // console.log("LeftPanelContainer rendering. showItinerary:", showItinerary, "Itinerary data:", !!itinerary);
+    // This warning is helpful if LeftPanelContainer expects showItinerary to be true but it isn't
+    if (itinerary && itinerary.length > 0 && !showItinerary) {
+      console.warn("LeftPanelContainer: Itinerary data exists (prop), but showItinerary prop is false.");
+    }
+  }, [showItinerary, itinerary]);
 
-  // The original logic in LeftPanelContainer was to show ScheduleViewer IF showItinerary was true.
-  // However, LeftPanel.tsx now renders ItineraryView directly under that condition.
-  // This LeftPanelContainer is only rendered in the 'else' block of LeftPanel.tsx.
-  // So, showItinerary will be false when this component renders, or itinerary will be null.
-  // The provided `LeftPanelContainer.tsx` structure seems to be from before `ItineraryView` was handled in `LeftPanel.tsx`.
-  // I will keep the structure user provided for `LeftPanelContainer` for now, but note the potential redundancy.
 
-  if (showItinerary && itinerary) {
-     // This block is likely not hit due to LeftPanel.tsx's conditional rendering.
-     // If it is hit, it means LeftPanel.tsx logic changed or showItinerary can be true
-     // when itinerary is null, which would then pass to here.
-     // For safety, keeping the original structure.
-    console.log("LeftPanelContainer: Rendering ScheduleViewer directly (should ideally be ItineraryView in LeftPanel.tsx)");
-    return (
-      <div className="fixed top-0 left-0 w-[300px] h-full bg-white border-r border-gray-200 z-40 shadow-md">
-        <ScheduleViewer
-          schedule={itinerary}
-          selectedDay={selectedItineraryDay}
-          onDaySelect={onSelectDay}
-          onClose={handleCloseItinerary} // This onClose is local to LeftPanelContainer
-          startDate={dates?.startDate || new Date()}
-        />
-      </div>
-    );
-  }
+  // The `if (showItinerary && itinerary)` block that rendered ScheduleViewer here is removed.
+  // LeftPanel.tsx conditionally renders EITHER ItineraryView (if showItinerary is true) 
+  // OR LeftPanelContainer (if showItinerary is false).
+  // So, when LeftPanelContainer is rendered, showItinerary prop should be false.
 
   return (
     <div className="fixed top-0 left-0 w-[300px] h-full bg-white border-l border-r border-gray-200 z-40 shadow-md flex flex-col">
@@ -129,9 +110,17 @@ const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
         />
         <ItineraryButton 
           allCategoriesSelected={allCategoriesSelected}
-          onCreateItinerary={onCreateItinerary} // This is a prop from LeftPanel
+          onCreateItinerary={onCreateItinerary}
         />
       </div>
+      
+      {/* 디버깅 정보 (개발 환경에서만 표시) */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="absolute bottom-0 left-0 w-full bg-gray-800 bg-opacity-80 text-white p-1 text-xs z-50">
+          <div>LPC Props: showItin: {uiState.showItineraryProp ? '✅' : '❌'} | hasItin: {uiState.hasItineraryProp ? '✅' : '❌'}</div>
+          <div>LPC Updated: {new Date(uiState.lastUpdate).toLocaleTimeString()}</div>
+        </div>
+      )}
     </div>
   );
 };
