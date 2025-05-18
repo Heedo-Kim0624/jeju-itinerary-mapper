@@ -5,7 +5,7 @@ import { useItineraryCreator, ItineraryDay as CreatorItineraryDay } from '@/hook
 import { useScheduleGenerator as useScheduleGeneratorHook } from '@/hooks/use-schedule-generator';
 import { useMapContext } from '@/components/rightpanel/MapContext';
 // ServerRouteResponse is now expected by MapContext, ServerRouteSummaryItem is from server
-import { SchedulePayload, NewServerScheduleResponse, ServerScheduleItem, ServerRouteSummaryItem, ServerRouteResponse } from '@/types/schedule'; 
+import { SchedulePayload, NewServerScheduleResponse, ServerScheduleItem, ServerRouteSummaryItem, ServerRouteResponse, isNewServerScheduleResponse } from '@/types/schedule'; 
 import { extractAllNodesFromRoute, extractAllLinksFromRoute } from '@/utils/routeParser';
 
 type ItineraryDay = DomainItineraryDay;
@@ -25,7 +25,7 @@ export const useScheduleManagement = ({
 }: UseScheduleManagementProps) => {
   const [itinerary, setItinerary] = useState<ItineraryDay[]>([]);
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
-  const [isLoadingState, setIsLoadingState] = useState<boolean>(true); 
+  const [isLoadingState, setIsLoadingState] = useState<boolean>(true); // Changed from false to true for initial loading
 
   const { createItinerary } = useItineraryCreator();
   const { generateSchedule: generateScheduleViaHook, isGenerating: isServerGenerating } = useScheduleGeneratorHook();
@@ -61,7 +61,7 @@ export const useScheduleManagement = ({
   }, [selectedPlaces, startDatetimeISO, endDatetimeISO]);
 
   const parseServerResponse = useCallback((
-    response: NewServerScheduleResponse, 
+    response: NewServerScheduleResponse, // Expect NewServerScheduleResponse
     currentSelectedPlaces: SelectedPlace[],
     tripStartDate: Date | null 
   ): ItineraryDay[] => {
@@ -73,8 +73,11 @@ export const useScheduleManagement = ({
     const dayOfWeekMap: { [key: string]: number } = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
     const tripStartDayOfWeek = tripStartDate.getDay();
 
+    // response.schedule is ServerScheduleItem[]
     const allServerPlaces: ItineraryPlaceWithTime[] = response.schedule.map((item: ServerScheduleItem) => {
-      const existingPlace = currentSelectedPlaces.find(p => p.id === item.id?.toString() || p.name === item.place_name);
+      const existingPlace = currentSelectedPlaces.find(p => 
+        (item.id !== undefined && String(p.id) === String(item.id)) || p.name === item.place_name
+      );
       if (existingPlace) {
         return {
           ...existingPlace,
@@ -93,49 +96,36 @@ export const useScheduleManagement = ({
       } as ItineraryPlaceWithTime;
     });
     
+    // response.route_summary is ServerRouteSummaryItem[]
     return response.route_summary.map((summaryItem: ServerRouteSummaryItem) => {
-      const routeDayOfWeek = dayOfWeekMap[summaryItem.day.substring(0, 3).charAt(0).toUpperCase() + summaryItem.day.substring(1,3).toLowerCase()];
+      const routeDayOfWeekString = summaryItem.day.substring(0, 3); // "Mon", "Tue", etc.
+      const routeDayOfWeek = dayOfWeekMap[routeDayOfWeekString];
       let tripDayNumber = routeDayOfWeek - tripStartDayOfWeek + 1;
       if (tripDayNumber <= 0) {
         tripDayNumber += 7;
       }
-
-      // Filter places based on the current day's interleaved_route
-      // This requires knowing which node IDs in interleaved_route correspond to places
-      // For now, we'll assume allServerPlaces are generally for the trip, and specific day assignment needs more logic
-      // or that the `schedule` part of the server response is already day-specific if applicable.
-      // If not, we might need to match place IDs from interleaved_route to allServerPlaces.
-      // Let's make a simple filter for places that might appear in this day's route summary (if IDs are available)
-      // This part is complex and depends on how server guarantees place_id in schedule vs node_id in route.
       
-      // For now, let's extract place IDs from the interleaved_route for this day
       const placeNodeIdsInRoute = summaryItem.interleaved_route
-        .filter((id, index) => index % 2 === 0) // Nodes are at even indices
+        .filter((id, index) => index % 2 === 0) 
         .map(String); 
 
       const dayPlaces = allServerPlaces.filter(p => {
-        // Match based on place ID. Need to ensure server place IDs and client place IDs are consistent.
-        // Or, if server 'schedule' items don't have IDs that match node_ids, this filtering is difficult.
-        // Assuming for now that a place's ID (if numeric) can be found in placeNodeIdsInRoute.
         const pIdStr = String(p.id);
         return placeNodeIdsInRoute.includes(pIdStr);
-        // If server provides place names in interleaved_route or a mapping, that could be used.
-        // As a fallback if above is too strict or IDs don't match:
-        // return true; // to include all places in all days if filtering is problematic
       });
 
       return {
         day: tripDayNumber,
-        places: dayPlaces.length > 0 ? dayPlaces : allServerPlaces, // Fallback to allServerPlaces if specific day filtering yields none (temporary)
+        places: dayPlaces, // Use filtered places. If empty, means no matching places for this day's route nodes.
         totalDistance: summaryItem.total_distance_m / 1000, 
         interleaved_route: summaryItem.interleaved_route,
-        routeData: { // This is for client-side rendering if needed, derived from interleaved_route
-          nodeIds: extractAllNodesFromRoute(summaryItem.interleaved_route).map(String),
+        routeData: { 
+          nodeIds: placeNodeIdsInRoute,
           linkIds: extractAllLinksFromRoute(summaryItem.interleaved_route).map(String),
         }
       };
     });
-  }, [selectedPlaces]); // Removed createItinerary as it's not used here, added selectedPlaces
+  }, [selectedPlaces]); 
 
   const runScheduleGenerationProcess = useCallback(async () => {
     setIsLoadingState(true);
@@ -147,42 +137,45 @@ export const useScheduleManagement = ({
         return; 
       }
 
-      const serverResponse = await generateScheduleViaHook(payload);
+      const serverResponse = await generateScheduleViaHook(payload); // Returns NewServerScheduleResponse | null
       console.log("🔍 서버 응답 (raw, from useScheduleManagement):", serverResponse);
 
-      if (serverResponse && serverResponse.route_summary && serverResponse.route_summary.length > 0) {
+      if (serverResponse && isNewServerScheduleResponse(serverResponse) && 
+          serverResponse.route_summary && serverResponse.route_summary.length > 0) {
+        
         const parsedItinerary = parseServerResponse(serverResponse, selectedPlaces, dates?.startDate || new Date());
         setItinerary(parsedItinerary);
         
-        if (serverResponse.route_summary) {
-            // Convert ServerRouteSummaryItem to ServerRouteResponse for MapContext
-            const routesForMapContext: Record<number, ServerRouteResponse> = {};
-            const dayOfWeekMap: { [key: string]: number } = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
-            const tripStartDayOfWeek = (dates?.startDate || new Date()).getDay();
+        // serverResponse.route_summary is guaranteed by isNewServerScheduleResponse and the length check
+        const routesForMapContext: Record<number, ServerRouteResponse> = {};
+        const dayOfWeekMap: { [key: string]: number } = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+        const tripStartDayOfWeek = (dates?.startDate || new Date()).getDay();
 
-            serverResponse.route_summary.forEach(summaryItem => {
-                const routeDayOfWeek = dayOfWeekMap[summaryItem.day.substring(0, 3).charAt(0).toUpperCase() + summaryItem.day.substring(1,3).toLowerCase()];
-                let tripDayNumber = routeDayOfWeek - tripStartDayOfWeek + 1;
-                if (tripDayNumber <= 0) tripDayNumber += 7;
+        serverResponse.route_summary.forEach(summaryItem => {
+            const routeDayOfWeekString = summaryItem.day.substring(0, 3);
+            const routeDayOfWeek = dayOfWeekMap[routeDayOfWeekString];
+            let tripDayNumber = routeDayOfWeek - tripStartDayOfWeek + 1;
+            if (tripDayNumber <= 0) tripDayNumber += 7;
 
-                routesForMapContext[tripDayNumber] = {
-                    nodeIds: extractAllNodesFromRoute(summaryItem.interleaved_route).map(String),
-                    linkIds: extractAllLinksFromRoute(summaryItem.interleaved_route).map(String),
-                    interleaved_route: summaryItem.interleaved_route, // Pass this along as it's part of ServerRouteResponse
-                };
-            });
-            setServerRoutes(routesForMapContext); // Pass the converted data
-        }
+            routesForMapContext[tripDayNumber] = {
+                nodeIds: extractAllNodesFromRoute(summaryItem.interleaved_route).map(String),
+                linkIds: extractAllLinksFromRoute(summaryItem.interleaved_route).map(String),
+                interleaved_route: summaryItem.interleaved_route, 
+            };
+        });
+        setServerRoutes(routesForMapContext);
         
         if (parsedItinerary.length > 0) {
           setSelectedDay(parsedItinerary[0].day as number); 
           toast.success("서버로부터 일정을 성공적으로 생성했습니다!");
         } else {
-          toast.error("⚠️ 선택한 장소 정보 또는 경로 계산이 부족하여 일정을 생성하지 못했습니다.");
+          // This case might occur if parseServerResponse results in an empty itinerary
+          // despite route_summary having items (e.g., place filtering issues)
+          toast.warn("서버에서 경로를 받았으나, 표시할 장소 정보가 부족합니다.");
         }
       } else {
-        toast.error("⚠️ 선택한 장소 정보 또는 경로 계산이 부족하여 일정을 생성하지 못했습니다.");
-        console.warn("서버 응답이 없거나 형식이 맞지 않아 클라이언트 측 일정을 생성 시도합니다 (실패 처리).");
+        toast.error("⚠️ 서버 응답이 없거나, 경로 정보가 부족하여 일정을 생성하지 못했습니다.");
+        console.warn("서버 응답이 없거나 형식이 맞지 않아 클라이언트 측 일정을 생성 시도합니다 (useScheduleManagement).");
         if (dates) { 
              const generatedItinerary: CreatorItineraryDay[] = createItinerary(
               selectedPlaces, 
@@ -200,12 +193,12 @@ export const useScheduleManagement = ({
             if (domainItinerary.length > 0) {
               setSelectedDay(domainItinerary[0].day);
             }
-            toast.info("클라이언트에서 기본 일정이 생성되었습니다. (서버 데이터 없음)");
+            toast.info("클라이언트에서 기본 일정이 생성되었습니다. (서버 응답 부족)");
         }
       }
     } catch (error) {
       console.error("일정 생성 오류 (useScheduleManagement):", error);
-      toast.error("⚠️ 선택한 장소 정보 또는 경로 계산이 부족하여 일정을 생성하지 못했습니다.");
+      toast.error("⚠️ 일정 생성 중 오류가 발생했습니다.");
       if (dates) { 
         console.warn("오류 발생으로 클라이언트 측 일정을 생성합니다 (useScheduleManagement).");
         const generatedItinerary: CreatorItineraryDay[] = createItinerary(
@@ -235,8 +228,8 @@ export const useScheduleManagement = ({
     setServerRoutes, 
     dates, 
     createItinerary,
-    clearAllRoutes, 
-    renderGeoJsonRoute 
+    clearAllRoutes, // Added clearAllRoutes
+    renderGeoJsonRoute // Added renderGeoJsonRoute
   ]);
 
   const handleSelectDay = useCallback((day: number) => {

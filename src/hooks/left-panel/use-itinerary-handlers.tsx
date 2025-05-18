@@ -1,7 +1,7 @@
-
 import { useCallback } from 'react';
 import { toast } from 'sonner';
 import { Place, SchedulePayload, ItineraryDay } from '@/types/supabase';
+import { NewServerScheduleResponse, isNewServerScheduleResponse } from '@/types/schedule';
 import { useMapContext } from '@/components/rightpanel/MapContext';
 import { useScheduleGenerator } from '@/hooks/use-schedule-generator';
 
@@ -32,7 +32,7 @@ export const useItineraryHandlers = () => {
     generateItineraryFn: (placesToUse: Place[], startDate: Date, endDate: Date, startTime: string, endTime: string) => ItineraryDay[] | null,
     setShowItinerary: (show: boolean) => void,
     setCurrentPanel: (panel: string) => void
-  ) => {
+  ): Promise<boolean> => {
     console.log('[handleCreateItinerary] 함수 호출됨, 인자:', {
       tripDetails: tripDetails ? {
         startDatetime: tripDetails.startDatetime,
@@ -52,24 +52,22 @@ export const useItineraryHandlers = () => {
       return false;
     }
     
-    // 경로 생성 페이로드 준비 (using startDatetime and endDatetime from tripDetails)
     const payload = prepareSchedulePayloadFn(selectedPlaces, tripDetails.startDatetime, tripDetails.endDatetime);
 
     if (payload) {
       console.log("[handleCreateItinerary] 서버 일정 생성 요청 시작, payload:", JSON.stringify(payload, null, 2));
       
       try {
-        // 서버에 일정 생성 요청
         const serverResponse = await generateSchedule(payload);
         
-        if (serverResponse && serverResponse.route_summary && serverResponse.route_summary.length > 0) {
+        if (serverResponse && isNewServerScheduleResponse(serverResponse) && 
+            serverResponse.route_summary && serverResponse.route_summary.length > 0) {
           console.log("[handleCreateItinerary] 서버 응답 성공:", serverResponse);
           setShowItinerary(true);
           setCurrentPanel('itinerary');
           return true;
         } else {
-          console.warn("[handleCreateItinerary] 서버 응답 없거나 불완전함, 클라이언트 측 일정 생성으로 폴백");
-          // 서버 응답이 없거나 불완전할 경우 클라이언트 측 일정 생성으로 폴백
+          console.warn("[handleCreateItinerary] 서버 응답 없거나 불완전함, 클라이언트 측 일정 생성으로 폴백. Response:", serverResponse);
           const result = generateItineraryFn(
             selectedPlaces, 
             tripDetails.dates.startDate, 
@@ -79,15 +77,17 @@ export const useItineraryHandlers = () => {
           );
           
           if (result) {
+            toast.info("서버 일정 생성 실패. 클라이언트에서 기본 일정을 생성했습니다.");
             setShowItinerary(true);
             setCurrentPanel('itinerary');
+          } else {
+            toast.error("서버 및 클라이언트 일정 생성 모두 실패했습니다.");
           }
-          
           return !!result;
         }
       } catch (error) {
         console.error("[handleCreateItinerary] 서버 요청 중 오류 발생:", error);
-        // 오류 발생 시 클라이언트 측 일정 생성으로 폴백
+        toast.error("서버 일정 생성 중 오류 발생. 클라이언트에서 기본 일정을 생성합니다.");
         const result = generateItineraryFn(
           selectedPlaces, 
           tripDetails.dates.startDate, 
@@ -99,8 +99,9 @@ export const useItineraryHandlers = () => {
         if (result) {
           setShowItinerary(true);
           setCurrentPanel('itinerary');
+        } else {
+           toast.error("서버 및 클라이언트 일정 생성 모두 실패했습니다.");
         }
-        
         return !!result;
       }
     } else {

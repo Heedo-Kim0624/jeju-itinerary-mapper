@@ -1,9 +1,7 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-// SchedulePayload와 NewServerScheduleResponse는 현재 직접 사용되지 않으므로, PlannerServerRouteResponse를 임포트합니다.
-// 만약 SchedulePayload가 여전히 필요하다면 유지해야 합니다. 사용자 요청에 따라 일단 PlannerServerRouteResponse 중심으로 변경합니다.
-import { SchedulePayload, PlannerServerRouteResponse } from '@/types/schedule';
+import { SchedulePayload, NewServerScheduleResponse, PlannerServerRouteResponse, isNewServerScheduleResponse, isPlannerServerRouteResponseArray, convertPlannerResponseToNewResponse } from '@/types/schedule';
 import { parseInterleavedRoute as parseInterleavedRouteUtil } from '@/utils/routeParser';
 
 // 서버 URL 환경 변수에서 가져오기
@@ -13,15 +11,12 @@ const SCHEDULE_GENERATION_ENDPOINT = "/generate_schedule"; // 경로 추가
 export const useScheduleGenerator = () => {
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [generationError, setGenerationError] = useState<Error | null>(null);
-  // 파트 1 요청에 따라 새로운 상태 추가
-  const [plannerRouteData, setPlannerRouteData] = useState<PlannerServerRouteResponse[]>([]);
+  // plannerRouteData 상태는 제거하고, generateSchedule이 NewServerScheduleResponse를 직접 반환하도록 합니다.
 
   // 서버에 일정 생성 요청
-  // 반환 타입을 PlannerServerRouteResponse[] | null 로 변경합니다.
-  const generateSchedule = async (payload: SchedulePayload): Promise<PlannerServerRouteResponse[] | null> => {
+  const generateSchedule = async (payload: SchedulePayload): Promise<NewServerScheduleResponse | null> => {
     setIsGenerating(true);
     setGenerationError(null);
-    setPlannerRouteData([]); // 이전 데이터 초기화
     
     const fullApiUrl = `${SERVER_BASE_URL}${SCHEDULE_GENERATION_ENDPOINT}`;
     console.log('[일정 생성] 환경 변수 확인:', {
@@ -50,42 +45,51 @@ export const useScheduleGenerator = () => {
         throw new Error(`서버 오류 (${response.status}): ${errorText}`);
       }
       
-      // 서버 응답이 PlannerServerRouteResponse[] 형식이라고 가정합니다.
-      const data: PlannerServerRouteResponse[] = await response.json();
-      console.log('[일정 생성] 서버로부터 받은 일정 데이터 (PlannerServerRouteResponse[]):', data);
+      const data = await response.json();
+      console.log('[일정 생성] 서버로부터 받은 원본 데이터 (use-schedule-generator):', data);
       
-      // 데이터 유효성 검사 (사용자 제공 예시 기반)
-      if (!Array.isArray(data) || 
-          data.length === 0 || 
-          !data.every(item => typeof item.date === 'string' && Array.isArray(item.nodeIds) && item.nodeIds.every(id => typeof id === 'number'))) {
-        console.error('[일정 생성] 수신된 데이터가 PlannerServerRouteResponse[] 형식이 아닙니다:', data);
-        throw new Error('유효하지 않은 응답 데이터 형식입니다.');
-      }
-      
-      // 응답 데이터 저장
-      setPlannerRouteData(data);
-      
-      // 성공 메시지
-      toast.success(`${data.length}일 일정이 성공적으로 생성되었습니다!`);
-      
-      // 기존 NewServerScheduleResponse 관련 로직은 이 컨텍스트에서는 제거되거나 주석 처리됩니다.
-      // 만약 이 로직이 여전히 다른 곳에서 필요하다면, 별도의 함수로 분리하거나 이 함수의 역할을 명확히 해야 합니다.
-      /*
-      if (data.route_summary && data.route_summary.length > 0) {
-        // ... 기존 route_summary 처리 로직 ...
+      let typedResponse: NewServerScheduleResponse;
+
+      if (isNewServerScheduleResponse(data)) {
+        typedResponse = data;
+        console.log('[일정 생성] 서버 응답이 이미 NewServerScheduleResponse 형태입니다.');
+      } else if (isPlannerServerRouteResponseArray(data)) {
+        console.log('[일정 생성] 서버 응답이 PlannerServerRouteResponse[] 형태입니다. 변환합니다.');
+        typedResponse = convertPlannerResponseToNewResponse(data);
       } else {
-        // ... 기존 경고 로직 ...
+        console.error('[일정 생성] 예상치 못한 서버 응답 형태:', data);
+        toast.error('서버 응답 형식이 올바르지 않습니다.');
+        throw new Error('서버 응답 형식이 예상과 다릅니다.');
       }
-      */
       
-      return data;
+      // 응답 데이터 로깅 및 유효성 검사
+      if (typedResponse.route_summary && typedResponse.route_summary.length > 0) {
+        console.log(`[일정 생성] ${typedResponse.route_summary.length}일치 경로 요약 데이터 수신 완료.`);
+        toast.success(`${typedResponse.route_summary.length}일 일정이 성공적으로 생성되었습니다!`);
+
+        // 상세 로깅 (예시: 첫 날 경로)
+        const firstRouteSummary = typedResponse.route_summary[0];
+        if (firstRouteSummary && firstRouteSummary.interleaved_route) {
+          console.log(`[일정 생성] 첫 날 (${firstRouteSummary.day}) 경로 샘플:`, {
+            interleaved_route_길이: firstRouteSummary.interleaved_route.length,
+            첫20개_인터리브드: firstRouteSummary.interleaved_route.slice(0, 20)
+          });
+          const parsedSegments = parseInterleavedRouteUtil(firstRouteSummary.interleaved_route);
+          console.log(`[일정 생성] 첫 날 (${firstRouteSummary.day}) 파싱된 경로 (util):`, parsedSegments);
+        }
+      } else {
+        console.warn('[일정 생성] 경로 요약 데이터(route_summary)가 없거나 비어있습니다.');
+        toast.warn('경로 정보가 부족하여 일부 기능이 제한될 수 있습니다.');
+        // 이 경우에도 typedResponse 자체는 반환될 수 있으나, 내용이 부족할 수 있음을 인지해야 함
+      }
+      
+      return typedResponse; // 성공적으로 처리된 NewServerScheduleResponse 반환
     } catch (error) {
       console.error('[일정 생성] 오류 발생 (use-schedule-generator):', error);
       setGenerationError(error instanceof Error ? error : new Error('알 수 없는 오류'));
-      toast.error('일정 생성에 실패했습니다.');
-      return null;
+      toast.error(`일정 생성 중 오류 발생: ${error instanceof Error ? error.message : '알 수 없는 문제'}`);
+      return null; // 오류 발생 시 null 반환
     } finally {
-      // 중요: 로딩 상태 종료
       setIsGenerating(false);
     }
   };
@@ -94,6 +98,6 @@ export const useScheduleGenerator = () => {
     generateSchedule,
     isGenerating,
     generationError,
-    plannerRouteData // 새로 추가된 상태 반환
+    // plannerRouteData는 더 이상 여기서 관리하지 않음
   };
 };

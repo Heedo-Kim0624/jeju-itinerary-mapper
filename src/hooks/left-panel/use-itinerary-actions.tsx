@@ -3,7 +3,7 @@ import { Place, SchedulePayload, ItineraryPlaceWithTime, CategoryName } from '@/
 import { useItineraryCreator, ItineraryDay } from '../use-itinerary-creator';
 import { useScheduleGenerator } from '../use-schedule-generator';
 import { toast } from 'sonner';
-import { NewServerScheduleResponse } from '@/types/schedule';
+import { NewServerScheduleResponse, isNewServerScheduleResponse, ServerScheduleItem } from '@/types/schedule';
 
 export const useItineraryActions = () => {
   const [itinerary, setItinerary] = useState<ItineraryDay[] | null>(null);
@@ -76,8 +76,12 @@ export const useItineraryActions = () => {
       
       const serverResponse = await generateSchedule(payload); // This now returns NewServerScheduleResponse | null
       
-      if (!serverResponse || !serverResponse.schedule || serverResponse.schedule.length === 0 || !serverResponse.route_summary || serverResponse.route_summary.length === 0) {
+      // 타입 가드를 사용하여 안전하게 필드 접근
+      if (!serverResponse || !isNewServerScheduleResponse(serverResponse) || 
+          !serverResponse.schedule || serverResponse.schedule.length === 0 || 
+          !serverResponse.route_summary || serverResponse.route_summary.length === 0) {
         toast.error("서버에서 일정을 받아오지 못했거나, 내용이 비어있습니다.");
+        console.warn("[handleServerItineraryCreation] Invalid server response:", serverResponse);
         return null;
       }
       
@@ -86,13 +90,31 @@ export const useItineraryActions = () => {
 
       // serverResponse is NewServerScheduleResponse
       const formattedItinerary: ItineraryDay[] = serverResponse.route_summary.map(summary => {
-        const routeDayOfWeek = dayOfWeekMap[summary.day.substring(0, 3).charAt(0).toUpperCase() + summary.day.substring(1,3).toLowerCase()];
+        const routeDayOfWeekString = summary.day.substring(0, 3); // "Mon", "Tue", etc.
+        const routeDayOfWeek = dayOfWeekMap[routeDayOfWeekString];
+        
         let tripDayNumber = routeDayOfWeek - tripStartDayOfWeek + 1;
         if (tripDayNumber <= 0) tripDayNumber += 7;
         
         // serverResponse.schedule is ServerScheduleItem[]
-        const dayPlaces = serverResponse.schedule 
-            .map(item => ({ // item is ServerScheduleItem
+        // 해당 날짜의 장소만 필터링 (선택적: 서버가 이미 날짜별로 구분된 스케줄을 제공하지 않는다면)
+        // 여기서는 일단 모든 스케줄 아이템을 해당 날짜와 연관된 것으로 간주하거나,
+        // 또는 route_summary의 interleaved_route에 있는 장소 ID와 매칭되는 schedule item을 찾아야 함.
+        // 현재 ServerScheduleItem에는 ID가 옵셔널이라, place_name 기반으로 찾거나, ID가 있다면 ID 기반.
+        // 단순화를 위해, 서버에서 온 schedule을 모두 포함시키고, 클라이언트에서 필요시 필터링한다고 가정.
+        // 또는, 서버가 route_summary의 순서와 schedule의 순서를 일치시켜준다고 가정.
+        // 여기서는 summary.interleaved_route의 장소 노드 ID를 사용하여 schedule에서 매칭되는 장소를 찾아봅니다.
+        const placeNodeIdsInRoute = summary.interleaved_route
+            .filter((id, index) => index % 2 === 0) // 노드는 짝수 인덱스
+            .map(id => String(id));
+
+        const dayPlaces = serverResponse.schedule
+            .filter(item => {
+                // item.id가 숫자나 문자열일 수 있고, placeNodeIdsInRoute는 문자열 배열
+                const itemIdStr = item.id !== undefined ? String(item.id) : null;
+                return itemIdStr && placeNodeIdsInRoute.includes(itemIdStr);
+            })
+            .map((item: ServerScheduleItem) => ({ // item is ServerScheduleItem
                 id: item.id?.toString() || item.place_name,
                 name: item.place_name,
                 category: item.place_type as CategoryName, 
@@ -102,13 +124,17 @@ export const useItineraryActions = () => {
                 isSelected: false, isCandidate: false, 
             } as ItineraryPlaceWithTime)); // Cast to ItineraryPlaceWithTime
 
+        // 만약 dayPlaces가 비어있다면, 모든 장소를 해당일에 할당하는 이전 로직을 임시로 사용할 수 있지만,
+        // 장기적으로는 서버 응답이나 매칭 로직을 개선해야 함.
+        // For now, if no places specifically match node IDs in route for this day, it will be empty. This might be desired.
+
         return {
           day: tripDayNumber,
           places: dayPlaces, // These are ItineraryPlaceWithTime[]
           totalDistance: summary.total_distance_m / 1000,
           interleaved_route: summary.interleaved_route,
-          routeData: { // This part is for client-side rendering if needed
-            nodeIds: summary.interleaved_route.filter((_, idx) => idx % 2 === 0).map(String),
+          routeData: { 
+            nodeIds: placeNodeIdsInRoute, // Use already filtered node IDs
             linkIds: summary.interleaved_route.filter((_, idx) => idx % 2 !== 0).map(String),
           }
         };
@@ -126,7 +152,7 @@ export const useItineraryActions = () => {
       toast.success(`${formattedItinerary.length}일 일정이 생성되었습니다!`);
       return formattedItinerary;
     } catch (error) {
-      console.error("서버 일정 생성 오류:", error);
+      console.error("서버 일정 생성 오류 (useItineraryActions):", error);
       toast.error("서버에서 일정을 생성하는데 실패했습니다.");
       return null;
     }
