@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect, ReactNode } from 'react';
 import { Place, SelectedPlace, ItineraryDay as DomainItineraryDay, ItineraryPlaceWithTime, CategoryName } from '@/types/supabase'; 
 import { toast } from 'sonner';

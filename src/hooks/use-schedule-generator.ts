@@ -1,7 +1,14 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { SchedulePayload, NewServerScheduleResponse, PlannerServerRouteResponse, isNewServerScheduleResponse, isPlannerServerRouteResponseArray, convertPlannerResponseToNewResponse } from '@/types/schedule';
+import { 
+  SchedulePayload, 
+  NewServerScheduleResponse, 
+  PlannerServerRouteResponse, 
+  isNewServerScheduleResponse, 
+  isPlannerServerRouteResponseArray, 
+  convertPlannerResponseToNewResponse 
+} from '@/types/schedule';
 import { parseInterleavedRoute as parseInterleavedRouteUtil } from '@/utils/routeParser';
 
 // 서버 URL 환경 변수에서 가져오기
@@ -102,4 +109,3 @@ export const useScheduleGenerator = () => {
     // plannerRouteData는 더 이상 여기서 관리하지 않음
   };
 };
-

@@ -1,3 +1,4 @@
+
 import { useCallback, useRef } from 'react';
 import { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/supabase';
 import { ServerRouteResponse, ExtractedRouteData } from '@/types/schedule';

@@ -1,3 +1,4 @@
+
 import { useEffect, useState, useCallback } from 'react';
 import { useMapContext } from './MapContext';
 import { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/supabase';
