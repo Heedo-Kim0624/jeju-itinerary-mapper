@@ -124,13 +124,29 @@ export interface SegmentRoute {
   linkIds: string[];
 }
 
+// Re-define RouteSegment here or import from supabase if identical and appropriate
+export interface RouteSegment {
+  fromPlaceName: string;
+  fromNodeId: string;
+  toPlaceName: string;
+  toNodeId: string;
+  distance: number; // meters
+  nodeCount: number;
+  linkCount: number;
+  nodes: string[];
+  links: string[];
+}
+
 // ItineraryDay 인터페이스 확장
 export interface ItineraryDay {
   day: number;
-  places: ItineraryPlaceWithTime[]; // Place[] 에서 ItineraryPlaceWithTime[] 으로 변경
-  totalDistance: number;
+  places: ItineraryPlaceWithTime[];
+  totalDistance: number; // in km
   routeData?: RouteData;
-  interleaved_route?: (string | number)[]; // 요청사항 4, 5 - 추가
+  interleaved_route?: (string | number)[];
+  dayOfWeek?: string; // 예: "Mon", "Tue"
+  date?: string; // 예: "05/20"
+  routeSegments?: RouteSegment[]; // 구간별 상세 정보
 }
 
 // Update ItineraryPlaceWithTime interface with correct property names
@@ -138,8 +154,11 @@ export interface ItineraryPlaceWithTime extends Place {
   arriveTime?: string;
   departTime?: string;
   stayDuration?: number; // 분 단위
-  travelTimeToNext?: string; // 다음 장소까지 이동 시간 (예: "30분")
-  timeBlock?: string; // "09:00 - 10:00" 형식 또는 "09:00 도착" 등
+  travelTimeToNext?: string | number; // 다음 장소까지 이동 시간 (예: "30분" or number of minutes)
+  timeBlock?: string;
+  nodeId?: string; // 장소의 GeoJSON 노드 ID
+  distanceToNext?: number; // 다음 장소까지의 거리 (meters)
+  nextPlaceName?: string; // 다음 장소 이름
 }
 
 // 새로운 인터페이스: 서버에서 받은 경로 데이터 파싱을 위한 인터페이스
