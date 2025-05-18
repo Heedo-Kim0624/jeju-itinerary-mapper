@@ -30,8 +30,8 @@ interface UseScheduleGenerationRunnerProps {
 export const useScheduleGenerationRunner = ({
   selectedPlaces,
   dates,
-  startDatetime, // useScheduleManagement에서 전달된 prop 이름 (ISO 문자열이어야 함)
-  endDatetime,   // useScheduleManagement에서 전달된 prop 이름 (ISO 문자열이어야 함)
+  startDatetime, 
+  endDatetime,   
   setItinerary,
   setSelectedDay,
   setIsLoadingState,
@@ -60,6 +60,7 @@ export const useScheduleGenerationRunner = ({
       
       if (!payload) {
         toast.error("일정 생성에 필요한 정보가 부족합니다.");
+        setIsLoadingState(false); // 추가: 로딩 상태 해제
         return;
       }
 
@@ -112,6 +113,10 @@ export const useScheduleGenerationRunner = ({
       } else {
         toast.error("⚠️ 서버 응답이 없거나, 경로 정보가 부족하여 일정을 생성하지 못했습니다.");
         console.warn("Server response missing or malformed. Attempting client-side schedule generation (useScheduleGenerationRunner).");
+        
+        // 추가: 상태 초기화 및 로딩 상태 해제 명시적 처리
+        // setIsLoadingState(false); // Moved to finally block
+
         if (dates) {
             const generatedItinerary: CreatorItineraryDay[] = createItinerary(
               selectedPlaces,
@@ -127,11 +132,19 @@ export const useScheduleGenerationRunner = ({
               setSelectedDay(generatedItinerary[0].day);
             }
             toast.info("클라이언트에서 기본 일정이 생성되었습니다. (서버 응답 부족)");
+            // 추가: fallback 일정 생성 후 강제 리렌더링 이벤트 발생
+            setTimeout(() => {
+              console.log("[useScheduleGenerationRunner] Dispatching forceRerender event after fallback generation");
+              window.dispatchEvent(new Event('forceRerender'));
+            }, 0);
         }
       }
     } catch (error) {
       console.error("Error during schedule generation (useScheduleGenerationRunner):", error);
       toast.error("⚠️ 일정 생성 중 오류가 발생했습니다.");
+      
+      // 추가: 상태 초기화 및 로딩 상태 해제 명시적 처리
+      // setIsLoadingState(false); // Moved to finally block
       
       if (dates) {
         console.warn("Error occurred. Generating client-side schedule as fallback (useScheduleGenerationRunner).");
@@ -148,14 +161,20 @@ export const useScheduleGenerationRunner = ({
         if (generatedItinerary.length > 0) {
           setSelectedDay(generatedItinerary[0].day);
         }
+        // 추가: 에러 발생 후 fallback 일정 생성 시 강제 리렌더링 이벤트 발생
+        setTimeout(() => {
+          console.log("[useScheduleGenerationRunner] Dispatching forceRerender event after error fallback");
+          window.dispatchEvent(new Event('forceRerender'));
+        }, 0);
       }
     } finally {
       console.log("[useScheduleGenerationRunner] Entering finally block. Attempting to set isLoadingState to false.");
       setIsLoadingState(false);
       console.log("[useScheduleGenerationRunner] setIsLoadingState(false) has been called in finally block.");
 
+      // 일정 생성 완료 후 LeftPanel 강제 업데이트를 위한 이벤트 발생
       if (finalItineraryForEvent.length > 0) {
-        console.log("Dispatching 'itineraryCreated' event with itinerary:", finalItineraryForEvent);
+        console.log("[useScheduleGenerationRunner] Dispatching 'itineraryCreated' event with itinerary:", finalItineraryForEvent);
         const event = new CustomEvent('itineraryCreated', { 
           detail: { 
             itinerary: finalItineraryForEvent,
@@ -163,8 +182,12 @@ export const useScheduleGenerationRunner = ({
           } 
         });
         window.dispatchEvent(event);
+        
+        // 추가: 강제 리렌더링 이벤트 발생
+        console.log("[useScheduleGenerationRunner] Dispatching 'forceRerender' event for LeftPanel update");
+        window.dispatchEvent(new Event('forceRerender'));
       } else {
-        console.log("Dispatching 'itineraryCreated' event with empty itinerary.");
+        console.log("[useScheduleGenerationRunner] Dispatching 'itineraryCreated' event with empty itinerary.");
         const event = new CustomEvent('itineraryCreated', {
           detail: {
             itinerary: [],
@@ -172,6 +195,9 @@ export const useScheduleGenerationRunner = ({
           }
         });
         window.dispatchEvent(event);
+        // Also dispatch forceRerender even if itinerary is empty to update UI
+        console.log("[useScheduleGenerationRunner] Dispatching 'forceRerender' event for LeftPanel update (empty itinerary)");
+        window.dispatchEvent(new Event('forceRerender'));
       }
     }
   }, [
