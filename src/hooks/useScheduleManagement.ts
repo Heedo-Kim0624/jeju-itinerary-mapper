@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, ReactNode } from 'react';
 import { Place, SelectedPlace, ItineraryDay as DomainItineraryDay, ItineraryPlaceWithTime, CategoryName } from '@/types/supabase'; 
 import { toast } from 'sonner';
 import { useItineraryCreator, ItineraryDay as CreatorItineraryDay } from '@/hooks/use-itinerary-creator';
@@ -15,6 +15,16 @@ interface UseScheduleManagementProps {
   dates: { startDate: Date; endDate: Date; startTime: string; endTime: string; } | null;
   startDatetimeISO: string | null; 
   endDatetimeISO: string | null;   
+}
+
+// 디버깅 모드 플래그 및 로그 함수 추가
+const DEBUG_MODE = true; // 개발 중 true, 배포 시 false로 변경 권장
+
+function debugLog(message: string, data?: any) {
+  if (DEBUG_MODE) {
+    // 콘솔에 더 잘 보이도록 스타일 추가 가능
+    console.log(`[DEBUG] %c${message}`, 'color: blue; font-weight: bold;', data !== undefined ? data : '');
+  }
 }
 
 export const useScheduleManagement = ({
@@ -131,6 +141,8 @@ export const useScheduleManagement = ({
     setIsLoadingState(true);
     try {
       const payload = preparePayload();
+      debugLog('서버 요청 페이로드 (useScheduleManagement):', payload); // 디버그 로그 추가
+      
       if (!payload) {
         toast.error("일정 생성에 필요한 정보가 부족합니다.");
         setIsLoadingState(false);
@@ -138,7 +150,16 @@ export const useScheduleManagement = ({
       }
 
       const serverResponse = await generateScheduleViaHook(payload); // Returns NewServerScheduleResponse | null
-      console.log("🔍 서버 응답 (raw, from useScheduleManagement):", serverResponse);
+      debugLog('서버 원본 응답 (useScheduleManagement):', serverResponse); // 디버그 로그 추가
+      
+      debugLog('서버 응답 타입 검사 (useScheduleManagement):', { // 디버그 로그 추가
+        isNull: serverResponse === null,
+        isObject: typeof serverResponse === 'object',
+        isArray: Array.isArray(serverResponse),
+        hasSchedule: !!serverResponse?.schedule,
+        hasRouteSummary: !!serverResponse?.route_summary,
+        isNewServerScheduleResponse: isNewServerScheduleResponse(serverResponse)
+      });
 
       if (serverResponse && isNewServerScheduleResponse(serverResponse) && 
           serverResponse.route_summary && serverResponse.route_summary.length > 0) {
@@ -170,8 +191,8 @@ export const useScheduleManagement = ({
           toast.success("서버로부터 일정을 성공적으로 생성했습니다!");
         } else {
           // This case might occur if parseServerResponse results in an empty itinerary
-          // despite route_summary having items (e.g., place filtering issues)
-          toast.warn("서버에서 경로를 받았으나, 표시할 장소 정보가 부족합니다.");
+          // toast.warn에서 toast.error로 변경
+          toast.error("서버에서 경로를 받았으나, 일정에 포함할 장소 정보가 부족합니다.");
         }
       } else {
         toast.error("⚠️ 서버 응답이 없거나, 경로 정보가 부족하여 일정을 생성하지 못했습니다.");
@@ -228,8 +249,8 @@ export const useScheduleManagement = ({
     setServerRoutes, 
     dates, 
     createItinerary,
-    clearAllRoutes, // Added clearAllRoutes
-    renderGeoJsonRoute // Added renderGeoJsonRoute
+    clearAllRoutes, 
+    renderGeoJsonRoute 
   ]);
 
   const handleSelectDay = useCallback((day: number) => {

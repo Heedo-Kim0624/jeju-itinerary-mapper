@@ -79,7 +79,8 @@ export const useScheduleGenerator = () => {
         }
       } else {
         console.warn('[일정 생성] 경로 요약 데이터(route_summary)가 없거나 비어있습니다.');
-        toast.warn('경로 정보가 부족하여 일부 기능이 제한될 수 있습니다.');
+        // toast.warn에서 toast.info로 변경
+        toast.info('경로 정보가 부족하여 일부 기능이 제한될 수 있습니다.');
         // 이 경우에도 typedResponse 자체는 반환될 수 있으나, 내용이 부족할 수 있음을 인지해야 함
       }
       
@@ -101,3 +102,4 @@ export const useScheduleGenerator = () => {
     // plannerRouteData는 더 이상 여기서 관리하지 않음
   };
 };
+
