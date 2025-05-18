@@ -11,7 +11,6 @@ export const useItinerary = () => {
   const [itinerary, setItinerary] = useState<ItineraryDay[] | null>(null);
   const [selectedItineraryDay, setSelectedItineraryDay] = useState<number | null>(null);
   const [showItinerary, setShowItinerary] = useState<boolean>(false);
-  // const [isItineraryCreated, setIsItineraryCreated] = useState<boolean>(false); // 이 상태는 현재 사용되지 않는 것으로 보입니다.
   const { createItinerary } = useItineraryCreator();
 
   const handleSelectItineraryDay = (day: number) => {
@@ -45,7 +44,6 @@ export const useItinerary = () => {
       }
 
       setItinerary(generatedItinerary);
-      // setIsItineraryCreated(true); // 이 상태 업데이트는 현재 isItineraryCreated 상태가 사용되지 않으므로 주석 처리합니다.
       setSelectedItineraryDay(1); // Default to day 1
       setShowItinerary(true);
 
@@ -63,32 +61,56 @@ export const useItinerary = () => {
     }
   };
 
-  // 서버 응답 처리 함수 (from user's Part 1, ensuring it's kept)
+  // 서버 응답 처리 함수
   const handleServerItineraryResponse = (serverItinerary: ItineraryDay[]) => {
     console.log("서버 일정 응답 처리 (useItinerary):", {
       일수: serverItinerary.length,
       첫날장소수: serverItinerary[0]?.places.length || 0
     });
 
-    setItinerary(serverItinerary);
-    // setIsItineraryCreated(true); // 이 상태 업데이트는 현재 isItineraryCreated 상태가 사용되지 않으므로 주석 처리합니다.
-
-    if (serverItinerary.length > 0) {
-      setSelectedItineraryDay(serverItinerary[0].day);
+    if (!serverItinerary || serverItinerary.length === 0) {
+      console.warn("[useItinerary] handleServerItineraryResponse: 빈 일정이 전달되었습니다.");
+      return serverItinerary;
     }
 
-    setShowItinerary(true);
+    try {
+      setItinerary(serverItinerary);
 
-    return serverItinerary;
+      // 명시적으로 일정 패널 표시 활성화
+      console.log("[useItinerary] handleServerItineraryResponse: 일정 패널 표시 활성화");
+      setShowItinerary(true);
+
+      if (serverItinerary.length > 0) {
+        // 항상 첫 번째 일자를 선택하도록 함
+        console.log(`[useItinerary] handleServerItineraryResponse: 첫 번째 일자(${serverItinerary[0].day}) 선택`);
+        setSelectedItineraryDay(serverItinerary[0].day);
+      }
+
+      // 강제 렌더링을 위한 이벤트 발생
+      setTimeout(() => {
+        console.log("[useItinerary] handleServerItineraryResponse: forceRerender 이벤트 발생");
+        window.dispatchEvent(new Event('forceRerender'));
+        
+        // itineraryWithCoordinatesReady 이벤트 발생
+        const event = new CustomEvent('itineraryWithCoordinatesReady', {
+          detail: { itinerary: serverItinerary }
+        });
+        console.log("[useItinerary] handleServerItineraryResponse: itineraryWithCoordinatesReady 이벤트 발생");
+        window.dispatchEvent(event);
+      }, 100);
+
+      return serverItinerary;
+    } catch (error) {
+      console.error("[useItinerary] handleServerItineraryResponse 처리 중 오류:", error);
+      return serverItinerary;
+    }
   };
 
   return {
     itinerary,
     selectedItineraryDay,
     showItinerary,
-    // isItineraryCreated, // 이 상태는 현재 사용되지 않으므로 반환 객체에서 제거 또는 주석 처리합니다.
     setItinerary,
-    // setIsItineraryCreated, // 이 상태 설정 함수도 함께 제거 또는 주석 처리합니다.
     setSelectedItineraryDay,
     setShowItinerary,
     handleSelectItineraryDay,

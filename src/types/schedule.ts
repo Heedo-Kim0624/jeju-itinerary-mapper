@@ -74,6 +74,8 @@ export interface ServerRouteSummaryItem {
   status: string;
   total_distance_m: number;
   interleaved_route: (string | number)[];
+  places_scheduled?: string[]; // 추가: 일정에 포함된 장소 이름 목록
+  places_routed?: string[]; // 추가: 경로 계산에 사용된 장소 이름 목록
 }
 
 // 기존 NewServerScheduleResponse 타입은 유지
@@ -183,6 +185,8 @@ export function convertPlannerResponseToNewResponse(
       status: 'OK', // 기본 상태값
       total_distance_m: 0, // PlannerServerRouteResponse에는 이 정보가 없으므로 기본값 또는 추후 계산
       interleaved_route: item.nodeIds, // nodeIds를 interleaved_route로 사용
+      places_scheduled: [], // 추가: 일정에 포함된 장소 이름 목록
+      places_routed: [], // 추가: 경로 계산에 사용된 장소 이름 목록
     };
   });
 
