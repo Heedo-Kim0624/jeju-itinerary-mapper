@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { mockServerResponseData } from '@/temp/mockServerData'; // 모의 데이터 임포트
 
 // 임시 플래그: true로 설정하면 모의 데이터를 사용합니다.
-const USE_MOCK_DATA = true;
+const USE_MOCK_DATA = false; // true에서 false로 변경
 
 export const useScheduleGenerator = () => {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -15,7 +15,7 @@ export const useScheduleGenerator = () => {
     setIsGenerating(true);
 
     if (USE_MOCK_DATA) {
-      console.log('[use-schedule-generator] Using MOCK DATA');
+      console.log('[use-schedule-generator] Using MOCK DATA - THIS PATH SHOULD NOT BE TAKEN NOW');
       // 모의 데이터가 NewServerScheduleResponse 타입과 일치하는지 확인 필요
       // 현재 mockServerResponseData는 해당 타입을 따르므로 바로 사용 가능
       return new Promise((resolve) => {
@@ -33,7 +33,9 @@ export const useScheduleGenerator = () => {
       // TODO: API_URL 환경변수 설정 또는 직접 URL 입력
       // 현재 API URL이 없으므로, 환경 변수 사용 예시를 주석 처리하고 임시 URL을 사용합니다.
       // 실제 배포 시에는 올바른 API URL로 교체해야 합니다.
-      const API_URL = '/api/generate_schedule_placeholder'; // 임시 플레이스홀더 URL
+      // VITE_SCHEDULE_API 환경 변수를 사용하도록 수정
+      const API_URL = import.meta.env.VITE_SCHEDULE_API_URL || '/api/generate_schedule_placeholder';
+
 
       console.log(`[use-schedule-generator] Sending request to: ${API_URL}`);
       
