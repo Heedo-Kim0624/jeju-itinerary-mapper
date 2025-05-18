@@ -45,6 +45,7 @@ interface LeftPanelContentProps {
     cafe: () => void;
   };
   isCategoryButtonEnabled: (category: string) => boolean;
+  isGenerating?: boolean; // 로딩 상태 prop 추가
 }
 
 const LeftPanelContent: React.FC<LeftPanelContentProps> = ({
@@ -63,6 +64,7 @@ const LeftPanelContent: React.FC<LeftPanelContentProps> = ({
   onConfirmCategory,
   handlePanelBack,
   isCategoryButtonEnabled,
+  isGenerating, // 이 prop은 현재 JSX 내에서 사용되지 않지만, 향후 UI 변경에 사용될 수 있습니다.
 }) => {
   return (
     <div className="flex-1 overflow-y-auto p-4 pb-24 space-y-6">
@@ -76,9 +78,9 @@ const LeftPanelContent: React.FC<LeftPanelContentProps> = ({
         categoryOrder={["숙소", "관광지", "음식점", "카페"]}
         currentCategoryIndex={categoryStepIndex}
         onCategoryClick={onCategoryClick}
-        categorySelectionConfirmed={true}
+        categorySelectionConfirmed={true} // 이 prop은 아마 regionConfirmed와 관련있을 수 있습니다. 확인 필요
         confirmedCategories={confirmedCategories}
-        isCategoryButtonEnabled={() => true}
+        isCategoryButtonEnabled={() => true} // 이 로직은 isCategoryButtonEnabled prop으로 대체될 수 있습니다.
         activeMiddlePanelCategory={activeMiddlePanelCategory}
       />
 

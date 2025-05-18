@@ -1,17 +1,20 @@
+
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Place } from '@/types/supabase';
 import { ItineraryDay } from '@/hooks/use-itinerary';
-import PlaceCart from './PlaceCart';
-import ItineraryButton from './ItineraryButton';
+// PlaceCart는 더 이상 사용되지 않으므로 주석 처리하거나 삭제합니다.
+// import PlaceCart from './PlaceCart'; 
+// ItineraryButton은 새로운 로딩 버튼 로직으로 대체됩니다.
+// import ItineraryButton from './ItineraryButton';
 import ScheduleViewer from './ScheduleViewer';
 
 interface LeftPanelContainerProps {
   showItinerary: boolean;
   onSetShowItinerary: (show: boolean) => void;
   selectedPlaces: Place[];
-  onRemovePlace: (id: string) => void;
-  onViewOnMap: (place: Place) => void;
+  onRemovePlace: (id: string) => void; // PlaceCart가 제거되었으므로 이 prop은 LeftPanelContainer 내부에서 사용되지 않습니다.
+  onViewOnMap: (place: Place) => void; // PlaceCart가 제거되었으므로 이 prop은 LeftPanelContainer 내부에서 사용되지 않습니다.
   allCategoriesSelected: boolean;
   children: React.ReactNode;
   dates: {
@@ -24,30 +27,35 @@ interface LeftPanelContainerProps {
   itinerary: ItineraryDay[] | null;
   selectedItineraryDay: number | null;
   onSelectDay: (day: number) => void;
+  isGenerating?: boolean; // 로딩 상태 prop 추가
 }
 
 const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
   showItinerary,
   onSetShowItinerary,
   selectedPlaces,
-  onRemovePlace,
-  onViewOnMap,
+  // onRemovePlace, // LeftPanelContainer 내부에서 사용되지 않음
+  // onViewOnMap,   // LeftPanelContainer 내부에서 사용되지 않음
   allCategoriesSelected,
   children,
   dates,
   onCreateItinerary,
   itinerary,
   selectedItineraryDay,
-  onSelectDay
+  onSelectDay,
+  isGenerating = false, // 기본값 false
 }) => {
-  // 강제 리렌더링을 위한 상태 추가 (from user's Part 2)
-  const [rerenderTrigger, setRerenderTrigger] = useState(0);
+  const [localIsGenerating, setLocalIsGenerating] = useState(isGenerating);
   
-  // 강제 리렌더링 이벤트 리스너 (from user's Part 2)
+  useEffect(() => {
+    console.log("[LeftPanelContainer] isGenerating prop 변경:", isGenerating);
+    setLocalIsGenerating(isGenerating);
+  }, [isGenerating]);
+  
   useEffect(() => {
     const handleForceRerender = () => {
-      console.log("LeftPanelContainer: 강제 리렌더링 이벤트 수신");
-      setRerenderTrigger(prev => prev + 1);
+      console.log("[LeftPanelContainer] forceRerender 이벤트 수신, 로딩 상태 확인 및 해제");
+      setLocalIsGenerating(false);
     };
     
     window.addEventListener('forceRerender', handleForceRerender);
@@ -56,60 +64,20 @@ const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
       window.removeEventListener('forceRerender', handleForceRerender);
     };
   }, []);
-  
-  // 리렌더링 트리거 변경 시 로그 (from user's Part 2)
-  useEffect(() => {
-    if (rerenderTrigger > 0) {
-      console.log("LeftPanelContainer: 강제 리렌더링 트리거됨:", rerenderTrigger);
-    }
-  }, [rerenderTrigger]);
 
   const handleCloseItinerary = () => {
     onSetShowItinerary(false);
-    // Potentially clear map elements here if MapContext is accessible or via another callback
   };
 
-  // The main display logic for LeftPanelContainer:
-  // If showItinerary is true AND itinerary data exists, it used to show ScheduleViewer.
-  // HOWEVER, LeftPanel.tsx now directly renders ItineraryView when showItinerary is true.
-  // So, LeftPanelContainer should only render its children (the selection panels)
-  // when showItinerary is FALSE.
-  // The user's original logic for LeftPanelContainer showed ScheduleViewer if showItinerary was true.
-  // Let's stick to the user's original logic for LeftPanelContainer IF ItineraryView in LeftPanel.tsx is not shown.
-  // The condition in LeftPanel.tsx is: `uiVisibility.showItinerary && itineraryManagement.itinerary`
-  // So, LeftPanelContainer is only rendered if that condition is false.
-  // Therefore, the `if (showItinerary && itinerary)` block inside LeftPanelContainer might be redundant
-  // if LeftPanel.tsx already handles this.
-  // Let's assume LeftPanelContainer is always the "non-itinerary view" part based on LeftPanel.tsx logic.
-
-  // The user's provided `LeftPanel.tsx` structure is:
-  // if (showItinerary && itinerary) { <ItineraryView /> } else { <LeftPanelContainer> <LeftPanelContent/> </LeftPanelContainer> }
-  // This means LeftPanelContainer will NOT be rendered when showItinerary is true.
-  // Thus, the `if (showItinerary && itinerary)` block within `LeftPanelContainer` is effectively dead code.
-  // I will remove it for clarity, as `LeftPanelContainer` will only display its children (the regular panels).
-  
-  // console.log("LeftPanelContainer rendering. showItinerary:", showItinerary, "Itinerary data:", !!itinerary);
-
-  // The original logic in LeftPanelContainer was to show ScheduleViewer IF showItinerary was true.
-  // However, LeftPanel.tsx now renders ItineraryView directly under that condition.
-  // This LeftPanelContainer is only rendered in the 'else' block of LeftPanel.tsx.
-  // So, showItinerary will be false when this component renders, or itinerary will be null.
-  // The provided `LeftPanelContainer.tsx` structure seems to be from before `ItineraryView` was handled in `LeftPanel.tsx`.
-  // I will keep the structure user provided for `LeftPanelContainer` for now, but note the potential redundancy.
-
   if (showItinerary && itinerary) {
-     // This block is likely not hit due to LeftPanel.tsx's conditional rendering.
-     // If it is hit, it means LeftPanel.tsx logic changed or showItinerary can be true
-     // when itinerary is null, which would then pass to here.
-     // For safety, keeping the original structure.
-    console.log("LeftPanelContainer: Rendering ScheduleViewer directly (should ideally be ItineraryView in LeftPanel.tsx)");
+    console.log("LeftPanelContainer: Rendering ScheduleViewer directly (this path might be taken if LeftPanel's ItineraryView condition is not met)");
     return (
       <div className="fixed top-0 left-0 w-[300px] h-full bg-white border-r border-gray-200 z-40 shadow-md">
         <ScheduleViewer
           schedule={itinerary}
           selectedDay={selectedItineraryDay}
           onDaySelect={onSelectDay}
-          onClose={handleCloseItinerary} // This onClose is local to LeftPanelContainer
+          onClose={handleCloseItinerary}
           startDate={dates?.startDate || new Date()}
         />
       </div>
@@ -122,15 +90,35 @@ const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
         {children}
       </div>
       <div className="px-4 py-4 border-t">
-        <PlaceCart 
-          selectedPlaces={selectedPlaces} 
-          onRemovePlace={onRemovePlace}
-          onViewOnMap={onViewOnMap}
-        />
-        <ItineraryButton 
-          allCategoriesSelected={allCategoriesSelected}
-          onCreateItinerary={onCreateItinerary} // This is a prop from LeftPanel
-        />
+        {/* PlaceCart 컴포넌트 대신 선택된 장소 개수 표시 */}
+        <div className="mb-4">
+          {selectedPlaces && selectedPlaces.length > 0 && (
+            <div className="mb-2 text-sm font-medium">
+              선택된 장소: {selectedPlaces.length}개
+            </div>
+          )}
+        </div>
+        
+        {/* 일정 생성 버튼 - 로딩 상태에 따라 다르게 표시 */}
+        {localIsGenerating ? (
+          <div className="w-full py-3 bg-blue-500 text-white text-center rounded-md flex items-center justify-center cursor-wait" aria-busy="true" aria-live="polite">
+            <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            일정 생성 중...
+          </div>
+        ) : (
+          <button
+            className={`w-full py-3 ${
+              allCategoriesSelected ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            } rounded-md font-medium transition-colors`}
+            onClick={() => allCategoriesSelected && onCreateItinerary()}
+            disabled={!allCategoriesSelected || localIsGenerating}
+          >
+            경로 생성하기
+          </button>
+        )}
       </div>
     </div>
   );
