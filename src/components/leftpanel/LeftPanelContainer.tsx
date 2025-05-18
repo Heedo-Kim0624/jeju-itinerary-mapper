@@ -2,14 +2,14 @@
 import React, { useState, useEffect } from 'react';
 import { Place } from '@/types/supabase';
 import { ItineraryDay } from '@/hooks/use-itinerary';
-import PlaceCart from './PlaceCart'; // PlaceCart 컴포넌트 import 주석 해제
+import PlaceCart from './PlaceCart'; // PlaceCart component import restored
 import ScheduleViewer from './ScheduleViewer';
 
 interface LeftPanelContainerProps {
   showItinerary: boolean;
   onSetShowItinerary: (show: boolean) => void;
   selectedPlaces: Place[];
-  onRemovePlace: (id: string) => void; // 기존 타입 유지
+  onRemovePlace: (id: string) => void; // Maintaining original type
   onViewOnMap: (place: Place) => void;
   allCategoriesSelected: boolean;
   children: React.ReactNode;
@@ -30,8 +30,8 @@ const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
   showItinerary,
   onSetShowItinerary,
   selectedPlaces,
-  onRemovePlace, // props 구조 분해 할당 확인
-  onViewOnMap,   // props 구조 분해 할당 확인
+  onRemovePlace, // Props destructuring confirmed
+  onViewOnMap,   // Props destructuring confirmed
   allCategoriesSelected,
   children,
   dates,
@@ -44,13 +44,13 @@ const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
   const [localIsGenerating, setLocalIsGenerating] = useState(isGenerating);
   
   useEffect(() => {
-    console.log("[LeftPanelContainer] isGenerating prop 변경:", isGenerating);
+    console.log("[LeftPanelContainer] isGenerating prop changed:", isGenerating);
     setLocalIsGenerating(isGenerating);
   }, [isGenerating]);
   
   useEffect(() => {
     const handleForceRerender = () => {
-      console.log("[LeftPanelContainer] forceRerender 이벤트 수신, 로딩 상태 확인 및 해제");
+      console.log("[LeftPanelContainer] forceRerender event received, checking and clearing loading state");
       setLocalIsGenerating(false);
     };
     
@@ -86,14 +86,14 @@ const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
         {children}
       </div>
       <div className="px-4 py-4 border-t">
-        {/* 선택된 장소 목록 복구 - PlaceCart 컴포넌트 */}
+        {/* Selected places list restored - PlaceCart component */}
         <PlaceCart 
           selectedPlaces={selectedPlaces} 
           onRemovePlace={onRemovePlace}
           onViewOnMap={onViewOnMap}
         />
         
-        {/* 일정 생성 버튼 - 로딩 상태에 따라 다르게 표시 */}
+        {/* Schedule generation button - displays differently based on loading state */}
         {localIsGenerating ? (
           <div className="w-full py-3 bg-blue-500 text-white text-center rounded-md flex items-center justify-center cursor-wait" aria-busy="true" aria-live="polite">
             <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -119,4 +119,3 @@ const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
 };
 
 export default LeftPanelContainer;
-
