@@ -72,8 +72,8 @@ export const useLeftPanel = () => {
       startTime: tripDetailsHook.dates.startTime, 
       endTime: tripDetailsHook.dates.endTime 
     } : null,
-    startDatetimeISO: tripDetailsHook.startDatetimeISO,
-    endDatetimeISO: tripDetailsHook.endDatetimeISO,
+    startDatetimeISO: tripDetailsHook.startDatetime, // Corrected: Was tripDetailsHook.startDatetimeISO
+    endDatetimeISO: tripDetailsHook.endDatetime,     // Corrected: Was tripDetailsHook.endDatetimeISO
   });
 
   // Local UI states for itinerary panel
@@ -96,7 +96,7 @@ export const useLeftPanel = () => {
       console.log("[useLeftPanel] Schedule loading finished, but itinerary is empty. Not showing panel or hide if shown.");
       // setShowItineraryPanel(false); // Optionally hide if it was shown due to old data
     }
-  }, [isScheduleLoading, itinerary]);
+  }, [isScheduleLoading, itinerary, showItineraryPanel]); // Added showItineraryPanel to deps as it's read
 
 
   // Listener for 'itineraryCreated' custom event (from useScheduleGenerationRunner)
@@ -191,10 +191,16 @@ export const useLeftPanel = () => {
   
   const handleCloseItinerary = useCallback(() => {
     setShowItineraryPanel(false);
-    setCurrentPanel('category'); // Or whatever the previous panel was
+    // setCurrentPanel('category'); // Or whatever the previous panel was // This direct call was the issue.
+    
+    // Create a wrapper to satisfy the expected signature of the original handler
+    const wrappedSetCurrentPanel = (panelValue: string) => {
+      setCurrentPanel(panelValue as 'region' | 'date' | 'category' | 'itinerary');
+    };
+
     // Call original handler if it does more, e.g., map cleanup
-    itineraryHandlersOriginal.handleCloseItinerary(setShowItineraryPanel, setCurrentPanel);
-  }, [itineraryHandlersOriginal, setCurrentPanel]);
+    itineraryHandlersOriginal.handleCloseItinerary(setShowItineraryPanel, wrappedSetCurrentPanel);
+  }, [itineraryHandlersOriginal, setCurrentPanel, setShowItineraryPanel]); // Added setCurrentPanel and setShowItineraryPanel to deps
 
   const forceRefresh = useCallback(() => {
     setForceRefreshCounter(prev => prev + 1);
