@@ -82,6 +82,12 @@ export interface NewServerScheduleResponse {
   // 서버 응답에 다른 최상위 키가 있다면 여기에 추가
 }
 
+// 새로운 서버 응답 구조 정의 (사용자 플랜 파트 1용)
+export interface PlannerServerRouteResponse {
+  date: string;       // 예: '2025-05-21'
+  nodeIds: number[];  // 예: [장소1_ID, 링크1_ID, 중간노드1_ID, 링크2_ID, ..., 장소N_ID]
+}
+
 // 서버 경로 응답 (각 날짜별)
 export interface ServerRouteResponse {
   nodeIds: (string | number)[];
