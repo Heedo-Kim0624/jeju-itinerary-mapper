@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useRef } from 'react';
 import { Place, ItineraryDay } from '@/types/supabase';
 import useMapCore from './useMapCore';

@@ -1,3 +1,4 @@
+
 import { useCallback } from 'react';
 import { toast } from 'sonner';
 import { SelectedPlace } from '@/types/supabase'; // ItineraryPlaceWithTime 제거 (선언되었으나 사용되지 않음)
