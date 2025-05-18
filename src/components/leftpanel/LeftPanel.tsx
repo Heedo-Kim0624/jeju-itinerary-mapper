@@ -1,5 +1,4 @@
-
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useLeftPanel } from '@/hooks/use-left-panel';
 import LeftPanelContainer from './LeftPanelContainer';
 import LeftPanelContent from './LeftPanelContent';
@@ -28,7 +27,15 @@ const LeftPanel: React.FC = () => {
   // 일정 생성 이벤트 처리를 위한 상태
   const [itineraryReceived, setItineraryReceived] = useState(false);
   
-  // 일정 상태 변화 감지를 위한 useEffect
+  // 마운트 상태 추적을 위한 ref
+  const isMountedRef = useRef(true);
+  
+  // 컴포넌트 언마운트시 ref 설정
+  useEffect(() => {
+    return () => { isMountedRef.current = false; };
+  }, []);
+  
+  // 일정 상태 변화 감지를 위한 useEffect - 디버깅 로그 추가
   useEffect(() => {
     console.log("LeftPanel - 일정 관련 상태 변화 감지:", {
       일정생성됨: !!itineraryManagement.itinerary,
@@ -41,19 +48,10 @@ const LeftPanel: React.FC = () => {
     
     // 일정이 존재하고 itineraryReceived가 true인 경우 일정 패널을 표시합니다
     if (itineraryManagement.itinerary && 
-        itineraryManagement.itinerary.length > 0 && 
-        itineraryReceived) {
-      console.log("LeftPanel - 일정이 존재하고 수신이 완료되어 일정 패널 표시 및 로딩 상태 해제");
+        itineraryManagement.itinerary.length > 0) {
+      console.log("LeftPanel - 일정이 존재하므로 일정 패널 표시 및 로딩 상태 해제");
       uiVisibility.setShowItinerary(true);
       setIsGenerating(false);
-    }
-    // 일정이 없는데 로딩 중이 아닌 경우도 처리
-    else if ((!itineraryManagement.itinerary || itineraryManagement.itinerary.length === 0) && 
-             !isGenerating && 
-             itineraryReceived) {
-      console.log("LeftPanel - 일정이 없고 로딩 중이 아니므로 일정 패널 숨김");
-      uiVisibility.setShowItinerary(false);
-      setItineraryReceived(false); // 이벤트 처리 완료
     }
   }, [
     itineraryManagement.itinerary, 
@@ -67,23 +65,33 @@ const LeftPanel: React.FC = () => {
   // 이벤트 리스너 추가 - 개선된 버전
   useEffect(() => {
     const handleForceRerender = () => {
-      console.log("[LeftPanel] forceRerender 이벤트 수신");
-      // 강제 리렌더링 이벤트가 발생하면 데이터 확인을 위해 약간 지연 후 로딩 상태 해제
-      setTimeout(() => {
-        setIsGenerating(false);
-      }, 50);
+      console.log("[LeftPanel] forceRerender 이벤트 수신, 로딩 상태 해제 시도");
+      if (isMountedRef.current) {
+        // 강제 리렌더링 이벤트가 발생하면 데이터 확인을 위해 약간 지연 후 로딩 상태 해제
+        setTimeout(() => {
+          setIsGenerating(false);
+        }, 50);
+      }
     };
     
     const handleItineraryCreated = (event: Event) => {
       console.log("[LeftPanel] itineraryCreated 이벤트 수신", (event as CustomEvent).detail);
       
-      // 일정 수신 완료로 표시
-      setItineraryReceived(true);
-      
-      // 일정 데이터 확인
-      const detail = (event as CustomEvent).detail;
-      if (detail && detail.itinerary && detail.itinerary.length > 0) {
-        console.log("[LeftPanel] itineraryCreated 이벤트에서 유효한 일정 데이터 확인");
+      if (isMountedRef.current) {
+        // 일정 수신 완료로 표시
+        setItineraryReceived(true);
+        
+        // 일정 데이터 확인
+        const detail = (event as CustomEvent).detail;
+        if (detail && detail.itinerary && detail.itinerary.length > 0) {
+          console.log("[LeftPanel] itineraryCreated 이벤트에서 유효한 일정 데이터 확인");
+          
+          // 일정 패널을 표시하도록 명시적으로 설정
+          uiVisibility.setShowItinerary(true);
+        }
+        
+        // 명시적으로 로딩 상태 해제
+        setIsGenerating(false);
       }
     };
     
@@ -91,16 +99,18 @@ const LeftPanel: React.FC = () => {
     const handleItineraryWithCoords = (event: Event) => {
       console.log("[LeftPanel] itineraryWithCoordinatesReady 이벤트 수신", (event as CustomEvent).detail);
       
-      // 좌표가 포함된 일정 데이터 확인
-      const detail = (event as CustomEvent).detail;
-      if (detail && detail.itinerary && detail.itinerary.length > 0) {
-        console.log("[LeftPanel] itineraryWithCoordinatesReady 이벤트에서 유효한 일정 데이터 확인");
-        
-        // 일정 패널을 표시하도록 명시적으로 설정
-        setTimeout(() => {
-          console.log("[LeftPanel] itineraryWithCoordinatesReady 이벤트 후 일정 패널 표시 시도");
+      if (isMountedRef.current) {
+        // 좌표가 포함된 일정 데이터 확인
+        const detail = (event as CustomEvent).detail;
+        if (detail && detail.itinerary && detail.itinerary.length > 0) {
+          console.log("[LeftPanel] itineraryWithCoordinatesReady 이벤트에서 유효한 일정 데이터 확인");
+          
+          // 일정 패널을 표시하도록 명시적으로 설정
           uiVisibility.setShowItinerary(true);
-        }, 100);
+        }
+        
+        // 명시적으로 로딩 상태 해제
+        setIsGenerating(false);
       }
     };
     
@@ -114,7 +124,6 @@ const LeftPanel: React.FC = () => {
       window.removeEventListener('itineraryWithCoordinatesReady', handleItineraryWithCoords);
     };
   }, [uiVisibility.setShowItinerary]);
-
 
   const handlePanelBackByCategory = (category: string) => {
     console.log(`${category} 카테고리 패널 뒤로가기`);
@@ -183,8 +192,9 @@ const LeftPanel: React.FC = () => {
       
       if (success) {
         console.log("[LeftPanel] 일정 생성 성공 (handleCreateItineraryWithLoading)");
-        // 성공 응답을 받았으나 여기서는 로딩 상태를 유지
-        // 이벤트 핸들러에서 실제 데이터 확인 후 상태 변경
+        // 성공 응답을 받았으나 여기서는 로딩 상태를 명시적으로 해제하지 않고
+        // 이벤트 핸들러에서 실제 데이터 확인 후 상태 변경을 진행합니다
+        // itineraryCreated 이벤트가 발생하면 해당 핸들러에서 로딩 상태 해제
       } else {
         console.log("[LeftPanel] 일정 생성 실패 (handleCreateItineraryWithLoading)");
         // 실패 시 로딩 상태 즉시 해제
@@ -205,8 +215,7 @@ const LeftPanel: React.FC = () => {
   const shouldShowItineraryView = 
     uiVisibility.showItinerary && 
     itineraryManagement.itinerary && 
-    itineraryManagement.itinerary.length > 0 &&
-    !isGenerating; // 로딩 중이 아닐 때
+    itineraryManagement.itinerary.length > 0;
 
   // 디버깅을 위한 추가 상태 로깅
   useEffect(() => {

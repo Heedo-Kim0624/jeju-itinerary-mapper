@@ -82,12 +82,13 @@ export const useScheduleGenerationRunner = ({
         isNewResponse: isNewServerScheduleResponse(serverResponse)
       });
 
-      // 서버 응답 검증 로직 추가 - 더 명확하고 강력하게
+      // 서버 응답 검증 로직 강화
       if (serverResponse && 
           typeof serverResponse === 'object' && 
           !Array.isArray(serverResponse) &&
           Array.isArray(serverResponse.schedule) && 
-          Array.isArray(serverResponse.route_summary) &&
+          serverResponse.schedule.length > 0 && 
+          Array.isArray(serverResponse.route_summary) && 
           serverResponse.route_summary.length > 0) {
         
         console.log('[useScheduleGenerationRunner] 서버 응답이 유효합니다. 일정 파싱을 시작합니다.');
@@ -200,7 +201,6 @@ export const useScheduleGenerationRunner = ({
     } finally {
       console.log("[useScheduleGenerationRunner] finally 블록 진입. isLoadingState를 false로 설정합니다.");
       
-      // 로딩 상태 해제는 이벤트 발생 후에 하도록 지연시킵니다
       // 일정 생성 이벤트 발생
       if (finalItineraryForEvent.length > 0) {
         console.log("[useScheduleGenerationRunner] 'itineraryCreated' 이벤트 발생:", JSON.parse(JSON.stringify(finalItineraryForEvent)));
@@ -227,7 +227,7 @@ export const useScheduleGenerationRunner = ({
           
           // 이벤트 발생 후 로딩 상태를 해제
           setIsLoadingState(false);
-        }, 100);
+        }, 200); // 타이머를 좀 더 길게 설정
       } else {
         console.log("[useScheduleGenerationRunner] 'itineraryCreated' 이벤트 발생 (빈 일정)");
         const event = new CustomEvent('itineraryCreated', {
@@ -241,7 +241,7 @@ export const useScheduleGenerationRunner = ({
         // 이벤트 발생 후 로딩 상태를 해제
         setTimeout(() => {
           setIsLoadingState(false);
-        }, 100);
+        }, 200);
       }
     }
   }, [

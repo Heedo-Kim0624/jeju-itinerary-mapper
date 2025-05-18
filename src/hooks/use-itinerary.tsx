@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Place } from '@/types/supabase';
 import { useItineraryCreator, ItineraryDay as CreatorItineraryDay } from './use-itinerary-creator'; // Keep alias if original ItineraryDay is also from here
 import { toast } from 'sonner';
@@ -16,6 +16,78 @@ export const useItinerary = () => {
   const handleSelectItineraryDay = (day: number) => {
     setSelectedItineraryDay(day);
   };
+
+  // 이벤트 핸들러 등록: itineraryCreated 이벤트 처리
+  useEffect(() => {
+    const handleItineraryCreated = (event: Event) => {
+      const customEvent = event as CustomEvent<{ 
+        itinerary: ItineraryDay[]; 
+        selectedDay: number | null 
+      }>;
+      
+      console.log("[useItinerary] itineraryCreated 이벤트 수신:", customEvent.detail);
+      
+      if (customEvent.detail && customEvent.detail.itinerary && customEvent.detail.itinerary.length > 0) {
+        // 일정과 선택된 날짜 설정
+        setItinerary(customEvent.detail.itinerary);
+        
+        if (customEvent.detail.selectedDay !== null) {
+          setSelectedItineraryDay(customEvent.detail.selectedDay);
+        } else {
+          setSelectedItineraryDay(customEvent.detail.itinerary[0].day);
+        }
+        
+        // 명시적으로 일정 패널 표시 활성화
+        setShowItinerary(true);
+        
+        console.log("[useItinerary] 이벤트 처리 후 상태:", {
+          일정길이: customEvent.detail.itinerary.length,
+          선택된날짜: customEvent.detail.selectedDay || customEvent.detail.itinerary[0].day,
+          패널표시여부: true
+        });
+      }
+    };
+    
+    // itineraryWithCoordinatesReady 이벤트도 처리합니다
+    const handleItineraryWithCoords = (event: Event) => {
+      const customEvent = event as CustomEvent<{
+        itinerary: ItineraryDay[];
+      }>;
+      
+      console.log("[useItinerary] itineraryWithCoordinatesReady 이벤트 수신");
+      
+      if (customEvent.detail && customEvent.detail.itinerary && customEvent.detail.itinerary.length > 0) {
+        // 일정 설정 (이미 itineraryCreated에서 처리했을 수 있으나 보장을 위해)
+        setItinerary(customEvent.detail.itinerary);
+        
+        // 선택된 날짜가 없다면 첫째 날을 선택
+        if (selectedItineraryDay === null) {
+          setSelectedItineraryDay(customEvent.detail.itinerary[0].day);
+        }
+        
+        // 일정 패널 표시 활성화를 명시적으로 설정
+        setShowItinerary(true);
+      }
+    };
+    
+    // 이벤트 리스너 등록
+    window.addEventListener('itineraryCreated', handleItineraryCreated);
+    window.addEventListener('itineraryWithCoordinatesReady', handleItineraryWithCoords);
+    
+    // 컴포넌트 언마운트 시 이벤트 리스너 해제
+    return () => {
+      window.removeEventListener('itineraryCreated', handleItineraryCreated);
+      window.removeEventListener('itineraryWithCoordinatesReady', handleItineraryWithCoords);
+    };
+  }, [selectedItineraryDay]);
+  
+  // 상태 동기화를 위한 추가 useEffect - 일정이 생성되었지만 패널이 표시되지 않는 경우를 처리
+  useEffect(() => {
+    if (itinerary && itinerary.length > 0 && !showItinerary) {
+      console.log("[useItinerary] 일정이 존재하나 패널이 표시되지 않아 자동 활성화");
+      setShowItinerary(true);
+    }
+  }, [itinerary, showItinerary]);
 
   const generateItinerary = (
     placesToUse: Place[],
@@ -109,7 +181,7 @@ export const useItinerary = () => {
         });
         console.log("[useItinerary] handleServerItineraryResponse: itineraryCreated 이벤트 발생");
         window.dispatchEvent(itineraryCreatedEvent);
-      }, 100);
+      }, 200); // 타이머를 좀 더 길게 설정
 
       return serverItinerary;
     } catch (error) {
