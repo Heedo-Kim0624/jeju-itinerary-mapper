@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { useMapContext } from './MapContext';
 import MapMarkers from './MapMarkers';
@@ -7,6 +6,8 @@ import GeoJsonLayer from './GeoJsonLayer';
 import MapControls from './MapControls';
 import type { Place, ItineraryDay } from '@/types/supabase';
 import { toast } from 'sonner';
+import { useMapItineraryVisualization } from '@/hooks/map/useMapItineraryVisualization';
+import DaySelectorMapOverlay from '@/components/map/DaySelector';
 
 interface MapProps {
   places: Place[];
@@ -34,8 +35,18 @@ const Map: React.FC<MapProps> = ({
     handleGeoJsonLoaded,
     isGeoJsonLoaded,
     checkGeoJsonMapping,
-    serverRoutesData
+    serverRoutesData,
+    geoJsonNodes,
+    geoJsonLinks
   } = useMapContext();
+
+  const {
+    itinerary: visualizedItinerary,
+    currentDay: visualizedCurrentDay,
+    totalDistance: visualizedTotalDistance,
+    visualizeDayRoute,
+    // clearAllVisualizations
+  } = useMapItineraryVisualization(map, geoJsonNodes, geoJsonLinks);
 
   // GeoJSON이 로드되면 사용자에게 알림
   useEffect(() => {
@@ -46,15 +57,13 @@ const Map: React.FC<MapProps> = ({
 
   // 일정을 선택했을 때 GeoJSON 자동 활성화
   useEffect(() => {
-    if (isGeoJsonLoaded && itinerary && selectedDay !== null) {
-      console.log("일정이 선택되었습니다. GeoJSON 표시를 활성화합니다.");
-      // toggleGeoJsonVisibility를 직접 호출하면 상태가 토글되기 때문에
-      // 이미 표시 중이라면 아무 작업도 하지 않도록 조건문 추가
+    if (isGeoJsonLoaded && visualizedItinerary && visualizedItinerary.length > 0 && visualizedCurrentDay !== null) {
+      console.log("시각화된 일정이 있습니다. GeoJSON 표시를 활성화합니다.");
       if (!showGeoJson) {
         toggleGeoJsonVisibility();
       }
     }
-  }, [itinerary, selectedDay, isGeoJsonLoaded, showGeoJson, toggleGeoJsonVisibility]);
+  }, [visualizedItinerary, visualizedCurrentDay, isGeoJsonLoaded, showGeoJson, toggleGeoJsonVisibility]);
 
   // 서버 경로 데이터가 변경될 때마다 로그 출력
   useEffect(() => {
@@ -66,7 +75,6 @@ const Map: React.FC<MapProps> = ({
         첫날_인터리브드: !!serverRoutesData[1]?.interleaved_route
       });
       
-      // GeoJSON이 로드되었고 표시가 활성화되어 있지 않다면 활성화
       if (isGeoJsonLoaded && !showGeoJson) {
         console.log("지도: 서버 경로 데이터가 있어 GeoJSON 표시를 활성화합니다.");
         toggleGeoJsonVisibility();
@@ -77,7 +85,6 @@ const Map: React.FC<MapProps> = ({
   // 장소와 GeoJSON 매핑 검사
   useEffect(() => {
     if (isGeoJsonLoaded && places.length > 0 && isMapInitialized) {
-      // 지연 실행으로 UI 블로킹 방지
       const timer = setTimeout(() => {
         const mappingResult = checkGeoJsonMapping(places);
         console.log('GeoJSON 매핑 결과:', mappingResult);
@@ -93,19 +100,22 @@ const Map: React.FC<MapProps> = ({
     }
   }, [isGeoJsonLoaded, places, isMapInitialized, checkGeoJsonMapping]);
 
-  // 장소 클릭 핸들러
   const handlePlaceClick = (place: Place, index: number) => {
     console.log(`장소 클릭됨: ${place.name} (${index + 1}번)`);
-    // 추가적인 상호작용 로직을 여기에 구현할 수 있습니다.
+    // Potentially pan to place or show info
+    // If part of visualized itinerary, could highlight segment, etc.
+    // This might conflict or complement MapMarkers.tsx's handleMarkerClick
   };
+
+  const isNewVisualizationActive = visualizedItinerary && visualizedItinerary.length > 0;
 
   return (
     <div ref={mapContainer} className="w-full h-full relative flex-grow">
       <MapMarkers
         places={places}
         selectedPlace={selectedPlace}
-        itinerary={itinerary}
-        selectedDay={selectedDay}
+        itinerary={isNewVisualizationActive ? null : visualizedItinerary}
+        selectedDay={isNewVisualizationActive ? null : visualizedCurrentDay}
         selectedPlaces={selectedPlaces}
         onPlaceClick={handlePlaceClick}
       />
@@ -117,6 +127,15 @@ const Map: React.FC<MapProps> = ({
           isMapInitialized={isMapInitialized}
           isNaverLoaded={isNaverLoaded}
           onGeoJsonLoaded={handleGeoJsonLoaded}
+        />
+      )}
+      
+      {isMapInitialized && visualizedItinerary.length > 0 && (
+        <DaySelectorMapOverlay
+          itinerary={visualizedItinerary}
+          currentDay={visualizedCurrentDay}
+          onDaySelect={visualizeDayRoute}
+          totalDistance={visualizedTotalDistance}
         />
       )}
       
