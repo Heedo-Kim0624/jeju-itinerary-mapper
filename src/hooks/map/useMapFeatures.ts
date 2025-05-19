@@ -1,5 +1,6 @@
 import { useCallback, useRef, useEffect, useState } from 'react';
-import { Place, ItineraryDay, GeoNode } from '@/types/supabase';
+import { Place, ItineraryDay } from '@/types/supabase';
+import { GeoNode } from '../../components/rightpanel/geojson/GeoJsonTypes';
 import { ServerRouteResponse, SegmentRoute } from '@/types/schedule';
 import {
   createNaverPolyline,
@@ -16,8 +17,8 @@ const DEFAULT_ROUTE_COLOR = '#007bff'; // Blue
 export const useMapFeatures = (map: any) => {
   const activePolylines = useRef<any[]>([]);
   const highlightedPathRef = useRef<any>(null);
-  const { geoJsonNodes } = useGeoJsonState();
-  const { isNaverLoaded } = useMapContext();
+  const mapContext = useMapContext();
+  const geoJsonState = useGeoJsonState();
 
   const drawRoutePath = useCallback((
     currentMap: any,
@@ -27,7 +28,7 @@ export const useMapFeatures = (map: any) => {
     opacity: number = 0.7,
     zIndex: number = 1
   ) => {
-    if (!currentMap || !isNaverLoaded || pathCoordinates.length < 2) return null;
+    if (!currentMap || !mapContext.isNaverLoaded || pathCoordinates.length < 2) return null;
 
     const naverPath = pathCoordinates.map(coord => createNaverLatLng(coord.lat, coord.lng));
     if (naverPath.some(p => p === null)) {
@@ -42,7 +43,7 @@ export const useMapFeatures = (map: any) => {
       zIndex: zIndex,
     });
     return polyline;
-  }, [isNaverLoaded]);
+  }, [mapContext.isNaverLoaded]);
 
   const clearAllRoutes = useCallback(() => {
     console.log('[MapFeatures] Clearing all routes and UI elements.');
@@ -58,31 +59,31 @@ export const useMapFeatures = (map: any) => {
   }, []);
 
   const mapPlacesWithGeoNodes = useCallback((places: Place[]): Place[] => {
-    if (!geoJsonNodes || geoJsonNodes.length === 0) {
+    if (!geoJsonState.geoJsonNodes || geoJsonState.geoJsonNodes.length === 0) {
       console.warn("[MapFeatures] GeoJSON nodes not available for mapping places.");
       return places.map(p => ({ ...p, x: p.x || 0, y: p.y || 0 }));
     }
 
     return places.map(place => {
       if (place.geoNodeId) {
-        const node = geoJsonNodes.find(n => String(n.properties.NODE_ID) === String(place.geoNodeId));
+        const node = geoJsonState.geoJsonNodes.find(n => String(n.properties.NODE_ID) === String(place.geoNodeId));
         if (node && node.geometry.type === 'Point') {
-          const [lng, lat] = node.geometry.coordinates;
+          const [lng, lat] = (node.geometry.coordinates as [number, number]); // Type assertion
           return { ...place, x: lng, y: lat };
         }
       }
       return { ...place, x: place.x || 0, y: place.y || 0 };
     });
-  }, [geoJsonNodes]);
+  }, [geoJsonState.geoJsonNodes]);
 
 
   const renderItineraryRoute = useCallback(
     (
       itineraryDay: ItineraryDay | null,
-      _allServerRoutesInput?: Record<number, ServerRouteResponse>, // Mark as unused if not directly used here
+      _allServerRoutesInput?: Record<number, ServerRouteResponse>, 
       onComplete?: () => void
     ) => {
-      if (!map || !isNaverLoaded) {
+      if (!map || !mapContext.isNaverLoaded) {
         console.log('[MapFeatures] Map not ready for rendering itinerary route.');
         if (onComplete) onComplete();
         return;
@@ -102,12 +103,12 @@ export const useMapFeatures = (map: any) => {
         return;
       }
 
-      const { places, interleaved_route } = itineraryDay; // routeData is part of itineraryDay
+      const { places, interleaved_route } = itineraryDay; 
       const mappedPlaces = mapPlacesWithGeoNodes(places); 
 
       if (interleaved_route.length === 0 && mappedPlaces.length > 1) {
         console.log("[MapFeatures] No interleaved_route, drawing direct lines between mapped places.");
-        const pathCoordinates = mappedPlaces.filter(p => typeof p.x === 'number' && typeof p.y === 'number').map(p => ({ lat: p.y, lng: p.x }));
+        const pathCoordinates = mappedPlaces.filter(p => typeof p.x === 'number' && typeof p.y === 'number').map(p => ({ lat: p.y as number, lng: p.x as number }));
         if (pathCoordinates.length > 1) {
             const polyline = drawRoutePath(map, pathCoordinates, DEFAULT_ROUTE_COLOR, 3);
             if (polyline) activePolylines.current.push(polyline);
@@ -125,22 +126,22 @@ export const useMapFeatures = (map: any) => {
       }
 
       const nodeCoordsMap = new Map<string, { lat: number; lng: number }>();
-      geoJsonNodes.forEach(node => {
+      geoJsonState.geoJsonNodes.forEach(node => {
         if (node.geometry.type === 'Point') {
+          const [lng, lat] = (node.geometry.coordinates as [number, number]); // Type assertion
           nodeCoordsMap.set(String(node.properties.NODE_ID), {
-            lng: node.geometry.coordinates[0],
-            lat: node.geometry.coordinates[1],
+            lng: lng,
+            lat: lat,
           });
         }
       });
       
-      mappedPlaces.forEach(place => { // Ensure mapped places (which might have x/y from DB) are in nodeCoordsMap
+      mappedPlaces.forEach(place => { 
         const placeIdStr = String(place.geoNodeId || place.id);
         if (!nodeCoordsMap.has(placeIdStr) && typeof place.x === 'number' && typeof place.y === 'number') {
-           nodeCoordsMap.set(placeIdStr, { lat: place.y, lng: place.x });
+           nodeCoordsMap.set(placeIdStr, { lat: place.y as number, lng: place.x as number });
         }
       });
-
 
       let currentPathSegment: { lat: number; lng: number }[] = [];
       const allRouteCoordinatesForBounds: any[] = [];
@@ -155,58 +156,52 @@ export const useMapFeatures = (map: any) => {
           if (naverCoord) allRouteCoordinatesForBounds.push(naverCoord);
 
           const nextIdStr = interleaved_route[index + 1] ? String(interleaved_route[index + 1]) : null;
-          // A LINK_ID would not be in nodeCoordsMap (unless links are also points, which is unlikely for routes)
-          // So, if nextId is not in nodeCoordsMap, or it's the end, we might have a segment.
           const isNextItemAPlaceNode = nextIdStr ? nodeCoordsMap.has(nextIdStr) : false;
           
           if (currentPathSegment.length >= 2 && (!isNextItemAPlaceNode || index === interleaved_route.length - 1)) {
             const polyline = drawRoutePath(map, currentPathSegment, DEFAULT_ROUTE_COLOR);
             if (polyline) activePolylines.current.push(polyline);
-            currentPathSegment = isNextItemAPlaceNode && coords ? [coords] : []; // Start new segment if next is a place
+            currentPathSegment = isNextItemAPlaceNode && coords ? [coords] : []; 
           } else if (currentPathSegment.length === 1 && !isNextItemAPlaceNode && index === interleaved_route.length -1){
-            // одиночная точка в конце, нечего рисовать
             currentPathSegment = [];
           }
 
         } else {
-          // This ID is not a known place/node (likely a LINK_ID or error).
-          // If we have a segment pending, draw it.
           if (currentPathSegment.length >= 2) {
             const polyline = drawRoutePath(map, currentPathSegment, DEFAULT_ROUTE_COLOR);
             if (polyline) activePolylines.current.push(polyline);
           }
-          currentPathSegment = []; // Reset segment
+          currentPathSegment = []; 
           console.warn(`[MapFeatures] Node ID ${nodeIdStr} from interleaved_route not found in geoJsonNodes or mappedPlaces.`);
         }
       });
       
-      if (currentPathSegment.length >= 2) { // Draw any final segment
+      if (currentPathSegment.length >= 2) { 
         const polyline = drawRoutePath(map, currentPathSegment, DEFAULT_ROUTE_COLOR);
         if (polyline) activePolylines.current.push(polyline);
       }
       
       if (allRouteCoordinatesForBounds.length > 0) {
         fitBoundsToCoordinates(map, allRouteCoordinatesForBounds.filter(c => c !== null));
-      } else if (mappedPlaces.length > 0) { // Fallback to mapped places if route itself had no coords
-        const fallbackCoords = mappedPlaces.map(p => createNaverLatLng(p.y, p.x)).filter(c => c !== null) as any[];
+      } else if (mappedPlaces.length > 0) { 
+        const fallbackCoords = mappedPlaces.map(p => createNaverLatLng(p.y as number, p.x as number)).filter(c => c !== null) as any[];
         if (fallbackCoords.length > 0) fitBoundsToCoordinates(map, fallbackCoords);
       }
 
-
       if (onComplete) onComplete();
     },
-    [map, isNaverLoaded, geoJsonNodes, drawRoutePath, clearAllRoutes, mapPlacesWithGeoNodes]
+    [map, mapContext.isNaverLoaded, geoJsonState.geoJsonNodes, drawRoutePath, clearAllRoutes, mapPlacesWithGeoNodes]
   );
 
   const showRouteForPlaceIndex = useCallback(
     (placeIndex: number, itineraryDay: ItineraryDay, onComplete?: () => void) => {
-      if (!map || !isNaverLoaded || !itineraryDay || !itineraryDay.places) {
+      if (!map || !mapContext.isNaverLoaded || !itineraryDay || !itineraryDay.places) {
         if (onComplete) onComplete();
         return;
       }
       
       const place = itineraryDay.places[placeIndex];
-      if (place && typeof place.y === 'number' && typeof place.x === 'number') { // Check types
+      if (place && typeof place.y === 'number' && typeof place.x === 'number') { 
           const position = createNaverLatLng(place.y, place.x);
           if (position) {
               map.panTo(position);
@@ -218,20 +213,19 @@ export const useMapFeatures = (map: any) => {
 
       if (onComplete) onComplete();
     },
-    [map, isNaverLoaded] // drawRoutePath and clearAllRoutes were removed as it's simplified
+    [map, mapContext.isNaverLoaded] 
   );
   
   const renderGeoJsonRoute = useCallback((route: SegmentRoute) => {
-    if (!map || !isNaverLoaded || !route || !route.nodeIds || !route.linkIds) {
+    if (!map || !mapContext.isNaverLoaded || !route || !route.nodeIds || !route.linkIds) {
       console.warn('[MapFeatures] Cannot render GeoJSON route: invalid input or map not ready');
       return;
     }
 
     clearAllRoutes();
 
-    // Find all nodes in the route
     const routeNodes = route.nodeIds.map(nodeId => {
-      return geoJsonNodes.find(node => String(node.properties.NODE_ID) === String(nodeId));
+      return geoJsonState.geoJsonNodes.find(node => String(node.properties.NODE_ID) === String(nodeId));
     }).filter(Boolean);
 
     if (routeNodes.length < 2) {
@@ -239,10 +233,9 @@ export const useMapFeatures = (map: any) => {
       return;
     }
 
-    // Extract coordinates from nodes
     const coordinates = routeNodes.map(node => {
       if (node && node.geometry.type === 'Point') {
-        const [lng, lat] = node.geometry.coordinates;
+        const [lng, lat] = (node.geometry.coordinates as [number, number]); // Type assertion
         return { lat, lng };
       }
       return null;
@@ -253,33 +246,29 @@ export const useMapFeatures = (map: any) => {
       return;
     }
 
-    // Draw the route
     const polyline = drawRoutePath(map, coordinates, DEFAULT_ROUTE_COLOR);
     if (polyline) {
       activePolylines.current.push(polyline);
     }
 
-    // Fit map to route bounds
     const naverCoords = coordinates.map(c => createNaverLatLng(c.lat, c.lng)).filter(c => c !== null) as any[];
     if (naverCoords.length > 0) {
       fitBoundsToCoordinates(map, naverCoords);
     }
-  }, [map, isNaverLoaded, geoJsonNodes, drawRoutePath, clearAllRoutes]);
+  }, [map, mapContext.isNaverLoaded, geoJsonState.geoJsonNodes, drawRoutePath, clearAllRoutes]);
 
   const highlightSegment = useCallback((segment: SegmentRoute | null) => {
-    // Clear previous highlight
     if (highlightedPathRef.current) {
       highlightedPathRef.current.setMap(null);
       highlightedPathRef.current = null;
     }
 
-    if (!map || !isNaverLoaded || !segment || !segment.nodeIds || segment.nodeIds.length < 2) {
+    if (!map || !mapContext.isNaverLoaded || !segment || !segment.nodeIds || segment.nodeIds.length < 2) {
       return;
     }
 
-    // Find nodes for this segment
     const segmentNodes = segment.nodeIds.map(nodeId => {
-      return geoJsonNodes.find(node => String(node.properties.NODE_ID) === String(nodeId));
+      return geoJsonState.geoJsonNodes.find(node => String(node.properties.NODE_ID) === String(nodeId));
     }).filter(Boolean);
 
     if (segmentNodes.length < 2) {
@@ -287,10 +276,9 @@ export const useMapFeatures = (map: any) => {
       return;
     }
 
-    // Extract coordinates
     const coordinates = segmentNodes.map(node => {
       if (node && node.geometry.type === 'Point') {
-        const [lng, lat] = node.geometry.coordinates;
+        const [lng, lat] = (node.geometry.coordinates as [number, number]); // Type assertion
         return { lat, lng };
       }
       return null;
@@ -301,19 +289,17 @@ export const useMapFeatures = (map: any) => {
       return;
     }
 
-    // Draw highlighted path
-    const highlightColor = '#ffc107'; // Yellow highlight
+    const highlightColor = '#ffc107'; 
     const polyline = drawRoutePath(map, coordinates, highlightColor, 6, 0.8, 200);
     if (polyline) {
       highlightedPathRef.current = polyline;
     }
 
-    // Optionally zoom to this segment
     const naverCoords = coordinates.map(c => createNaverLatLng(c.lat, c.lng)).filter(c => c !== null) as any[];
     if (naverCoords.length > 0) {
       fitBoundsToCoordinates(map, naverCoords);
     }
-  }, [map, isNaverLoaded, geoJsonNodes, drawRoutePath]);
+  }, [map, mapContext.isNaverLoaded, geoJsonState.geoJsonNodes, drawRoutePath]);
   
   const clearPreviousHighlightedPath = useCallback(() => {
     if (highlightedPathRef.current) {
@@ -327,13 +313,13 @@ export const useMapFeatures = (map: any) => {
     options: {
       highlightPlaceId?: string;
       isItinerary?: boolean;
-      useRecommendedStyle?: boolean; // This option seems less used now
+      useRecommendedStyle?: boolean; 
       useColorByCategory?: boolean;
       onMarkerClick?: (place: Place, index: number) => void;
       itineraryOrder?: boolean; 
     } = {}
   ): any[] => {
-    if (!map || !isNaverLoaded || !placesToAdd || placesToAdd.length === 0) return [];
+    if (!map || !mapContext.isNaverLoaded || !placesToAdd || placesToAdd.length === 0) return [];
 
     const { 
       highlightPlaceId, 
@@ -345,23 +331,22 @@ export const useMapFeatures = (map: any) => {
     const createdMarkers: any[] = [];
 
     placesToAdd.forEach((place, index) => {
-      // Defensive coordinate check
       if (typeof place.x !== 'number' || typeof place.y !== 'number' || isNaN(place.x) || isNaN(place.y)) {
         console.warn(`[MapFeatures - addMarkers] Place '${place.name}' (ID: ${place.id}) has invalid or missing coordinates (x: ${place.x}, y: ${place.y}). Skipping marker.`);
         return; 
       }
 
       const position = createNaverLatLng(place.y, place.x);
-      if (!position) { // Should not happen if x, y are valid numbers
+      if (!position) { 
         console.warn(`[MapFeatures - addMarkers] Failed to create LatLng for '${place.name}'. Skipping marker.`);
         return;
       }
 
       const isHighlighted = place.id === highlightPlaceId;
       
-      const categoryKey = mapCategoryNameToKey(place.category); // from @/utils/categoryColors
-      const resolvedCategoryColor = getCategoryColor(categoryKey); // from @/utils/categoryColors
-      const markerBaseColor = useColorByCategory ? resolvedCategoryColor : (isHighlighted ? '#FF3B30' : '#4CD964'); // Default green if not by category and not highlighted
+      const categoryKey = mapCategoryNameToKey(place.category); 
+      const resolvedCategoryColor = getCategoryColor(categoryKey); 
+      const markerBaseColor = useColorByCategory ? resolvedCategoryColor : (isHighlighted ? '#FF3B30' : '#4CD964');
 
       let markerIcon;
       if (isItinerary && itineraryOrder) {
@@ -376,24 +361,24 @@ export const useMapFeatures = (map: any) => {
               font-size: 13px;
             ">${index + 1}</div>
           `,
-          anchor: new window.naver.maps.Point(14, 14) // Center anchor
+          anchor: new window.naver.maps.Point(14, 14)
         };
       } else if (isHighlighted) {
-         markerIcon = { // Specific style for highlighted marker
+         markerIcon = { 
           content: `
             <div style="
               width: 30px; height: 30px; border-radius: 50%; 
-              background-color: #FF3B30; /* Explicit highlight color */
+              background-color: #FF3B30; 
               color: white; display: flex;
               align-items: center; justify-content: center;
               box-shadow: 0 2px 6px rgba(0,0,0,0.5); border: 2px solid white;
-              font-size: 16px; /* Slightly larger icon for highlight */
+              font-size: 16px; 
             ">⭐</div>
-          `, // Using a star for highlighted, for example
-          anchor: new window.naver.maps.Point(15, 15) // Center anchor
+          `, 
+          anchor: new window.naver.maps.Point(15, 15)
         };
       }
-       else { // Default non-itinerary, non-highlighted marker
+       else { 
         markerIcon = {
           content: `
             <div style="
@@ -402,7 +387,7 @@ export const useMapFeatures = (map: any) => {
               border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.3);
             "></div>
           `,
-          anchor: new window.naver.maps.Point(6, 6) // Center anchor
+          anchor: new window.naver.maps.Point(6, 6)
         };
       }
 
@@ -414,7 +399,6 @@ export const useMapFeatures = (map: any) => {
         zIndex: isHighlighted ? 200 : (isItinerary && itineraryOrder ? 100 - index : 50)
       });
 
-      // InfoWindow content (simplified)
       const contentString = `
         <div style="padding: 8px; max-width: 180px; font-size: 12px;">
           <h3 style="font-weight: bold; margin-bottom: 4px; font-size: 13px;">${place.name}</h3>
@@ -430,11 +414,10 @@ export const useMapFeatures = (map: any) => {
         borderColor: "#ccc",
         borderWidth: 1,
         anchorSize: new window.naver.maps.Size(8, 8),
-        pixelOffset: new window.naver.maps.Point(0, -15) // Adjust offset based on marker icon
+        pixelOffset: new window.naver.maps.Point(0, -15) 
       });
 
       window.naver.maps.Event.addListener(marker, 'click', () => {
-        // Consider managing infoWindows globally if only one should be open.
         infoWindow.open(map, marker); 
         if (onMarkerClick) {
           onMarkerClick(place, index);
@@ -445,32 +428,31 @@ export const useMapFeatures = (map: any) => {
     });
     
     return createdMarkers;
-  }, [map, isNaverLoaded]);
+  }, [map, mapContext.isNaverLoaded, getCategoryColor, mapCategoryNameToKey]);
 
-  const calculateRoutes = useCallback((placesToRoute: Place[]) => {
-    if (!map || !isNaverLoaded || placesToRoute.length < 2) return [];
+  const calculateRoutes = useCallback((placesToRoute: Place[]) => { // This returns any[]
+    if (!map || !mapContext.isNaverLoaded || placesToRoute.length < 2) return [];
 
     const polylines: any[] = [];
     const pathCoordinates = placesToRoute
-        .filter(p => typeof p.x === 'number' && typeof p.y === 'number') // Ensure valid coords
-        .map(place => ({ lat: place.y, lng: place.x }));
+        .filter(p => typeof p.x === 'number' && typeof p.y === 'number') 
+        .map(place => ({ lat: place.y as number, lng: place.x as number }));
 
     if (pathCoordinates.length < 2) return [];
 
-    const polyline = drawRoutePath(map, pathCoordinates, '#22c55e', 4); // Green color, weight 4
+    const polyline = drawRoutePath(map, pathCoordinates, '#22c55e', 4); 
     if (polyline) {
       polylines.push(polyline);
       activePolylines.current.push(polyline); 
     }
     
     return polylines; 
-  }, [map, isNaverLoaded, drawRoutePath]);
-
+  }, [map, mapContext.isNaverLoaded, drawRoutePath]);
 
   return {
     addMarkers,
     clearMarkersAndUiElements: clearAllRoutes, 
-    calculateRoutes,
+    calculateRoutes, // This is (placesToRoute: Place[]) => any[]
     renderItineraryRoute,
     clearAllRoutes,
     highlightSegment,

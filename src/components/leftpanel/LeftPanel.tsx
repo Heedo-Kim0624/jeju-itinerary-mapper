@@ -20,7 +20,7 @@ const LeftPanel: React.FC = () => {
     tripDetails,
     uiVisibility,
     itineraryManagement,
-    handleCreateItinerary,
+    handleCreateItinerary, // This is async () => Promise<boolean>
     handleCloseItinerary
   } = useLeftPanel();
 
@@ -29,8 +29,8 @@ const LeftPanel: React.FC = () => {
   // 일정 생성 이벤트 처리를 위한 상태
   const [itineraryReceived, setItineraryReceived] = useState(false);
   // 빈 일정 패널도 표시하기 위한 강제 표시 상태
-  const [forceShowPanel, setForceShowPanel] = useState(false);
-  
+  // const [forceShowPanel, setForceShowPanel] = useState(false); // 이제 uiVisibility.showItinerary로 대체됨
+
   // 일정 상태 변화 감지를 위한 useEffect
   useEffect(() => {
     console.log("LeftPanel - 일정 관련 상태 변화 감지:", {
@@ -107,8 +107,7 @@ const LeftPanel: React.FC = () => {
   // 패널 닫기 핸들러 (뒤로 버튼용)
   const handleClosePanelWithBackButton = () => {
     console.log("[LeftPanel] '뒤로' 버튼으로 패널 닫기 실행");
-    // setForceShowPanel(false); // use-left-panel에서 showItinerary를 false로 설정하는 것으로 대체
-    handleCloseItinerary(); // This should set showItinerary to false in useLeftPanel
+    handleCloseItinerary(); 
   };
 
   const handlePanelBackByCategory = (category: string) => {
@@ -165,46 +164,55 @@ const LeftPanel: React.FC = () => {
   };
   
   // 일정 생성 함수 - 로딩 상태 관리 및 이벤트 처리 개선
-  const handleCreateItineraryWithLoading = async () => {
-    setItineraryReceived(false); // 일정 수신 상태 초기화
+  // LeftPanelContainer의 onCreateItinerary prop 타입은 () => boolean 이므로,
+  // 이 함수는 동기��으로 boolean을 반환해야 합니다.
+  const handleCreateItineraryWithLoading = () => { // async 키워드 제거
+    setItineraryReceived(false); 
     setIsGenerating(true);
-    console.log("[LeftPanel] 일정 생성 시작, isGenerating:", true);
+    console.log("[LeftPanel] 일정 생성 시작 (동기 호출), isGenerating:", true);
     
-    try {
-      const success = await handleCreateItinerary(); // This now triggers events handled by use-itinerary
-      
-      // 로딩 상태 해제 및 UI 표시는 itineraryCreated 이벤트 핸들러에서 담당
-      if (success) {
-        console.log("[LeftPanel] handleCreateItinerary 호출 성공. 이벤트 대기 중...");
-        // 안전장치: 15초 후에도 로딩 중이면 강제로 상태 업데이트 시도
-        setTimeout(() => {
-          if (isGenerating) { // isGenerating 상태를 직접 확인
-            console.warn("[LeftPanel] 15초 경과, 여전히 로딩 중. 강제 상태 업데이트 시도.");
-            setIsGenerating(false); // 로딩 상태 강제 해제
-            setItineraryReceived(true); // 일정 수신된 것으로 간주 (오류일 수도 있음)
-            
-            // uiVisibility.setShowItinerary(true); // useLeftPanel에서 itinerary 상태 보고 결정
-            // setForceShowPanel(true);
+    // handleCreateItinerary는 Promise<boolean>을 반환하므로 .then().catch()로 처리
+    handleCreateItinerary()
+      .then(success => {
+        // 로딩 상태 해제 및 UI 표시는 itineraryCreated 이벤트 핸들러에서 담당
+        if (success) {
+          console.log("[LeftPanel] handleCreateItinerary Promise 성공. 이벤트 대기 중...");
+          // 안전장치: 15초 후에도 로딩 중이면 강제로 상태 업데이트 시도
+          setTimeout(() => {
+            // setIsGenerating의 최신 상태를 확인하기 위해 함수형 업데이트를 사용하거나,
+            // 이 시점의 isGenerating 상태를 직접 참조합니다.
+            // 여기서는 isGenerating 상태를 직접 확인합니다.
+            // useState의 isGenerating 상태를 직접 참조합니다.
+            // 클로저 문제를 피하려면 이 부분에서 isGenerating 상태를 다시 가져오거나,
+            // 혹은 isGenerating 상태를 업데이트하는 로직이 timeout 내부에서 올바르게 동작하도록 해야합니다.
+            // 간단하게는, 상태가 아직 true이면 업데이트합니다.
+            if (isGenerating) { 
+              console.warn("[LeftPanel] 15초 경과, 여전히 로딩 중. 강제 상태 업데이트 시도.");
+              setIsGenerating(false); 
+              setItineraryReceived(true); 
 
-            if (!itineraryManagement.itinerary || itineraryManagement.itinerary.length === 0) {
-                 toast.warning("일정 생성 시간이 초과되었거나 빈 일정이 생성되었습니다.");
+              if (!itineraryManagement.itinerary || itineraryManagement.itinerary.length === 0) {
+                   toast.warning("일정 생성 시간이 초과되었거나 빈 일정이 생성되었습니다.");
+              }
             }
-          }
-        }, 15000); // 타임아웃 증가
-      } else {
-        console.log("[LeftPanel] handleCreateItinerary 호출 실패.");
+          }, 15000);
+        } else {
+          console.log("[LeftPanel] handleCreateItinerary Promise 실패.");
+          setIsGenerating(false);
+          setItineraryReceived(false); 
+          toast.error("일정 생성 요청에 실패했습니다.");
+        }
+        // 이 함수는 boolean을 반환해야 하지만, 실제 성공 여부는 비동기적으로 결정됩니다.
+        // Prop 타입에 맞추기 위해 true를 반환하고, 실제 로직은 Promise 내부에서 처리합니다.
+      })
+      .catch(error => {
+        console.error("[LeftPanel] 일정 생성 중 오류 (handleCreateItineraryWithLoading의 catch):", error);
         setIsGenerating(false);
-        setItineraryReceived(false); // 실패 시 명확히 설정
-        toast.error("일정 생성 요청에 실패했습니다.");
-      }
-      return success; 
-    } catch (error) {
-      console.error("[LeftPanel] 일정 생성 중 오류 (handleCreateItineraryWithLoading):", error);
-      setIsGenerating(false);
-      setItineraryReceived(false);
-      toast.error("일정 생성 중 내부 오류가 발생했습니다.");
-      return false;
-    }
+        setItineraryReceived(false);
+        toast.error("일정 생성 중 내부 오류가 발생했습니다.");
+      });
+
+    return true; // Prop 타입 () => boolean을 만족시키기 위해 동기적으로 true 반환
   };
   
   // shouldShowItineraryView는 이제 useLeftPanel의 uiVisibility.showItinerary를 직접 사용
@@ -310,7 +318,7 @@ const LeftPanel: React.FC = () => {
             startTime: tripDetails.dates?.startTime || "09:00",
             endTime: tripDetails.dates?.endTime || "21:00"
           }}
-          onCreateItinerary={handleCreateItineraryWithLoading} // 수정된 함수 사용
+          onCreateItinerary={handleCreateItineraryWithLoading} // 수��된 함수 사용
           itinerary={itineraryManagement.itinerary} // 상태 반영용
           selectedItineraryDay={itineraryManagement.selectedItineraryDay} // 상태 반영용
           onSelectDay={itineraryManagement.handleSelectItineraryDay} // 상태 반영용

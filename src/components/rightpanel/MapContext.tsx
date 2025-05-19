@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext } from 'react';
 import { Place, ItineraryDay } from '@/types/supabase';
 import useMapCore from './useMapCore'; // Assuming useMapCore is in the same directory
@@ -17,16 +16,16 @@ interface MapContextType {
     useColorByCategory?: boolean;
     onClick?: (place: Place, index: number) => void;
   }) => any[];
-  calculateRoutes: () => void; // Kept as () => void as per useMapFeatures's deprecation message
+  calculateRoutes: (placesToRoute: Place[]) => void; // Changed signature
   clearMarkersAndUiElements: () => void;
   panTo: (locationOrCoords: string | {lat: number, lng: number}) => void;
   showGeoJson: boolean;
   toggleGeoJsonVisibility: () => void;
-  renderItineraryRoute: ( // Ensure this signature is correct
+  renderItineraryRoute: ( 
     itineraryDay: ItineraryDay | null, 
     allServerRoutes?: Record<number, ServerRouteResponse>, 
-    onComplete?: () => void, 
-    onClear?: () => void
+    onComplete?: () => void
+    // onClear 제거됨: useMapFeatures의 renderItineraryRoute 시그니처와 불일치
   ) => void;
   clearAllRoutes: () => void;
   handleGeoJsonLoaded: (nodes: any[], links: any[]) => void;
@@ -37,12 +36,12 @@ interface MapContextType {
     totalPlaces: number;
     mappedPlaces: number;
     mappingRate: string;
-    averageDistance: number | string; // Can be string 'N/A'
+    averageDistance: number | string; 
     success: boolean;
     message: string;
   };
   mapPlacesWithGeoNodes: (places: Place[]) => Place[];
-  showRouteForPlaceIndex: (placeIndex: number, itineraryDay: ItineraryDay) => void;
+  showRouteForPlaceIndex: (placeIndex: number, itineraryDay: ItineraryDay, onComplete?: () => void) => void; // Added onComplete
   renderGeoJsonRoute: (nodeIds: string[], linkIds: string[], style?: any) => any[];
   geoJsonNodes: any[];
   geoJsonLinks: any[];
@@ -60,13 +59,12 @@ const defaultContext: MapContextType = {
   isNaverLoaded: false,
   isMapError: false,
   addMarkers: () => [],
-  calculateRoutes: () => {},
+  calculateRoutes: (placesToRoute: Place[]) => {}, // Changed signature
   clearMarkersAndUiElements: () => {},
   panTo: () => {},
   showGeoJson: false,
   toggleGeoJsonVisibility: () => {},
-  // Corrected default signature for renderItineraryRoute
-  renderItineraryRoute: (itineraryDay, allServerRoutes, onComplete, onClear) => {}, 
+  renderItineraryRoute: (itineraryDay, allServerRoutes, onComplete) => {}, 
   clearAllRoutes: () => {},
   handleGeoJsonLoaded: (nodes, links) => {},
   highlightSegment: (fromIndex, toIndex, itineraryDay) => {},
@@ -78,10 +76,10 @@ const defaultContext: MapContextType = {
     mappingRate: '0%', 
     averageDistance: 'N/A',
     success: false,
-    message: 'GeoJSON 데이터가 로드되지 않았습니다.'
+    message: 'GeoJSON 데이터�� 로드되지 않았습니다.'
   }),
   mapPlacesWithGeoNodes: (places) => places,
-  showRouteForPlaceIndex: (placeIndex, itineraryDay) => {},
+  showRouteForPlaceIndex: (placeIndex, itineraryDay, onComplete) => {}, // Added onComplete
   renderGeoJsonRoute: (nodeIds, linkIds, style) => [],
   geoJsonNodes: [],
   geoJsonLinks: [],
@@ -94,7 +92,7 @@ const MapContext = createContext<MapContextType>(defaultContext);
 export const useMapContext = () => useContext(MapContext);
 
 export const MapProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
-  const mapCoreValues = useMapCore(); // Renamed to avoid conflict if mapCore was used directly
+  const mapCoreValues = useMapCore(); 
   
   // Debug output for GeoJSON loading
   console.log("[MapProvider] MapContext 제공 상태:", {

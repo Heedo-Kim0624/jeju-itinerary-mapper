@@ -1,4 +1,3 @@
-
 import { useMapInitialization } from '@/hooks/map/useMapInitialization';
 import { useMapNavigation } from '@/hooks/map/useMapNavigation';
 import { useMapMarkers } from '@/hooks/map/useMapMarkers'; // This hook might be deprecated or its functionality moved to useMapFeatures
@@ -21,20 +20,16 @@ const useMapCore = () => {
     isMapError
   } = useMapInitialization();
   
-  // useMapFeatures now provides most of these functionalities
   const features = useMapFeatures(map); 
 
   const { 
-    // addMarkers, // From features
-    clearMarkersAndUiElements, // From features
-    // calculateRoutes // From features (deprecated there)
-  } = features; // useMapMarkers(map); // Potentially replaced by useMapFeatures for these
+    clearMarkersAndUiElements, 
+  } = features;
 
   const { 
     panTo 
-  } = useMapNavigation(map); // Keep if specific navigation logic is separate
+  } = useMapNavigation(map);
 
-  // GeoJSON state is separate
   const {
     showGeoJson,
     isGeoJsonLoaded,
@@ -43,23 +38,17 @@ const useMapCore = () => {
     toggleGeoJsonVisibility,
     handleGeoJsonLoaded,
     checkGeoJsonMapping,
-    // mapPlacesWithGeoNodes // This is now in useMapFeatures
   } = useGeoJsonState();
 
   const {
     serverRoutesData,
-    setServerRoutes: setServerRoutesBase // Renamed to avoid conflict
+    setServerRoutes: setServerRoutesBase
   } = useServerRoutes();
 
-  // Wrapper for setServerRoutes to potentially include GeoJSON logic if needed from useGeoJsonState
   const setServerRoutes = (
     dayRoutes: Record<number, ServerRouteResponse> | 
                ((prevRoutes: Record<number, ServerRouteResponse>) => Record<number, ServerRouteResponse>)
   ) => {
-    // The original implementation of setServerRoutes in useMapCore had:
-    // setServerRoutesBase(dayRoutes, showGeoJson, toggleGeoJsonVisibility);
-    // This seems incorrect as setServerRoutesBase from useServerRoutes only takes dayRoutes.
-    // For now, just pass through. If showGeoJson interaction is needed, it has to be re-evaluated.
     if (typeof dayRoutes === 'function') {
         setServerRoutesBase(prev => dayRoutes(prev));
     } else {
@@ -67,13 +56,11 @@ const useMapCore = () => {
     }
   };
   
-  // renderItineraryRoute correctly typed and calling the one from useMapFeatures
   const renderItineraryRoute = (
     itineraryDay: ItineraryDay | null,
     allServerRoutesInput?: Record<number, ServerRouteResponse>,
     onCompleteInput?: () => void
   ) => {
-    // Call features.renderItineraryRoute with all three arguments
     features.renderItineraryRoute(
         itineraryDay,
         allServerRoutesInput ?? serverRoutesData,
@@ -81,35 +68,32 @@ const useMapCore = () => {
     );
   };
 
-  // showRouteForPlaceIndex correctly typed and calling the one from useMapFeatures
   const showRouteForPlaceIndex = (
     placeIndex: number, 
     itineraryDay: ItineraryDay,
     onComplete?: () => void
   ) => {
-    // Call features.showRouteForPlaceIndex with all three arguments
     features.showRouteForPlaceIndex(
         placeIndex, 
         itineraryDay, 
         onComplete
     );
   };
+  
+  const calculateRoutesWrapper = (placesToRoute: Place[]) => {
+    features.calculateRoutes(placesToRoute);
+  };
 
   return {
-    // Map basic properties
     map,
     mapContainer,
     isMapInitialized,
     isNaverLoaded,
     isMapError,
-    
-    // Features from useMapFeatures, selectively exposed or wrapped
     addMarkers: features.addMarkers,
-    calculateRoutes: features.calculateRoutes, // Expose the (deprecated) one from useMapFeatures
-    clearMarkersAndUiElements, // This was from features
-    panTo, // From useMapNavigation
-    
-    // GeoJSON related (mostly from useGeoJsonState, mapPlacesWithGeoNodes from useMapFeatures)
+    calculateRoutes: calculateRoutesWrapper,
+    clearMarkersAndUiElements,
+    panTo,
     showGeoJson,
     toggleGeoJsonVisibility,
     isGeoJsonLoaded,
@@ -117,19 +101,15 @@ const useMapCore = () => {
     geoJsonLinks,
     handleGeoJsonLoaded,
     checkGeoJsonMapping,
-    mapPlacesWithGeoNodes: features.mapPlacesWithGeoNodes, // From useMapFeatures
-    
-    // Path rendering (from useMapFeatures)
-    renderItineraryRoute, // Wrapped version
+    mapPlacesWithGeoNodes: features.mapPlacesWithGeoNodes,
+    renderItineraryRoute, 
     clearAllRoutes: features.clearAllRoutes,
     highlightSegment: features.highlightSegment,
     clearPreviousHighlightedPath: features.clearPreviousHighlightedPath,
-    showRouteForPlaceIndex, // Wrapped version
+    showRouteForPlaceIndex, 
     renderGeoJsonRoute: features.renderGeoJsonRoute,
-    
-    // Server routes data
     serverRoutesData,
-    setServerRoutes // Wrapped version
+    setServerRoutes
   };
 };
 

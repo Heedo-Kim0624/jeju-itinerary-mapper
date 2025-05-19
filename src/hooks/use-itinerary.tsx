@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import type { Place, ItineraryDay, ItineraryPlaceWithTime, RouteData } from '@/types'; // @/types 에서 타입 가져오기 (core.ts 재수출)
-import { useItineraryCreator, ItineraryDay as CreatorItineraryDay } from './use-itinerary-creator'; // 읽기 전용 파일의 타입은 별칭으로 구분
+import type { Place, ItineraryDay, ItineraryPlaceWithTime, RouteData } from '@/types';
+import { useItineraryCreator, ItineraryDay as CreatorItineraryDay } from './use-itinerary-creator';
 import { toast } from 'sonner';
 
 // Helper to get day of week string (e.g., "Mon")
@@ -15,7 +15,7 @@ const getDateStringMMDD = (date: Date): string => {
   return `${month}/${day}`;
 };
 
-// 서버 응답을 ItineraryDay[] 형태로 파싱하는 함수 (사용자 제공 버전으로 교체)
+// 서버 응답을 ItineraryDay[] 형태로 파싱하는 함수
 const parseServerResponse = (serverResponse: any): ItineraryDay[] => {
   try {
     console.log("[useItinerary] parseServerResponse 시작:", {
@@ -35,18 +35,15 @@ const parseServerResponse = (serverResponse: any): ItineraryDay[] => {
     const placeCoordinates: Record<string, {x: number, y: number}> = {};
     
     serverResponse.schedule.forEach((item: any) => {
-      // 서버 응답의 place_id 또는 id를 사용해야 합니다. API 응답 스키마 확인 필요.
-      // 우선 'id' 필드가 있다고 가정합니다.
-      const idKey = item.id || item.place_id; // 서버 응답에서 ID 필드 이름 확인
+      const idKey = item.id || item.place_id; 
       if (idKey && (item.x !== undefined || item.longitude !== undefined) && 
           (item.y !== undefined || item.latitude !== undefined)) {
-        placeCoordinates[String(idKey)] = { // Ensure ID is string for key
-          x: parseFloat(item.x || item.longitude || '0'), // Ensure numeric
-          y: parseFloat(item.y || item.latitude || '0')  // Ensure numeric
+        placeCoordinates[String(idKey)] = { 
+          x: parseFloat(item.x || item.longitude || '0'), 
+          y: parseFloat(item.y || item.latitude || '0') 
         };
       } else if (idKey) {
-        // 좌표가 없는 경우, placeCoordinates에 기록하지 않거나 기본값 설정
-        console.warn(`[useItinerary] 장소 '${item.place_name}' (ID: ${idKey})에 대한 좌표 정보가 서버 응답��� 없습니다.`);
+        console.warn(`[useItinerary] 장소 '${item.place_name}' (ID: ${idKey})에 대한 좌표 정보가 서버 응답에 없습니다.`);
       }
     });
     
@@ -56,10 +53,10 @@ const parseServerResponse = (serverResponse: any): ItineraryDay[] => {
         time_block: item.time_block,
         place_name: item.place_name,
         place_type: item.place_type,
-        id: item.id, x: item.x, y: item.y // 좌표 로깅
+        id: item.id, x: item.x, y: item.y
       });
       
-      const dayMatch = item.time_block?.match(/^([A-Za-z]+)_/); // time_block이 없을 수 있으므로 optional chaining
+      const dayMatch = item.time_block?.match(/^([A-Za-z]+)_/); 
       if (dayMatch && dayMatch[1]) {
         const day = dayMatch[1];
         if (!dayGroups[day]) {
@@ -74,10 +71,10 @@ const parseServerResponse = (serverResponse: any): ItineraryDay[] => {
     console.log("[useItinerary] 날짜별 그룹화 결과:", Object.keys(dayGroups).map(day => ({ day, count: dayGroups[day].length })));
     
     const result: ItineraryDay[] = [];
-    let dayIndex = 1; // 1일차부터 시작
+    let dayIndex = 1; 
     
     for (const routeInfo of serverResponse.route_summary) {
-      const dayKey = routeInfo.day; // 'Mon', 'Tue' 등
+      const dayKey = routeInfo.day; 
       const dayPlacesRaw = dayGroups[dayKey] || [];
       
       console.log(`[useItinerary] ${dayKey}일 경로 정보 처리:`, routeInfo);
@@ -87,16 +84,21 @@ const parseServerResponse = (serverResponse: any): ItineraryDay[] => {
         const timeMatch = placeRaw.time_block?.match(/_([^_]+)$/);
         const timeBlock = timeMatch ? timeMatch[1] : 'N/A';
         
-        // 서버 응답의 ID 필드 (item.id 또는 item.place_id)를 사용
         const placeIdFromServer = String(placeRaw.id || placeRaw.place_id || Math.random().toString(36).substring(7));
 
-        const coords = placeCoordinates[placeIdFromServer] || {
-          x: 126.5311884, // 제주도 중심 X
-          y: 33.4996213,  // 제주도 중심 Y
-          // 로그 추가: 기본 좌표 사용 시
-          _defaultCoordsUsed: !placeCoordinates[placeIdFromServer]
-        };
-        if (coords._defaultCoordsUsed) {
+        let coordsInput = placeCoordinates[placeIdFromServer];
+        let defaultCoordsUsed = false;
+        if (!coordsInput) {
+            coordsInput = {
+                x: 126.5311884, 
+                y: 33.4996213,
+            };
+            defaultCoordsUsed = true;
+        }
+        
+        const coords = { ...coordsInput };
+
+        if (defaultCoordsUsed) { // Check the flag instead of property on coords
             console.warn(`[useItinerary] 장소 ID '${placeIdFromServer}' (${placeRaw.place_name})에 대한 좌표를 찾지 못해 기본값을 사용합니다.`);
         }
         
@@ -108,9 +110,9 @@ const parseServerResponse = (serverResponse: any): ItineraryDay[] => {
           address: placeRaw.address || '',
           x: coords.x,
           y: coords.y,
-          arriveTime: timeBlock, // 실제 도착/출발 시간은 추후 계산 필요
-          departTime: '',     //
-          stayDuration: placeRaw.stay_time_minutes || 60, // 분 단위
+          arriveTime: timeBlock, 
+          departTime: '',     
+          stayDuration: placeRaw.stay_time_minutes || 60, 
           travelTimeToNext: placeRaw.travel_time_to_next_min ? `${placeRaw.travel_time_to_next_min}분` : '',
           phone: placeRaw.phone || '',
           description: placeRaw.description || '',
@@ -118,30 +120,29 @@ const parseServerResponse = (serverResponse: any): ItineraryDay[] => {
           rating: parseFloat(placeRaw.rating || '0'),
           road_address: placeRaw.road_address || '',
           homepage: placeRaw.homepage || '',
-          geoNodeId: placeIdFromServer, // 경로 시각화를 위해 서버 ID 사용
+          geoNodeId: placeIdFromServer, 
         } as ItineraryPlaceWithTime;
       });
       
-      // 날짜 계산은 실제 여행 시작일을 기준으로 해야 함. 여기서는 임시로 오늘부터.
       const currentDate = new Date(); // TODO: 실제 여행 시작일(tripDetails.dates.startDate) 사용
       currentDate.setDate(currentDate.getDate() + dayIndex -1);
       
       const nodeIds = routeInfo.places_routed?.map((id: any) => String(id)) || [];
-      const linkIds = routeInfo.links_routed?.map((id: any) => String(id)) || []; // 서버 응답에 links_routed가 있다면 사용
+      const linkIds = routeInfo.links_routed?.map((id: any) => String(id)) || [];
       const interleaved = routeInfo.interleaved_route?.map((id: any) => String(id)) || [];
 
       const itineraryDay: ItineraryDay = {
         day: dayIndex,
-        dayOfWeek: dayKey.substring(0,3), // 'Mon', 'Tue'
+        dayOfWeek: dayKey.substring(0,3), 
         date: getDateStringMMDD(currentDate),
         places: places,
-        totalDistance: parseFloat(routeInfo.total_distance_m || '0') / 1000, // km 단위
+        totalDistance: parseFloat(routeInfo.total_distance_m || '0') / 1000, 
         routeData: {
           nodeIds: nodeIds,
-          linkIds: linkIds, // links_routed 사용
-          segmentRoutes: [], // 세그먼트 경로는 여기서 채우지 않음
+          linkIds: linkIds, 
+          segmentRoutes: [], 
         },
-        interleaved_route: interleaved.length > 0 ? interleaved : nodeIds, // Fallback
+        interleaved_route: interleaved.length > 0 ? interleaved : nodeIds, 
       };
       
       result.push(itineraryDay);
@@ -171,7 +172,6 @@ export const useItinerary = () => {
 
   const handleSelectItineraryDay = (day: number) => {
     setSelectedItineraryDay(day);
-    // 선택된 날짜의 장소들을 로그로 출력
     const selectedDayData = itinerary?.find(d => d.day === day);
     if (selectedDayData) {
       console.log(`[useItinerary] Selected Day ${day} places:`, selectedDayData.places.map(p => ({name: p.name, x: p.x, y: p.y, id: p.id })));
@@ -180,19 +180,18 @@ export const useItinerary = () => {
 
   // generateItinerary 함수가 @/types의 ItineraryDay[]를 반환하도록 보장
   const generateItinerary = (
-    placesToUse: Place[], // Place 타입은 @/types에서 온 것
+    placesToUse: Place[], 
     startDate: Date,
     endDate: Date,
     startTime: string,
     endTime: string
-  ): ItineraryDay[] => { // 반환 타입 명시: @/types의 ItineraryDay[]
+  ): ItineraryDay[] => { 
     try {
       if (placesToUse.length === 0) {
         toast.error("선택된 장소가 없습니다.");
         return [];
       }
 
-      // use-itinerary-creator.ts (읽기 전용)의 결과물 타입은 CreatorItineraryDay[]
       const creatorItineraryResult: CreatorItineraryDay[] = createItinerary(
         placesToUse,
         startDate,
@@ -206,39 +205,31 @@ export const useItinerary = () => {
         return [];
       }
 
-      // CreatorItineraryDay[]를 @/types의 ItineraryDay[]로 정확히 매핑
       const mappedItinerary: ItineraryDay[] = creatorItineraryResult.map((creatorDay, index) => {
         const currentDayDate = new Date(startDate);
         currentDayDate.setDate(startDate.getDate() + index);
-
-        // creatorDay.places (PlaceWithUsedFlag[])를 ItineraryPlaceWithTime[] (@/types 기준)으로 매핑
-        // PlaceWithUsedFlag는 Place를 확장하며, use-itinerary-creator는 arriveTime 등을 추가함.
-        // ItineraryPlaceWithTime은 Place를 확장하므로, 호환 가능성이 높음. 명시적 캐스팅 사용.
         const mappedPlaces: ItineraryPlaceWithTime[] = creatorDay.places.map(p_creator => {
-            // Ensure coordinates are present
             const placeWithCoords = {
                 ...p_creator,
-                x: p_creator.x ?? 0, // Default to 0 if null/undefined
-                y: p_creator.y ?? 0, // Default to 0 if null/undefined
+                x: p_creator.x ?? 0, 
+                y: p_creator.y ?? 0, 
             };
             return placeWithCoords as ItineraryPlaceWithTime; 
         });
 
-        // @/types의 ItineraryDay 객체 구성 (모든 필수 필드 포함)
         const coreItineraryDay: ItineraryDay = {
           day: creatorDay.day,
           places: mappedPlaces,
           totalDistance: creatorDay.totalDistance,
-          // --- @/types/core.ts ItineraryDay 필수 필드 ---
           dayOfWeek: getDayOfWeekString(currentDayDate),
           date: getDateStringMMDD(currentDayDate),
-          routeData: { nodeIds: [], linkIds: [], segmentRoutes: [] }, // 기본값 제공
-          interleaved_route: [], // 기본값 제공
+          routeData: { nodeIds: [], linkIds: [], segmentRoutes: [] }, 
+          interleaved_route: [], 
         };
         return coreItineraryDay;
       });
 
-      setItinerary(mappedItinerary); // 여기서 setItinerary는 useItinerary 내부의 상태를 업데이트
+      setItinerary(mappedItinerary); 
       setIsItineraryCreated(true);
       setSelectedItineraryDay(1);
       setShowItinerary(true);
@@ -249,7 +240,7 @@ export const useItinerary = () => {
         첫날장소: mappedItinerary[0]?.places.map(p => ({name: p.name, x: p.x, y: p.y}))
       });
 
-      return mappedItinerary; // @/types의 ItineraryDay[] 반환
+      return mappedItinerary; 
     } catch (error) {
       console.error("일정 생성 오류 (useItinerary - generateItinerary):", error);
       toast.error("일정 생성 중 오류가 발생했습니다.");
@@ -259,7 +250,7 @@ export const useItinerary = () => {
 
   // handleServerItineraryResponse 함수는 서버에서 이미 @/types/core 기준 ItineraryDay[]를 받는다고 가정.
   // (useScheduleParser.ts에서 그렇게 파싱한다고 되어 있음)
-  const handleServerItineraryResponse = (serverItinerary: ItineraryDay[]) => { // 매개변수 타입은 @/types의 ItineraryDay[]
+  const handleServerItineraryResponse = (serverItinerary: ItineraryDay[]) => { 
     console.log("서버 일정 응답 처리 시작 (useItinerary):", {
       일수: serverItinerary?.length || 0,
       첫날장소수: serverItinerary?.[0]?.places?.length || 0,
@@ -268,11 +259,11 @@ export const useItinerary = () => {
 
     if (!serverItinerary || serverItinerary.length === 0) {
       console.warn("[useItinerary] handleServerItineraryResponse: 빈 일정이 전달되었습니다.");
-      setItinerary([]); // 빈 배열로 설정하여 UI가 빈 상태를 반영하도록 함
-      setShowItinerary(true); // 빈 패널이라도 표시하도록 설정할 수 있음
-      setIsItineraryCreated(false); // 일정 생성 안된 것으로 처리
+      setItinerary([]); 
+      setShowItinerary(true); 
+      setIsItineraryCreated(false); 
       toast.info("생성된 일정이 없습니다. 다른 조건으로 시도해보세요.");
-      return []; // 빈 배열 반환
+      return []; 
     }
 
     try {
@@ -286,7 +277,6 @@ export const useItinerary = () => {
         console.log(`[useItinerary] handleServerItineraryResponse: 첫 번째 일자(${serverItinerary[0].day}) 선택`);
         setSelectedItineraryDay(serverItinerary[0].day);
       } else if (serverItinerary.length > 0) {
-        // Fallback if day property is missing but there are days
         setSelectedItineraryDay(1); 
       }
 
@@ -303,7 +293,7 @@ export const useItinerary = () => {
         const itineraryCreatedEvent = new CustomEvent('itineraryCreated', {
           detail: { 
             itinerary: serverItinerary,
-            selectedDay: selectedItineraryDay // 현재 선택된 날짜 사용
+            selectedDay: selectedItineraryDay 
           }
         });
         console.log("[useItinerary] handleServerItineraryResponse: itineraryCreated 이벤트 발생 (from handleServerItineraryResponse)");
@@ -314,37 +304,36 @@ export const useItinerary = () => {
     } catch (error) {
       console.error("[useItinerary] handleServerItineraryResponse 처리 중 오류:", error);
       setIsItineraryCreated(false);
-      setShowItinerary(false); // 오류 시 패널 숨김
+      setShowItinerary(false); 
       toast.error("일정 처리 중 오류가 발생했습니다.");
-      return []; // 빈 배열 반환 또는 기존 일정 유지
+      return []; 
     }
   };
   
   // createDebugItinerary 함수가 @/types의 ItineraryDay[]를 반환하도록 보장
-  const createDebugItinerary = (startDateInput: Date | null): ItineraryDay[] => { // 반환 타입 명시
-    const result: ItineraryDay[] = []; // 결과 배열 타입 명시
+  const createDebugItinerary = (startDateInput: Date | null): ItineraryDay[] => { 
+    const result: ItineraryDay[] = []; 
     const startDate = startDateInput || new Date(); 
     
     for (let i = 0; i < 3; i++) {
       const currentDate = new Date(startDate);
       currentDate.setDate(startDate.getDate() + i);
       
-      const places: ItineraryPlaceWithTime[] = []; // @/types의 ItineraryPlaceWithTime[]
+      const places: ItineraryPlaceWithTime[] = []; 
       for (let j = 0; j < 3 + Math.floor(Math.random() * 2); j++) {
         const placeIdNum = 4060000000 + i * 10000 + j * 100;
         const placeIdStr = String(placeIdNum);
-        // Place.category는 string, ItineraryPlaceWithTime도 string이므로 영어 카테고리명 사용 가능
         const debugCategory = ['attraction', 'restaurant', 'cafe', 'accommodation'][j % 4];
         places.push({
           id: placeIdStr, 
           name: `디버깅 장소 ${i+1}-${j+1}`,
           address: '제주특별자치도',
           phone: 'N/A',
-          category: debugCategory, // Place.category is string
+          category: debugCategory, 
           description: '디버그용 장소 설명',
           rating: 4.0 + Math.random(),
-          x: 126.5 + (Math.random() * 0.5 - 0.25), // Random coords around Jeju
-          y: 33.4 + (Math.random() * 0.2 - 0.1),   // Random coords around Jeju
+          x: 126.5 + (Math.random() * 0.5 - 0.25), 
+          y: 33.4 + (Math.random() * 0.2 - 0.1),   
           image_url: '',
           road_address: '제주특별자치도 도로명',
           homepage: '',
@@ -354,7 +343,7 @@ export const useItinerary = () => {
           departTime: `${(9 + j * 2 + 1).toString().padStart(2, '0')}:00`,
           stayDuration: 60,
           travelTimeToNext: "15분",
-        } as ItineraryPlaceWithTime); // 명시적 타입 단언
+        } as ItineraryPlaceWithTime); 
       }
       
       const nodeIdsNum = places.map(p => Number(p.id));
@@ -375,14 +364,14 @@ export const useItinerary = () => {
         day: i + 1,
         places: places,
         totalDistance: parseFloat((10 + Math.random() * 20).toFixed(2)),
-        routeData: { // ItineraryDay.routeData는 필수
+        routeData: { 
           nodeIds: nodeIdsNum.map(String),
           linkIds: linkIdsNum.map(String),
           segmentRoutes: [] 
         },
-        interleaved_route: interleavedRouteNum, // ItineraryDay.interleaved_route는 필수
-        dayOfWeek: getDayOfWeekString(currentDate), // ItineraryDay.dayOfWeek는 필수
-        date: getDateStringMMDD(currentDate), // ItineraryDay.date는 필수
+        interleaved_route: interleavedRouteNum, 
+        dayOfWeek: getDayOfWeekString(currentDate), 
+        date: getDateStringMMDD(currentDate), 
       });
     }
     return result;
@@ -395,7 +384,7 @@ export const useItinerary = () => {
       const serverResponse = (event as CustomEvent).detail?.response;
       
       if (serverResponse && serverResponse.schedule && serverResponse.route_summary) {
-        const parsedItinerary = parseServerResponse(serverResponse); // Use the new parser
+        const parsedItinerary = parseServerResponse(serverResponse); 
         console.log("[useItinerary] 서버 응답 파싱 완료. 파싱된 일정:", parsedItinerary);
         
         if (parsedItinerary && parsedItinerary.length > 0) {
@@ -409,7 +398,7 @@ export const useItinerary = () => {
              console.log(`[useItinerary] 첫 번째 유효한 날짜 (${firstDay.day}) 선택됨.`);
           } else {
              console.warn("[useItinerary] 파싱된 일정에 유효한 첫 날 정보가 없습니다.");
-             setSelectedItineraryDay(null); // Or some default like 1 if structure guarantees it
+             setSelectedItineraryDay(null); 
           }
           
           const itineraryCreatedEvent = new CustomEvent('itineraryCreated', {
@@ -422,12 +411,11 @@ export const useItinerary = () => {
           window.dispatchEvent(itineraryCreatedEvent);
         } else {
           console.error("[useItinerary] 서버 응답 파싱 결과가 비어있거나 유효하지 않습니다.");
-          setItinerary([]); // Clear itinerary
+          setItinerary([]); 
           setIsItineraryCreated(false);
-          setShowItinerary(true); // Show empty panel
+          setShowItinerary(true); 
           setSelectedItineraryDay(null);
           toast.error("일정 생성에 실패했거나 데이터가 없습니다. 다시 시도해주세요.");
-          // Dispatch itineraryCreated with empty data to signify completion but no data
            const itineraryCreatedEvent = new CustomEvent('itineraryCreated', {
             detail: { 
               itinerary: [],
@@ -440,7 +428,7 @@ export const useItinerary = () => {
         console.error("[useItinerary] 서버 응답이 유효하지 않거나 필요한 데이터가 없습니다:", serverResponse);
         setItinerary([]);
         setIsItineraryCreated(false);
-        setShowItinerary(true); // Show empty panel even on error
+        setShowItinerary(true); 
         setSelectedItineraryDay(null);
         toast.error("서버 응답이 유효하지 않습니다. 다시 시도해주세요.");
          const itineraryCreatedEvent = new CustomEvent('itineraryCreated', {
@@ -458,7 +446,7 @@ export const useItinerary = () => {
     return () => {
       window.removeEventListener('rawServerResponseReceived', handleRawServerResponse);
     };
-  }, [setItinerary, setSelectedItineraryDay, setShowItinerary, setIsItineraryCreated]); // parseServerResponse is stable if defined outside or memoized
+  }, [setItinerary, setSelectedItineraryDay, setShowItinerary, setIsItineraryCreated]); 
 
   useEffect(() => {
     const handleItineraryCreated = (event: Event) => {
@@ -470,12 +458,10 @@ export const useItinerary = () => {
       if (receivedItinerary && Array.isArray(receivedItinerary)) {
         if (receivedItinerary.length === 0) {
           console.warn("[useItinerary] 수신된 일정 데이터가 비어 있습니다. (itineraryCreated listener)");
-          // 이미 rawServerResponse에서 처리했을 수 있지만, 여기서도 상태를 명확히 함
           setItinerary([]);
-          setShowItinerary(true); // 빈 패널 표시
-          setIsItineraryCreated(false); // 생성 안됨으로 마크
+          setShowItinerary(true); 
+          setIsItineraryCreated(false); 
           setSelectedItineraryDay(null);
-          // toast.info("일정이 비어있습니다."); // 중복 토스트 방지
           return;
         }
         
@@ -483,7 +469,6 @@ export const useItinerary = () => {
           day && 
           typeof day.day === 'number' && 
           day.places && Array.isArray(day.places) &&
-          // Ensure all places have coordinates after parsing
           day.places.every(p => typeof p.x === 'number' && typeof p.y === 'number' && !isNaN(p.x) && !isNaN(p.y)) &&
           typeof day.dayOfWeek === 'string' && 
           typeof day.date === 'string' &&       
@@ -506,7 +491,6 @@ export const useItinerary = () => {
           setShowItinerary(true);
           setIsItineraryCreated(false);
           setSelectedItineraryDay(null);
-          // toast.error("유효한 일정을 만들 수 없습니다."); // 중복 토스트 방지
           return;
         }
         
@@ -546,21 +530,20 @@ export const useItinerary = () => {
     return () => {
       window.removeEventListener('itineraryCreated', handleItineraryCreated);
     };
-  }, [setItinerary, setSelectedItineraryDay, setShowItinerary, setIsItineraryCreated]); // Dependencies updated
+  }, [setItinerary, setSelectedItineraryDay, setShowItinerary, setIsItineraryCreated]);
 
   return {
     itinerary,
     selectedItineraryDay,
     showItinerary,
     isItineraryCreated,
-    setItinerary, // Expose setters if needed by other parts, e.g. useLeftPanel
+    setItinerary,
     setSelectedItineraryDay,
     setShowItinerary,
     setIsItineraryCreated,
     handleSelectItineraryDay,
     generateItinerary,
-    handleServerItineraryResponse, // This might be deprecated if rawServerResponse is the main path
+    handleServerItineraryResponse,
     createDebugItinerary
-    // parseServerResponse, // No need to export if only used internally
   };
 };
