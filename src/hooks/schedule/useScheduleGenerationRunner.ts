@@ -2,7 +2,7 @@
 import { useCallback } from 'react';
 import { toast } from 'sonner';
 import { SelectedPlace } from '@/types/supabase';
-import { NewServerScheduleResponse, ServerRouteResponse, isNewServerScheduleResponse } from '@/types/schedule';
+import { NewServerScheduleResponse, ServerRouteResponse, isNewServerScheduleResponse, ItineraryDay as CoreItineraryDay } from '@/types/core';
 import { useScheduleGenerator as useScheduleGeneratorHook } from '@/hooks/use-schedule-generator';
 import { useItineraryCreator, ItineraryDay as CreatorItineraryDay } from '@/hooks/use-itinerary-creator';
 import { useMapContext } from '@/components/rightpanel/MapContext';
@@ -23,7 +23,7 @@ interface UseScheduleGenerationRunnerProps {
   dates: { startDate: Date; endDate: Date; startTime: string; endTime: string; } | null;
   startDatetime: string | null;
   endDatetime: string | null;
-  setItinerary: (itinerary: CreatorItineraryDay[]) => void;
+  setItinerary: (itinerary: CoreItineraryDay[]) => void;  // 명확히 CoreItineraryDay[] 타입으로 표시
   setSelectedDay: (day: number | null) => void;
   setIsLoadingState: (loading: boolean) => void;
 }
@@ -33,7 +33,7 @@ export const useScheduleGenerationRunner = ({
   dates,
   startDatetime, 
   endDatetime,   
-  setItinerary,
+  setItinerary: setItineraryCore,  // CoreItineraryDay[] 타입을 위한 별칭 사용
   setSelectedDay,
   setIsLoadingState,
 }: UseScheduleGenerationRunnerProps) => {
@@ -52,7 +52,7 @@ export const useScheduleGenerationRunner = ({
     console.log("[useScheduleGenerationRunner] runScheduleGenerationProcess started. Setting isLoadingState to true.");
     setIsLoadingState(true);
     
-    let finalItineraryForEvent: CreatorItineraryDay[] = [];
+    let finalItineraryForEvent: CoreItineraryDay[] = [];
     
     try {
       const payload = preparePayload();
@@ -112,10 +112,13 @@ export const useScheduleGenerationRunner = ({
             );
             
             if (fallbackItinerary.length > 0) {
+              // CreatorItineraryDay[]를 CoreItineraryDay[]로 적절히 변환
+              const mappedFallbackItinerary = convertCreatorToCore(fallbackItinerary, dates.startDate);
+              
               // 대체 일정 저장 및 이벤트 발생을 위한 설정
-              setItinerary(fallbackItinerary);
-              finalItineraryForEvent = fallbackItinerary;
-              setSelectedDay(fallbackItinerary[0].day);
+              setItineraryCore(mappedFallbackItinerary);
+              finalItineraryForEvent = mappedFallbackItinerary;
+              setSelectedDay(mappedFallbackItinerary[0].day);
               toast.info('클라이언트에서 대체 일정을 생성했습니다.');
             }
           }
@@ -129,7 +132,7 @@ export const useScheduleGenerationRunner = ({
         console.log("[useScheduleGenerationRunner] 좌표가 추가된 일정:", JSON.parse(JSON.stringify(itineraryWithCoords)));
         
         // 상태에 일정 데이터를 저장
-        setItinerary(itineraryWithCoords);
+        setItineraryCore(itineraryWithCoords);
         finalItineraryForEvent = itineraryWithCoords;
         
         // MapContext에 경로 데이터 전달
@@ -166,11 +169,14 @@ export const useScheduleGenerationRunner = ({
               dates.endTime
             );
             
-            setItinerary(fallbackItinerary);
-            finalItineraryForEvent = fallbackItinerary;
+            // CreatorItineraryDay[]를 CoreItineraryDay[]로 적절히 변환
+            const mappedFallbackItinerary = convertCreatorToCore(fallbackItinerary, dates.startDate);
             
-            if (fallbackItinerary.length > 0) {
-              setSelectedDay(fallbackItinerary[0].day);
+            setItineraryCore(mappedFallbackItinerary);
+            finalItineraryForEvent = mappedFallbackItinerary;
+            
+            if (mappedFallbackItinerary.length > 0) {
+              setSelectedDay(mappedFallbackItinerary[0].day);
               toast.info("클라이언트에서 기본 일정이 생성되었습니다.");
             }
         }
@@ -189,11 +195,14 @@ export const useScheduleGenerationRunner = ({
           dates.endTime
         );
         
-        setItinerary(fallbackItinerary);
-        finalItineraryForEvent = fallbackItinerary;
+        // CreatorItineraryDay[]를 CoreItineraryDay[]로 적절히 변환
+        const mappedFallbackItinerary = convertCreatorToCore(fallbackItinerary, dates.startDate);
         
-        if (fallbackItinerary.length > 0) {
-          setSelectedDay(fallbackItinerary[0].day);
+        setItineraryCore(mappedFallbackItinerary);
+        finalItineraryForEvent = mappedFallbackItinerary;
+        
+        if (mappedFallbackItinerary.length > 0) {
+          setSelectedDay(mappedFallbackItinerary[0].day);
           toast.info("오류 발생으로 인해 기본 일정을 생성했습니다.");
         }
       }
@@ -253,10 +262,40 @@ export const useScheduleGenerationRunner = ({
     setServerRoutes,
     dates,
     createItinerary,
-    setItinerary,
+    setItineraryCore,
     setSelectedDay,
     setIsLoadingState,
   ]);
+
+  // CreatorItineraryDay[]를 CoreItineraryDay[]로 변환하는 유틸리티 함수
+  const convertCreatorToCore = (creatorItinerary: CreatorItineraryDay[], startDate: Date): CoreItineraryDay[] => {
+    return creatorItinerary.map((creatorDay, index) => {
+      const currentDayDate = new Date(startDate);
+      currentDayDate.setDate(startDate.getDate() + index);
+      
+      const dayOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][currentDayDate.getDay()];
+      const date = `${(currentDayDate.getMonth() + 1).toString().padStart(2, '0')}/${currentDayDate.getDate().toString().padStart(2, '0')}`;
+      
+      // 기본 필드를 모두 포함하는 CoreItineraryDay 객체 반환
+      return {
+        day: creatorDay.day,
+        places: creatorDay.places.map(p => ({
+          ...p,
+          // 필요한 추가 필드가 있다면 여기에 추가
+        })),
+        totalDistance: creatorDay.totalDistance,
+        // core.ts에서 정의한 필수 필드 추가
+        routeData: { 
+          nodeIds: [], 
+          linkIds: [],
+          segmentRoutes: [] 
+        },
+        interleaved_route: [],
+        dayOfWeek: dayOfWeek,
+        date: date
+      };
+    });
+  };
 
   return { 
     runScheduleGenerationProcess,

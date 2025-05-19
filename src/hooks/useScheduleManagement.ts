@@ -4,6 +4,7 @@ import { useScheduleStateAndEffects } from './schedule/useScheduleStateAndEffect
 import { useScheduleGenerationRunner } from './schedule/useScheduleGenerationRunner';
 import { SelectedPlace } from '@/types/supabase';
 import { useEffect } from 'react'; // useEffect 추가
+import { ItineraryDay } from '@/types/core'; // 명시적으로 core에서 타입 import
 
 interface UseScheduleManagementProps {
   selectedPlaces: SelectedPlace[];
@@ -35,7 +36,8 @@ export const useScheduleManagement = ({
     dates,
     startDatetime,
     endDatetime,
-    setItinerary,
+    // 명시적으로 함수를 래핑하여 타입 문제 해결
+    setItinerary: (itinerary: ItineraryDay[]) => setItinerary(itinerary), 
     setSelectedDay,
     setIsLoadingState, // This setIsLoadingState is from useScheduleStateAndEffects
   });

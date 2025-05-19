@@ -1,6 +1,6 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react'; // useRef 추가
-import { ItineraryDay } from '@/types/supabase';
+import { ItineraryDay } from '@/types/core'; // core.ts에서 직접 import
 import { useMapContext } from '@/components/rightpanel/MapContext';
 import { extractAllNodesFromRoute, extractAllLinksFromRoute } from '@/utils/routeParser';
 
