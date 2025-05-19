@@ -1,8 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
 import { Place, ItineraryDay } from '@/types'; 
 import PlaceCart from './PlaceCart';
 import ScheduleViewer from './ScheduleViewer'; 
-// import ItineraryView from './ItineraryView'; // No longer directly used here if ScheduleViewer is primary
 
 interface LeftPanelContainerProps {
   showItinerary: boolean;

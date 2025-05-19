@@ -1,3 +1,4 @@
+
 import { useCallback } from 'react';
 import { toast } from 'sonner';
 import { 
@@ -42,11 +43,6 @@ interface UseScheduleGenerationRunnerProps {
   setItinerary: (itinerary: ItineraryDay[]) => void; // Expects global ItineraryDay[]
   setSelectedDay: (day: number | null) => void;
   setIsLoadingState: (loading: boolean) => void;
-  // setShowItinerary is typically handled by a UI visibility hook like useLeftPanel or useItinerary itself
-  // Forcing it from here might be okay if this hook is the sole controller of that state piece.
-  // The user's prompt added setShowItinerary to handleCreateItinerary in use-itinerary-handlers.tsx
-  // For now, let's keep its management to event 'itineraryCreated' detail.
-  // setShowItinerary?: (show: boolean) => void; // Optional, if direct control is needed
 }
 
 export const useScheduleGenerationRunner = ({
@@ -57,7 +53,6 @@ export const useScheduleGenerationRunner = ({
   setItinerary,
   setSelectedDay,
   setIsLoadingState,
-  // setShowItinerary // Optional prop
 }: UseScheduleGenerationRunnerProps) => {
   const { generateSchedule: generateScheduleViaHook } = useScheduleGeneratorHook();
   const { createItinerary: originalCreateItinerary } = useItineraryCreator(); // Renamed to avoid confusion
@@ -78,13 +73,20 @@ export const useScheduleGenerationRunner = ({
     return creatorDays.map((creatorDay, index) => {
       const currentDayDate = new Date(startDate);
       currentDayDate.setDate(startDate.getDate() + index);
+      
+      // Ensure we have a routeData object that meets the global RouteData type
+      const routeData: RouteData = {
+        nodeIds: (creatorDay.routeData?.nodeIds || []).map(String),
+        linkIds: (creatorDay.routeData?.linkIds || []).map(String),
+        segmentRoutes: creatorDay.routeData?.segmentRoutes || []
+      };
+      
       return {
         ...creatorDay,
         dayOfWeek: getDayOfWeekString(currentDayDate),
         date: getDateStringMMDD(currentDayDate),
-        // Ensure routeData is compliant with the new ItineraryDay type (must be RouteData, not optional)
-        routeData: creatorDay.routeData || { nodeIds: [], linkIds: [], segmentRoutes: [] },
-        interleaved_route: (creatorDay as any).interleaved_route || [], // Cast if interleaved_route is not on CreatorItineraryDay
+        routeData: routeData, // Use the properly typed routeData
+        interleaved_route: (creatorDay as any).interleaved_route || [], 
       };
     });
   };
@@ -143,7 +145,6 @@ export const useScheduleGenerationRunner = ({
               setItinerary(mappedFallbackItinerary);
               finalItineraryForEvent = mappedFallbackItinerary;
               setSelectedDay(mappedFallbackItinerary[0].day);
-              // if (setShowItinerary) setShowItinerary(true); // As per user's logic
               toast.info('클라이언트에서 대체 일정을 생성했습니다.');
               itineraryCreatedSuccessfully = true;
             }
@@ -157,8 +158,6 @@ export const useScheduleGenerationRunner = ({
         setItinerary(itineraryWithCoords); // itineraryWithCoords should be ItineraryDay[]
         finalItineraryForEvent = itineraryWithCoords;
         
-        // User's request logic for setShowItinerary(true) and setSelectedDay
-        // if (setShowItinerary) setShowItinerary(true);
         setSelectedDay(itineraryWithCoords[0].day);
         
         const routesForMapContext: Record<number, ServerRouteResponse> = {};
@@ -199,7 +198,6 @@ export const useScheduleGenerationRunner = ({
             
             if (mappedFallbackItinerary.length > 0) {
               setSelectedDay(mappedFallbackItinerary[0].day);
-              // if (setShowItinerary) setShowItinerary(true);
               toast.info("서버 응답 문제로 클라이언트에서 기본 일정이 생성되었습니다.");
               itineraryCreatedSuccessfully = true;
             } else {
@@ -228,7 +226,6 @@ export const useScheduleGenerationRunner = ({
         
         if (mappedFallbackItinerary.length > 0) {
           setSelectedDay(mappedFallbackItinerary[0].day);
-          // if (setShowItinerary) setShowItinerary(true);
           toast.info("오류 발생으로 인해 기본 일정을 생성했습니다.");
           itineraryCreatedSuccessfully = true;
         }
@@ -262,12 +259,11 @@ export const useScheduleGenerationRunner = ({
     selectedPlaces,
     setServerRoutes,
     dates,
-    originalCreateItinerary, // Use renamed version
+    originalCreateItinerary, 
     setItinerary,
     setSelectedDay,
     setIsLoadingState,
-    // setShowItinerary, // Add if prop is used
-    mapCreatorItineraryToGlobal, // Add new mapper function to dependencies
+    mapCreatorItineraryToGlobal, 
   ]);
 
   return { 

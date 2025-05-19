@@ -31,6 +31,12 @@ export const useItinerary = () => {
   const [isItineraryCreated, setIsItineraryCreated] = useState<boolean>(false); // Added state
   const { createItinerary } = useItineraryCreator();
 
+  // Standard function name for selecting a day
+  const onDaySelect = (day: number) => {
+    setSelectedItineraryDay(day);
+  };
+
+  // Keeping the original function as well for backward compatibility
   const handleSelectItineraryDay = (day: number) => {
     setSelectedItineraryDay(day);
   };
@@ -291,6 +297,7 @@ export const useItinerary = () => {
     setShowItinerary,
     setIsItineraryCreated, // expose setter
     handleSelectItineraryDay,
+    onDaySelect, // Add standardized function name
     generateItinerary,
     handleServerItineraryResponse,
     createDebugItinerary // expose for debugging if needed

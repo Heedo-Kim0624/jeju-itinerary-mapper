@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useCallback } from 'react';
 import { useLeftPanel } from '@/hooks/use-left-panel';
 import LeftPanelContainer from './LeftPanelContainer';
@@ -48,31 +49,30 @@ const LeftPanel: React.FC = () => {
         현재패널표시상태_before: uiVisibility.showItinerary
       });
 
-      // Check if itineraryManagement and its methods exist before calling
-      if (itineraryManagement && typeof itineraryManagement.setItinerary === 'function') {
-        itineraryManagement.setItinerary(itinerary || []);
-      } else {
-        console.warn("[LeftPanel] itineraryManagement.setItinerary is not available.");
-      }
+      if (itinerary && Array.isArray(itinerary)) {
+        // Use the setters directly from itineraryManagement (which should come from useItinerary)
+        if (itineraryManagement && itineraryManagement.setItinerary) {
+          itineraryManagement.setItinerary(itinerary);
+        }
 
-      if (itineraryManagement && typeof itineraryManagement.setSelectedItineraryDay === 'function') {
-        itineraryManagement.setSelectedItineraryDay(selectedDay);
-      } else {
-        console.warn("[LeftPanel] itineraryManagement.setSelectedItineraryDay is not available.");
+        if (itineraryManagement && itineraryManagement.setSelectedItineraryDay) {
+          itineraryManagement.setSelectedItineraryDay(selectedDay);
+        }
+        
+        if (uiVisibility && uiVisibility.setShowItinerary) {
+          // Update showItinerary based on the event, but only if we have valid data
+          const shouldShow = eventShowItinerary && itinerary && itinerary.length > 0;
+          uiVisibility.setShowItinerary(shouldShow);
+          console.log(`[LeftPanel] setShowItinerary(${shouldShow}) 호출됨 (이벤트 핸들러)`);
+        }
       }
       
-      if (uiVisibility && typeof uiVisibility.setShowItinerary === 'function') {
-        uiVisibility.setShowItinerary(eventShowItinerary && itinerary && itinerary.length > 0);
-         console.log(`[LeftPanel] setShowItinerary(${eventShowItinerary && itinerary && itinerary.length > 0}) 호출됨 (이벤트 핸들러)`);
-      } else {
-        console.warn("[LeftPanel] uiVisibility.setShowItinerary is not available.");
-      }
+      // Reset the loading state
       setIsGeneratingItinerary(false);
     };
     
     window.addEventListener('itineraryCreated', handleItineraryCreated);
     
-    // Optional: Listen to forceRerender if still needed for other purposes
     const handleForceRerender = () => {
       console.log("[LeftPanel] forceRerender 이벤트 수신. 로딩 상태 재확인.");
     };
@@ -82,7 +82,7 @@ const LeftPanel: React.FC = () => {
       window.removeEventListener('itineraryCreated', handleItineraryCreated);
       window.removeEventListener('forceRerender', handleForceRerender);
     };
-  }, [uiVisibility, itineraryManagement]); // Simplified dependency array, ensure itineraryManagement itself is stable or correctly includes its methods.
+  }, [uiVisibility, itineraryManagement]);
 
   const handlePanelBackByCategory = (category: string) => {
     console.log(`${category} 카테고리 패널 뒤로가기`);
@@ -181,7 +181,7 @@ const LeftPanel: React.FC = () => {
           <ItineraryView
             itinerary={itineraryManagement.itinerary!}
             startDate={tripDetails.dates?.startDate || new Date()}
-            onDaySelect={itineraryManagement.handleSelectItineraryDay}
+            onSelectDay={itineraryManagement.onDaySelect || itineraryManagement.handleSelectItineraryDay}
             selectedDay={itineraryManagement.selectedItineraryDay}
             onClose={() => {
               handleCloseItinerary(); 
@@ -246,7 +246,7 @@ const LeftPanel: React.FC = () => {
           onCreateItinerary={triggerCreateItinerary} 
           itinerary={itineraryManagement.itinerary}
           selectedItineraryDay={itineraryManagement.selectedItineraryDay}
-          onSelectDay={itineraryManagement.handleSelectItineraryDay}
+          onSelectDay={itineraryManagement.onDaySelect || itineraryManagement.handleSelectItineraryDay}
           isGenerating={isGeneratingItinerary} 
         />
       )}

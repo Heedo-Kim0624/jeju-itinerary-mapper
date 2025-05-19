@@ -1,12 +1,13 @@
+
 import React, { useEffect } from 'react';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import { ItineraryDay, ItineraryPlaceWithTime } from '@/types/supabase';
+import { ItineraryDay, ItineraryPlaceWithTime } from '@/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Clock, Navigation } from 'lucide-react';
 
-interface ScheduleViewerProps {
+export interface ScheduleViewerProps {
   schedule?: ItineraryDay[];
   selectedDay?: number | null;
   onDaySelect?: (day: number) => void;
@@ -49,25 +50,14 @@ const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
       schedule.find(d => d.day === selectedDay) : null);
 
   if (!currentDayToDisplay && selectedDay !== null) {
-    // This log is helpful if a day is selected but no data is found for it
     console.warn(`ScheduleViewer: 선택된 날짜(${selectedDay})에 해당하는 일정 데이터가 없습니다.`, {
       scheduleAvailable: !!schedule,
       scheduleDays: schedule?.map(d => d.day)
     });
   }
-  
-  // The DaySelector (horizontal day buttons) is now in ItineraryView.
-  // ScheduleViewer is now primarily for displaying the details of the *selected* day.
-  // So, the part that renders the day buttons in ScheduleViewer itself can be removed if ItineraryView always provides them.
-  // However, keeping it allows ScheduleViewer to be more versatile if used elsewhere.
-  // For now, based on user's Part 2 for ItineraryView, the day buttons are there. ScheduleViewer will just display details.
 
   return (
     <div className="h-full flex flex-col">
-      {/* The header with "생성된 여행 일정" and "뒤로" button is now in ItineraryView */}
-      {/* The day selector buttons are also now in ItineraryView */}
-      {/* This component now focuses solely on displaying the details of currentDayToDisplay */}
-
       <ScrollArea className="flex-1">
         {currentDayToDisplay ? (
           <div className="p-4">
@@ -117,7 +107,6 @@ const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
           </div>
         )}
       </ScrollArea>
-      {/* 디버깅용 상태 표시 (개발 중에만 사용) */}
       {process.env.NODE_ENV === 'development' && !currentDayToDisplay && selectedDay !== null && (
         <div className="p-4 bg-yellow-100 text-yellow-800 text-sm">
           디버깅 (ScheduleViewer): 선택된 날짜({selectedDay})에 해당하는 일정 데이터가 없습니다.<br />

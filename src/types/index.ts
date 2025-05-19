@@ -1,4 +1,3 @@
-
 // 기본 장소 인터페이스
 export interface Place {
   id: string | number; // Allow number for geoNodeId consistency
@@ -94,17 +93,17 @@ export interface ServerScheduleItem {
   place_type: string;
 }
 
-// 서버 경로 요약 항목 (사용자 제안에 따라 필수 항목 강화)
+// 서버 경로 요약 항목 (사용자 제안에 따라 조정)
 export interface ServerRouteSummaryItem {
   day: string;                   // "Tue", "Wed", "Thu", "Fri" 등
   status: string;                // "성공" 등
   total_distance_m: number;      // 미터 단위 총 거리
-  places_scheduled: string[];   // 일정에 포함된 장소 이름 배열 (필수)
-  places_routed: string[];      // 경로에 포함된 장소 이름 배열 (필수)
-  interleaved_route: number[]; // NODE_ID와 LINK_ID가 번갈아 있는 숫자 배열 (필수)
+  places_scheduled?: string[];   // 일정에 포함된 장소 이름 배열 (선택적으로 변경)
+  places_routed?: string[];      // 경로에 포함된 장소 이름 배열 (선택적으로 변경)
+  interleaved_route: (string | number)[]; // NODE_ID와 LINK_ID가 번갈아 있는 배열
 }
 
-// 서버 응답 인터페이스 (사용자 제안에 따라 ServerRouteSummaryItem 변경 적용)
+// 서버 응답 인터페이스
 export interface NewServerScheduleResponse {
   total_reward?: number;
   schedule: ServerScheduleItem[];
@@ -118,7 +117,7 @@ export interface ServerRouteResponse {
   interleaved_route?: number[]; // Optional as per original
 }
 
-// 타입 검사 함수 (사용자 제안 반영하여 ServerRouteSummaryItem 필드 검사 강화)
+// 타입 검�� 함수 (업데이트)
 export function isNewServerScheduleResponse(obj: any): obj is NewServerScheduleResponse {
   return (
     obj !== null &&
@@ -132,9 +131,7 @@ export function isNewServerScheduleResponse(obj: any): obj is NewServerScheduleR
       typeof item.day === 'string' &&
       item.hasOwnProperty('status') && // Use hasOwnProperty for safer check
       item.hasOwnProperty('total_distance_m') &&
-      Array.isArray(item.places_scheduled) && // Now required
-      Array.isArray(item.places_routed) &&    // Now required
-      Array.isArray(item.interleaved_route)   // Now required (and number[] as per ServerRouteSummaryItem)
+      Array.isArray(item.interleaved_route)   // Only interleaved_route is required
     )
   );
 }
