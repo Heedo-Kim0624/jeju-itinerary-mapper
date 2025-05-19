@@ -5,20 +5,16 @@ import { Button } from '@/components/ui/button';
 import { format, addDays } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { categoryColors, getCategoryName } from '@/utils/categoryColors';
-import type { ItineraryDay, ItineraryPlaceWithTime } from '@/types/supabase'; // ItineraryDay from supabase might conflict if use-itinerary has a different one.
-// Assuming ItineraryDay from use-itinerary is intended here, or they are compatible.
-// For now, let's assume ItineraryDay from use-itinerary is the source of truth for this component.
-// If types/supabase defines a different ItineraryDay, this might need aliasing.
-// import type { ItineraryDay } from '@/hooks/use-itinerary'; // Alternative if types are conflicting
-import ScheduleViewer from './ScheduleViewer'; // Import ScheduleViewer
+import type { ItineraryDay, ItineraryPlaceWithTime } from '@/types'; // @/types에서 가져오도록 변경
+import ScheduleViewer from './ScheduleViewer';
 
 interface ItineraryViewProps {
-  itinerary: ItineraryDay[]; // Using ItineraryDay from the local scope or an imported one
+  itinerary: ItineraryDay[];
   startDate: Date;
   onSelectDay: (day: number) => void;
   selectedDay: number | null;
-  onClose?: () => void; // Added onClose prop
-  debug?: { // Added debug prop
+  onClose?: () => void;
+  debug?: {
     itineraryLength: number;
     selectedDay: number | null;
     showItinerary: boolean;
@@ -30,7 +26,7 @@ const ItineraryView: React.FC<ItineraryViewProps> = ({
   startDate,
   onSelectDay,
   selectedDay,
-  onClose, // Added onClose
+  onClose, 
   debug 
 }) => {
   useEffect(() => {
@@ -42,8 +38,13 @@ const ItineraryView: React.FC<ItineraryViewProps> = ({
     });
     
     if (itinerary?.length > 0 && selectedDay === null && onSelectDay) {
-      console.log("ItineraryView: 첫 번째 날짜 자동 선택:", itinerary[0].day);
-      onSelectDay(itinerary[0].day);
+      // Ensure itinerary[0] exists and day is valid before selecting
+      if (itinerary[0] && typeof itinerary[0].day === 'number') {
+        console.log("ItineraryView: 첫 번째 날짜 자동 선택:", itinerary[0].day);
+        onSelectDay(itinerary[0].day);
+      } else {
+        console.warn("ItineraryView: 첫 번째 날짜 자동 선택 불가 - itinerary[0] 또는 day가 유효하지 않음");
+      }
     }
   }, [itinerary, selectedDay, onSelectDay, startDate, debug]);
 
@@ -52,15 +53,9 @@ const ItineraryView: React.FC<ItineraryViewProps> = ({
     onSelectDay(day);
   };
 
-  const getDateForDay = (day: number) => {
-    const date = addDays(new Date(startDate), day - 1);
-    return format(date, 'yyyy년 MM월 dd일');
-  };
-
-  const getDayOfWeek = (day: number) => {
-    const date = addDays(new Date(startDate), day - 1);
-    return format(date, 'EEEE', { locale: ko });
-  };
+  // getDateForDay and getDayOfWeek are not used directly in JSX anymore
+  // const getDateForDay = (day: number) => { ... };
+  // const getDayOfWeek = (day: number) => { ... };
 
   if (!itinerary || itinerary.length === 0) {
     console.warn("ItineraryView: 일정 데이터가 없습니다.");
@@ -71,19 +66,11 @@ const ItineraryView: React.FC<ItineraryViewProps> = ({
     );
   }
 
-  // This console log was already here, keeping it.
-  // console.log("ItineraryView 렌더링", {
-  //   일수: itinerary.length,
-  //   선택일자: selectedDay
-  // });
-
-  // const currentDayItinerary = selectedDay ? itinerary.find(day => day.day === selectedDay) : null; // This was for the old structure, ScheduleViewer handles current day
-
   return (
     <div className="w-full h-full flex flex-col">
       <div className="flex items-center justify-between p-4 border-b">
         <h2 className="text-lg font-semibold">생성된 여행 일정</h2>
-        {onClose && ( // Added back button
+        {onClose && (
           <button
             onClick={onClose}
             className="text-sm text-blue-600 hover:underline"
@@ -93,47 +80,37 @@ const ItineraryView: React.FC<ItineraryViewProps> = ({
         )}
       </div>
       
-      {/* 날짜 버튼 UI */}
       <div className="flex overflow-x-auto pb-2 p-4 gap-2 border-b">
         {itinerary.map((dayItem) => {
-          const dayDate = new Date(startDate);
-          // Ensure dayItem.day is a number before using in addDays or setDate
-          const currentDayNumber = typeof dayItem.day === 'number' ? dayItem.day : parseInt(String(dayItem.day), 10);
-          if (isNaN(currentDayNumber)) {
-            console.error("Invalid day number in itinerary:", dayItem);
-            return null; 
-          }
-          dayDate.setDate(startDate.getDate() + currentDayNumber - 1);
-          const formattedDate = format(dayDate, 'MM/dd(EEE)', { locale: ko });
-          
+          // dayItem.date 와 dayItem.dayOfWeek 를 직접 사용 (core.ts의 ItineraryDay에 포함됨)
+          // const dayDate = new Date(startDate);
+          // dayDate.setDate(startDate.getDate() + dayItem.day - 1);
+          // const formattedDate = format(dayDate, 'MM/dd(EEE)', { locale: ko });
+          const formattedDate = `${dayItem.date}(${dayItem.dayOfWeek})`;
+
+
           return (
             <Button
-              key={currentDayNumber}
-              variant={selectedDay === currentDayNumber ? "default" : "outline"}
+              key={dayItem.day}
+              variant={selectedDay === dayItem.day ? "default" : "outline"}
               className="flex flex-col h-16 min-w-16 whitespace-nowrap"
-              onClick={() => handleDayClick(currentDayNumber)}
+              onClick={() => handleDayClick(dayItem.day)}
             >
-              <span className="font-bold text-sm">{currentDayNumber}일차</span>
+              <span className="font-bold text-sm">{dayItem.day}일차</span>
               <span className="text-xs">{formattedDate}</span>
             </Button>
           );
         })}
       </div>
       
-      {/* 선택된 날짜의 일정 표시 via ScheduleViewer */}
-      {/* ScheduleViewer needs the full schedule to allow day switching if onDaySelect is passed for its own day buttons */}
       <ScheduleViewer
-        schedule={itinerary} // Pass full schedule
+        schedule={itinerary} 
         selectedDay={selectedDay}
-        onDaySelect={onSelectDay} // Allow ScheduleViewer's internal day buttons (if any) to also work
+        onDaySelect={onSelectDay} 
         startDate={startDate}
-        // itineraryDay prop is for when ScheduleViewer shows only one specific day's details
-        // Here, ItineraryView handles the day selection, ScheduleViewer just displays the selected one
-        // So we find the current day's data to pass if ScheduleViewer expects only one day's data via itineraryDay
         itineraryDay={selectedDay !== null ? itinerary.find(d => d.day === selectedDay) : null}
       />
     </div>
   );
 };
-
 export default ItineraryView;

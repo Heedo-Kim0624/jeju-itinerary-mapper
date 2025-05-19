@@ -1,9 +1,6 @@
 import React, { useEffect } from 'react';
-import { format } from 'date-fns';
-import { ko } from 'date-fns/locale';
-import { ItineraryDay, ItineraryPlaceWithTime } from '@/types/supabase';
+import { ItineraryDay, ItineraryPlaceWithTime } from '@/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Button } from '@/components/ui/button';
 import { Clock, Navigation } from 'lucide-react';
 
 interface ScheduleViewerProps {
@@ -37,73 +34,65 @@ const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
       'accommodation': '숙소',
       'attraction': '관광지',
       'restaurant': '음식점',
-      'cafe': '카페'
+      'cafe': '카페',
+      'unknown': '기타'
     };
-    
-    return categoryMap[category] || category;
+    return categoryMap[category.toLowerCase()] || category;
   };
 
-  // If itineraryDay is provided, use it. Otherwise, find from schedule if schedule and selectedDay are present.
   const currentDayToDisplay = itineraryDay || 
     (selectedDay !== null && schedule && schedule.length > 0 ? 
       schedule.find(d => d.day === selectedDay) : null);
 
   if (!currentDayToDisplay && selectedDay !== null) {
-    // This log is helpful if a day is selected but no data is found for it
     console.warn(`ScheduleViewer: 선택된 날짜(${selectedDay})에 해당하는 일정 데이터가 없습니다.`, {
       scheduleAvailable: !!schedule,
       scheduleDays: schedule?.map(d => d.day)
     });
   }
   
-  // The DaySelector (horizontal day buttons) is now in ItineraryView.
-  // ScheduleViewer is now primarily for displaying the details of the *selected* day.
-  // So, the part that renders the day buttons in ScheduleViewer itself can be removed if ItineraryView always provides them.
-  // However, keeping it allows ScheduleViewer to be more versatile if used elsewhere.
-  // For now, based on user's Part 2 for ItineraryView, the day buttons are there. ScheduleViewer will just display details.
-
   return (
     <div className="h-full flex flex-col">
-      {/* The header with "생성된 여행 일정" and "뒤로" button is now in ItineraryView */}
-      {/* The day selector buttons are also now in ItineraryView */}
-      {/* This component now focuses solely on displaying the details of currentDayToDisplay */}
-
       <ScrollArea className="flex-1">
         {currentDayToDisplay ? (
           <div className="p-4">
             <div className="mb-4">
-              <h3 className="text-md font-medium mb-2">{currentDayToDisplay.day}일차 일정</h3>
+              <h3 className="text-md font-medium mb-2">
+                {currentDayToDisplay.day}일차 ({currentDayToDisplay.date} {currentDayToDisplay.dayOfWeek})
+              </h3>
               <div className="text-sm text-muted-foreground mb-4">
                 총 이동 거리: {currentDayToDisplay.totalDistance ? currentDayToDisplay.totalDistance.toFixed(2) : 'N/A'} km
               </div>
             </div>
             
             <div className="space-y-4 relative">
-              <div className="absolute top-0 bottom-0 left-6 w-0.5 bg-gray-200 z-0"></div>
+              {currentDayToDisplay.places.length > 1 && (
+                 <div className="absolute top-6 bottom-6 left-[23px] w-0.5 bg-gray-300 z-0"></div>
+              )}
               
               {currentDayToDisplay.places.map((place, idx) => (
-                <div key={place.id || `place-${idx}`} className="flex relative z-10">
-                  <div className="h-12 w-12 rounded-full bg-blue-500 text-white font-bold flex items-center justify-center border-2 border-white shadow-md z-10">
+                <div key={place.id || `place-${idx}`} className="flex items-start relative z-10">
+                  <div className="h-12 w-12 rounded-full bg-blue-500 text-white font-bold flex items-center justify-center border-4 border-white shadow-md shrink-0">
                     {idx + 1}
                   </div>
                   
-                  <div className="ml-4 flex-1 border rounded-lg p-3 bg-white">
+                  <div className="ml-4 flex-1 border rounded-lg p-3 bg-white shadow">
                     <div className="font-medium">{place.name}</div>
                     <div className="text-sm text-muted-foreground">
-                      {categoryToKorean(place.category)}
+                      {categoryToKorean(place.category)} 
                     </div>
                     
                     {place.timeBlock && (
                       <div className="flex items-center mt-2 text-xs text-gray-600">
-                        <Clock className="w-3 h-3 mr-1" />
+                        <Clock className="w-3 h-3 mr-1.5" />
                         <span>{place.timeBlock}</span>
                       </div>
                     )}
                     
-                    {(place as ItineraryPlaceWithTime).travelTimeToNext && (place as ItineraryPlaceWithTime).travelTimeToNext !== "-" && (
+                    {place.travelTimeToNext && place.travelTimeToNext !== "-" && (
                       <div className="flex items-center mt-1 text-xs text-gray-600">
-                        <Navigation className="w-3 h-3 mr-1" />
-                        <span>다음 장소까지: {(place as ItineraryPlaceWithTime).travelTimeToNext}</span>
+                        <Navigation className="w-3 h-3 mr-1.5" />
+                        <span>다음 장소까지: {place.travelTimeToNext}</span>
                       </div>
                     )}
                   </div>
@@ -112,12 +101,11 @@ const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
             </div>
           </div>
         ) : (
-          <div className="h-full flex items-center justify-center text-muted-foreground">
-            {selectedDay ? `선택된 ${selectedDay}일차의 일정을 불러오는 중이거나 데이터가 없습니다.` : '일자를 선택해주세요'}
+          <div className="h-full flex items-center justify-center text-muted-foreground p-4 text-center">
+            {selectedDay ? `선택된 ${selectedDay}일차의 일정을 불러오는 중이거나 데이터가 없습니다.` : '표시할 일정이 없습니다. 날짜를 선택해주세요.'}
           </div>
         )}
       </ScrollArea>
-      {/* 디버깅용 상태 표시 (개발 중에만 사용) */}
       {process.env.NODE_ENV === 'development' && !currentDayToDisplay && selectedDay !== null && (
         <div className="p-4 bg-yellow-100 text-yellow-800 text-sm">
           디버깅 (ScheduleViewer): 선택된 날짜({selectedDay})에 해당하는 일정 데이터가 없습니다.<br />

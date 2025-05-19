@@ -1,8 +1,7 @@
-
 import React from 'react';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ItineraryDay } from '@/types/supabase';
+import { ItineraryDay } from '@/types'; // @/types에서 가져오도록 변경
 import DaySelector from './DaySelector';
 import ScheduleViewer from './ScheduleViewer';
 
@@ -39,7 +38,8 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
           itinerary={itinerary}
           selectedDay={selectedDay}
           onSelectDay={onSelectDay}
-          startDate={startDate}
+          // DaySelector는 startDate가 optional이지만, ItineraryPanel은 startDate를 받으므로 전달
+          startDate={startDate} 
         />
         
         <div className="p-4 pt-2">

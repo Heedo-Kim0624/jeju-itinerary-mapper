@@ -1,51 +1,9 @@
-// 모든 타입을 index.ts로 통합했으므로 이 파일에서는 재정의하지 않고 재내보내기만 합니다.
-import {
-  SchedulePlace,
-  Place,
-  SelectedPlace,
-  TripDateTime,
-  SchedulePayload,
-  ServerScheduleItem,
-  ServerRouteSummaryItem,
-  NewServerScheduleResponse,
-  PlannerServerRouteResponse,
-  ServerRouteResponse,
-  ServerScheduleResponse,
-  RouteData,
-  SegmentRoute,
-  ItineraryDay,
-  ItineraryPlaceWithTime,
-  RouteSegment,
-  ParsedRouteData,
-  ParsedRoute,
-  ExtractedRouteData,
-  isNewServerScheduleResponse,
-  isPlannerServerRouteResponseArray,
-  convertPlannerResponseToNewResponse
-} from './index';
 
-// 모든 타입을 재내보내기
-export {
-  SchedulePlace,
-  Place,
-  SelectedPlace,
-  TripDateTime,
-  SchedulePayload,
-  ServerScheduleItem,
-  ServerRouteSummaryItem,
-  NewServerScheduleResponse,
-  PlannerServerRouteResponse,
-  ServerRouteResponse,
-  ServerScheduleResponse,
-  RouteData,
-  SegmentRoute,
-  ItineraryDay,
-  ItineraryPlaceWithTime,
-  RouteSegment,
-  ParsedRouteData,
-  ParsedRoute,
-  ExtractedRouteData,
-  isNewServerScheduleResponse,
-  isPlannerServerRouteResponseArray,
-  convertPlannerResponseToNewResponse
-};
+/**
+ * 이 파일은 core.ts에서 타입을 재내보내기(re-export)하는 역할만 합니다.
+ * 모든 실제 타입 정의는 core.ts에 있습니다.
+ * 
+ * 이 파일은 기존 import 경로와의 호환성을 위해 유지됩니다.
+ */
+
+export * from './core';

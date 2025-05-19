@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Place } from '@/types/supabase';
-import { ItineraryDay } from '@/hooks/use-itinerary';
+import { Place, ItineraryDay } from '@/types'; // @/types에서 가져오도록 변경
 import PlaceCart from './PlaceCart';
 import ScheduleViewer from './ScheduleViewer';
 
@@ -50,10 +49,8 @@ const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
   useEffect(() => {
     const handleForceRerender = () => {
       console.log("[LeftPanelContainer] forceRerender event received, checking and clearing loading state");
-      // Only set generating to false if it's currently true
-      // This prevents prematurely setting it to false if another process is still running.
       if (localIsGenerating) {
-        // setLocalIsGenerating(false); // This might be too aggressive. Let the runner manage its state.
+        // setLocalIsGenerating(false); // Let runner manage its state
       }
     };
     
@@ -62,13 +59,12 @@ const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
     return () => {
       window.removeEventListener('forceRerender', handleForceRerender);
     };
-  }, [localIsGenerating]); // Add localIsGenerating to dependencies
+  }, [localIsGenerating]);
 
   const handleCloseItinerary = () => {
     onSetShowItinerary(false);
   };
 
-  // Debug log for itinerary state
   useEffect(() => {
     console.log("[LeftPanelContainer] Itinerary State:", {
       showItinerary,
@@ -78,7 +74,7 @@ const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
     });
   }, [showItinerary, itinerary, selectedItineraryDay, localIsGenerating]);
 
-  if (showItinerary && itinerary && itinerary.length > 0) { // Added itinerary.length > 0 check
+  if (showItinerary && itinerary && itinerary.length > 0) {
     console.log("LeftPanelContainer: Rendering ScheduleViewer directly");
     return (
       <div className="fixed top-0 left-0 w-[300px] h-full bg-white border-r border-gray-200 z-40 shadow-md">
@@ -119,8 +115,7 @@ const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
               allCategoriesSelected ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-gray-300 text-gray-500 cursor-not-allowed'
             } rounded-md font-medium transition-colors`}
             onClick={() => {
-              if (allCategoriesSelected && !localIsGenerating) { // Prevent multiple clicks
-                // setLocalIsGenerating(true); // Set loading state immediately on click
+              if (allCategoriesSelected && !localIsGenerating) {
                 onCreateItinerary();
               }
             }}
