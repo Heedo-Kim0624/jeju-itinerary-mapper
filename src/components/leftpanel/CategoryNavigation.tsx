@@ -1,20 +1,23 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
+import { CategoryName, CategoryNameKorean } from '@/types'; // Import both if needed, or just CategoryNameKorean if all ops are Korean-based
 
 interface CategoryNavigationProps {
-  categoryOrder: string[];
-  currentCategoryIndex: number;
-  onCategoryClick: (category: string) => void;
+  categoryOrder: CategoryNameKorean[]; // Expecting Korean names for display and order
+  currentCategoryIndex: number; // This might not be needed if activeMiddlePanelCategory is used
+  onCategoryClick: (category: CategoryNameKorean) => void; // Passes Korean name back
   categorySelectionConfirmed: boolean;
-  confirmedCategories: string[];
-  isCategoryButtonEnabled: (category: string) => boolean;
-  activeMiddlePanelCategory: string | null;
+  confirmedCategories: CategoryNameKorean[]; // List of confirmed Korean category names
+  isCategoryButtonEnabled: (category: CategoryNameKorean) => boolean; // Checks based on Korean name
+  activeMiddlePanelCategory: CategoryNameKorean | null; // Active category is Korean name
+  // Removed props that seemed out of place for a navigation component based on user's previous prompt changes
+  // setShowCategoryResult, showCategoryResult, directInputValues, onDirectInputChange, handleConfirmCategory
 }
 
 const CategoryNavigation: React.FC<CategoryNavigationProps> = ({
   categoryOrder,
-  currentCategoryIndex,
+  // currentCategoryIndex, // Not used
   onCategoryClick,
   categorySelectionConfirmed,
   confirmedCategories,
@@ -23,8 +26,7 @@ const CategoryNavigation: React.FC<CategoryNavigationProps> = ({
 }) => {
   if (!categorySelectionConfirmed) return null;
 
-  // Create a 2x2 grid layout
-  const renderCategoryButton = (category: string, index: number) => {
+  const renderCategoryButton = (category: CategoryNameKorean, index: number) => {
     const isEnabled = isCategoryButtonEnabled(category);
     const isActive = category === activeMiddlePanelCategory;
     const isConfirmed = confirmedCategories.includes(category);
@@ -43,7 +45,7 @@ const CategoryNavigation: React.FC<CategoryNavigationProps> = ({
         `}
         disabled={!isEnabled}
       >
-        {category}
+        {category} {/* Display Korean name */}
       </button>
     );
   };

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Place, CategoryName } from '@/types';
+import { Place, CategoryName, CategoryNameKorean, toCategoryNameKorean } from '@/types';
 import { useMapContext } from '../rightpanel/MapContext';
 import PlaceDetailDialog from '../places/PlaceDetailDialog';
 import { useCategoryResults } from '@/hooks/use-category-results';
@@ -11,18 +11,18 @@ import { Button } from '@/components/ui/button';
 import { CheckIcon } from 'lucide-react';
 
 interface CategoryResultPanelProps {
-  category: CategoryName;
+  category: CategoryName; // This is English CategoryName
   regions: string[];
   keywords: string[];
   onClose: () => void;
   onSelectPlace: (place: Place, checked: boolean) => void;
   isPlaceSelected: (id: string | number) => boolean;
   isOpen: boolean;
-  onConfirm?: (category: CategoryName, selectedPlaces: Place[], recommendedPlaces: Place[]) => void;
+  onConfirm?: (category: CategoryName, selectedPlaces: Place[], recommendedPlaces: Place[]) => void; // category here is English
 }
 
 const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
-  category,
+  category, // English CategoryName
   regions,
   keywords,
   onClose,
@@ -36,7 +36,10 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
   const [userSelectedPlacesInPanel, setUserSelectedPlacesInPanel] = useState<Place[]>([]);
 
   const safeRegions = Array.isArray(regions) ? regions : [];
-  const { isLoading, error, recommendedPlaces, normalPlaces } = useCategoryResults(category, keywords, safeRegions);
+  
+  // Convert English CategoryName to Korean CategoryNameKorean for useCategoryResults hook
+  const categoryForHook = toCategoryNameKorean(category);
+  const { isLoading, error, recommendedPlaces, normalPlaces } = useCategoryResults(categoryForHook, keywords, safeRegions);
 
   useEffect(() => {
     clearMarkersAndUiElements();
@@ -82,6 +85,7 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
   const handleConfirmClick = () => {
     console.log(`[카테고리 확인] ${category} 카테고리 선택 완료 및 자동 보완 시작: ${userSelectedPlacesInPanel.length}개 장소`);
     if (onConfirm) {
+      // onConfirm expects English CategoryName, and 'category' prop is already English
       onConfirm(category, userSelectedPlacesInPanel, recommendedPlaces);
     }
     onClose();
@@ -89,10 +93,13 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
 
   if (!isOpen) return null;
 
+  // ResultHeader expects Korean category name for display
+  const displayCategoryName = toCategoryNameKorean(category);
+
   return (
     <div className="fixed top-0 left-[300px] w-[300px] h-full bg-white border-l border-r border-gray-200 z-40 shadow-md">
       <div className="h-full flex flex-col">
-        <ResultHeader category={category} onClose={onClose} />
+        <ResultHeader category={displayCategoryName} onClose={onClose} />
 
         <div className="flex-1 overflow-auto">
           {isLoading && <LoadingState />}
