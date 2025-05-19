@@ -1,61 +1,63 @@
 
 import { useCallback } from 'react';
 import { toast } from 'sonner';
-import type { Place, SchedulePayload as SupabaseSchedulePayload } from '@/types/supabase'; // Keep original SchedulePayload for Supabase if distinct, or use global
-import { ItineraryDay } from '@/hooks/use-itinerary'; // Corrected import
-import { NewServerScheduleResponse, isNewServerScheduleResponse, ServerRouteResponse, SchedulePayload } from '@/types'; // Import from @/types
+import { useAtom } from 'jotai';
+import {
+  tripDetailsAtom, // 사용한다고 가정
+  itineraryAtom,
+  selectedDayAtom,
+  isLoadingAtom,
+  rawServerResponseAtom,
+  showItineraryPanelAtom,
+  currentLeftPanelAtom,
+  serverRoutesAtom // 추가
+} from '@/store/itineraryStore'; // 생성된 스토어 사용
+import {
+  type Place,
+  type ItineraryDay,
+  type SchedulePayload,
+  type NewServerScheduleResponse,
+  isNewServerScheduleResponse,
+  type TripDetailsState, // 추가
+  // ServerRouteResponse // src/types/schedule 에서 가져오므로 여기서는 직접 import 안 함
+} from '@/types';
 import { useMapContext } from '@/components/rightpanel/MapContext';
-import { useScheduleGenerator } from '@/hooks/use-schedule-generator'; // This is the server call hook
+import { useScheduleGenerator } from '@/hooks/use-schedule-generator';
+import { useItineraryCreator } from '@/hooks/useItineraryCreator'; // 생성된 임시 훅 사용
+import { useScheduleParser } from '@/hooks/schedule/useScheduleParser';
 
-/**
- * 일정 관련 핸들러 훅
- */
+
 export const useItineraryHandlers = () => {
-  const { clearMarkersAndUiElements, setServerRoutes } = useMapContext();
-  // useScheduleGenerator hook does not seem to export 'error'.
-  // Destructure only what's available.
-  const { generateSchedule, isGenerating } = useScheduleGenerator();
+  const { clearMarkersAndUiElements, setServerRoutes: setMapServerRoutes } = useMapContext();
+  const { generateSchedule, isGenerating: serverIsGenerating } = useScheduleGenerator();
+  const { generateItineraryFallback } = useItineraryCreator(); // 임시 폴백 사용
+  
+  const [, setItinerary] = useAtom(itineraryAtom);
+  const [, setSelectedDay] = useAtom(selectedDayAtom);
+  const [isLoading, setIsLoading] = useAtom(isLoadingAtom);
+  const [, setRawServerResponse] = useAtom(rawServerResponseAtom);
+  const [, setTripDetails] = useAtom(tripDetailsAtom); // tripDetailsAtom 사용
+  const [, setShowItineraryPanel] = useAtom(showItineraryPanelAtom);
+  const [, setCurrentLeftPanel] = useAtom(currentLeftPanelAtom);
+  const [, setServerRoutesData] = useAtom(serverRoutesAtom); // Jotai atom for server routes
 
-  interface TripDetailsForItinerary {
-    dates: {
-      startDate: Date;
-      endDate: Date;
-      startTime: string;
-      endTime: string;
-    } | null;
-    startDatetime: string | null;
-    endDatetime: string | null;
-  }
+  // currentSelectedPlaces는 이 훅의 범위 밖이므로, useScheduleParser를 여기서 직접 호출하지 않음
+  // 대신, parseServerResponse 함수 자체를 가져와서 필요시 호출할 수 있도록 함.
+  // 또는, parseServerResponse가 필요한 곳에서 currentSelectedPlaces와 함께 호출.
+  // 여기서는 handleCreateItinerary 내에서 직접 사용하지 않고, 이벤트 통해 전달된 데이터를 처리하는 구조.
 
   const handleCreateItinerary = useCallback(async (
-    tripDetails: TripDetailsForItinerary,
-    selectedPlacesInput: Place[], // Changed from selectedPlaces to avoid conflict with hook's selectedPlaces
+    currentTripDetails: TripDetailsState, // TripDetailsState 사용
+    selectedPlacesInput: Place[],
     prepareSchedulePayloadFn: (
-        userSelectedPlaces: Place[], 
-        // candidatePlaces: Place[], // Assuming candidate places are handled within prepareSchedulePayloadFn if needed
+        userSelectedPlaces: Place[],
         startDatetimeISO: string | null,
         endDatetimeISO: string | null
-    ) => SchedulePayload | null, // Use global SchedulePayload
-    generateItineraryFn: (
-        placesToUse: Place[], 
-        startDate: Date, 
-        endDate: Date, 
-        startTime: string, 
-        endTime: string
-    ) => ItineraryDay[] | null,
-    setShowItinerary: (show: boolean) => void,
-    setCurrentPanel: (panel: string) => void
+    ) => SchedulePayload | null
   ): Promise<boolean> => {
-    console.log('[handleCreateItinerary] 함수 호출됨, 인자:', {
-      tripDetails: tripDetails ? {
-        startDatetime: tripDetails.startDatetime,
-        endDatetime: tripDetails.endDatetime,
-        hasDates: !!tripDetails.dates
-      } : 'null',
-      selectedPlacesCount: selectedPlacesInput.length,
-    });
-    
-    if (!tripDetails.dates || !tripDetails.startDatetime || !tripDetails.endDatetime) {
+    console.log('[handleCreateItinerary] 호출됨', { currentTripDetails, selectedPlacesCount: selectedPlacesInput.length });
+
+    if (!currentTripDetails.dates || !currentTripDetails.startDatetime || !currentTripDetails.endDatetime) {
       toast.error("여행 날짜와 시간을 먼저 설정해주세요.");
       return false;
     }
@@ -64,147 +66,137 @@ export const useItineraryHandlers = () => {
       toast.error("선택된 장소가 없습니다. 장소를 선택해주세요.");
       return false;
     }
-    
-    // The payload for the server uses global SchedulePayload
+
+    setIsLoading(true);
+    setTripDetails(currentTripDetails); // 여행 정보 Jotai atom에 저장
+
     const payloadForServer = prepareSchedulePayloadFn(
-      selectedPlacesInput, 
-      // [], // Pass empty array or handle candidates inside prepareSchedulePayloadFn
-      tripDetails.startDatetime, 
-      tripDetails.endDatetime
+      selectedPlacesInput,
+      currentTripDetails.startDatetime,
+      currentTripDetails.endDatetime
     );
 
     if (payloadForServer) {
-      console.log("[handleCreateItinerary] 서버 일정 생성 요청 시작, payload:", JSON.stringify(payloadForServer, null, 2));
-      
+      console.log("[handleCreateItinerary] 서버 일정 생성 요청:", payloadForServer);
       try {
-        const serverResponse: NewServerScheduleResponse | null = await generateSchedule(payloadForServer);
-        
-        if (serverResponse) {
-          console.log("[handleCreateItinerary] 서버 응답 성공:", serverResponse);
-          console.log("[handleCreateItinerary] 서버 응답 로그 (세부):", {
-            응답타입: typeof serverResponse,
-            객체여부: typeof serverResponse === 'object',
-            널여부: serverResponse === null,
-            배열여부: Array.isArray(serverResponse),
-            schedule존재: !!serverResponse?.schedule,
-            route_summary존재: !!serverResponse?.route_summary,
-            유효성검사결과: isNewServerScheduleResponse(serverResponse)
+        const serverResponse = await generateSchedule(payloadForServer);
+        console.log("[handleCreateItinerary] 서버 응답 수신:", serverResponse);
+
+        if (serverResponse && isNewServerScheduleResponse(serverResponse) && serverResponse.route_summary?.length > 0) {
+          setRawServerResponse(serverResponse); // 원본 응답 저장
+          
+          // 서버 응답을 기반으로 지도 경로 데이터 설정 준비 (구체적인 로직은 useScheduleParser 등에서 처리된 결과를 받아야 함)
+          // 예시: 각 day의 interleaved_route를 ServerRouteResponse 형식으로 변환하여 setMapServerRoutes 및 setServerRoutesData 호출
+          // 이 부분은 rawServerResponseAtom 구독자가 처리하도록 변경 가능
+          const newMapRoutes: Record<number, import('@/types').ServerRouteResponse> = {};
+          serverResponse.route_summary.forEach((summary, index) => {
+            // day 문자열 (e.g., "Tue")을 숫자 day (1, 2, ...)로 변환 필요. 여기서는 index + 1로 가정
+            const dayNumber = index + 1; 
+            newMapRoutes[dayNumber] = {
+              nodeIds: summary.interleaved_route.filter((_, idx) => idx % 2 === 0),
+              linkIds: summary.interleaved_route.filter((_, idx) => idx % 2 !== 0),
+              interleaved_route: summary.interleaved_route
+            };
           });
+          setMapServerRoutes(newMapRoutes); // MapContext 업데이트
+          setServerRoutesData(newMapRoutes); // Jotai atom 업데이트
           
-          if (isNewServerScheduleResponse(serverResponse) && 
-              serverResponse.route_summary && 
-              serverResponse.route_summary.length > 0) {
-            
-            console.log("[handleCreateItinerary] 유효한 응답입니다. rawServerResponseReceived 이벤트를 발생시킵니다.");
-            window.dispatchEvent(new CustomEvent('rawServerResponseReceived', { detail: serverResponse }));
-            return true;
-          } else {
-            console.warn("[handleCreateItinerary] 서버 응답은 있지만 형식이 맞지 않거나 route_summary가 비어있습니다. 클라이언트 측 일정 생성으로 폴백.", {
-              isNewResponseFormat: isNewServerScheduleResponse(serverResponse),
-              hasRouteSummary: !!serverResponse?.route_summary,
-              routeSummaryLength: serverResponse?.route_summary?.length ?? 0
-            });
-            
-            const clientItinerary = generateItineraryFn(
-              selectedPlacesInput, 
-              tripDetails.dates.startDate, 
-              tripDetails.dates.endDate, 
-              tripDetails.dates.startTime, 
-              tripDetails.dates.endTime
-            );
-            
-            if (clientItinerary && clientItinerary.length > 0) {
-              toast.info("서버 일정 생성 실패 또는 형식이 맞지 않아 클라이언트에서 기본 일정을 생성했습니다.");
-              const event = new CustomEvent('itineraryCreated', { 
-                detail: { 
-                  itinerary: clientItinerary,
-                  selectedDay: clientItinerary.length > 0 ? clientItinerary[0].day : null
-                } 
-              });
-              window.dispatchEvent(event);
-              setShowItinerary(true);
-              setCurrentPanel('itinerary'); 
-            } else {
-              toast.error("서버 및 클라이언트 일정 생성 모두 실패했습니다.");
-            }
-            return !!clientItinerary && clientItinerary.length > 0;
-          }
+          // rawServerResponseReceived 이벤트를 통해 다른 컴포넌트/훅에서 파싱 및 itinerary 상태 업데이트
+          window.dispatchEvent(new CustomEvent('rawServerResponseReceived', { detail: serverResponse }));
+
+          setShowItineraryPanel(true);
+          setCurrentLeftPanel('itinerary');
+          toast.success("서버로부터 일정을 성공적으로 생성했습니다!");
+          return true;
         } else {
-          console.warn("[handleCreateItinerary] 서버 응답이 null 또는 undefined입니다. 클라이언트 폴백.");
-          toast.error("서버로부터 응답을 받지 못했습니다. 클라이언트에서 기본 일정을 생성합니다.");
-          
-          const clientItinerary = generateItineraryFn(
-            selectedPlacesInput, 
-            tripDetails.dates.startDate, 
-            tripDetails.dates.endDate, 
-            tripDetails.dates.startTime, 
-            tripDetails.dates.endTime
+          toast.warn("서버 응답 형식이 맞지 않거나 경로 정보가 부족합니다. 클라이언트 폴백 일정을 생성합니다.");
+          // Fallback to client-side generation
+          const clientItinerary = generateItineraryFallback(
+            selectedPlacesInput,
+            currentTripDetails.dates.startDate,
+            currentTripDetails.dates.endDate,
+            currentTripDetails.dates.startTime,
+            currentTripDetails.dates.endTime
           );
-          
           if (clientItinerary && clientItinerary.length > 0) {
-            const event = new CustomEvent('itineraryCreated', { 
-              detail: { 
-                itinerary: clientItinerary,
-                selectedDay: clientItinerary.length > 0 ? clientItinerary[0].day : null
-              } 
-            });
-            window.dispatchEvent(event);
-            setShowItinerary(true);
-            setCurrentPanel('itinerary');
+            setItinerary(clientItinerary);
+            setSelectedDay(clientItinerary[0]?.day ?? null);
+            setShowItineraryPanel(true);
+            setCurrentLeftPanel('itinerary');
+            toast.info("클라이언트에서 기본 일정을 생성했습니다.");
             return true;
           } else {
-            toast.error("클라이언트 일정 생성에 실패했습니다.");
+            toast.error("클라이언트 일정 생성에도 실패했습니다.");
             return false;
           }
         }
-      } catch (e: any) { // Catch specific error type if known
-        console.error("[handleCreateItinerary] 서버 요청 중 오류 발생:", e);
-        toast.error(`서버 일정 생성 중 오류: ${e.message || '알 수 없는 오류'}. 클라이언트에서 기본 일정을 생성합니다.`);
-        const clientItinerary = generateItineraryFn(
-          selectedPlacesInput, 
-          tripDetails.dates.startDate, 
-          tripDetails.dates.endDate, 
-          tripDetails.dates.startTime, 
-          tripDetails.dates.endTime
+      } catch (e: any) {
+        console.error("[handleCreateItinerary] 서버 요청 중 오류:", e);
+        toast.error(`서버 일정 생성 중 오류: ${e.message || '알 수 없는 오류'}. 클라이언트 폴백 일정을 생성합니다.`);
+        // Fallback to client-side generation
+        const clientItinerary = generateItineraryFallback(
+          selectedPlacesInput,
+          currentTripDetails.dates.startDate,
+          currentTripDetails.dates.endDate,
+          currentTripDetails.dates.startTime,
+          currentTripDetails.dates.endTime
         );
-        
         if (clientItinerary && clientItinerary.length > 0) {
-          const event = new CustomEvent('itineraryCreated', { 
-            detail: { 
-              itinerary: clientItinerary,
-              selectedDay: clientItinerary.length > 0 ? clientItinerary[0].day : null
-            } 
-          });
-          window.dispatchEvent(event);
-          setShowItinerary(true);
-          setCurrentPanel('itinerary');
+          setItinerary(clientItinerary);
+          setSelectedDay(clientItinerary[0]?.day ?? null);
+          setShowItineraryPanel(true);
+          setCurrentLeftPanel('itinerary');
+          return true;
         } else {
-           toast.error("서버 및 클라이언트 일정 생성 모두 실패했습니다.");
+          toast.error("클라이언트 일정 생성에도 실패했습니다.");
+          return false;
         }
-        return !!clientItinerary && clientItinerary.length > 0;
+      } finally {
+        setIsLoading(false);
       }
     } else {
-      console.error("[handleCreateItinerary] 페이로드 생성 실패");
-      toast.error("일정 생성에 필요한 정보가 부족합니다.");
+      toast.error("일정 생성에 필요한 정보(페이로드)를 만들 수 없습니다.");
+      setIsLoading(false);
       return false;
     }
-  }, [generateSchedule, setServerRoutes]); // Dependencies: generateSchedule, setServerRoutes
+  }, [
+    generateSchedule, 
+    generateItineraryFallback,
+    setMapServerRoutes, 
+    setItinerary, 
+    setSelectedDay, 
+    setIsLoading, 
+    setRawServerResponse, 
+    setTripDetails,
+    setShowItineraryPanel,
+    setCurrentLeftPanel,
+    setServerRoutesData
+  ]);
 
-  const handleCloseItinerary = useCallback((
-    setShowItineraryFn: (show: boolean) => void,
-    setCurrentPanelFn: (panel: string) => void
-  ) => {
-    setShowItineraryFn(false);
-    clearMarkersAndUiElements(); 
-    setServerRoutes({});
-    setCurrentPanelFn('category'); 
-  }, [clearMarkersAndUiElements, setServerRoutes]);
+  const handleCloseItinerary = useCallback(() => {
+    setShowItineraryPanel(false);
+    setCurrentLeftPanel('category'); // 또는 'region' 등 기본 패널로
+    setItinerary([]);
+    setSelectedDay(null);
+    setRawServerResponse(null);
+    setMapServerRoutes({}); // 지도 경로 데이터 초기화
+    setServerRoutesData({}); // Jotai atom 초기화
+    clearMarkersAndUiElements();
+    console.log('[handleCloseItinerary] 일정 패널 닫기 완료');
+  }, [
+    setShowItineraryPanel, 
+    setCurrentLeftPanel, 
+    setItinerary, 
+    setSelectedDay, 
+    setRawServerResponse, 
+    clearMarkersAndUiElements, 
+    setMapServerRoutes,
+    setServerRoutesData
+  ]);
 
   return {
     handleCreateItinerary,
     handleCloseItinerary,
-    isGenerating, // Expose loading state from useScheduleGenerator
-    // error property is not available from useScheduleGenerator, so not exposed here
+    isGenerating: isLoading || serverIsGenerating, // 통합 로딩 상태
   };
 };
-

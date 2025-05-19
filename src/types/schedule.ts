@@ -1,45 +1,18 @@
-import { CategoryName } from '@/utils/categoryUtils';
+import type { CategoryName } from '@/utils/categoryUtils';
+import type { Place as BasePlace } from './index'; // 이제 index.ts의 Place를 사용
 
 // 서버로 전송할 장소 데이터 간소화 구조
 export interface SchedulePlace {
-  id: number | string;
+  id: string; // string으로 통일
   name: string;
 }
 
-export interface Place {
-  id: string;
-  name: string;
-  address: string;
-  phone: string;
-  category: string; // 실제로는 CategoryName 타입이어야 할 수 있음
-  description: string;
-  rating: number;
-  x: number;
-  y: number;
-  image_url: string;
-  road_address: string;
-  homepage: string;
-  operationTimeData?: {
-    [key: string]: number;
-  };
-  isSelected?: boolean;
-  isRecommended?: boolean;
-  geoNodeId?: string;
-  geoNodeDistance?: number;
-  weight?: number;
-  isCandidate?: boolean;
-  raw?: any;
+// Place 인터페이스는 index.ts의 것을 따르도록 수정
+// 여기서는 index.ts의 Place와 거의 동일하므로, 직접 사용하거나 필요한 확장만 정의
+export interface Place extends BasePlace {}
 
-  // 빌드 에러 해결을 위해 옵셔널 필드로 추가
-  categoryDetail?: string;
-  reviewCount?: number;
-  naverLink?: string;
-  instaLink?: string;
-  operatingHours?: string;
-}
-
-export interface SelectedPlace extends Place {
-  category: CategoryName; // 이 부분은 CategoryName으로 강제
+// SelectedPlace 인터페이스도 index.ts의 것을 따르도록 수정
+export interface SelectedPlace extends BasePlace {
   isSelected: boolean;
   isCandidate: boolean;
 }
@@ -61,61 +34,47 @@ export interface SchedulePayload {
 }
 
 // 새로운 서버 응답 구조 정의
+// 사용자 프롬프트에 명시된 ScheduleEntry 와 유사
 export interface ServerScheduleItem {
-  time_block: string;
-  place_type: string; // 서버에서 오는 카테고리 문자열 (e.g., "restaurant")
+  id?: number | string; // 장소의 NODE_ID (서버에서 number로 올 수 있음)
   place_name: string;
-  id?: number | string; // 장소 ID (서버에서 제공한다면)
-  // 서버 응답에 따라 추가 필드 정의 가능
+  place_type: CategoryName | string; // 서버에서 오는 카테고리 문자열 (e.g., "restaurant"), CategoryName으로 변환 필요할 수 있음
+  time_block: string; // "Tue_0900", "Fri_1700" 등의 시간 슬롯
 }
 
+// 사용자 프롬프트에 명시된 DailyRouteSummary 와 유사
 export interface ServerRouteSummaryItem {
-  day: string; // 예: "Mon", "Tue" (요일 문자열)
-  status: string;
-  total_distance_m: number;
-  interleaved_route: (string | number)[];
+  day: string; // 예: "Tue", "Wed" (요일 문자열)
+  interleaved_route: (string | number)[]; // [장소 NODE_ID, 링크 ID, 장소 NODE_ID, ...]
+  status: string; // 예: "성공"
+  total_distance_m: number; // 당일 총 이동 거리 (m 단위)
   places_scheduled?: string[]; // 추가: 일정에 포함된 장소 이름 목록
   places_routed?: string[]; // 추가: 경로 계산에 사용된 장소 이름 목록
 }
 
-// 기존 NewServerScheduleResponse 타입은 유지
 export interface NewServerScheduleResponse {
   schedule: ServerScheduleItem[];
   route_summary: ServerRouteSummaryItem[];
-  // 서버 응답에 다른 최상위 키가 있다면 여기에 추가
+  total_reward?: number; // 사용자 프롬프트에 있었던 필드
 }
 
 // 서버 응답의 일관성을 위한 타입 정의 (사용자 플랜 파트 1용)
-// 이 타입은 이미 use-schedule-generator.ts 에서 사용되고 있으므로 유지합니다.
 export interface PlannerServerRouteResponse {
   date: string;       // 예: '2025-05-21'
-  nodeIds: number[];  // 예: [장소1_ID, 링크1_ID, 중간노드1_ID, 링크2_ID, ..., 장소N_ID]
+  nodeIds: number[];
 }
 
-// 서버 경로 응답 (각 날짜별)
+// 서버 경로 응답 (각 날짜별) - GeoJSON 경로 표시에 사용
 export interface ServerRouteResponse {
-  nodeIds: (string | number)[];
-  linkIds: (string | number)[];
-  interleaved_route?: (string | number)[]; // 요청사항 4, 5 - 추가됨
-  // 여기에 다른 경로 관련 필드가 있다면 추가
-}
-
-// 서버 전체 일정 응답
-export interface ServerScheduleResponse {
-  itinerary: { // 각 날짜별 일정
-    day: number;
-    places: any[]; // 실제로는 서버에서 오는 장소 정보 타입 (예: PlaceId 또는 Place 객체 일부)
-    totalDistance?: number;
-    // 여기에 time_block 같은 정보가 포함될 수 있음
-  }[];
-  routes?: Record<string, ServerRouteResponse>; // key는 day (예: "1", "2")
-  // 여기에 다른 전체 일정 관련 필드가 있다면 추가
+  nodeIds: (string | number)[]; // 서버에서 오는 ID는 number일 수 있음
+  linkIds: (string | number)[]; // 서버에서 오는 ID는 number일 수 있음
+  interleaved_route?: (string | number)[];
 }
 
 // 경로 데이터 인터페이스 추가
 export interface RouteData {
-  nodeIds?: string[];
-  linkIds?: string[];
+  nodeIds: string[]; // GeoJSON 레이어에서 사용할 때는 string으로 변환
+  linkIds: string[]; // GeoJSON 레이어에서 사용할 때는 string으로 변환
   segmentRoutes?: SegmentRoute[];
 }
 
@@ -126,16 +85,7 @@ export interface SegmentRoute {
   linkIds: string[];
 }
 
-// ItineraryDay 인터페이스 확장
-export interface ItineraryDay {
-  day: number;
-  places: ItineraryPlaceWithTime[]; // Place[] 에서 ItineraryPlaceWithTime[] 으로 변경
-  totalDistance: number;
-  routeData?: RouteData;
-  interleaved_route?: (string | number)[]; // 요청사항 4, 5 - 추가
-}
-
-// Update ItineraryPlaceWithTime interface with correct property names
+// ItineraryPlaceWithTime 인터페이스 - 기본 Place 타입 확장
 export interface ItineraryPlaceWithTime extends Place {
   arriveTime?: string;
   departTime?: string;
@@ -144,11 +94,22 @@ export interface ItineraryPlaceWithTime extends Place {
   timeBlock?: string; // "09:00 - 10:00" 형식 또는 "09:00 도착" 등
 }
 
+// ItineraryDay 인터페이스 확장
+export interface ItineraryDay {
+  day: number; // 1, 2, ...
+  date: string; // "MM/DD" 형식
+  dayOfWeek: string; // "Mon", "Tue", ...
+  places: ItineraryPlaceWithTime[];
+  totalDistance: number; // km 단위
+  routeData?: RouteData;
+  interleaved_route?: (string | number)[]; // 서버 원본 데이터
+}
+
 // 새로운 인터페이스: 서버에서 받은 경로 데이터 파싱을 위한 인터페이스
-export interface RouteSegment {
-  from: string; // 출발 노드 ID
-  to: string;   // 도착 노드 ID
-  links: string[]; // 링크 ID 배열
+export interface RouteSegment { // src/components/rightpanel/geojson/GeoJsonTypes.ts 와 유사할 수 있음
+  from: string; // 출발 노드 ID (string)
+  to: string;   // 도착 노드 ID (string)
+  links: string[]; // 링크 ID 배열 (string)
 }
 
 // 경로 응답에서 추출한 파싱된 경로 세그먼트
@@ -160,9 +121,9 @@ export interface ParsedRouteData {
 
 // 클라이언트에서 파싱된 경로 세그먼트 (utils/routeParser.ts 에서 사용)
 export interface ParsedRoute {
-  from: string | number;
-  to: string | number;
-  links: (string | number)[];
+  from: string | number; // 원본 ID 유지
+  to: string | number;   // 원본 ID 유지
+  links: (string | number)[]; // 원본 ID 유지
 }
 
 export interface ExtractedRouteData {

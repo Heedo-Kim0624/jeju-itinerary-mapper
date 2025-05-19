@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useMapContext } from '@/components/rightpanel/MapContext';
 import { Button } from '@/components/ui/button';
@@ -6,15 +5,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import PlaceList from '@/components/middlepanel/PlaceList';
 import PlaceDetailDialog from '@/components/places/PlaceDetailDialog';
-import { Place } from '@/types/supabase';
+import type { Place, CategoryName } from '@/types'; // CategoryName도 @/types 를 통해 가져올 수 있도록 index.ts 수정 필요
 import { 
   parsePrompt, 
-  fetchWeightedResults, 
-  convertToPlace,
+  fetchWeightedResults,
 } from '@/lib/jeju/travelPromptUtils';
 
 interface TravelPromptSearchProps {
-  onPlacesFound?: (places: Place[], category: string) => void;
+  onPlacesFound?: (places: Place[], category: CategoryName) => void; // category 타입을 CategoryName으�� 명시
 }
 
 // PlaceResult 인터페이스 추가
@@ -22,7 +20,7 @@ interface PlaceResult {
   id: string | number;
   name?: string;
   address?: string;
-  category?: string;
+  category?: string; // API 응답의 카테고리 문자열
   categoryDetail?: string;
   x?: number;
   y?: number;
@@ -33,6 +31,33 @@ interface PlaceResult {
   instaLink?: string;
   operatingHours?: string;
 }
+
+// PlaceResult를 Place 타입으로 변환하는 함수
+const convertToAppPlace = (result: PlaceResult, parsedCategory: CategoryName): Place => {
+  return {
+    id: String(result.id), // id를 string으로 변환
+    name: result.name || '',
+    address: result.address || '',
+    phone: '', // 기본값
+    // category는 travelPromptUtils에서 파싱된 CategoryName 사용 또는 매핑 필요
+    category: parsedCategory, // API의 category 문자열을 CategoryName으로 변환해야 할 수 있음
+    description: '', // 기본값
+    rating: result.rating || 0,
+    x: result.x || 0,
+    y: result.y || 0,
+    image_url: '', // 기본값
+    road_address: '', // 기본값
+    homepage: '', // 기본값
+    categoryDetail: result.categoryDetail || '',
+    reviewCount: result.reviewCount || 0,
+    weight: result.weight || 0,
+    naverLink: result.naverLink || '',
+    instaLink: result.instaLink || '',
+    operatingHours: result.operatingHours || '',
+    isSelected: false, // 기본값
+    isCandidate: false, // 기본값
+  };
+};
 
 const TravelPromptSearch: React.FC<TravelPromptSearchProps> = ({ onPlacesFound }) => {
   const [prompt, setPrompt] = useState('');
@@ -75,34 +100,17 @@ const TravelPromptSearch: React.FC<TravelPromptSearchProps> = ({ onPlacesFound }
       );
       
       // 4. Convert to Place type with all required fields
-      const convertedPlaces = placeResults.map((result: PlaceResult) => ({
-        id: String(result.id),
-        name: result.name || '',
-        address: result.address || '',
-        phone: '',  // Set default values for required fields
-        category: result.category || '',
-        description: '',  // Set default values for required fields
-        rating: result.rating || 0,
-        x: result.x || 0,
-        y: result.y || 0,
-        image_url: '',  // Set default values for required fields
-        road_address: '',  // Set default values for required fields
-        homepage: '',  // Set default values for required fields
-        categoryDetail: result.categoryDetail || '',
-        reviewCount: result.reviewCount || 0,
-        weight: result.weight || 0,
-        naverLink: result.naverLink || '',
-        instaLink: result.instaLink || '',
-        operatingHours: result.operatingHours || ''
-      }));
+      const convertedPlaces: Place[] = placeResults.map((result: PlaceResult) => 
+        convertToAppPlace(result, parsed.category as CategoryName)
+      );
       
-      setPlaces(convertedPlaces as Place[]);
+      setPlaces(convertedPlaces);
       setCurrentPage(1);
       
       // 5. Add markers to map
       if (convertedPlaces.length && mapCtx) {
-        const recommended = convertedPlaces.slice(0, 4) as Place[];
-        const others = convertedPlaces.slice(4) as Place[];
+        const recommended = convertedPlaces.slice(0, 4);
+        const others = convertedPlaces.slice(4);
         mapCtx.addMarkers(recommended, { highlight: true });
         mapCtx.addMarkers(others, { highlight: false });
         
@@ -115,7 +123,7 @@ const TravelPromptSearch: React.FC<TravelPromptSearchProps> = ({ onPlacesFound }
       
       // 6. Call callback if provided
       if (onPlacesFound && convertedPlaces.length > 0) {
-        onPlacesFound(convertedPlaces as Place[], parsed.category);
+        onPlacesFound(convertedPlaces, parsed.category as CategoryName);
       }
       
       if (placeResults.length === 0) {
@@ -165,14 +173,14 @@ const TravelPromptSearch: React.FC<TravelPromptSearchProps> = ({ onPlacesFound }
       <div className="flex-grow overflow-hidden flex flex-col">
         {places.length > 0 && (
           <PlaceList
-            places={places}
+            places={places} // Place[] 타입 전달
             loading={loading}
-            onSelectPlace={setSelectedPlace}
-            selectedPlace={selectedPlace}
+            onSelectPlace={setSelectedPlace} // Place 타입 콜백
+            selectedPlace={selectedPlace} // Place | null 타입 전달
             page={currentPage}
             onPageChange={setCurrentPage}
             totalPages={totalPages}
-            onViewDetails={handleViewDetails}
+            onViewDetails={handleViewDetails} // Place 타입 콜백
           />
         )}
       </div>
