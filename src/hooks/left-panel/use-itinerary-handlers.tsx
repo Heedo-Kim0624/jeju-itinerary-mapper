@@ -1,8 +1,9 @@
+
 import { useCallback } from 'react';
 import { toast } from 'sonner';
-import type { Place, SchedulePayload as SupabaseSchedulePayload } from '@/types/supabase'; // Keep original SchedulePayload for Supabase if distinct
+import type { Place, SchedulePayload as SupabaseSchedulePayload } from '@/types/supabase'; // Keep original SchedulePayload for Supabase if distinct, or use global
 import { ItineraryDay } from '@/hooks/use-itinerary'; // Corrected import
-import { NewServerScheduleResponse, isNewServerScheduleResponse, ServerRouteResponse } from '@/types'; // Import from @/types
+import { NewServerScheduleResponse, isNewServerScheduleResponse, ServerRouteResponse, SchedulePayload } from '@/types'; // Import from @/types
 import { useMapContext } from '@/components/rightpanel/MapContext';
 import { useScheduleGenerator } from '@/hooks/use-schedule-generator'; // This is the server call hook
 
@@ -10,8 +11,10 @@ import { useScheduleGenerator } from '@/hooks/use-schedule-generator'; // This i
  * 일정 관련 핸들러 훅
  */
 export const useItineraryHandlers = () => {
-  const { clearMarkersAndUiElements, setServerRoutes } = useMapContext(); // Added setServerRoutes
-  const { generateSchedule, isGenerating, error } = useScheduleGenerator();
+  const { clearMarkersAndUiElements, setServerRoutes } = useMapContext();
+  // useScheduleGenerator hook does not seem to export 'error'.
+  // Destructure only what's available.
+  const { generateSchedule, isGenerating } = useScheduleGenerator();
 
   interface TripDetailsForItinerary {
     dates: {
@@ -26,24 +29,22 @@ export const useItineraryHandlers = () => {
 
   const handleCreateItinerary = useCallback(async (
     tripDetails: TripDetailsForItinerary,
-    selectedPlaces: Place[],
-    // prepareSchedulePayloadFn is complex, let's assume it's passed correctly from useSelectedPlaces or similar
-    // For now, using SupabaseSchedulePayload type for it.
+    selectedPlacesInput: Place[], // Changed from selectedPlaces to avoid conflict with hook's selectedPlaces
     prepareSchedulePayloadFn: (
-        userSelectedPlacesInput: Place[], // Assuming Place from supabase is used here
+        userSelectedPlaces: Place[], 
+        // candidatePlaces: Place[], // Assuming candidate places are handled within prepareSchedulePayloadFn if needed
         startDatetimeISO: string | null,
         endDatetimeISO: string | null
-    ) => SupabaseSchedulePayload | null,
-    // generateItineraryFn is the client-side fallback from useItinerary
+    ) => SchedulePayload | null, // Use global SchedulePayload
     generateItineraryFn: (
         placesToUse: Place[], 
         startDate: Date, 
         endDate: Date, 
         startTime: string, 
         endTime: string
-    ) => ItineraryDay[] | null, // This ItineraryDay is from use-itinerary
-    setShowItinerary: (show: boolean) => void, // This likely comes from useLeftPanel's uiVisibility
-    setCurrentPanel: (panel: string) => void // This likely comes from useLeftPanel
+    ) => ItineraryDay[] | null,
+    setShowItinerary: (show: boolean) => void,
+    setCurrentPanel: (panel: string) => void
   ): Promise<boolean> => {
     console.log('[handleCreateItinerary] 함수 호출됨, 인자:', {
       tripDetails: tripDetails ? {
@@ -51,7 +52,7 @@ export const useItineraryHandlers = () => {
         endDatetime: tripDetails.endDatetime,
         hasDates: !!tripDetails.dates
       } : 'null',
-      selectedPlacesCount: selectedPlaces.length,
+      selectedPlacesCount: selectedPlacesInput.length,
     });
     
     if (!tripDetails.dates || !tripDetails.startDatetime || !tripDetails.endDatetime) {
@@ -59,25 +60,27 @@ export const useItineraryHandlers = () => {
       return false;
     }
     
-    if (selectedPlaces.length === 0) {
+    if (selectedPlacesInput.length === 0) {
       toast.error("선택된 장소가 없습니다. 장소를 선택해주세요.");
       return false;
     }
     
-    // The payload for the server might be different from SupabaseSchedulePayload if types diverged.
-    // Assuming prepareSchedulePayloadFn from useSelectedPlaces creates the correct server payload.
-    const payloadForServer = prepareSchedulePayloadFn(selectedPlaces, tripDetails.startDatetime, tripDetails.endDatetime);
+    // The payload for the server uses global SchedulePayload
+    const payloadForServer = prepareSchedulePayloadFn(
+      selectedPlacesInput, 
+      // [], // Pass empty array or handle candidates inside prepareSchedulePayloadFn
+      tripDetails.startDatetime, 
+      tripDetails.endDatetime
+    );
 
     if (payloadForServer) {
       console.log("[handleCreateItinerary] 서버 일정 생성 요청 시작, payload:", JSON.stringify(payloadForServer, null, 2));
       
       try {
-        // Server call returns NewServerScheduleResponse
-        const serverResponse: NewServerScheduleResponse | null = await generateSchedule(payloadForServer as any); // Cast if types are slightly off
+        const serverResponse: NewServerScheduleResponse | null = await generateSchedule(payloadForServer);
         
         if (serverResponse) {
           console.log("[handleCreateItinerary] 서버 응답 성공:", serverResponse);
-          
           console.log("[handleCreateItinerary] 서버 응답 로그 (세부):", {
             응답타입: typeof serverResponse,
             객체여부: typeof serverResponse === 'object',
@@ -85,33 +88,25 @@ export const useItineraryHandlers = () => {
             배열여부: Array.isArray(serverResponse),
             schedule존재: !!serverResponse?.schedule,
             route_summary존재: !!serverResponse?.route_summary,
-            유효성검사결과: isNewServerScheduleResponse(serverResponse) // Use the imported function
+            유효성검사결과: isNewServerScheduleResponse(serverResponse)
           });
           
-          if (isNewServerScheduleResponse(serverResponse) && // Use the imported function
+          if (isNewServerScheduleResponse(serverResponse) && 
               serverResponse.route_summary && 
               serverResponse.route_summary.length > 0) {
             
-            console.log("[handleCreateItinerary] 유효한 응답입니다. 이벤트를 발생시킵니다 (useScheduleGenerationRunner에서 처리).");
-            // The actual processing and event dispatching for itineraryCreated
-            // should happen in useScheduleGenerationRunner which calls this.
-            // This function's role might be simplified to just getting server response
-            // or directly parsing and setting if not using the runner approach.
-            // For now, we assume this is part of a flow where runner will use this.
-            // If this handler IS the main runner, it should dispatch the event itself.
-            // Let's assume for now that `useScheduleGenerationRunner` handles the event dispatch.
-             window.dispatchEvent(new CustomEvent('rawServerResponseReceived', { detail: serverResponse }));
-
-            return true; // Indicate success for runner to proceed.
+            console.log("[handleCreateItinerary] 유효한 응답입니다. rawServerResponseReceived 이벤트를 발생시킵니다.");
+            window.dispatchEvent(new CustomEvent('rawServerResponseReceived', { detail: serverResponse }));
+            return true;
           } else {
-            console.warn("[handleCreateItinerary] 서버 응답은 있지만 형식이 맞지 않습니다. 클라이언트 측 일정 생성으로 폴백.", {
-              isNewResponse: isNewServerScheduleResponse(serverResponse), // Use the imported function
+            console.warn("[handleCreateItinerary] 서버 응답은 있지만 형식이 맞지 않거나 route_summary가 비어있습니다. 클라이언트 측 일정 생성으로 폴백.", {
+              isNewResponseFormat: isNewServerScheduleResponse(serverResponse),
               hasRouteSummary: !!serverResponse?.route_summary,
-              routeSummaryLength: serverResponse?.route_summary?.length
+              routeSummaryLength: serverResponse?.route_summary?.length ?? 0
             });
             
             const clientItinerary = generateItineraryFn(
-              selectedPlaces, 
+              selectedPlacesInput, 
               tripDetails.dates.startDate, 
               tripDetails.dates.endDate, 
               tripDetails.dates.startTime, 
@@ -119,7 +114,7 @@ export const useItineraryHandlers = () => {
             );
             
             if (clientItinerary && clientItinerary.length > 0) {
-              toast.info("서버 일정 생성 실패. 클라이언트에서 기본 일정을 생성했습니다.");
+              toast.info("서버 일정 생성 실패 또는 형식이 맞지 않아 클라이언트에서 기본 일정을 생성했습니다.");
               const event = new CustomEvent('itineraryCreated', { 
                 detail: { 
                   itinerary: clientItinerary,
@@ -127,7 +122,7 @@ export const useItineraryHandlers = () => {
                 } 
               });
               window.dispatchEvent(event);
-              setShowItinerary(true); // Ensure panel shows
+              setShowItinerary(true);
               setCurrentPanel('itinerary'); 
             } else {
               toast.error("서버 및 클라이언트 일정 생성 모두 실패했습니다.");
@@ -139,7 +134,7 @@ export const useItineraryHandlers = () => {
           toast.error("서버로부터 응답을 받지 못했습니다. 클라이언트에서 기본 일정을 생성합니다.");
           
           const clientItinerary = generateItineraryFn(
-            selectedPlaces, 
+            selectedPlacesInput, 
             tripDetails.dates.startDate, 
             tripDetails.dates.endDate, 
             tripDetails.dates.startTime, 
@@ -162,11 +157,11 @@ export const useItineraryHandlers = () => {
             return false;
           }
         }
-      } catch (e) {
+      } catch (e: any) { // Catch specific error type if known
         console.error("[handleCreateItinerary] 서버 요청 중 오류 발생:", e);
-        toast.error("서버 일정 생성 중 오류 발생. 클라이언트에서 기본 일정을 생성합니다.");
+        toast.error(`서버 일정 생성 중 오류: ${e.message || '알 수 없는 오류'}. 클라이언트에서 기본 일정을 생성합니다.`);
         const clientItinerary = generateItineraryFn(
-          selectedPlaces, 
+          selectedPlacesInput, 
           tripDetails.dates.startDate, 
           tripDetails.dates.endDate, 
           tripDetails.dates.startTime, 
@@ -193,15 +188,15 @@ export const useItineraryHandlers = () => {
       toast.error("일정 생성에 필요한 정보가 부족합니다.");
       return false;
     }
-  }, [generateSchedule, setServerRoutes]); // Added setServerRoutes
+  }, [generateSchedule, setServerRoutes]); // Dependencies: generateSchedule, setServerRoutes
 
   const handleCloseItinerary = useCallback((
-    setShowItineraryFn: (show: boolean) => void, // Renamed to avoid conflict
-    setCurrentPanelFn: (panel: string) => void // Renamed to avoid conflict
+    setShowItineraryFn: (show: boolean) => void,
+    setCurrentPanelFn: (panel: string) => void
   ) => {
     setShowItineraryFn(false);
     clearMarkersAndUiElements(); 
-    setServerRoutes({}); // Clear server routes from map
+    setServerRoutes({});
     setCurrentPanelFn('category'); 
   }, [clearMarkersAndUiElements, setServerRoutes]);
 
@@ -209,6 +204,7 @@ export const useItineraryHandlers = () => {
     handleCreateItinerary,
     handleCloseItinerary,
     isGenerating, // Expose loading state from useScheduleGenerator
-    error // Expose error state
+    // error property is not available from useScheduleGenerator, so not exposed here
   };
 };
+
