@@ -11,12 +11,12 @@ import ScheduleViewer from './ScheduleViewer';
 interface ItineraryViewProps {
   itinerary: ItineraryDay[];
   startDate: Date;
-  onSelectDay: (day: number) => void;
-  selectedDay: number | null;
+  onSelectDay: (day: ItineraryDay) => void; // ItineraryDay 객체 전체를 받도록 변경
+  selectedDay: ItineraryDay | null; // ItineraryDay 객체 전체를 받도록 변경
   onClose?: () => void;
   debug?: {
     itineraryLength: number;
-    selectedDay: number | null;
+    selectedDayObject: ItineraryDay | null; // 이름 변경
     showItinerary: boolean;
   };
 }
@@ -32,7 +32,7 @@ const ItineraryView: React.FC<ItineraryViewProps> = ({
   useEffect(() => {
     console.log("ItineraryView 마운트/업데이트:", {
       itineraryLength: itinerary?.length || 0,
-      selectedDay,
+      selectedDayObject: selectedDay, // 변경된 props 사용
       startDate: startDate?.toISOString(),
       debugInfo: debug
     });
@@ -40,17 +40,17 @@ const ItineraryView: React.FC<ItineraryViewProps> = ({
     if (itinerary?.length > 0 && selectedDay === null && onSelectDay) {
       // Ensure itinerary[0] exists and day is valid before selecting
       if (itinerary[0] && typeof itinerary[0].day === 'number') {
-        console.log("ItineraryView: 첫 번째 날짜 자동 선택:", itinerary[0].day);
-        onSelectDay(itinerary[0].day);
+        console.log("ItineraryView: 첫 번째 날짜 자동 선택:", itinerary[0]);
+        onSelectDay(itinerary[0]); // ItineraryDay 객체 전달
       } else {
         console.warn("ItineraryView: 첫 번째 날짜 자동 선택 불가 - itinerary[0] 또는 day가 유효하지 않음");
       }
     }
   }, [itinerary, selectedDay, onSelectDay, startDate, debug]);
 
-  const handleDayClick = (day: number) => {
-    console.log(`ItineraryView: 일자 선택: ${day}일차`);
-    onSelectDay(day);
+  const handleDayClick = (dayItem: ItineraryDay) => { // ItineraryDay 객체 받음
+    console.log(`ItineraryView: 일자 선택: ${dayItem.day}일차`);
+    onSelectDay(dayItem); // ItineraryDay 객체 전달
   };
 
   // getDateForDay and getDayOfWeek are not used directly in JSX anymore
@@ -67,7 +67,7 @@ const ItineraryView: React.FC<ItineraryViewProps> = ({
   }
 
   return (
-    <div className="w-full h-full flex flex-col">
+    <div className="w-full h-full flex flex-col bg-white">
       <div className="flex items-center justify-between p-4 border-b">
         <h2 className="text-lg font-semibold">생성된 여행 일정</h2>
         {onClose && (
@@ -79,37 +79,47 @@ const ItineraryView: React.FC<ItineraryViewProps> = ({
           </button>
         )}
       </div>
-      
-      <div className="flex overflow-x-auto pb-2 p-4 gap-2 border-b">
-        {itinerary.map((dayItem) => {
-          // dayItem.date 와 dayItem.dayOfWeek 를 직접 사용 (core.ts의 ItineraryDay에 포함됨)
-          // const dayDate = new Date(startDate);
-          // dayDate.setDate(startDate.getDate() + dayItem.day - 1);
-          // const formattedDate = format(dayDate, 'MM/dd(EEE)', { locale: ko });
-          const formattedDate = `${dayItem.date}(${dayItem.dayOfWeek})`;
 
-
-          return (
-            <Button
-              key={dayItem.day}
-              variant={selectedDay === dayItem.day ? "default" : "outline"}
-              className="flex flex-col h-16 min-w-16 whitespace-nowrap"
-              onClick={() => handleDayClick(dayItem.day)}
-            >
-              <span className="font-bold text-sm">{dayItem.day}일차</span>
-              <span className="text-xs">{formattedDate}</span>
-            </Button>
-          );
-        })}
+      {/* 일정 날짜 버튼 - 가로 스크롤 */}
+      <div className="flex overflow-x-auto whitespace-nowrap p-4 border-b scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+        {itinerary.map((dayItem) => (
+          <Button
+            key={dayItem.day}
+            variant={selectedDay?.day === dayItem.day ? "default" : "outline"}
+            className="mr-2 flex-shrink-0 flex flex-col h-auto py-2 px-3 leading-snug" // 버튼 스타일 조정
+            onClick={() => handleDayClick(dayItem)}
+          >
+            <span className="font-bold text-sm">{dayItem.day}일차</span>
+            <span className="text-xs opacity-70">
+              {dayItem.date}({dayItem.dayOfWeek})
+            </span>
+          </Button>
+        ))}
       </div>
       
-      <ScheduleViewer
-        schedule={itinerary} 
-        selectedDay={selectedDay}
-        onDaySelect={onSelectDay} 
-        startDate={startDate}
-        itineraryDay={selectedDay !== null ? itinerary.find(d => d.day === selectedDay) : null}
-      />
+      {/* 선택된 날짜의 일정 내용 - 세로 스크롤 */}
+      {/* ScheduleViewer가 이 역할을 하도록 수정. ItineraryPanel과 유사하게 구성 */}
+      <ScrollArea className="flex-1" style={{ height: 'calc(100vh - 200px)' }}> {/* Adjust height as needed */}
+        <div className="p-4">
+          {selectedDay && (
+            <ScheduleViewer
+              schedule={itinerary} // 전체 일정 전달
+              selectedDay={selectedDay.day} // 선택된 '일자 번호' 전달
+              onDaySelect={(dayNum) => { // ScheduleViewer가 일자 번호로 콜백하면
+                const newSelectedDay = itinerary.find(d => d.day === dayNum);
+                if (newSelectedDay) onSelectDay(newSelectedDay);
+              }}
+              startDate={startDate}
+              itineraryDay={selectedDay} // 선택된 ItineraryDay 객체 전달
+            />
+          )}
+          {!selectedDay && itinerary.length > 0 && (
+            <div className="text-center text-muted-foreground p-8">
+              날짜를 선택하여 일정을 확인하세요.
+            </div>
+          )}
+        </div>
+      </ScrollArea>
     </div>
   );
 };

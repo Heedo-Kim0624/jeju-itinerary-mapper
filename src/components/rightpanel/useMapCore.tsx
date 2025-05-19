@@ -1,4 +1,3 @@
-
 import { useMapInitialization } from '@/hooks/map/useMapInitialization';
 import { useMapNavigation } from '@/hooks/map/useMapNavigation';
 // import { useMapMarkers } from '@/hooks/map/useMapMarkers'; // Deprecated
@@ -25,7 +24,8 @@ const useMapCore = () => {
   const features = useMapFeatures(map, isNaverLoaded); 
 
   const { 
-    clearMarkersAndUiElements, 
+    // clearMarkersAndUiElements는 이제 clearAllMapElements로 변경됨
+    clearAllMapElements, 
   } = features;
 
   const { 
@@ -57,20 +57,23 @@ const useMapCore = () => {
         setServerRoutesBase(dayRoutes);
     }
   };
-  
-  const renderItineraryRoute = (
+
+  // renderItineraryRoute는 MapContextType의 시그니처와 일치해야 함
+  const renderItineraryRouteWrapper = (
     itineraryDay: ItineraryDay | null,
-    allServerRoutesInput?: Record<number, ServerRouteResponse>,
+    allServerRoutesInput?: Record<number, ServerRouteResponse>, // 이 인자는 features.renderItineraryRoute에서 사용 안함
     onCompleteInput?: () => void
   ) => {
+    // features.renderItineraryRoute는 ItineraryDay, (사용 안하는 allServerRoutes), onComplete를 받음
     features.renderItineraryRoute(
         itineraryDay,
-        allServerRoutesInput ?? serverRoutesData,
+        allServerRoutesInput, // features.renderItineraryRoute에서 이 인자를 무시하거나 선택적으로 사용
         onCompleteInput
     );
   };
 
-  const showRouteForPlaceIndex = (
+  // showRouteForPlaceIndex wrapper - 시그니처 일치 확인
+  const showRouteForPlaceIndexWrapper = (
     placeIndex: number, 
     itineraryDay: ItineraryDay,
     onComplete?: () => void
@@ -82,20 +85,24 @@ const useMapCore = () => {
     );
   };
   
+  // calculateRoutesWrapper - 이 함수는 재검토 필요
   const calculateRoutesWrapper = (placesToRoute: Place[]) => {
     features.calculateRoutes(placesToRoute);
   };
   
-  // highlightSegment의 타입이 (segment: SegmentRoute | null) => void 이므로,
-  // useMapCore에서 그대로 전달하면 됩니다.
-  // MapContextType에서 이 타입을 맞춰줘야 합니다.
+  // highlightSegmentWrapper
   const highlightSegmentWrapper = (segment: SegmentRoute | null) => {
     features.highlightSegment(segment);
   };
 
-  // Fix for renderGeoJsonRoute to make it return void
-  const renderGeoJsonRouteWrapper = (route: SegmentRoute) => {
-    features.renderGeoJsonRoute(route);
+  // renderGeoJsonRouteWrapper는 renderItineraryRouteWrapper와 유사하게 동작
+  const renderGeoJsonRouteWrapperInternal = (
+    itineraryDay: ItineraryDay | null,
+    allServerRoutes?: Record<number, ServerRouteResponse>,
+    onComplete?: () => void
+  ) => {
+    // features.renderGeoJsonRoute가 features.renderItineraryRoute와 동일하게 동작하도록 수정됨
+    features.renderGeoJsonRoute(itineraryDay, allServerRoutes, onComplete);
   };
 
   return {
@@ -104,9 +111,11 @@ const useMapCore = () => {
     isMapInitialized,
     isNaverLoaded,
     isMapError,
-    addMarkers: features.addMarkers,
+    addMarkers: features.addMarkers, // 시그니처가 MapContextType과 일치하는지 확인
     calculateRoutes: calculateRoutesWrapper,
-    clearMarkersAndUiElements,
+    clearAllMapElements: features.clearAllMapElements, // 변경된 함수명
+    clearAllRoutes: features.clearAllRoutes, // 추가
+    clearAllMarkers: features.clearAllMarkers, // 추가
     panTo,
     showGeoJson,
     toggleGeoJsonVisibility,
@@ -116,12 +125,11 @@ const useMapCore = () => {
     handleGeoJsonLoaded,
     checkGeoJsonMapping,
     mapPlacesWithGeoNodes: features.mapPlacesWithGeoNodes,
-    renderItineraryRoute, 
-    clearAllRoutes: features.clearAllRoutes,
+    renderItineraryRoute: renderItineraryRouteWrapper, 
     highlightSegment: highlightSegmentWrapper, 
     clearPreviousHighlightedPath: features.clearPreviousHighlightedPath,
-    showRouteForPlaceIndex, 
-    renderGeoJsonRoute: renderGeoJsonRouteWrapper,
+    showRouteForPlaceIndex: showRouteForPlaceIndexWrapper, 
+    renderGeoJsonRoute: renderGeoJsonRouteWrapperInternal, // renderItineraryRoute와 유사하게
     serverRoutesData,
     setServerRoutes
   };

@@ -234,8 +234,8 @@ export const fitBoundsToPlaces = (map: any, places: Place[]) => {
 
 // Fixed fitBoundsToCoordinates function
 export const fitBoundsToCoordinates = (map: any, coordinates: any[]) => { 
-  if (!map || !window.naver || !window.naver.maps || coordinates.length === 0) {
-    console.warn("fitBoundsToCoordinates: 지도 객체가 없거나, 좌표 목록이 비어 있습니다.");
+  if (!map || !window.naver || !window.naver.maps || !coordinates || !Array.isArray(coordinates) || coordinates.length === 0) {
+    console.warn("fitBoundsToCoordinates: 지도 객체가 없거나, 좌표 목록이 비어 있거나 유효하지 않습니다.");
     return;
   }
 
@@ -243,10 +243,11 @@ export const fitBoundsToCoordinates = (map: any, coordinates: any[]) => {
   let hasValidCoords = false;
 
   coordinates.forEach(coord => {
+    // coord가 naver.maps.LatLng 인스턴스인지, 아니면 {lat, lng} 객체인지 확인
     if (coord instanceof window.naver.maps.LatLng) {
       bounds.extend(coord);
       hasValidCoords = true;
-    } else if (coord && typeof coord.lat === 'number' && typeof coord.lng === 'number') {
+    } else if (coord && typeof coord.lat === 'number' && typeof coord.lng === 'number' && !isNaN(coord.lat) && !isNaN(coord.lng)) {
       bounds.extend(new window.naver.maps.LatLng(coord.lat, coord.lng));
       hasValidCoords = true;
     } else {
@@ -256,17 +257,25 @@ export const fitBoundsToCoordinates = (map: any, coordinates: any[]) => {
 
   try {
     if (hasValidCoords) {
-      const ne = bounds.getNE();
-      const sw = bounds.getSW();
-      
-      // Check if bounds is valid before calling fitBounds
-      if (ne && sw && !ne.equals(sw)) {
-        map.fitBounds(bounds);
+      // bounds.isEmpty() 메서드가 있는지 확인하고 사용
+      let isEmpty;
+      if (typeof bounds.isEmpty === 'function') {
+        isEmpty = bounds.isEmpty();
       } else {
-        console.warn("fitBoundsToCoordinates: 유효한 경계를 계산할 수 없습니다.");
+        // 대체 로직: getNE()과 getSW() 비교
+        const ne = bounds.getNE();
+        const sw = bounds.getSW();
+        isEmpty = !ne || !sw || ne.equals(sw);
+      }
+
+      if (!isEmpty) {
+        // Padding 옵션 추가 가능 (예: { top: 50, right: 50, bottom: 50, left: 50 })
+        map.fitBounds(bounds); 
+      } else {
+        console.warn("fitBoundsToCoordinates: 유효한 경계를 계산할 수 없습니다 (bounds is empty or invalid).");
       }
     } else {
-      console.warn("fitBoundsToCoordinates: 유효한 좌표가 없습니다.");
+      console.warn("fitBoundsToCoordinates: 유효한 좌표가 목록에 없습니다.");
     }
   } catch (error) {
     console.error("fitBoundsToCoordinates 중 오류 발생:", error);
