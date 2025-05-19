@@ -24,27 +24,26 @@ export const useScheduleManagement = ({
     setItinerary,
     selectedDay,
     setSelectedDay,
-    isLoadingState: isLoadingStateFromEffects, // 이름 변경하여 명확화
+    isLoadingState: isLoadingStateFromEffects,
     setIsLoadingState,
     handleSelectDay,
   } = useScheduleStateAndEffects();
 
-  const { isGenerating: isGeneratingFromGenerator } = useScheduleGeneratorHook(); // 이름 변경하여 명확화
+  const { isGenerating: isGeneratingFromGenerator } = useScheduleGeneratorHook();
 
   const { runScheduleGenerationProcess } = useScheduleGenerationRunner({
     selectedPlaces,
     dates,
     startDatetime,
     endDatetime,
-    // 명시적으로 함수를 래핑하여 타입 문제 해결
-    setItinerary: (itinerary: ItineraryDay[]) => setItinerary(itinerary), 
+    setItinerary: (itinerary: ItineraryDay[]) => setItinerary(itinerary),
     setSelectedDay,
-    setIsLoadingState, // This setIsLoadingState is from useScheduleStateAndEffects
+    setIsLoadingState,
   });
 
   const combinedIsLoading = isGeneratingFromGenerator || isLoadingStateFromEffects;
 
-  // Log all relevant states whenever they change
+  // Log all relevant states whenever they change and add server response handler
   useEffect(() => {
     console.log(`[useScheduleManagement] State Update:
       - isGenerating (from use-schedule-generator): ${isGeneratingFromGenerator}

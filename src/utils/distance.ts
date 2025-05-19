@@ -1,5 +1,5 @@
 
-import { ItineraryPlaceWithTime, Place } from '@/types/supabase'; // ItineraryPlaceWithTime might be from a different path if not in supabase types
+import { ItineraryPlaceWithTime, Place } from '@/types/supabase';
 
 /**
  * Calculates the distance between two geographical coordinates using the Haversine formula.

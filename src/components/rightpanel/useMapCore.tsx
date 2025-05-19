@@ -73,10 +73,10 @@ const useMapCore = () => {
     allServerRoutesInput?: Record<number, ServerRouteResponse>,
     onCompleteInput?: () => void
   ) => {
-    // features.renderItineraryRoute는 3개의 인자를 받음: itineraryDay, allServerRoutes, onComplete
+    // Correcting function call: Pass all three arguments to features.renderItineraryRoute
     features.renderItineraryRoute(
         itineraryDay,
-        allServerRoutesInput ?? serverRoutesData, // Use input if provided, else internal state
+        allServerRoutesInput ?? serverRoutesData,
         onCompleteInput
     );
   };
@@ -85,9 +85,10 @@ const useMapCore = () => {
   const showRouteForPlaceIndex = (
     placeIndex: number, 
     itineraryDay: ItineraryDay,
-    onComplete?: () => void  // 누락된 3번째 인자 추가
+    onComplete?: () => void
   ) => {
-    features.showRouteForPlaceIndex(placeIndex, itineraryDay, onComplete); // 3개 인자로 호출
+    // Correcting function call: Pass all three arguments to features.showRouteForPlaceIndex
+    features.showRouteForPlaceIndex(placeIndex, itineraryDay, onComplete);
   };
 
   return {

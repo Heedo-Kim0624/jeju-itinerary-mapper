@@ -249,10 +249,9 @@ export const useMapFeatures = (map: any) => {
   // 일정 경로 렌더링
   const renderItineraryRoute = (
     itineraryDay: ItineraryDay | null,
-    allServerRoutes?: Record<number, ServerRouteResponse>, // This param is available but might not be directly used if interleaved_route is primary
-    onComplete?: () => void,
-    onClear?: () => void
-  ): void => {
+    allServerRoutes?: Record<number, ServerRouteResponse>,
+    onComplete?: () => void
+  ) => {
     console.log('[useMapFeatures] renderItineraryRoute 호출됨:', { itineraryDay, serverRoutesData: allServerRoutes });
     if (onClear) onClear();
     else clearAllRoutes(); // 기본적으로 모든 경로 클리어
@@ -494,7 +493,11 @@ export const useMapFeatures = (map: any) => {
   };
   
   // 특정 장소 인덱스의 경로 표시
-  const showRouteForPlaceIndex = (placeIndex: number, itineraryDay: ItineraryDay, onComplete?: () => void) => {
+  const showRouteForPlaceIndex = (
+    placeIndex: number,
+    itineraryDay: ItineraryDay,
+    onComplete?: () => void
+  ) => {
     if (!map || !isGeoJsonLoadedRef.current || !itineraryDay) {
       console.warn('[showRouteForPlaceIndex] 지도, GeoJSON 또는 일정 데이터가 준비되지 않았습니다.');
       return;

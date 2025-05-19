@@ -118,11 +118,21 @@ const LeftPanel: React.FC = () => {
     // rawServerResponseReceived 이벤트 핸들러 추가 - 서버 응답을 받았을 때 무한 로딩 문제 해결
     const handleRawServerResponse = (event: Event) => {
       console.log("[LeftPanel] rawServerResponseReceived 이벤트 수신", (event as CustomEvent).detail);
-      // 서버 응답을 받은 시점에 바로 로딩 상태를 해제하고 패널을 준비
+      
+      // 서버 응답을 받은 시점에서 짧은 타임아웃 후 로딩 상태를 점검
       setTimeout(() => {
-        setIsGenerating(false);
-        setItineraryReceived(true);
-      }, 100);
+        // 서버 응답으로부터 3초가 지났는데도 로딩 상태라면 강제로 해제
+        if (isGenerating) {
+          console.log("[LeftPanel] 서버 응답 후 3초가 지났는데도 로딩 중. 강제로 로딩 상태 해제");
+          setIsGenerating(false);
+          setItineraryReceived(true);
+          
+          // 일정 패널을 표시하도록 명시적으로 설정
+          if (itineraryManagement.itinerary && itineraryManagement.itinerary.length > 0) {
+            uiVisibility.setShowItinerary(true);
+          }
+        }
+      }, 3000);
     };
     
     window.addEventListener('forceRerender', handleForceRerender);
@@ -136,7 +146,7 @@ const LeftPanel: React.FC = () => {
       window.removeEventListener('itineraryWithCoordinatesReady', handleItineraryWithCoords);
       window.removeEventListener('rawServerResponseReceived', handleRawServerResponse);
     };
-  }, [uiVisibility.setShowItinerary]);
+  }, [isGenerating, itineraryManagement.itinerary, uiVisibility.setShowItinerary]);
 
 
   const handlePanelBackByCategory = (category: string) => {
@@ -208,6 +218,19 @@ const LeftPanel: React.FC = () => {
         console.log("[LeftPanel] 일정 생성 성공 (handleCreateItineraryWithLoading)");
         // 성공 응답을 받았으나 여기서는 로딩 상태를 유지
         // 이벤트 핸들러에서 실제 데이터 확인 후 상태 변경
+        
+        // 안전장치: 10초 후에도 로딩 중이면 강제로 해제
+        setTimeout(() => {
+          if (isGenerating) {
+            console.log("[LeftPanel] 10초가 지났는데도 로딩 중. 강제로 로딩 상태 해제");
+            setIsGenerating(false);
+            
+            // 일정이 있으면 표시
+            if (itineraryManagement.itinerary && itineraryManagement.itinerary.length > 0) {
+              uiVisibility.setShowItinerary(true);
+            }
+          }
+        }, 10000);
       } else {
         console.log("[LeftPanel] 일정 생성 실패 (handleCreateItineraryWithLoading)");
         // 실패 시 로딩 상태 즉시 해제
@@ -245,16 +268,16 @@ const LeftPanel: React.FC = () => {
   return (
     <div className="relative h-full">
       {isGenerating ? (
-        // 로딩 중일 때 로딩 인디케이터 표시
-        <div className="fixed top-0 left-0 w-[300px] h-full bg-white border-r border-gray-200 z-40 shadow-md">
+        // 로딩 중일 때 로딩 인디케이터 표시 (z-index 값 높게 설정)
+        <div className="fixed top-0 left-0 w-[300px] h-full bg-white border-r border-gray-200 z-50 shadow-md">
           <ScheduleLoadingIndicator 
             text="일정을 생성하는 중..." 
             subtext="잠시만 기다려주세요"
           />
         </div>
       ) : shouldShowItineraryView ? (
-        // 일정이 있고 로딩 중이 아닐 때 일정 패널 표시
-        <div className="fixed top-0 left-0 w-[300px] h-full bg-white border-r border-gray-200 z-40 shadow-md">
+        // 일정이 있고 로딩 중이 아닐 때 일정 패널 표시 (z-index 값 높게 설정)
+        <div className="fixed top-0 left-0 w-[300px] h-full bg-white border-r border-gray-200 z-50 shadow-md">
           <ItineraryView
             itinerary={itineraryManagement.itinerary!} // Null 체크는 shouldShowItineraryView에서 이미 수행
             startDate={tripDetails.dates?.startDate || new Date()}

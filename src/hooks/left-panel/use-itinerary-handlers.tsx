@@ -1,3 +1,4 @@
+
 import { useCallback } from 'react';
 import { toast } from 'sonner';
 import type { Place, SchedulePayload, ItineraryDay, NewServerScheduleResponse } from '@/types'; // @/types에서 가져오도록 변경
@@ -81,7 +82,10 @@ export const useItineraryHandlers = () => {
               serverResponse.route_summary.length > 0) {
             
             console.log("[handleCreateItinerary] 유효한 응답입니다. rawServerResponseReceived 이벤트를 발생시킵니다.");
-            window.dispatchEvent(new CustomEvent('rawServerResponseReceived', { detail: serverResponse }));
+            // 원본 서버 응답을 포함한 이벤트 디스패치 (detail 추가)
+            window.dispatchEvent(new CustomEvent('rawServerResponseReceived', { 
+              detail: { response: serverResponse } 
+            }));
             return true;
           } else {
             console.warn("[handleCreateItinerary] 서버 응답은 있지만 형식이 맞지 않거나 route_summary가 비어있습니다. 클라이언트 측 일정 생성으로 폴백.", {
@@ -173,7 +177,7 @@ export const useItineraryHandlers = () => {
       toast.error("일정 생성에 필요한 정보가 부족합니다.");
       return false;
     }
-  }, [generateSchedule, setServerRoutes]); // generateItineraryFn was removed from deps array as it's a param
+  }, [generateSchedule, setServerRoutes]);
 
   const handleCloseItinerary = useCallback((
     setShowItineraryFn: (show: boolean) => void,
@@ -181,7 +185,7 @@ export const useItineraryHandlers = () => {
   ) => {
     setShowItineraryFn(false);
     clearMarkersAndUiElements(); 
-    setServerRoutes({} as Record<number, import('@/types').ServerRouteResponse>); // Ensure ServerRouteResponse is from @/types
+    setServerRoutes({} as Record<number, import('@/types').ServerRouteResponse>);
     setCurrentPanelFn('category'); 
   }, [clearMarkersAndUiElements, setServerRoutes]);
 
