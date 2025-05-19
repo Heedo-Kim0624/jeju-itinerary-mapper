@@ -1,92 +1,85 @@
 
 import { useCallback } from 'react';
 import { toast } from 'sonner';
-import { CategoryName } from '@/utils/categoryUtils';
-import { Place, ItineraryDay } from '@/types';
-import { ItineraryDay as ServerItineraryDay } from '@/hooks/use-itinerary';
+// Removed CategoryName import from '@/utils/categoryUtils'
+import { CategoryName, Place, ItineraryDay, SchedulePayload } from '@/types';
+import { TripDetailsState } from '../use-trip-details'; // Assuming this path
 
-export interface ItineraryActions {
-  createItinerary: () => Promise<boolean>;
-  closeItinerary: () => void;
-}
-
-export interface UseItineraryActionsProps {
+interface ItineraryActionsDeps {
+  tripDetails: TripDetailsState;
   selectedPlaces: Place[];
-  dates: {
-    startDate: Date | null;
-    endDate: Date | null;
-    startTime: string;
-    endTime: string;
-  };
-  selectedRegions: string[];
+  prepareSchedulePayload: () => SchedulePayload | null;
+  generateItinerary: (payload: SchedulePayload) => Promise<ItineraryDay[] | null>;
   setShowItinerary: (show: boolean) => void;
-  setItinerary: (itinerary: ItineraryDay[] | ServerItineraryDay[]) => void;
-  setSelectedItineraryDay: (day: number | null) => void;
-  categoriesWithPlaces: CategoryName[];
-  runScheduleGenerationProcess?: () => Promise<void>;
+  setCurrentPanel: (panel: 'region' | 'date' | 'category' | 'itinerary') => void;
 }
 
-export const useItineraryActions = ({
-  selectedPlaces,
-  dates,
-  selectedRegions,
-  setShowItinerary,
-  setItinerary,
-  setSelectedItineraryDay,
-  categoriesWithPlaces,
-  runScheduleGenerationProcess
-}: UseItineraryActionsProps): ItineraryActions => {
-  
-  const createItinerary = useCallback(async (): Promise<boolean> => {
-    if (!dates.startDate || !dates.endDate) {
-      toast.error("여행 날짜를 선택해주세요.");
+export const useItineraryActions = (dependencies: ItineraryActionsDeps) => {
+  const {
+    tripDetails,
+    selectedPlaces,
+    prepareSchedulePayload,
+    generateItinerary,
+    setShowItinerary,
+    setCurrentPanel,
+  } = dependencies;
+
+  const [isGenerating, setIsGenerating] = React.useState(false);
+
+
+  const handleCreateItinerary = useCallback(async () => {
+    if (!tripDetails.dates?.startDate || !tripDetails.dates?.endDate || !tripDetails.startDatetime || !tripDetails.endDatetime) {
+      toast.error("여행 날짜와 시간을 먼저 설정해주세요.");
       return false;
     }
-    
-    if (selectedRegions.length === 0) {
-      toast.error("지역을 선택해주세요.");
-      return false;
-    }
-    
     if (selectedPlaces.length === 0) {
-      toast.error("최소 한 개 이상의 장소를 선택해주세요.");
-      return false;
-    }
-    
-    if (categoriesWithPlaces.length < 2) {
-      toast.error("최소 두 종류 이상의 카테고리에서 장소를 선택해주세요.");
+      toast.error("선택된 장소가 없습니다. 장소를 선택해주세요.");
       return false;
     }
 
+    const schedulePayload = prepareSchedulePayload();
+    if (!schedulePayload) {
+      toast.error("일정 생성에 필요한 정보를 준비하지 못했습니다.");
+      return false;
+    }
+    
+    setIsGenerating(true);
     try {
-      if (runScheduleGenerationProcess) {
-        await runScheduleGenerationProcess();
+      const itineraryData = await generateItinerary(schedulePayload);
+      if (itineraryData) {
+        setShowItinerary(true);
+        setCurrentPanel('itinerary');
+        toast.success("일정이 성공적으로 생성되었습니다!");
         return true;
       } else {
-        console.error("runScheduleGenerationProcess 함수가 제공되지 않았습니다.");
+        toast.error("일정 생성에 실패했습니다. 다시 시도해주세요.");
         return false;
       }
     } catch (error) {
-      console.error("일정 생성 중 오류:", error);
+      console.error("Error creating itinerary:", error);
       toast.error("일정 생성 중 오류가 발생했습니다.");
       return false;
+    } finally {
+      setIsGenerating(false);
     }
   }, [
-    dates.startDate, 
-    dates.endDate,
-    selectedRegions,
+    tripDetails,
     selectedPlaces,
-    categoriesWithPlaces,
-    runScheduleGenerationProcess
+    prepareSchedulePayload,
+    generateItinerary,
+    setShowItinerary,
+    setCurrentPanel,
   ]);
-    
-  const closeItinerary = useCallback(() => {
+
+  const handleCloseItinerary = useCallback(() => {
     setShowItinerary(false);
-    setSelectedItineraryDay(null);
-  }, [setShowItinerary, setSelectedItineraryDay]);
+    setCurrentPanel('category'); // Or 'date' or 'region' depending on desired flow
+    // Potentially clear itinerary data from state if needed
+  }, [setShowItinerary, setCurrentPanel]);
 
   return {
-    createItinerary,
-    closeItinerary
+    handleCreateItinerary,
+    handleCloseItinerary,
+    isGenerating,
   };
 };

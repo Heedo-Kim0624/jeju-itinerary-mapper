@@ -1,5 +1,5 @@
-import { Place } from '@/types/supabase';
-import { CategoryName } from '@/utils/categoryUtils';
+import { Place, SelectedPlace, ItineraryDay, CategoryName, CategoryNameKorean, toCategoryName, toCategoryNameKorean } from '@/types';
+import { getMinimumRecommendationsByCategory, timeOfDayWeights } from '@/utils/categoryUtils';
 
 export const getCategoryKorean = (category?: string): string => {
   if (!category) return '기타';
@@ -105,3 +105,91 @@ export function autoCompleteCandidatePlaces(
 
   return { finalPlaces, addedPlaces };
 }
+
+export const calculatePlaceScore = (
+  place: Place,
+  keywords: string[],
+  timeOfDay: 'morning' | 'afternoon' | 'evening' | 'night',
+  userRating?: number // Optional user rating for the place
+): number => {
+  let score = place.rating || 3.0; // Default score if no rating
+
+  // Keyword matching bonus
+  const placeKeywords = place.description?.toLowerCase().split(/\s+/) || [];
+  const matchedKeywords = keywords.filter(kw => placeKeywords.includes(kw.toLowerCase()));
+  score += matchedKeywords.length * 0.5; // Bonus for each matched keyword
+
+  // Time of day weight bonus
+  const categoryKorean = toCategoryNameKorean(place.category || 'landmark'); // Convert to Korean for timeOfDayWeights
+  const weights = timeOfDayWeights[categoryKorean];
+  if (weights) {
+    score *= (1 + weights[timeOfDay] * 0.2); // Apply time-based weight
+  }
+
+  // User rating influence (if provided)
+  if (userRating !== undefined) {
+    score = (score + userRating) / 2; // Average with user's explicit rating
+  }
+  
+  // Popularity (e.g., review count)
+  if (place.reviewCount && place.reviewCount > 100) {
+      score += Math.log10(place.reviewCount / 100);
+  }
+
+  return parseFloat(score.toFixed(2));
+};
+
+export const recommendPlacesForDay = (
+  availablePlaces: Place[],
+  selectedPlacesForDay: SelectedPlace[],
+  dayNumber: number,
+  totalTravelDays: number,
+  preferredKeywordsByCategory: Record<CategoryName, string[]>, // Expects English CategoryName keys
+  timeOfDay: 'morning' | 'afternoon' | 'evening' | 'night'
+): Place[] => {
+  const recommendations: Place[] = [];
+  const minRecsByCategory = getMinimumRecommendationsByCategory(totalTravelDays);
+
+  const categoryNamesEnglish = Object.keys(preferredKeywordsByCategory) as CategoryName[];
+
+  for (const category of categoryNamesEnglish) {
+    const koreanCategory = toCategoryNameKorean(category); // Convert for minRecsByCategory
+    const targetCount = minRecsByCategory[koreanCategory] || 0;
+    const currentCount = selectedPlacesForDay.filter(p => toCategoryName(p.category || 'landmark') === category).length;
+    let needed = targetCount - currentCount;
+
+    if (needed <= 0) continue;
+
+    const categoryPlaces = availablePlaces.filter(
+      p => toCategoryName(p.category || 'landmark') === category && !selectedPlacesForDay.find(sp => sp.id === p.id)
+    );
+
+    const scoredPlaces = categoryPlaces
+      .map(p => ({
+        ...p,
+        score: calculatePlaceScore(p, preferredKeywordsByCategory[category] || [], timeOfDay),
+      }))
+      .sort((a, b) => b.score - a.score);
+
+    recommendations.push(...scoredPlaces.slice(0, needed));
+  }
+
+  // Add some diverse options if specific category needs are met
+  if (recommendations.length < (totalTravelDays * 2)) { // Ensure some variety
+      const generalPlaces = availablePlaces.filter(p => 
+          !selectedPlacesForDay.find(sp => sp.id === p.id) && 
+          !recommendations.find(rec => rec.id === p.id)
+      );
+      const scoredGeneralPlaces = generalPlaces
+          .map(p => ({
+              ...p,
+              score: calculatePlaceScore(p, [], timeOfDay) // Generic scoring
+          }))
+          .sort((a, b) => b.score - a.score);
+      
+      recommendations.push(...scoredGeneralPlaces.slice(0, (totalTravelDays * 2) - recommendations.length));
+  }
+  
+  // Remove duplicates that might have been added if a place fits multiple criteria (though less likely with current logic)
+  return Array.from(new Map(recommendations.map(item => [item.id, item])).values());
+};

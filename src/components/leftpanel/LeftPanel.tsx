@@ -11,9 +11,9 @@ import { toast } from 'sonner';
 const LeftPanel: React.FC = () => {
   const {
     regionSelection,
-    categorySelection,
-    keywordsAndInputs,
-    placesManagement,
+    categorySelection, // Internally uses English CategoryName
+    keywordsAndInputs, // Internally uses English CategoryName keys
+    placesManagement, // Uses Korean for some functions, English for others
     tripDetails,
     handleCreateItinerary: triggerCreateItineraryFromHook,
     handleCloseItinerary: triggerCloseItineraryFromHook,
@@ -34,7 +34,7 @@ const LeftPanel: React.FC = () => {
     setIsGeneratingItinerary(isGeneratingFromHook);
   }, [isGeneratingFromHook]);
   
-  const [categoryResultPanelCategory, setCategoryResultPanelCategory] = useState<CategoryName | null>(null);
+  const [categoryResultPanelCategory, setCategoryResultPanelCategory] = useState<CategoryName | null>(null); // Store as English
 
   useEffect(() => {
     console.log("[LeftPanel] Relevant state:", {
@@ -76,8 +76,7 @@ const LeftPanel: React.FC = () => {
 
   const handlePanelBackByCategory = (koreanCategory: CategoryNameKorean) => {
     console.log(`${koreanCategory} 카테고리 패널 뒤로가기`);
-    // categorySelection.handlePanelBack expects English CategoryName
-    categorySelection.handlePanelBack(toCategoryName(koreanCategory));
+    categorySelection.handlePanelBack(toCategoryName(koreanCategory)); // Pass English CategoryName
   };
 
   const handleResultClose = () => {
@@ -87,17 +86,16 @@ const LeftPanel: React.FC = () => {
 
   const handleConfirmByCategoryKeywords = (koreanCategoryString: CategoryNameKorean, finalKeywords: string[]) => {
     const englishCategoryName = toCategoryName(koreanCategoryString);
-
-    // No need for !englishCategoryName check as toCategoryName now always returns a valid CategoryName (or default)
     
     console.log(`카테고리 '${englishCategoryName}' (원래: ${koreanCategoryString}) 키워드 확인, 키워드: ${finalKeywords.join(', ')}`);
-    keywordsAndInputs.handleConfirmCategory(englishCategoryName, finalKeywords, true); // true for clearSelection to show result panel
-    setCategoryResultPanelCategory(englishCategoryName); 
+    // keywordsAndInputs.handleConfirmCategory expects English CategoryName
+    keywordsAndInputs.handleConfirmCategory(englishCategoryName, finalKeywords, true); 
+    setCategoryResultPanelCategory(englishCategoryName); // Set English CategoryName
     return true;
   };
   
   const handleConfirmCategorySelectionAndAutocomplete = ( 
-    confirmedEnglishCategory: CategoryName,
+    confirmedEnglishCategory: CategoryName, // Received as English
     userSelectedInPanel: Place[],
     recommendedPoolForCategory: Place[]
   ) => {
@@ -118,7 +116,7 @@ const LeftPanel: React.FC = () => {
       setCategoryResultPanelCategory(null);
       return;
     }
-    const confirmedKoreanCategory = toCategoryNameKorean(confirmedEnglishCategory);
+    const confirmedKoreanCategory = toCategoryNameKorean(confirmedEnglishCategory); // Convert to Korean for placesManagement
     placesManagement.handleAutoCompletePlaces(confirmedKoreanCategory, recommendedPoolForCategory, actualTravelDays);
     setCategoryResultPanelCategory(null); 
   };
@@ -174,46 +172,48 @@ const LeftPanel: React.FC = () => {
         selectedPlaces={placesManagement.selectedPlaces as Place[]}
         onRemovePlace={placesManagement.handleRemovePlace}
         onViewOnMap={placesManagement.handleViewOnMap}
-        allCategoriesSelected={placesManagement.allCategoriesSelected}
+        allCategoriesSelected={placesManagement.allCategoriesSelected} // This is based on Korean category counts
         children={
           <LeftPanelContent
             onDateSelect={tripDetails.setDates}
             onOpenRegionPanel={() => regionSelection.setRegionSlidePanelOpen(true)}
             hasSelectedDates={!!tripDetails.dates.startDate && !!tripDetails.dates.endDate}
-            onCategoryClick={(koreanCategory: CategoryNameKorean) => { // onCategoryClick expects Korean
+            onCategoryClick={(koreanCategory: CategoryNameKorean) => { 
+              // categorySelection.handleCategoryButtonClick expects English CategoryName
               categorySelection.handleCategoryButtonClick(toCategoryName(koreanCategory));
             }}
             regionConfirmed={regionSelection.regionConfirmed}
-            categoryStepIndex={categorySelection.stepIndex}
+            categoryStepIndex={categorySelection.stepIndex} // This is English based index
             activeMiddlePanelCategory={categorySelection.activeMiddlePanelCategory} // English CategoryName | null
             confirmedCategories={categorySelection.confirmedCategories} // English CategoryName[]
-            selectedKeywordsByCategory={categorySelection.selectedKeywordsByCategory}
-            toggleKeyword={categorySelection.toggleKeyword}
-            directInputValues={{ // Ensure keys are correct for LeftPanelContentProps
-              accommodation: keywordsAndInputs.directInputValues.accommodation || '',
+            selectedKeywordsByCategory={categorySelection.selectedKeywordsByCategory} // Keys are English CategoryName
+            toggleKeyword={categorySelection.toggleKeyword} // Expects English CategoryName
+            directInputValues={{ 
+              accommodation: keywordsAndInputs.directInputValues.accommodation || '', // Corrected key
               landmark: keywordsAndInputs.directInputValues.landmark || '',
               restaurant: keywordsAndInputs.directInputValues.restaurant || '',
               cafe: keywordsAndInputs.directInputValues.cafe || ''
             }}
-            onDirectInputChange={{ // Ensure keys are correct
-              accommodation: (value: string) => keywordsAndInputs.onDirectInputChange('accommodation', value),
+            onDirectInputChange={{ 
+              accommodation: (value: string) => keywordsAndInputs.onDirectInputChange('accommodation', value), // Corrected key
               landmark: (value: string) => keywordsAndInputs.onDirectInputChange('landmark', value),
               restaurant: (value: string) => keywordsAndInputs.onDirectInputChange('restaurant', value),
               cafe: (value: string) => keywordsAndInputs.onDirectInputChange('cafe', value)
             }}
-            onConfirmCategory={{  // Ensure keys are correct
-              accommodation: (finalKeywords: string[]) => handleConfirmByCategoryKeywords('숙소', finalKeywords),
+            onConfirmCategory={{  
+              accommodation: (finalKeywords: string[]) => handleConfirmByCategoryKeywords('숙소', finalKeywords), // Corrected key
               landmark: (finalKeywords: string[]) => handleConfirmByCategoryKeywords('관광지', finalKeywords),
               restaurant: (finalKeywords: string[]) => handleConfirmByCategoryKeywords('음식점', finalKeywords),
               cafe: (finalKeywords: string[]) => handleConfirmByCategoryKeywords('카페', finalKeywords)
             }}
-            handlePanelBack={{ // Ensure keys are correct
-              accommodation: () => handlePanelBackByCategory('숙소'),
+            handlePanelBack={{ 
+              accommodation: () => handlePanelBackByCategory('숙소'), // Corrected key
               landmark: () => handlePanelBackByCategory('관광지'),
               restaurant: () => handlePanelBackByCategory('음식점'),
               cafe: () => handlePanelBackByCategory('카페')
             }}
             isCategoryButtonEnabled={(koreanCategory: CategoryNameKorean) => // Expects Korean
+              // categorySelection.isCategoryButtonEnabled expects English CategoryName
               categorySelection.isCategoryButtonEnabled(toCategoryName(koreanCategory))
             }
             isGenerating={isGeneratingItinerary}
@@ -248,13 +248,14 @@ const LeftPanel: React.FC = () => {
       />
 
       <CategoryResultHandler
-        showCategoryResult={categoryResultPanelCategory} // English CategoryName | null
+        showCategoryResult={categoryResultPanelCategory} // Pass English CategoryName | null
         selectedRegions={regionSelection.selectedRegions}
-        selectedKeywords={categoryResultPanelCategory ? (categorySelection.selectedKeywordsByCategory[categoryResultPanelCategory] || []) : []} // Uses English CategoryName as key
+        // selectedKeywordsByCategory has English CategoryName keys
+        selectedKeywords={categoryResultPanelCategory ? (categorySelection.selectedKeywordsByCategory[categoryResultPanelCategory] || []) : []}
         onClose={handleResultClose}
-        onSelectPlace={placesManagement.handleSelectPlace}
+        onSelectPlace={placesManagement.handleSelectPlace} // Expects category string, which it converts
         selectedPlaces={placesManagement.selectedPlaces as SelectedPlace[]}
-        onConfirmCategory={handleConfirmCategorySelectionAndAutocomplete} 
+        onConfirmCategory={handleConfirmCategorySelectionAndAutocomplete} // Expects English CategoryName
       />
       
       {process.env.NODE_ENV === 'development' && (

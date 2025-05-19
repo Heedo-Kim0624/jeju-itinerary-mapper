@@ -3,7 +3,7 @@ import React from 'react';
 import PanelHeader from './PanelHeader';
 import CategoryNavigation from './CategoryNavigation';
 import CategoryPanels from './CategoryPanels';
-import { CategoryName, CategoryNameKorean, toCategoryNameKorean } from '@/types'; // Import necessary types
+import { CategoryName, CategoryNameKorean, toCategoryNameKorean, toCategoryName } from '@/types'; // Import necessary types
 
 interface LeftPanelContentProps {
   onDateSelect: (dates: {
@@ -14,13 +14,13 @@ interface LeftPanelContentProps {
   }) => void;
   onOpenRegionPanel: () => void;
   hasSelectedDates: boolean;
-  onCategoryClick: (category: CategoryNameKorean) => void; // Expects Korean name
+  onCategoryClick: (category: CategoryNameKorean) => void; 
   regionConfirmed: boolean;
   categoryStepIndex: number;
-  activeMiddlePanelCategory: CategoryName | null; // English name from hook
-  confirmedCategories: CategoryName[]; // English names from hook
-  selectedKeywordsByCategory: Record<string, string[]>; // Key might be English or Korean based on usage
-  toggleKeyword: (category: string, keyword: string) => void;
+  activeMiddlePanelCategory: CategoryName | null; 
+  confirmedCategories: CategoryName[]; 
+  selectedKeywordsByCategory: Record<CategoryName, string[]>; // Key is English CategoryName
+  toggleKeyword: (category: CategoryName, keyword: string) => void; // Expects English CategoryName
   directInputValues: {
     accommodation: string; // Corrected spelling
     landmark: string;
@@ -45,7 +45,7 @@ interface LeftPanelContentProps {
     restaurant: () => void;
     cafe: () => void;
   };
-  isCategoryButtonEnabled: (category: CategoryNameKorean) => boolean; // Expects Korean name
+  isCategoryButtonEnabled: (category: CategoryNameKorean) => boolean; 
   isGenerating?: boolean;
 }
 
@@ -56,10 +56,10 @@ const LeftPanelContent: React.FC<LeftPanelContentProps> = ({
   onCategoryClick,
   regionConfirmed,
   categoryStepIndex,
-  activeMiddlePanelCategory, // English CategoryName or null
-  confirmedCategories, // English CategoryName[]
-  selectedKeywordsByCategory,
-  toggleKeyword,
+  activeMiddlePanelCategory, 
+  confirmedCategories, 
+  selectedKeywordsByCategory, // Keys are English
+  toggleKeyword, // Expects English CategoryName
   directInputValues,
   onDirectInputChange,
   onConfirmCategory,
@@ -69,7 +69,6 @@ const LeftPanelContent: React.FC<LeftPanelContentProps> = ({
 }) => {
   const koreanCategoryOrder: CategoryNameKorean[] = ["숙소", "관광지", "음식점", "카페"];
   
-  // Convert English CategoryNames to Korean for CategoryNavigation
   const koreanConfirmedCategories = confirmedCategories.map(cat => toCategoryNameKorean(cat));
   const koreanActiveMiddlePanelCategory = activeMiddlePanelCategory ? toCategoryNameKorean(activeMiddlePanelCategory) : null;
 
@@ -83,18 +82,18 @@ const LeftPanelContent: React.FC<LeftPanelContentProps> = ({
 
       <CategoryNavigation
         categoryOrder={koreanCategoryOrder}
-        currentCategoryIndex={categoryStepIndex}
-        onCategoryClick={onCategoryClick} // Passed directly as it expects Korean
-        categorySelectionConfirmed={regionConfirmed} // Assuming regionConfirmed implies category selection can start
-        confirmedCategories={koreanConfirmedCategories} // Pass converted Korean names
-        isCategoryButtonEnabled={isCategoryButtonEnabled} // Passed directly
-        activeMiddlePanelCategory={koreanActiveMiddlePanelCategory} // Pass converted Korean name
+        currentCategoryIndex={categoryStepIndex} // This is English based index
+        onCategoryClick={onCategoryClick} 
+        categorySelectionConfirmed={regionConfirmed} 
+        confirmedCategories={koreanConfirmedCategories} 
+        isCategoryButtonEnabled={isCategoryButtonEnabled} 
+        activeMiddlePanelCategory={koreanActiveMiddlePanelCategory}
       />
 
       <CategoryPanels
-        activeMiddlePanelCategory={activeMiddlePanelCategory} // This component might need English or Korean, check its definition. Assuming English for now.
-        selectedKeywordsByCategory={selectedKeywordsByCategory}
-        toggleKeyword={toggleKeyword}
+        activeMiddlePanelCategory={activeMiddlePanelCategory} // Pass English CategoryName
+        selectedKeywordsByCategory={selectedKeywordsByCategory} // Pass Record<CategoryName, string[]>
+        toggleKeyword={toggleKeyword} // Pass (category: CategoryName, keyword: string) => void
         directInputValues={directInputValues}
         onDirectInputChange={onDirectInputChange}
         onConfirmCategory={onConfirmCategory}

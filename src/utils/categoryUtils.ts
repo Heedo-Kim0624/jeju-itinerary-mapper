@@ -13,12 +13,12 @@ export const categoryKeywords: CategoryKeywords = {
 
 // 이제 @/types에 있는 CATEGORY_MAPPING_REVERSE 또는 toCategoryName 사용
 export const categoryToEnglish = (koreanName: CategoryNameKorean): CategoryName => {
-  return CATEGORY_MAPPING_REVERSE[koreanName] || 'landmark'; // Default or error handling
+  return toCategoryName(koreanName); // Use converter from @/types
 };
 
 // 이제 @/types에 있는 CATEGORY_MAPPING 또는 toCategoryNameKorean 사용
 export const englishToKorean = (englishName: CategoryName): CategoryNameKorean => {
-  return CATEGORY_MAPPING[englishName] || '관광지'; // Default or error handling
+  return toCategoryNameKorean(englishName); // Use converter from @/types
 };
 
 // CATEGORIES는 이제 CategoryNameKorean 타입을 사용합니다.
