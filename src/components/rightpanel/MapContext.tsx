@@ -22,7 +22,12 @@ interface MapContextType {
   panTo: (locationOrCoords: string | {lat: number, lng: number}) => void;
   showGeoJson: boolean;
   toggleGeoJsonVisibility: () => void;
-  renderItineraryRoute: (itineraryDay: ItineraryDay | null) => void;
+  renderItineraryRoute: (
+    itineraryDay: ItineraryDay | null, 
+    allServerRoutes?: Record<number, ServerRouteResponse>, 
+    onComplete?: () => void, 
+    onClear?: () => void
+  ) => void;
   clearAllRoutes: () => void;
   handleGeoJsonLoaded: (nodes: any[], links: any[]) => void;
   highlightSegment: (fromIndex: number, toIndex: number, itineraryDay?: ItineraryDay) => void;
@@ -60,7 +65,7 @@ const defaultContext: MapContextType = {
   panTo: () => {},
   showGeoJson: false,
   toggleGeoJsonVisibility: () => {},
-  renderItineraryRoute: () => {},
+  renderItineraryRoute: () => {}, // Updated to a simple function for default
   clearAllRoutes: () => {},
   handleGeoJsonLoaded: () => {},
   highlightSegment: () => {},
@@ -107,3 +112,4 @@ export const MapProvider: React.FC<{children: React.ReactNode}> = ({ children })
     </MapContext.Provider>
   );
 };
+

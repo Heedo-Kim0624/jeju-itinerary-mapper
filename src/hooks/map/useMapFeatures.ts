@@ -1,302 +1,553 @@
-
-import { useCallback, useRef, useEffect, useState } from 'react';
-import { Place, ItineraryDay, ServerRouteResponse } from '@/types/supabase'; // core.ts의 타입 사용
-import { useMapContext } from '@/components/rightpanel/MapContext';
-import { clearPolylines, createNaverPolyline, createNaverMarker } from '@/utils/map/mapDrawing'; // 경로 및 마커 유틸리티 - drawPolylineFromCoords removed
+import {
+  calculateDistance,
+  createNaverLatlng,
+  createNaverMarker,
+  createNaverPolyline,
+  getMarkerIconOptions,
+  panToPosition,
+  fitBoundsToCoordinates,
+  clearMarkers as clearDrawnMarkers,
+  clearPolylines as clearDrawnPolylines,
+  clearInfoWindows as clearDrawnInfoWindows,
+  fitBoundsToPlaces,
+  clearOverlayByCondition
+} from '@/utils/map/mapDrawing';
+import { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/supabase';
+import { ParsedRoute, ServerRouteResponse, SegmentRoute } from '@/types/schedule'; // SegmentRoute 추가
 import { parseInterleavedRoute, extractAllNodesFromRoute, extractAllLinksFromRoute } from '@/utils/routeParser';
+import { useRef, useState, useEffect } from 'react';
 
-interface NodeFeature {
-  type: 'Feature';
-  properties: { NODE_ID: string; [key: string]: any };
-  geometry: { type: 'Point'; coordinates: [number, number] };
-}
-
-interface LinkFeature {
-  type: 'Feature';
-  properties: { LINK_ID: string; [key: string]: any };
-  geometry: { type: 'LineString'; coordinates: [number, number][] };
-}
-
-export const useMapFeatures = (mapInstance: any) => {
-  const { geoJsonNodes, geoJsonLinks } = useMapContext(); // GeoJSON 데이터 접근
-  const drawnPolylinesRef = useRef<any[]>([]);
-  const highlightedPathRef = useRef<any>(null);
-  const [currentMap, setCurrentMap] = useState<any>(null);
-
-  useEffect(() => {
-    if (mapInstance) {
-      setCurrentMap(mapInstance);
-    }
-  }, [mapInstance]);
-
-  const clearDrawnPolylines = useCallback(() => {
-    clearPolylines(drawnPolylinesRef.current);
-    drawnPolylinesRef.current = [];
-  }, []);
-
-  const clearPreviousHighlightedPath = useCallback(() => {
-    if (highlightedPathRef.current) {
-      highlightedPathRef.current.setMap(null);
-      highlightedPathRef.current = null;
-    }
-  }, []);
-
-  // GeoJSON 노드와 링크 ID를 기반으로 경로를 지도에 렌더링
-  const renderGeoJsonRoute = useCallback((
-    nodeIds: string[], // 경로를 구성하는 NODE_ID 배열
-    linkIds: string[], // 경로를 구성하는 LINK_ID 배열
-    options?: { strokeColor?: string; strokeWeight?: number; strokeOpacity?: number }
-  ): any[] => { // 명시적으로 any[] 반환 타입 지정
-    if (!currentMap || !window.naver || !geoJsonNodes || !geoJsonLinks) {
-      console.warn('[useMapFeatures] 지도 또는 GeoJSON 데이터가 준비되지 않아 경로를 렌더링할 수 없습니다.', {
-        mapExists: !!currentMap,
-        naverExists: !!window.naver,
-        geoJsonNodesExists: !!geoJsonNodes,
-        geoJsonLinksExists: !!geoJsonLinks
-      });
-      return []; // 빈 배열 반환
-    }
-    clearDrawnPolylines(); // 기존 polyline 제거
-
-    const currentPolylines: any[] = []; // 이번 렌더링에서 생성된 polyline을 저장할 배열
-
-    const defaultOptions = { strokeColor: '#22c55e', strokeWeight: 5, strokeOpacity: 0.8 }; // 연두색으로 변경
-    const mergedOptions = { ...defaultOptions, ...options };
-
-    console.log(`[useMapFeatures] 경로 렌더링 시작: ${linkIds.length}개의 링크로 경로를 그립니다.`, {
-      노드수: nodeIds.length,
-      링크수: linkIds.length,
-      스타일: mergedOptions,
-      geoJsonNodes길이: geoJsonNodes?.length || 0,
-      geoJsonLinks길이: geoJsonLinks?.length || 0
-    });
-
-    // 링크 ID를 기반으로 Polyline 생성
-    linkIds.forEach(linkId => {
-      // geoJsonLinks는 LinkFeature[] 배열임
-      const linkFeature = geoJsonLinks.find(
-        (f: LinkFeature) => String(f.properties.LINK_ID) === String(linkId)
-      );
-      
-      if (linkFeature) {
-        const pathCoords = linkFeature.geometry.coordinates.map(
-          (coord: [number, number]) => new window.naver.maps.LatLng(coord[1], coord[0])
-        );
-        
-        if (pathCoords.length > 1) {
-          const polyline = createNaverPolyline(currentMap, pathCoords, mergedOptions);
-          currentPolylines.push(polyline); // 현재 생성된 polyline 추가
-        }
-      } else {
-        console.warn(`[useMapFeatures] LINK_ID '${linkId}'에 해당하는 GeoJSON 링크를 찾을 수 없습니다.`);
-      }
-    });
-    
-    // 참조 업데이트 (이번에 생성된 polyline들)
-    drawnPolylinesRef.current = currentPolylines;
-
-    console.log(`[useMapFeatures] ${currentPolylines.length}개의 polyline으로 경로를 렌더링했습니다.`);
-    return currentPolylines; // 생성된 polyline 배열 반환
-  }, [currentMap, geoJsonNodes, geoJsonLinks, clearDrawnPolylines]);
+/**
+ * 지도 기능 관련 훅
+ * 마커, 경로, GeoJSON 등 지도 위에 표시되는 요소들을 관리
+ */
+export const useMapFeatures = (map: any) => {
+  // 지도 초기화 상태
+  const [isMapInitialized, setIsMapInitialized] = useState<boolean>(false);
+  const [isNaverLoaded, setIsNaverLoaded] = useState<boolean>(false);
+  const [isMapError, setIsMapError] = useState<boolean>(false);
+  const [showGeoJson, setShowGeoJson] = useState<boolean>(false);
   
-  // 일정 경로 렌더링 함수 - 서버 데이터 활용 (interleaved_route 우선)
-  const renderItineraryRoute = useCallback((
-    itineraryDay: ItineraryDay,
-    serverRoutesData: Record<number, ServerRouteResponse>, // 추가: 서버 경로 데이터
-    renderDayRouteFallback: (dayData: ItineraryDay) => void, // 추가: 폴백 렌더링 함수
-    clearAllRoutesFunction: () => void // 추가: 모든 경로 제거 함수
-  ) => {
-    if (!currentMap || !window.naver) {
-      console.warn('[useMapFeatures] 지도 또는 Naver API가 초기화되지 않아 경로 렌더링을 건너뜁니다.');
-      return;
+  // GeoJSON 데이터 상태
+  const isGeoJsonLoadedRef = useRef<boolean>(false);
+  const geoJsonNodesRef = useRef<any[]>([]);
+  const geoJsonLinksRef = useRef<any[]>([]);
+  
+  // 서버 경로 데이터
+  const [serverRoutesData, setServerRoutesData] = useState<Record<number, ServerRouteResponse>>({});
+  
+  // 지도 오버레이 (마커, 폴리라인 등) 관리
+  const mapOverlaysRef = useRef<Array<{overlay: any; type: string; segmentId?: string}>>([]);
+  const mapContainer = useRef<HTMLDivElement>(null);
+  
+  // 지도 초기화 감지
+  useEffect(() => {
+    if (map) {
+      setIsMapInitialized(true);
+      setIsNaverLoaded(!!window.naver);
+      console.log('[useMapFeatures] 지도 초기화 감지됨');
+    }
+  }, [map]);
+  
+  // 마커 추가 함수
+  const addMarkers = (places: Place[], opts?: { 
+    highlight?: boolean; 
+    isItinerary?: boolean; 
+    useRecommendedStyle?: boolean;
+    useColorByCategory?: boolean;
+    onClick?: (place: Place, index: number) => void;
+  }) => {
+    if (!map || !window.naver) {
+      console.warn('[useMapFeatures] 지도가 초기화되지 않았습니다. 마커를 추가할 수 없습니다.');
+      return [];
     }
     
-    clearAllRoutesFunction(); // 기존 경로들 모두 제거
-
-    console.log("[useMapFeatures] renderItineraryRoute 호출됨, 일자:", itineraryDay.day, "interleaved_route:", {
-      경로존재: !!itineraryDay.interleaved_route,
-      경로길이: itineraryDay.interleaved_route?.length || 0
-    });
-
-    if (itineraryDay.interleaved_route && itineraryDay.interleaved_route.length > 0) {
-      // 서버에서 받은 interleaved_route 배열에서 노드 ID와 링크 ID 추출
-      const nodeIds = extractAllNodesFromRoute(itineraryDay.interleaved_route).map(String);
-      const linkIds = extractAllLinksFromRoute(itineraryDay.interleaved_route).map(String);
-      
-      console.log("[useMapFeatures] GeoJSON 기반 경로 렌더링 시도. 노드:", nodeIds.length, "링크:", linkIds.length);
-      
-      // GeoJSON 데이터로 경로 렌더링 (연두색, 약간 더 두껍게)
-      const createdPolylines = renderGeoJsonRoute(nodeIds, linkIds, { 
-        strokeColor: '#22c55e', 
-        strokeWeight: 6, 
-        strokeOpacity: 0.9 
-      });
-      
-      console.log(`[useMapFeatures] 경로 렌더링 완료: ${createdPolylines.length}개의 polyline 생성됨`);
-    } else if (itineraryDay.routeData && itineraryDay.routeData.nodeIds && itineraryDay.routeData.nodeIds.length > 0) {
-      console.warn(`[useMapFeatures] 일자 ${itineraryDay.day}: interleaved_route는 없지만 routeData.nodeIds는 존재. 폴백 렌더링 시도.`);
-      
-      const nodeIds = itineraryDay.routeData.nodeIds.map(String);
-      const linkIds = itineraryDay.routeData.linkIds?.map(String) || [];
-      
-      if (nodeIds.length > 0 || linkIds.length > 0) {
-        const createdPolylines = renderGeoJsonRoute(nodeIds, linkIds, { 
-          strokeColor: '#FFA500', 
-          strokeWeight: 4, 
-          strokeOpacity: 0.7 
-        });
-        
-        console.log(`[useMapFeatures] 폴백 경로 렌더링 완료: ${createdPolylines.length}개의 polyline 생성됨`);
-      }
-    } else if (serverRoutesData && serverRoutesData[itineraryDay.day]) {
-      console.warn(`[useMapFeatures] 일자 ${itineraryDay.day}: 일정에 경로 데이터가 없지만 서버 경로 데이터 발견. 서버 데이터로 렌더링 시도.`);
-      
-      const dayServerRoute = serverRoutesData[itineraryDay.day];
-      
-      if (dayServerRoute.interleaved_route && dayServerRoute.interleaved_route.length > 0) {
-        const nodeIds = extractAllNodesFromRoute(dayServerRoute.interleaved_route).map(String);
-        const linkIds = extractAllLinksFromRoute(dayServerRoute.interleaved_route).map(String);
-        
-        console.log(`[useMapFeatures] 서버 경로 데이터로 렌더링 시도. 노드: ${nodeIds.length}, 링크: ${linkIds.length}`);
-        
-        const createdPolylines = renderGeoJsonRoute(nodeIds, linkIds, { 
-          strokeColor: '#4B9CD3', 
-          strokeWeight: 5, 
-          strokeOpacity: 0.8 
-        });
-        
-        console.log(`[useMapFeatures] 서버 경로 데이터 렌더링 완료: ${createdPolylines.length}개의 polyline 생성됨`);
-      } else if (dayServerRoute.nodeIds && dayServerRoute.nodeIds.length > 0) {
-        const nodeIds = dayServerRoute.nodeIds.map(String);
-        const linkIds = dayServerRoute.linkIds?.map(String) || [];
-        
-        console.log(`[useMapFeatures] 서버 경로 노드/링크 데이터로 렌더링 시도. 노드: ${nodeIds.length}, 링크: ${linkIds.length}`);
-        
-        const createdPolylines = renderGeoJsonRoute(nodeIds, linkIds, { 
-          strokeColor: '#4B9CD3', 
-          strokeWeight: 5, 
-          strokeOpacity: 0.8 
-        });
-        
-        console.log(`[useMapFeatures] 서버 경로 노드/링크 데이터 렌더링 완료: ${createdPolylines.length}개의 polyline 생성됨`);
-      } else {
-        console.warn(`[useMapFeatures] 일자 ${itineraryDay.day}: 서버 경로 데이터도 유효하지 않습니다.`);
-      }
-    } else {
-      console.warn(`[useMapFeatures] 일자 ${itineraryDay.day}에 대한 경로 데이터(interleaved_route, routeData, 서버 데이터)가 모두 없습니다.`);
-    }
-  }, [currentMap, geoJsonNodes, geoJsonLinks, renderGeoJsonRoute, clearDrawnPolylines]); 
-
-  // 특정 장소 인덱스의 경로 하이라이트
-  const showRouteForPlaceIndex = useCallback((
-    placeIndex: number,
-    itineraryDay: ItineraryDay,
-    serverRoutesData?: Record<number, ServerRouteResponse> // Optional로 변경
-  ) => {
-    if (!currentMap || !window.naver || !itineraryDay) {
-      console.warn('[useMapFeatures] 지도, Naver API 또는 일정 데이터가 없어 경로 하이라이트를 건너뜁니다.');
-      return;
-    }
-    
-    clearPreviousHighlightedPath();
-    
-    console.log(`[useMapFeatures] 장소 인덱스 ${placeIndex}에 대한 경로 하이라이트 시도`);
-    
-    // interleaved_route가 있는지 확인
-    if (!itineraryDay.interleaved_route || itineraryDay.interleaved_route.length === 0) {
-      console.warn('[useMapFeatures] interleaved_route 데이터가 없어 경로 세그먼트를 분석할 수 없습니다.');
-      
-      // 서버 경로 데이터가 있는지 확인
-      if (serverRoutesData && serverRoutesData[itineraryDay.day] && 
-          serverRoutesData[itineraryDay.day].interleaved_route && 
-          serverRoutesData[itineraryDay.day].interleaved_route!.length > 0) {
-        
-        console.log('[useMapFeatures] 서버 경로 데이터로 경로 하이라이트 시도');
-        const serverDay = serverRoutesData[itineraryDay.day];
-        
-        const parsedSegments = parseInterleavedRoute(serverDay.interleaved_route!);
-        if (placeIndex < 0 || placeIndex >= parsedSegments.length) {
-          console.warn(`[useMapFeatures] 인덱스 ${placeIndex}는 세그먼트 범위를 벗어납니다 (0-${parsedSegments.length-1})`);
-          return;
-        }
-        
-        highlightSegment(parsedSegments[placeIndex], serverDay.interleaved_route!);
+    const markers: any[] = [];
+    places.forEach((place, index) => {
+      if (!place.y || !place.x) {
+        console.warn(`[useMapFeatures] 장소 '${place.name}'의 좌표가 없습니다. 마커를 생성하지 않습니다.`);
         return;
       }
       
-      console.warn('[useMapFeatures] 서버 경로 데이터도 없어 경로 하이라이트를 할 수 없습니다.');
-      return;
-    }
-    
-    const parsedSegments = parseInterleavedRoute(itineraryDay.interleaved_route);
-    if (placeIndex < 0 || placeIndex >= parsedSegments.length) {
-      console.warn(`[useMapFeatures] 인덱스 ${placeIndex}는 세그먼트 범위를 벗어납니다 (0-${parsedSegments.length-1})`);
-      return;
-    }
-    
-    highlightSegment(parsedSegments[placeIndex], itineraryDay.interleaved_route);
-  }, [currentMap, geoJsonNodes, geoJsonLinks, clearPreviousHighlightedPath]);
-  
-  // 세그먼트 하이라이트 헬퍼 함수
-  const highlightSegment = useCallback((
-    segment: { from: string; to: string; links: string[] },
-    interleavedRoute: (string | number)[]
-  ) => {
-    if (!currentMap || !window.naver || !geoJsonNodes || !geoJsonLinks) {
-      console.warn('[useMapFeatures] 지도 또는 GeoJSON 데이터가 없어 세그먼트 하이라이트를 건너뜁니다.');
-      return;
-    }
-    
-    const segmentNodeIds = [String(segment.from), String(segment.to)]; // 시작과 끝 노드
-    const segmentLinkIds = segment.links.map(String);
-    
-    console.log(`[useMapFeatures] 세그먼트 하이라이트: 노드 ${segmentNodeIds.join('-')}, 링크 ${segmentLinkIds.length}개`);
-
-    const allCoords: any[] = [];
-
-    // 시작 노드 좌표 추가
-    const fromNodeFeature = geoJsonNodes.find(
-        (f: NodeFeature) => String(f.properties.NODE_ID) === segmentNodeIds[0]
-    );
-    
-    if (fromNodeFeature) {
-        allCoords.push(new window.naver.maps.LatLng(
-            fromNodeFeature.geometry.coordinates[1], fromNodeFeature.geometry.coordinates[0]
-        ));
-    }
-
-    // 링크들의 좌표 추가
-    segmentLinkIds.forEach(linkId => {
-        const linkFeature = geoJsonLinks.find(
-            (f: LinkFeature) => String(f.properties.LINK_ID) === linkId
-        );
-        
-        if (linkFeature) {
-            linkFeature.geometry.coordinates.forEach((coord: [number, number]) => {
-                allCoords.push(new window.naver.maps.LatLng(coord[1], coord[0]));
-            });
-        }
+      const position = createNaverLatlng(place.y, place.x);
+      const iconOptions = getMarkerIconOptions(place, opts?.highlight, opts?.useRecommendedStyle, opts?.isItinerary, opts?.useColorByCategory);
+      
+      const marker = createNaverMarker(map, position, iconOptions, place.name);
+      
+      if (opts?.onClick) {
+        window.naver.maps.Event.addListener(marker, 'click', () => {
+          opts.onClick!(place, index);
+        });
+      }
+      
+      markers.push(marker);
+      mapOverlaysRef.current.push({ overlay: marker, type: 'marker' });
     });
     
-    if (allCoords.length > 1) {
-        highlightedPathRef.current = createNaverPolyline(currentMap, allCoords, {
-            strokeColor: '#FF0000', // 하이라이트는 빨간색
-            strokeWeight: 8,
-            strokeOpacity: 0.9,
-            zIndex: 10 
-        });
-        
-        console.log(`[useMapFeatures] 경로 하이라이트 완료: ${allCoords.length}개 좌표점으로 polyline 생성됨`);
-    } else {
-        console.warn('[useMapFeatures] 경로 하이라이트 실패: 좌표점이 부족합니다.');
-    }
-  }, [currentMap, geoJsonNodes, geoJsonLinks]);
-
-  return {
-    renderGeoJsonRoute,
-    renderItineraryRoute,
-    clearDrawnPolylines,
-    showRouteForPlaceIndex,
-    clearPreviousHighlightedPath,
+    return markers;
   };
-};
+  
+  // 모든 마커 및 UI 요소 제거
+  const clearMarkersAndUiElements = () => {
+    mapOverlaysRef.current.forEach(overlayObj => {
+      if (overlayObj.overlay && typeof overlayObj.overlay.setMap === 'function') {
+        overlayObj.overlay.setMap(null);
+      }
+    });
+    mapOverlaysRef.current = [];
+  };
+  
+  // 지도 이동 함수
+  const panTo = (locationOrCoords: string | {lat: number, lng: number}) => {
+    if (!map) return;
+    
+    if (typeof locationOrCoords === 'string') {
+      // 주소 기반 이동 (geocoding 필요)
+      console.log(`[useMapFeatures] 주소 기반 이동은 아직 구현되지 않았습니다: ${locationOrCoords}`);
+    } else {
+      // 좌표 기반 이동
+      panToPosition(map, locationOrCoords.lat, locationOrCoords.lng);
+    }
+  };
+  
+  // GeoJSON 가시성 토글
+  const toggleGeoJsonVisibility = () => {
+    setShowGeoJson(prev => !prev);
+  };
+  
+  // 경로 세그먼트 그리기 함수
+  const drawRouteSegment = (
+    segment: { from: string; to: string; links: string[] },
+    style?: any,
+    type: string = 'route' // 오버레이 타입을 위한 파라미터 추가
+  ): any | null => {
+    if (!map || !geoJsonNodesRef.current || !geoJsonLinksRef.current) {
+      console.warn('[drawRouteSegment] 지도 또는 GeoJSON 데이터가 준비되지 않았습니다.');
+      return null;
+    }
+  
+    const fromNodeGeo = geoJsonNodesRef.current.find(n => String(n.id) === String(segment.from));
+    const toNodeGeo = geoJsonNodesRef.current.find(n => String(n.id) === String(segment.to));
+  
+    if (!fromNodeGeo || !toNodeGeo) {
+      console.warn(`[drawRouteSegment] 세그먼트 노드를 찾을 수 없습니다: From ${segment.from}, To ${segment.to}`);
+      return null;
+    }
+  
+    const pathCoordinates = [createNaverLatlng(fromNodeGeo.coordinates[1], fromNodeGeo.coordinates[0])];
+  
+    segment.links.forEach(linkId => {
+      const linkGeo = geoJsonLinksRef.current.find(l => String(l.id) === String(linkId));
+      if (linkGeo && linkGeo.coordinates) {
+        linkGeo.coordinates.forEach((coordPair: [number, number]) => {
+          // 첫번째 좌표는 fromNodeGeo와 겹치므로 건너뛰고, 마지막 좌표는 toNodeGeo와 겹치므로 나중에 추가
+          // 여기서는 링크의 모든 중간 좌표를 추가한다고 가정
+          pathCoordinates.push(createNaverLatlng(coordPair[1], coordPair[0]));
+        });
+      } else {
+        console.warn(`[drawRouteSegment] 링크 ID ${linkId}에 대한 GeoJSON 데이터를 찾을 수 없습니다.`);
+      }
+    });
+  
+    // Ensure the last coordinate of the TO_NODE is included if not already by links
+    const lastLinkCoord = pathCoordinates[pathCoordinates.length -1];
+    const toNodeCoord = createNaverLatlng(toNodeGeo.coordinates[1], toNodeGeo.coordinates[0]);
+    if (!lastLinkCoord || !lastLinkCoord.equals(toNodeCoord)) {
+       pathCoordinates.push(toNodeCoord);
+    }
+
+    if (pathCoordinates.length < 2) {
+      console.warn(`[drawRouteSegment] 경로를 그리기에 좌표가 부족합니다 (${pathCoordinates.length}개). From: ${segment.from}, To: ${segment.to}`);
+      return null;
+    }
+  
+    const polyline = createNaverPolyline({
+      path: pathCoordinates,
+      strokeColor: style?.strokeColor || '#007EEF',
+      strokeWeight: style?.strokeWeight || 3,
+      strokeOpacity: style?.strokeOpacity || 0.8,
+      map: map,
+    });
+  
+    mapOverlaysRef.current.push({ overlay: polyline, type: type, segmentId: `${segment.from}-${segment.to}-${Date.now()}` });
+    return polyline;
+  };
+  
+  // interleaved_route 배열을 사용하여 경로 세그먼트 하이라이트
+  const highlightSegmentByInterleavedRoute = (
+    interleaved_route: (string | number)[],
+    highlightStyle?: any,
+    mapInstance?: any,
+  ) => {
+    const currentMap = mapInstance || map;
+    if (!currentMap || !isGeoJsonLoadedRef.current) {
+      console.warn('[highlightSegmentByInterleavedRoute] Map or GeoJSON not ready.');
+      return [];
+    }
+
+    const parsedSegments: ParsedRoute[] = parseInterleavedRoute(interleaved_route);
+    if (!parsedSegments || parsedSegments.length === 0) {
+      console.warn('[highlightSegmentByInterleavedRoute] No segments to highlight.');
+      return [];
+    }
+
+    // 이전 하이라이트 경로 지우기 (특정 조건, 예를 들어 타입이 'highlight'인 경우)
+    clearOverlayByCondition(mapOverlaysRef.current, (overlay) => overlay.type === 'highlight');
+    mapOverlaysRef.current = mapOverlaysRef.current.filter(overlay => overlay.type !== 'highlight');
+    
+    console.log(`[highlightSegmentByInterleavedRoute] Highlighting ${parsedSegments.length} segments.`);
+
+    const highlightedPaths: any[] = [];
+    parsedSegments.forEach((segment, index) => {
+      // Ensure from and to are strings for drawRouteSegment
+      const segmentWithStringIds: { from: string; to: string; links: string[] } = {
+        from: String(segment.from),
+        to: String(segment.to),
+        links: segment.links.map(String),
+      };
+
+      console.log(`[highlightSegmentByInterleavedRoute] Drawing segment ${index + 1}: From ${segmentWithStringIds.from} To ${segmentWithStringIds.to} via ${segmentWithStringIds.links.length} links`);
+      const path = drawRouteSegment(
+        segmentWithStringIds,
+        highlightStyle || { strokeColor: '#FF0000', strokeWeight: 5, strokeOpacity: 0.8 },
+        'highlight' // type을 'highlight'로 지정
+      );
+      if (path) {
+        highlightedPaths.push(path);
+      }
+    });
+    return highlightedPaths;
+  };
+  
+  // 이전에 하이라이트된 경로 제거
+  const clearPreviousHighlightedPath = () => {
+    clearOverlayByCondition(mapOverlaysRef.current, (overlay) => overlay.type === 'highlight');
+    mapOverlaysRef.current = mapOverlaysRef.current.filter(overlay => overlay.type !== 'highlight');
+  };
+  
+  // 일정 경로 렌더링
+  const renderItineraryRoute = (
+    itineraryDay: ItineraryDay | null,
+    allServerRoutes?: Record<number, ServerRouteResponse>,
+    onComplete?: () => void,
+    onClear?: () => void
+  ): void => {
+    console.log('[useMapFeatures] renderItineraryRoute 호출됨:', { itineraryDay, serverRoutesData: allServerRoutes });
+    if (onClear) onClear();
+    else clearAllRoutes(); // 기본적으로 모든 경로 클리어
+
+    if (!itineraryDay || !itineraryDay.interleaved_route || itineraryDay.interleaved_route.length === 0) {
+      console.log('[useMapFeatures] 표시할 일정이 없거나 경로 데이터가 없습니다.');
+      if (onComplete) onComplete();
+      return;
+    }
+
+    console.log(`[useMapFeatures] ${itineraryDay.day}일차 경로 렌더링 시작. Interleaved route 길이: ${itineraryDay.interleaved_route.length}`);
+    
+    const routeStyle = {
+      strokeColor: '#1E90FF', // 파란색 계열
+      strokeWeight: 4,
+      strokeOpacity: 0.9,
+      strokeStyle: 'solid',
+      startIcon: window.naver?.maps.PointableIcon?.CIRCLE,
+      startIconSize: 8,
+      endIcon: window.naver?.maps.PointableIcon?.CIRCLE,
+      endIconSize: 8,
+    };
+
+    // highlightSegmentByInterleavedRoute를 사용하여 경로를 그림
+    // 이 함수는 내부적으로 clearOverlayByCondition을 호출하여 이전 'highlight' 타입 경로를 지움
+    // 만약 일반 경로 타입이 다르다면, 해당 타입으로 지우도록 수정 필요
+    // 여기서는 기존 clearAllRoutes가 이미 호출되었으므로, 중복 클리어를 피하거나 조정 필요.
+    // clearAllRoutes가 mapOverlaysRef.current를 비우므로, highlightSegmentByInterleavedRoute 내부의 clearOverlayByCondition은 아무것도 안할 수 있음.
+    
+    const drawnPath = highlightSegmentByInterleavedRoute(itineraryDay.interleaved_route, routeStyle);
+    
+    if (drawnPath && drawnPath.length > 0) {
+       console.log(`[useMapFeatures] ${itineraryDay.day}일차 경로 ${drawnPath.length}개 세그먼트 렌더링 완료.`);
+       // Fit map to the new route if needed
+       const nodeIds = extractAllNodesFromRoute(itineraryDay.interleaved_route);
+       if (nodeIds.length > 0 && geoJsonNodesRef.current.length > 0) {
+           const routeNodeCoordinates = nodeIds.map(nodeId => {
+               const node = geoJsonNodesRef.current.find(n => String(n.id) === String(nodeId));
+               return node ? createNaverLatlng(node.coordinates[1], node.coordinates[0]) : null;
+           }).filter(coord => coord !== null) as any[];
+           
+           if (routeNodeCoordinates.length > 0) {
+               fitBoundsToCoordinates(map, routeNodeCoordinates);
+           }
+       }
+    } else {
+      console.warn(`[useMapFeatures] ${itineraryDay.day}일차 경로 렌더링에 실패했거나 그려진 경로가 없습니다.`);
+    }
+
+    if (onComplete) onComplete();
+  };
+  
+  // 모든 경로 제거
+  const clearAllRoutes = () => {
+    console.log('[useMapFeatures] 모든 경로 및 관련 UI 요소 제거 중');
+    mapOverlaysRef.current.forEach(overlayObj => {
+      if (overlayObj.overlay && typeof overlayObj.overlay.setMap === 'function') {
+        overlayObj.overlay.setMap(null);
+      }
+    });
+    mapOverlaysRef.current = []; // 모든 오버레이 참조 제거
+    console.log('[useMapFeatures] 모든 경로 제거 완료');
+  };
+  
+  // GeoJSON 노드와 링크를 사용하여 경로 렌더링
+  const renderGeoJsonRoute = (nodeIds: string[], linkIds: string[], style?: any) => {
+    if (!map || !isGeoJsonLoadedRef.current) {
+      console.warn('[renderGeoJsonRoute] 지도 또는 GeoJSON이 준비되지 않았습니다.');
+      return [];
+    }
+    
+    console.log(`[renderGeoJsonRoute] 경로 렌더링: ${nodeIds.length}개 노드, ${linkIds.length}개 링크`);
+    
+    // 이전 경로 제거
+    clearAllRoutes();
+    
+    if (nodeIds.length < 2) {
+      console.warn('[renderGeoJsonRoute] 노드가 2개 미만입니다. 경로를 그릴 수 없습니다.');
+      return [];
+    }
+    
+    const polylines = [];
+    
+    // 각 노드 쌍 사이의 링크를 찾아 경로 생성
+    for (let i = 0; i < nodeIds.length - 1; i++) {
+      const fromNodeId = nodeIds[i];
+      const toNodeId = nodeIds[i + 1];
+      
+      // 해당 구간의 링크 찾기
+      const segmentLinks = linkIds.filter((_, idx) => idx >= i && idx < nodeIds.length - 1);
+      
+      if (segmentLinks.length > 0) {
+        const segment = {
+          from: fromNodeId,
+          to: toNodeId,
+          links: segmentLinks
+        };
+        
+        const polyline = drawRouteSegment(segment, style);
+        if (polyline) {
+          polylines.push(polyline);
+        }
+      }
+    }
+    
+    return polylines;
+  };
+  
+  // GeoJSON 데이터 로드 처리
+  const handleGeoJsonLoaded = (nodes: any[], links: any[]) => {
+    console.log(`[handleGeoJsonLoaded] GeoJSON 데이터 로드됨: ${nodes.length}개 노드, ${links.length}개 링크`);
+    geoJsonNodesRef.current = nodes;
+    geoJsonLinksRef.current = links;
+    isGeoJsonLoadedRef.current = true;
+  };
+  
+  // 특정 구간 하이라이트
+  const highlightSegment = (fromIndex: number, toIndex: number, itineraryDay?: ItineraryDay) => {
+    if (!map || !isGeoJsonLoadedRef.current || !itineraryDay) {
+      console.warn('[highlightSegment] 지도, GeoJSON 또는 일정 데이터가 준비되지 않았습니다.');
+      return;
+    }
+    
+    // 이전 하이라이트 제거
+    clearPreviousHighlightedPath();
+    
+    if (fromIndex < 0 || toIndex >= itineraryDay.places.length || fromIndex >= toIndex) {
+      console.warn(`[highlightSegment] 유효하지 않은 인덱스: ${fromIndex} -> ${toIndex}`);
+      return;
+    }
+    
+    console.log(`[highlightSegment] 구간 하이라이트: ${fromIndex} -> ${toIndex}`);
+    
+    // 해당 구간의 경로 데이터 추출
+    // 이 부분은 itineraryDay의 구조에 따라 다를 수 있음
+    // 예: itineraryDay.routeData.segmentRoutes에서 해당 구간 찾기
+    
+    // 임시 구현: 전체 경로에서 해당 구간만 하이라이트
+    if (itineraryDay.interleaved_route && itineraryDay.interleaved_route.length > 0) {
+      // interleaved_route에서 해당 구간 추출 로직 필요
+      // 현재는 전체 경로를 하이라이트
+      highlightSegmentByInterleavedRoute(
+        itineraryDay.interleaved_route,
+        { strokeColor: '#FF5722', strokeWeight: 5, strokeOpacity: 0.8 }
+      );
+    }
+  };
+  
+  // 장소와 GeoJSON 노드 매핑 검사
+  const checkGeoJsonMapping = (places: Place[]) => {
+    if (!isGeoJsonLoadedRef.current || geoJsonNodesRef.current.length === 0) {
+      return {
+        totalPlaces: places.length,
+        mappedPlaces: 0,
+        mappingRate: '0%',
+        averageDistance: 'N/A',
+        success: false,
+        message: 'GeoJSON 데이터가 로드되지 않았습니다.'
+      };
+    }
+    
+    let mappedCount = 0;
+    let totalDistance = 0;
+    
+    places.forEach(place => {
+      if (!place.x || !place.y) return;
+      
+      // 가장 가까운 노드 찾기
+      let closestNode = null;
+      let minDistance = Infinity;
+      
+      geoJsonNodesRef.current.forEach(node => {
+        const distance = calculateDistance(
+          place.y, place.x,
+          node.coordinates[1], node.coordinates[0]
+        );
+        
+        if (distance < minDistance) {
+          minDistance = distance;
+          closestNode = node;
+        }
+      });
+      
+      if (closestNode && minDistance < 1000) { // 1km 이내
+        mappedCount++;
+        totalDistance += minDistance;
+      }
+    });
+    
+    const mappingRate = places.length > 0 ? (mappedCount / places.length) * 100 : 0;
+    const averageDistance = mappedCount > 0 ? totalDistance / mappedCount : 0;
+    
+    return {
+      totalPlaces: places.length,
+      mappedPlaces: mappedCount,
+      mappingRate: `${mappingRate.toFixed(1)}%`,
+      averageDistance: averageDistance.toFixed(1),
+      success: mappingRate >= 80, // 80% 이상이면 성공으로 간주
+      message: mappingRate >= 80 
+        ? '매핑 성공' 
+        : `매핑 부족 (${mappingRate.toFixed(1)}%)`
+    };
+  };
+  
+  // 장소에 GeoJSON 노드 ID 매핑
+  const mapPlacesWithGeoNodes = (places: Place[]) => {
+    if (!isGeoJsonLoadedRef.current || geoJsonNodesRef.current.length === 0) {
+      return places;
+    }
+    
+    return places.map(place => {
+      if (!place.x || !place.y) return place;
+      
+      // 가장 가까운 노드 찾기
+      let closestNode = null;
+      let minDistance = Infinity;
+      
+      geoJsonNodesRef.current.forEach(node => {
+        const distance = calculateDistance(
+          place.y, place.x,
+          node.coordinates[1], node.coordinates[0]
+        );
+        
+        if (distance < minDistance) {
+          minDistance = distance;
+          closestNode = node;
+        }
+      });
+      
+      if (closestNode && minDistance < 1000) { // 1km 이내
+        return {
+          ...place,
+          geoNodeId: closestNode.id
+        };
+      }
+      
+      return place;
+    });
+  };
+  
+  // 특정 장소 인덱스의 경로 표시
+  const showRouteForPlaceIndex = (placeIndex: number, itineraryDay: ItineraryDay) => {
+    if (!map || !isGeoJsonLoadedRef.current || !itineraryDay) {
+      console.warn('[showRouteForPlaceIndex] 지도, GeoJSON 또는 일정 데이터가 준비되지 않았습니다.');
+      return;
+    }
+    
+    if (placeIndex < 0 || placeIndex >= itineraryDay.places.length) {
+      console.warn(`[showRouteForPlaceIndex] 유효하지 않은 인덱스: ${placeIndex}`);
+      return;
+    }
+    
+    // 이전 경로 제거
+    clearAllRoutes();
+    
+    // 해당 장소로 지도 이동
+    const place = itineraryDay.places[placeIndex];
+    if (place.y && place.x) {
+      panToPosition(map, place.y, place.x);
+    }
+    
+    // 해당 장소의 경로 표시
+    // 이 부분은 itineraryDay의 구조에 따라 다를 수 있음
+    
+    // 임시 구현: 전체 경로 표시
+    if (itineraryDay.interleaved_route && itineraryDay.interleaved_route.length > 0) {
+      highlightSegmentByInterleavedRoute(
+        itineraryDay.interleaved_route,
+        { strokeColor: '#4CAF50', strokeWeight: 4, strokeOpacity: 0.8 }
+      );
+    }
+  };
+  
+  // 서버 경로 데이터 설정
+  const setServerRoutes = (
+    dayRoutes: Record<number, ServerRouteResponse> | ((prev: Record<number, ServerRouteResponse>) => Record<number, ServerRouteResponse>)
+  ) => {
+    if (typeof dayRoutes === 'function') {
+      setServerRoutesData(prev => {
+        const newRoutes = dayRoutes(prev);
+        console.log('[setServerRoutes] 서버 경로 데이터 업데이트 (함수):', Object.keys(newRoutes).length);
+        return newRoutes;
+      });
+    } else {
+      setServerRoutesData(dayRoutes);
+      console.log('[setServerRoutes] 서버 경로 데이터 업데이트 (객체):', Object.keys(dayRoutes).length);
+    }
+  };
+  
+  return {
+    map,
+    mapContainer,
+    isMapInitialized,
+    isNaverLoaded,
+    isMapError,
+    addMarkers,
+    calculateRoutes: () => console.warn("calculateRoutes is deprecated"),
+    clearMarkersAndUiElements,
+    panTo,
+    showGeoJson,
+    toggleGeoJsonVisibility,
+    renderItineraryRoute,
+    clearAllRoutes,
+    handleGeoJsonLoaded,
+    geoJsonNodes: geoJsonNodesRef.current,
+    geoJsonLinks: geoJsonLinksRef.current,
+    highlightSegment,
+    clearPreviousHighlightedPath,
+    isGeoJsonLoaded: isGeoJsonLoadedRef.current,
+    checkGeoJsonMapping,
+    mapPlacesWithGeoNodes,
+    showRouteForPlaceIndex,
+    renderGeoJsonRoute, // Make sure this is correctly implemented and returned
+    setServerRoutes,
+    serverRoutesData
+  };
+}
+
+export default useMapFeatures;
