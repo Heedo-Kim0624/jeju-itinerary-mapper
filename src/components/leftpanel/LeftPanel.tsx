@@ -9,6 +9,7 @@ import ItineraryView from './ItineraryView';
 import { CategoryName } from '@/utils/categoryUtils';
 import { Place } from '@/types/supabase';
 import { toast } from 'sonner';
+import { ScheduleLoadingIndicator } from './ScheduleLoadingIndicator';
 
 const LeftPanel: React.FC = () => {
   const {
@@ -39,7 +40,7 @@ const LeftPanel: React.FC = () => {
       일정수신완료: itineraryReceived
     });
     
-    // 일정이 존재하고 itineraryReceived가 true인 경우 일정 패널을 표시합니다
+    // 일정이 존재하고 itineraryReceived가 true인 경우 일정 패널을 표시하고 로딩 상태를 해제합니다
     if (itineraryManagement.itinerary && 
         itineraryManagement.itinerary.length > 0 && 
         itineraryReceived) {
@@ -68,10 +69,8 @@ const LeftPanel: React.FC = () => {
   useEffect(() => {
     const handleForceRerender = () => {
       console.log("[LeftPanel] forceRerender 이벤트 수신");
-      // 강제 리렌더링 이벤트가 발생하면 데이터 확인을 위해 약간 지연 후 로딩 상태 해제
-      setTimeout(() => {
-        setIsGenerating(false);
-      }, 50);
+      // 강제 리렌더링 이벤트가 발생하면 데이터 확인을 위해 로딩 상태 즉시 해제
+      setIsGenerating(false);
     };
     
     const handleItineraryCreated = (event: Event) => {
@@ -92,10 +91,7 @@ const LeftPanel: React.FC = () => {
         setIsGenerating(false);
         
         // 일정 패널을 표시하도록 명시적으로 설정
-        setTimeout(() => {
-          console.log("[LeftPanel] itineraryCreated 이벤트 후 일정 패널 표시 시도");
-          uiVisibility.setShowItinerary(true);
-        }, 100);
+        uiVisibility.setShowItinerary(true);
       } else {
         console.warn("[LeftPanel] itineraryCreated 이벤트에 유효한 일정 데이터가 없습니다");
         setIsGenerating(false);
@@ -115,21 +111,30 @@ const LeftPanel: React.FC = () => {
         setIsGenerating(false);
         
         // 일정 패널을 표시하도록 명시적으로 설정
-        setTimeout(() => {
-          console.log("[LeftPanel] itineraryWithCoordinatesReady 이벤트 후 일정 패널 표시 시도");
-          uiVisibility.setShowItinerary(true);
-        }, 100);
+        uiVisibility.setShowItinerary(true);
       }
+    };
+    
+    // rawServerResponseReceived 이벤트 핸들러 추가 - 서버 응답을 받았을 때 무한 로딩 문제 해결
+    const handleRawServerResponse = (event: Event) => {
+      console.log("[LeftPanel] rawServerResponseReceived 이벤트 수신", (event as CustomEvent).detail);
+      // 서버 응답을 받은 시점에 바로 로딩 상태를 해제하고 패널을 준비
+      setTimeout(() => {
+        setIsGenerating(false);
+        setItineraryReceived(true);
+      }, 100);
     };
     
     window.addEventListener('forceRerender', handleForceRerender);
     window.addEventListener('itineraryCreated', handleItineraryCreated);
     window.addEventListener('itineraryWithCoordinatesReady', handleItineraryWithCoords);
+    window.addEventListener('rawServerResponseReceived', handleRawServerResponse);
     
     return () => {
       window.removeEventListener('forceRerender', handleForceRerender);
       window.removeEventListener('itineraryCreated', handleItineraryCreated);
       window.removeEventListener('itineraryWithCoordinatesReady', handleItineraryWithCoords);
+      window.removeEventListener('rawServerResponseReceived', handleRawServerResponse);
     };
   }, [uiVisibility.setShowItinerary]);
 
@@ -239,7 +244,16 @@ const LeftPanel: React.FC = () => {
 
   return (
     <div className="relative h-full">
-      {shouldShowItineraryView ? (
+      {isGenerating ? (
+        // 로딩 중일 때 로딩 인디케이터 표시
+        <div className="fixed top-0 left-0 w-[300px] h-full bg-white border-r border-gray-200 z-40 shadow-md">
+          <ScheduleLoadingIndicator 
+            text="일정을 생성하는 중..." 
+            subtext="잠시만 기다려주세요"
+          />
+        </div>
+      ) : shouldShowItineraryView ? (
+        // 일정이 있고 로딩 중이 아닐 때 일정 패널 표시
         <div className="fixed top-0 left-0 w-[300px] h-full bg-white border-r border-gray-200 z-40 shadow-md">
           <ItineraryView
             itinerary={itineraryManagement.itinerary!} // Null 체크는 shouldShowItineraryView에서 이미 수행
@@ -255,6 +269,7 @@ const LeftPanel: React.FC = () => {
           />
         </div>
       ) : (
+        // 기본 왼쪽 패널 표시 (일정이 없거나 표시하지 않을 때)
         <LeftPanelContainer
           showItinerary={uiVisibility.showItinerary}
           onSetShowItinerary={uiVisibility.setShowItinerary}

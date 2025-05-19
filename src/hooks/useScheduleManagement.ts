@@ -52,7 +52,25 @@ export const useScheduleManagement = ({
       - Combined isLoading for UI: ${combinedIsLoading}
       - Itinerary length: ${itinerary.length}
       - Selected Day: ${selectedDay}`);
-  }, [isGeneratingFromGenerator, isLoadingStateFromEffects, combinedIsLoading, itinerary, selectedDay]);
+      
+    // 서버 응답을 감지하는 이벤트 리스너 추가
+    const handleRawServerResponse = () => {
+      console.log("[useScheduleManagement] rawServerResponseReceived 이벤트 감지됨. 로딩 상태 확인.");
+      if (isLoadingStateFromEffects) {
+        // 서버 응답을 받은 후 즉시 로딩 상태를 해제하여 무한 로딩 방지
+        setTimeout(() => {
+          console.log("[useScheduleManagement] 서버 응답 후 로딩 상태 해제");
+          setIsLoadingState(false);
+        }, 50);
+      }
+    };
+    
+    window.addEventListener('rawServerResponseReceived', handleRawServerResponse);
+    
+    return () => {
+      window.removeEventListener('rawServerResponseReceived', handleRawServerResponse);
+    };
+  }, [isGeneratingFromGenerator, isLoadingStateFromEffects, combinedIsLoading, itinerary, selectedDay, setIsLoadingState]);
 
   return {
     itinerary,

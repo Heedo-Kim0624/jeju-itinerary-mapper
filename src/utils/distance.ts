@@ -42,5 +42,7 @@ export const calculateTotalDistance = (places: Place[]): number => {
       console.warn(`[calculateTotalDistance] Missing coordinates for place ${place1.name} or ${place2.name}`);
     }
   }
-  return totalDistance;
+  
+  // 거리를 소수점 둘째 자리까지 반올림
+  return Math.round(totalDistance * 100) / 100;
 };

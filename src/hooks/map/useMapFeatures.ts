@@ -494,7 +494,7 @@ export const useMapFeatures = (map: any) => {
   };
   
   // 특정 장소 인덱스의 경로 표시
-  const showRouteForPlaceIndex = (placeIndex: number, itineraryDay: ItineraryDay) => {
+  const showRouteForPlaceIndex = (placeIndex: number, itineraryDay: ItineraryDay, onComplete?: () => void) => {
     if (!map || !isGeoJsonLoadedRef.current || !itineraryDay) {
       console.warn('[showRouteForPlaceIndex] 지도, GeoJSON 또는 일정 데이터가 준비되지 않았습니다.');
       return;
@@ -519,10 +519,7 @@ export const useMapFeatures = (map: any) => {
     
     // 임시 구현: 전체 경로 표시
     if (itineraryDay.interleaved_route && itineraryDay.interleaved_route.length > 0) {
-      highlightSegmentByInterleavedRoute( // This is from useMapFeatures
-        itineraryDay.interleaved_route,
-        { strokeColor: '#4CAF50', strokeWeight: 4, strokeOpacity: 0.8 }
-      );
+      renderItineraryRoute(itineraryDay, undefined, onComplete);
     }
   };
   

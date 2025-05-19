@@ -274,12 +274,10 @@ export const useScheduleGenerationRunner = ({
           console.log("[useScheduleGenerationRunner] 'forceRerender' 이벤트 발생");
           window.dispatchEvent(new Event('forceRerender'));
           
-          // 로딩 상태를 명시적으로 해제 - 타이밍 조정
-          setTimeout(() => {
-            console.log("[useScheduleGenerationRunner] 최종 로딩 상태 해제");
-            setIsLoadingState(false);
-          }, 300);
-        }, 200);
+          // 로딩 상태를 명시적으로 더 빨리 해제 - 타이밍 조정
+          console.log("[useScheduleGenerationRunner] 최종 로딩 상태 즉시 해제");
+          setIsLoadingState(false);
+        }, 100); // 타이밍 단축
       } else {
         console.log("[useScheduleGenerationRunner] 일정이 생성되지 않았거나 빈 일정입니다. 로딩 상태 즉시 해제.");
         setIsLoadingState(false);
