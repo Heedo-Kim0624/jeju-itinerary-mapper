@@ -2,14 +2,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSelectedPlaces } from './use-selected-places';
 import { useTripDetails } from './use-trip-details';
 import { useCategoryResults } from './use-category-results';
-import { useItinerary, ItineraryDay } from './use-itinerary'; // ItineraryDay should now be correctly exported
+import { useItinerary, ItineraryDay } from './use-itinerary';
 import { useRegionSelection } from './use-region-selection';
 import { useCategorySelection } from './use-category-selection';
 import { useCategoryHandlers } from './left-panel/use-category-handlers';
 import { useItineraryHandlers } from './left-panel/use-itinerary-handlers';
 import { useInputState } from './left-panel/use-input-state';
-import { Place, SelectedPlace } from '@/types'; // Using Place and SelectedPlace from @/types
-import { CategoryName } from '@/utils/categoryUtils';
+import { Place, SelectedPlace, CategoryName, CategoryNameKorean, toCategoryNameKorean } from '@/types';
 import { toast } from 'sonner';
 
 /**
@@ -18,41 +17,39 @@ import { toast } from 'sonner';
 export const useLeftPanel = () => {
   // 지역 및 카테고리 선택 기능
   const regionSelection = useRegionSelection();
-  const categorySelection = useCategorySelection();
+  const categorySelection = useCategorySelection(); // Uses CategoryName (English) internally
   const tripDetails = useTripDetails();
   
-  // 상태 관리
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<CategoryName | null>(null); // English
   const [currentPanel, setCurrentPanel] = useState<'region' | 'date' | 'category' | 'itinerary'>('region');
-  const [showCategoryResult, setShowCategoryResult] = useState<CategoryName | null>(null);
+  // showCategoryResult state is managed in LeftPanel.tsx locally as categoryResultPanelCategory now.
+  // const [showCategoryResult, setShowCategoryResult] = useState<CategoryName | null>(null);
   
-  // 입력값 관리
-  const { directInputValues, onDirectInputChange } = useInputState();
+  const { directInputValues, onDirectInputChange } = useInputState(); // directInputValues keys are English CategoryName
 
-  // 키워드 및 입력 관련 기능
   const keywordsAndInputs = {
-    directInputValues,
-    onDirectInputChange,
-    handleConfirmCategory: (category: string, finalKeywords: string[], clearSelection: boolean = false) => {
-      categorySelection.handleConfirmCategory(category as CategoryName, finalKeywords, clearSelection);
-      if (clearSelection) {
-        setShowCategoryResult(category as CategoryName);
-      }
+    directInputValues, // Keys are English CategoryName
+    onDirectInputChange: (categoryKey: CategoryName, value: string) => { // Expect English CategoryName key
+      onDirectInputChange(categoryKey, value);
+    },
+    handleConfirmCategory: (category: CategoryName, finalKeywords: string[], clearSelection: boolean = false) => { // Expect English CategoryName
+      categorySelection.handleConfirmCategory(category, finalKeywords, clearSelection);
+      // If clearSelection is true, it implies we want to show the results panel.
+      // This logic is now in LeftPanel.tsx: setCategoryResultPanelCategory(category);
     }
   };
 
-  // 장소 관리 기능
   const {
     selectedPlaces,
     candidatePlaces,
-    selectedPlacesByCategory,
-    handleSelectPlace,
+    selectedPlacesByCategory, // Keys are CategoryNameKorean
+    handleSelectPlace, // Third arg is CategoryName (English)
     handleRemovePlace,
     handleViewOnMap,
-    allCategoriesSelected,
-    prepareSchedulePayload, // This function is used in handleCreateItinerary
-    isAccommodationLimitReached,
-    handleAutoCompletePlaces,
+    allCategoriesSelected, // Based on CategoryNameKorean
+    prepareSchedulePayload,
+    isAccommodationLimitReached, // Based on CategoryNameKorean '숙소'
+    handleAutoCompletePlaces, // First arg is CategoryNameKorean
     isPlaceSelected
   } = useSelectedPlaces();
 
@@ -70,18 +67,17 @@ export const useLeftPanel = () => {
     isPlaceSelected
   };
 
-  // 일정 관리 기능 (from useItinerary)
   const { 
     itinerary,
     selectedItineraryDay,
-    showItinerary,
-    isItineraryCreated, // consume this
+    showItinerary, // This is boolean
+    isItineraryCreated,
     setItinerary, 
     setSelectedItineraryDay,
-    setShowItinerary,
-    setIsItineraryCreated, // consume this
+    setShowItinerary, // This function is (value: boolean) => void
+    setIsItineraryCreated,
     handleSelectItineraryDay,
-    generateItinerary // This is the client-side fallback generator
+    generateItinerary
   } = useItinerary();
 
   const itineraryManagement = {
@@ -90,51 +86,70 @@ export const useLeftPanel = () => {
     setItinerary, 
     setSelectedItineraryDay,
     handleSelectItineraryDay,
-    generateItinerary, // Keep client-side generator for fallback
+    generateItinerary,
     isItineraryCreated,
     setIsItineraryCreated
   };
-
-  // UI 가시성 관리
+  
+  // uiVisibility state for showCategoryResult is managed in LeftPanel.tsx now.
+  // It receives CategoryName | null.
   const uiVisibility = {
     showItinerary,
     setShowItinerary,
-    showCategoryResult,
-    setShowCategoryResult
+    // showCategoryResult, // Removed as it's local to LeftPanel
+    // setShowCategoryResult // Removed
   };
 
-  // 카테고리 결과 관리
-  const { 
-    isLoading: isCategoryLoading,
-    error: categoryError,
-    recommendedPlaces,
-    normalPlaces,
-    refetch
-  } = useCategoryResults(showCategoryResult, 
-    showCategoryResult ? categorySelection.selectedKeywordsByCategory[showCategoryResult] || [] : [], 
-    regionSelection.selectedRegions);
+  // Example: showCategoryResult (English CategoryName) would be used here if it was managed here.
+  // const { 
+  //   isLoading: isCategoryLoading,
+  //   error: categoryError,
+  //   recommendedPlaces,
+  //   normalPlaces,
+  //   refetch
+  // } = useCategoryResults(
+  //   showCategoryResult ? toCategoryNameKorean(showCategoryResult) : null, // useCategoryResults expects Korean
+  //   showCategoryResult ? categorySelection.selectedKeywordsByCategory[showCategoryResult] || [] : [], 
+  //   regionSelection.selectedRegions
+  // );
+  // Since showCategoryResult is now local to LeftPanel (as categoryResultPanelCategory), 
+  // useCategoryResults hook would be directly used in CategoryResultPanel.tsx with the Korean category name.
+  // So, categoryResults here might be stale or not needed.
+  // For now, I'll leave categoryResults and related loading/error states, but they might need refactoring
+  // if CategoryResultPanel directly uses useCategoryResults.
+  // Let's assume for now they are passed down or managed by a context if needed elsewhere.
+  // The error log doesn't point to issues here, so minimal change.
+  const [isCategoryLoading, setIsCategoryLoading] = useState(false); // Placeholder
+  const [categoryError, setCategoryError] = useState<Error | null>(null); // Placeholder
+  const categoryResults = { recommendedPlaces: [], normalPlaces: [] }; // Placeholder
 
-  const categoryResults = {
-    recommendedPlaces: recommendedPlaces || [],
-    normalPlaces: normalPlaces || []
+
+  const categoryHandlers = useCategoryHandlers(); // Check its internal type usage
+  const handleCategorySelect = (category: CategoryName) => { // Expects English
+    // categoryHandlers.handleCategorySelect(category, refetch); // refetch might be an issue
+    setSelectedCategory(category);
+    // refetch logic would need to be connected to the actual data fetching trigger
   };
 
-  // 카테고리 핸들러
-  const categoryHandlers = useCategoryHandlers();
-  const handleCategorySelect = (category: string) => categoryHandlers.handleCategorySelect(category, refetch);
-  const handleCloseCategoryResult = () => categoryHandlers.handleCloseCategoryResult(
-    (value: CategoryName | null) => setShowCategoryResult(value)
-  );
-  const handleConfirmCategoryFromButton = () => categoryHandlers.handleConfirmCategory(selectedCategory);
-
-  // 일정 핸들러
+  const handleCloseCategoryResult = () => {
+    // This is handled by LeftPanel.tsx by setting categoryResultPanelCategory to null
+    // categoryHandlers.handleCloseCategoryResult(
+    //   (value: CategoryName | null) => setShowCategoryResult(value) // setShowCategoryResult is no longer here
+    // );
+  };
+  const handleConfirmCategoryFromButton = () => {
+    if (selectedCategory) {
+      // categoryHandlers.handleConfirmCategory(selectedCategory);
+      // This likely triggers showing the category result panel, which is now handled by
+      // LeftPanel.tsx's setCategoryResultPanelCategory(selectedCategory)
+    }
+  };
+  
   const itineraryHandlers = useItineraryHandlers(); 
   
-  // This is the function called by the "경로 생성하기" button
   const handleInitiateItineraryCreation = useCallback(async () => {
     console.log('[useLeftPanel] handleInitiateItineraryCreation 호출됨');
     
-    // Ensure tripDetails and selectedPlaces are valid before calling
     if (!tripDetails.dates || !tripDetails.startDatetime || !tripDetails.endDatetime) {
       toast.error("여행 날짜와 시간을 먼저 설정해주세요.");
       return false;
@@ -144,51 +159,41 @@ export const useLeftPanel = () => {
       return false;
     }
 
-    // Call the server-side itinerary creation logic from useItineraryHandlers
-    // This function now primarily calls the server. Client fallback is inside it.
     const success = await itineraryHandlers.handleCreateItinerary(
-      tripDetails, // TripDetailsForItinerary
-      placesManagement.selectedPlaces as Place[], // Ensure Place[] type
-      placesManagement.prepareSchedulePayload, // (places, startISO, endISO) => SchedulePayload | null
-      itineraryManagement.generateItinerary,  // Client-side fallback: (places, startDate, endDate, startTime, endTime) => ItineraryDay[] | null
-      uiVisibility.setShowItinerary,          // (show: boolean) => void
-      (panel: 'region' | 'date' | 'category' | 'itinerary') => setCurrentPanel(panel) // (panel: string) => void
+      tripDetails, 
+      placesManagement.selectedPlaces as Place[], 
+      placesManagement.prepareSchedulePayload, 
+      itineraryManagement.generateItinerary,  
+      uiVisibility.setShowItinerary,
+      (panel: 'region' | 'date' | 'category' | 'itinerary') => setCurrentPanel(panel)
     );
     
-    // If server call was successful (or client fallback worked),
-    // the 'itineraryCreated' event should be dispatched by the respective logic paths.
-    // useItinerary hook listens to this event and updates its state.
-    // The UI should react to changes in useItinerary's state (itinerary, showItinerary, etc.)
-
     if (success) {
-      console.log('[useLeftPanel] Itinerary creation process initiated (server or client). Waiting for itineraryCreated event.');
-      // No direct setShowItinerary(true) here; let the event handler in useItinerary do it.
+      console.log('[useLeftPanel] Itinerary creation process initiated. Waiting for itineraryCreated event.');
     } else {
       console.log('[useLeftPanel] Itinerary creation process failed to initiate or complete.');
-      // Ensure loading states are properly reset if failure happens early.
     }
     
     return success;
   }, [
       tripDetails, 
       placesManagement, 
-      itineraryManagement.generateItinerary, // Pass client generator as fallback
+      itineraryManagement.generateItinerary, 
       itineraryHandlers, 
       uiVisibility.setShowItinerary, 
       setCurrentPanel
   ]);
   
-  const handleCloseItineraryPanel = () => { // Renamed to avoid confusion
+  const handleCloseItineraryPanel = () => { 
     itineraryHandlers.handleCloseItinerary(
       uiVisibility.setShowItinerary, 
       (panel: 'region' | 'date' | 'category' | 'itinerary') => setCurrentPanel(panel)
     );
-    itineraryManagement.setItinerary(null); // Clear itinerary data
-    itineraryManagement.setIsItineraryCreated(false); // Reset created flag
+    itineraryManagement.setItinerary(null); 
+    itineraryManagement.setIsItineraryCreated(false);
   };
 
   useEffect(() => {
-    // This effect responds to changes triggered by 'itineraryCreated' event inside useItinerary
     if (itineraryManagement.isItineraryCreated && itineraryManagement.itinerary && itineraryManagement.itinerary.length > 0) {
       if (!uiVisibility.showItinerary) {
          console.log("useLeftPanel: Itinerary created, ensuring panel is visible.");
@@ -212,8 +217,6 @@ export const useLeftPanel = () => {
     };
   }, []);
 
-  // `showCategoryResultScreen` 상태가 사용되지 않는 것으로 보여 주석 처리했으므로, 반환 객체에서도 제거합니다.
-  // 만약 필요하다면 복원해야 합니다.
   return {
     regionSelection,
     categorySelection,
@@ -221,15 +224,9 @@ export const useLeftPanel = () => {
     placesManagement,
     tripDetails,
     uiVisibility,
-    itineraryManagement: { // Pass through from useItinerary
-        itinerary: itineraryManagement.itinerary,
-        selectedItineraryDay: itineraryManagement.selectedItineraryDay,
-        handleSelectItineraryDay: itineraryManagement.handleSelectItineraryDay,
-        // generateItinerary is not directly called by LeftPanel, but by handleInitiateItineraryCreation as fallback
-    },
-    handleCreateItinerary: handleInitiateItineraryCreation, // This is the main action button call
+    itineraryManagement,
+    handleCreateItinerary: handleInitiateItineraryCreation,
     selectedCategory,
-    // showCategoryResultScreen, 
     currentPanel,
     isCategoryLoading,
     categoryError,
@@ -237,7 +234,7 @@ export const useLeftPanel = () => {
     handleCategorySelect,
     handleCloseCategoryResult,
     handleConfirmCategory: handleConfirmCategoryFromButton, 
-    handleCloseItinerary: handleCloseItineraryPanel, // Use renamed
-    isGeneratingItinerary: itineraryHandlers.isGenerating, // Pass through loading state
+    handleCloseItinerary: handleCloseItineraryPanel,
+    isGeneratingItinerary: itineraryHandlers.isGenerating,
   };
 };

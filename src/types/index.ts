@@ -144,13 +144,13 @@ export interface RawServerResponse {
   [key: string]: any;
 }
 
-// 카테고리 이름 타입 (영문 기반, 표준으로 사용)
+// 카테고리 이름 타입 (영문 기반, 올바른 철자 사용)
 export type CategoryName = 'accommodation' | 'landmark' | 'restaurant' | 'cafe';
 
-// 카테고리 이름 타입 (한글 기반, UI 표시 및 레거시 호환용)
+// 카테고리 이름 타입 (한글 기반)
 export type CategoryNameKorean = '숙소' | '관광지' | '음식점' | '카페';
 
-// 카테고리 매핑 객체 (영문 -> 한글)
+// 카테고리 매핑 객체 (영문 -> 한글, 올바른 철자 사용)
 export const CATEGORY_MAPPING: Record<CategoryName, CategoryNameKorean> = {
   'accommodation': '숙소',
   'landmark': '관광지',
@@ -158,7 +158,7 @@ export const CATEGORY_MAPPING: Record<CategoryName, CategoryNameKorean> = {
   'cafe': '카페'
 };
 
-// 역방향 매핑 객체 (한글 -> 영문)
+// 역방향 매핑 객체 (한글 -> 영문, 올바른 철자 사용)
 export const CATEGORY_MAPPING_REVERSE: Record<CategoryNameKorean, CategoryName> = {
   '숙소': 'accommodation',
   '관광지': 'landmark',
@@ -166,8 +166,11 @@ export const CATEGORY_MAPPING_REVERSE: Record<CategoryNameKorean, CategoryName> 
   '카페': 'cafe'
 };
 
-// 문자열 (한글 또는 영문)을 영문 CategoryName으로 변환하는 함수
+// 문자열 (한글 또는 영문, 또는 잘못된 영문 철자 'accomodation')을 영문 CategoryName으로 변환하는 함수
 export function toCategoryName(category: string | CategoryName | CategoryNameKorean): CategoryName {
+  if (category === 'accomodation') { // 잘못된 철자 수정
+    return 'accommodation';
+  }
   if (category in CATEGORY_MAPPING_REVERSE) {
     return CATEGORY_MAPPING_REVERSE[category as CategoryNameKorean];
   }
@@ -178,20 +181,28 @@ export function toCategoryName(category: string | CategoryName | CategoryNameKor
   return 'landmark'; // 기본값 또는 오류 처리
 }
 
-// 문자열 (한글 또는 영문)을 한글 CategoryNameKorean으로 변환하는 함수
-export function toCategoryNameKorean(category: string | CategoryName | CategoryNameKorean): CategoryNameKorean {
-  if (category in CATEGORY_MAPPING) {
-    return CATEGORY_MAPPING[category as CategoryName];
+// 문자열 (한글 또는 영문, 또는 잘못된 영문 철자 'accomodation')을 한글 CategoryNameKorean으로 변환하는 함수
+export function toCategoryNameKorean(category: string | CategoryName | CategoryNameKorean | null | undefined): CategoryNameKorean {
+  if (!category) {
+    console.warn(`[toCategoryNameKorean] Received null or undefined category, defaulting to '관광지'.`);
+    return '관광지'; // Handle null/undefined input
   }
-  if (['숙소', '관광지', '음식점', '카페'].includes(category)) {
-    return category as CategoryNameKorean;
+  let normalizedCategory = category;
+  if (category === 'accomodation') { // 잘못된 철자 수정
+    normalizedCategory = 'accommodation';
   }
-  console.warn(`[toCategoryNameKorean] Unknown category: ${category}, defaulting to '관광지'.`);
+
+  if (normalizedCategory in CATEGORY_MAPPING) {
+    return CATEGORY_MAPPING[normalizedCategory as CategoryName];
+  }
+  if (['숙소', '관광지', '음식점', '카페'].includes(normalizedCategory)) {
+    return normalizedCategory as CategoryNameKorean;
+  }
+  console.warn(`[toCategoryNameKorean] Unknown category: ${normalizedCategory}, defaulting to '관광지'.`);
   return '관광지'; // 기본값 또는 오류 처리
 }
 
 // 카테고리 결과 상태 (LeftPanel.tsx 에서 setShowCategoryResult 에 사용됨)
-// This was previously defined but not used, now it's clearer with CategoryName
 export interface CategoryResultState {
   showCategoryResult: CategoryName | null;
   selectedRegions: string[];

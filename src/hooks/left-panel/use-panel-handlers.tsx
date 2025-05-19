@@ -1,16 +1,15 @@
-
 import { useState } from 'react';
 import { usePanelVisibility } from '../use-panel-visibility';
 import { useMapContext } from '@/components/rightpanel/MapContext';
-import type { CategoryName } from '@/utils/categoryUtils';
+import type { CategoryName, CategoryNameKorean } from '@/types';
 
 export const usePanelHandlers = () => {
   // Panel visibility functionality
   const {
     showItinerary,
     setShowItinerary,
-    showCategoryResult,
-    setShowCategoryResult,
+    showCategoryResult, // This is CategoryName | null
+    setShowCategoryResult, // This is (value: CategoryName | null) => void
   } = usePanelVisibility();
 
   const [isItineraryMode, setIsItineraryMode] = useState(false);
@@ -23,34 +22,34 @@ export const usePanelHandlers = () => {
 
   // Generate category-specific confirmation handlers
   const handleConfirmByCategory = {
-    accomodation: (finalKeywords: string[], clearSelection: boolean = false) => {
-      handleConfirmCategory('숙소', finalKeywords, clearSelection);
-      setShowCategoryResult('숙소');
+    accommodation: (finalKeywords: string[], clearSelection: boolean = false) => {
+      handleConfirmCategory('accommodation', finalKeywords, clearSelection);
+      setShowCategoryResult('accommodation');
       if (selectedRegions.length > 0) panTo(selectedRegions[0]);
     },
     landmark: (finalKeywords: string[], clearSelection: boolean = false) => {
-      handleConfirmCategory('관광지', finalKeywords, clearSelection);
-      setShowCategoryResult('관광지');
+      handleConfirmCategory('landmark', finalKeywords, clearSelection);
+      setShowCategoryResult('landmark');
       if (selectedRegions.length > 0) panTo(selectedRegions[0]);
     },
     restaurant: (finalKeywords: string[], clearSelection: boolean = false) => {
-      handleConfirmCategory('음식점', finalKeywords, clearSelection);
-      setShowCategoryResult('음식점');
+      handleConfirmCategory('restaurant', finalKeywords, clearSelection);
+      setShowCategoryResult('restaurant');
       if (selectedRegions.length > 0) panTo(selectedRegions[0]);
     },
     cafe: (finalKeywords: string[], clearSelection: boolean = false) => {
-      handleConfirmCategory('카페', finalKeywords, clearSelection);
-      setShowCategoryResult('카페');
+      handleConfirmCategory('cafe', finalKeywords, clearSelection);
+      setShowCategoryResult('cafe');
       if (selectedRegions.length > 0) panTo(selectedRegions[0]);
     }
   };
 
   // Panel back handlers by category
   const handlePanelBackByCategory = {
-    accomodation: () => handlePanelBack(),
-    landmark: () => handlePanelBack(),
-    restaurant: () => handlePanelBack(),
-    cafe: () => handlePanelBack()
+    accommodation: () => handlePanelBack('accommodation'),
+    landmark: () => handlePanelBack('landmark'),
+    restaurant: () => handlePanelBack('restaurant'),
+    cafe: () => handlePanelBack('cafe')
   };
 
   // 일정 모드 설정 함수
@@ -65,14 +64,15 @@ export const usePanelHandlers = () => {
 
   // These functions will be provided by props from use-left-panel
   let selectedRegions: any[] = [];
+  // Updated type for confirmCategoryFn and panelBackFn
   let handleConfirmCategory = (category: CategoryName, keywords: string[], clear?: boolean) => {};
-  let handlePanelBack = () => {};
+  let handlePanelBack = (category: CategoryName) => {}; // Changed to accept CategoryName
 
   // Setup function to inject dependencies from parent hook
   const setup = (
     regions: any[],
     confirmCategoryFn: (category: CategoryName, keywords: string[], clear?: boolean) => void,
-    panelBackFn: () => void
+    panelBackFn: (category: CategoryName) => void // Changed to accept CategoryName
   ) => {
     selectedRegions = regions;
     handleConfirmCategory = confirmCategoryFn;

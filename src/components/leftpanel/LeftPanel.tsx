@@ -5,7 +5,7 @@ import LeftPanelContainer from './LeftPanelContainer';
 import LeftPanelContent from './LeftPanelContent';
 import RegionPanelHandler from './RegionPanelHandler';
 import CategoryResultHandler from './CategoryResultHandler';
-import { Place, SelectedPlace, CategoryName, CategoryNameKorean, toCategoryName, toCategoryNameKorean, CATEGORY_MAPPING_REVERSE } from '@/types';
+import { Place, SelectedPlace, CategoryName, CategoryNameKorean, toCategoryName, toCategoryNameKorean } from '@/types';
 import { toast } from 'sonner';
 
 const LeftPanel: React.FC = () => {
@@ -35,7 +35,6 @@ const LeftPanel: React.FC = () => {
   }, [isGeneratingFromHook]);
   
   const [categoryResultPanelCategory, setCategoryResultPanelCategory] = useState<CategoryName | null>(null);
-
 
   useEffect(() => {
     console.log("[LeftPanel] Relevant state:", {
@@ -77,7 +76,8 @@ const LeftPanel: React.FC = () => {
 
   const handlePanelBackByCategory = (koreanCategory: CategoryNameKorean) => {
     console.log(`${koreanCategory} 카테고리 패널 뒤로가기`);
-    categorySelection.handlePanelBack();
+    // categorySelection.handlePanelBack expects English CategoryName
+    categorySelection.handlePanelBack(toCategoryName(koreanCategory));
   };
 
   const handleResultClose = () => {
@@ -85,17 +85,13 @@ const LeftPanel: React.FC = () => {
     setCategoryResultPanelCategory(null);
   };
 
-  const handleConfirmByCategoryKeywords = (koreanCategoryString: string, finalKeywords: string[]) => {
+  const handleConfirmByCategoryKeywords = (koreanCategoryString: CategoryNameKorean, finalKeywords: string[]) => {
     const englishCategoryName = toCategoryName(koreanCategoryString);
 
-    if (!englishCategoryName) {
-      toast.error(`잘못된 카테고리명입니다: ${koreanCategoryString}`);
-      console.error(`Invalid Korean category name for mapping: ${koreanCategoryString}`);
-      return false;
-    }
-
+    // No need for !englishCategoryName check as toCategoryName now always returns a valid CategoryName (or default)
+    
     console.log(`카테고리 '${englishCategoryName}' (원래: ${koreanCategoryString}) 키워드 확인, 키워드: ${finalKeywords.join(', ')}`);
-    keywordsAndInputs.handleConfirmCategory(englishCategoryName, finalKeywords, true);
+    keywordsAndInputs.handleConfirmCategory(englishCategoryName, finalKeywords, true); // true for clearSelection to show result panel
     setCategoryResultPanelCategory(englishCategoryName); 
     return true;
   };
@@ -184,41 +180,42 @@ const LeftPanel: React.FC = () => {
             onDateSelect={tripDetails.setDates}
             onOpenRegionPanel={() => regionSelection.setRegionSlidePanelOpen(true)}
             hasSelectedDates={!!tripDetails.dates.startDate && !!tripDetails.dates.endDate}
-            onCategoryClick={(koreanCategoryString: string) => {
-              const englishCategoryName = toCategoryName(koreanCategoryString);
-              categorySelection.handleCategoryButtonClick(englishCategoryName);
+            onCategoryClick={(koreanCategory: CategoryNameKorean) => { // onCategoryClick expects Korean
+              categorySelection.handleCategoryButtonClick(toCategoryName(koreanCategory));
             }}
             regionConfirmed={regionSelection.regionConfirmed}
             categoryStepIndex={categorySelection.stepIndex}
-            activeMiddlePanelCategory={categorySelection.activeMiddlePanelCategory}
-            confirmedCategories={categorySelection.confirmedCategories}
+            activeMiddlePanelCategory={categorySelection.activeMiddlePanelCategory} // English CategoryName | null
+            confirmedCategories={categorySelection.confirmedCategories} // English CategoryName[]
             selectedKeywordsByCategory={categorySelection.selectedKeywordsByCategory}
             toggleKeyword={categorySelection.toggleKeyword}
-            directInputValues={{
-              accommodation: keywordsAndInputs.directInputValues['숙소'] || '',
-              landmark: keywordsAndInputs.directInputValues['관광지'] || '',
-              restaurant: keywordsAndInputs.directInputValues['음식점'] || '',
-              cafe: keywordsAndInputs.directInputValues['카페'] || ''
+            directInputValues={{ // Ensure keys are correct for LeftPanelContentProps
+              accommodation: keywordsAndInputs.directInputValues.accommodation || '',
+              landmark: keywordsAndInputs.directInputValues.landmark || '',
+              restaurant: keywordsAndInputs.directInputValues.restaurant || '',
+              cafe: keywordsAndInputs.directInputValues.cafe || ''
             }}
-            onDirectInputChange={{
-              accommodation: (value: string) => keywordsAndInputs.onDirectInputChange('숙소', value),
-              landmark: (value: string) => keywordsAndInputs.onDirectInputChange('관광지', value),
-              restaurant: (value: string) => keywordsAndInputs.onDirectInputChange('음식점', value),
-              cafe: (value: string) => keywordsAndInputs.onDirectInputChange('카페', value)
+            onDirectInputChange={{ // Ensure keys are correct
+              accommodation: (value: string) => keywordsAndInputs.onDirectInputChange('accommodation', value),
+              landmark: (value: string) => keywordsAndInputs.onDirectInputChange('landmark', value),
+              restaurant: (value: string) => keywordsAndInputs.onDirectInputChange('restaurant', value),
+              cafe: (value: string) => keywordsAndInputs.onDirectInputChange('cafe', value)
             }}
-            onConfirmCategory={{ 
+            onConfirmCategory={{  // Ensure keys are correct
               accommodation: (finalKeywords: string[]) => handleConfirmByCategoryKeywords('숙소', finalKeywords),
               landmark: (finalKeywords: string[]) => handleConfirmByCategoryKeywords('관광지', finalKeywords),
               restaurant: (finalKeywords: string[]) => handleConfirmByCategoryKeywords('음식점', finalKeywords),
               cafe: (finalKeywords: string[]) => handleConfirmByCategoryKeywords('카페', finalKeywords)
             }}
-            handlePanelBack={{
+            handlePanelBack={{ // Ensure keys are correct
               accommodation: () => handlePanelBackByCategory('숙소'),
               landmark: () => handlePanelBackByCategory('관광지'),
               restaurant: () => handlePanelBackByCategory('음식점'),
               cafe: () => handlePanelBackByCategory('카페')
             }}
-            isCategoryButtonEnabled={categorySelection.isCategoryButtonEnabled}
+            isCategoryButtonEnabled={(koreanCategory: CategoryNameKorean) => // Expects Korean
+              categorySelection.isCategoryButtonEnabled(toCategoryName(koreanCategory))
+            }
             isGenerating={isGeneratingItinerary}
           />
         }
@@ -251,9 +248,9 @@ const LeftPanel: React.FC = () => {
       />
 
       <CategoryResultHandler
-        showCategoryResult={categoryResultPanelCategory}
+        showCategoryResult={categoryResultPanelCategory} // English CategoryName | null
         selectedRegions={regionSelection.selectedRegions}
-        selectedKeywords={categoryResultPanelCategory ? (categorySelection.selectedKeywordsByCategory[toCategoryNameKorean(categoryResultPanelCategory)] || []) : []}
+        selectedKeywords={categoryResultPanelCategory ? (categorySelection.selectedKeywordsByCategory[categoryResultPanelCategory] || []) : []} // Uses English CategoryName as key
         onClose={handleResultClose}
         onSelectPlace={placesManagement.handleSelectPlace}
         selectedPlaces={placesManagement.selectedPlaces as SelectedPlace[]}

@@ -3,6 +3,7 @@ import React from 'react';
 import PanelHeader from './PanelHeader';
 import CategoryNavigation from './CategoryNavigation';
 import CategoryPanels from './CategoryPanels';
+import { CategoryName, CategoryNameKorean, toCategoryNameKorean } from '@/types'; // Import necessary types
 
 interface LeftPanelContentProps {
   onDateSelect: (dates: {
@@ -13,39 +14,39 @@ interface LeftPanelContentProps {
   }) => void;
   onOpenRegionPanel: () => void;
   hasSelectedDates: boolean;
-  onCategoryClick: (category: string) => void;
+  onCategoryClick: (category: CategoryNameKorean) => void; // Expects Korean name
   regionConfirmed: boolean;
   categoryStepIndex: number;
-  activeMiddlePanelCategory: string | null;
-  confirmedCategories: string[];
-  selectedKeywordsByCategory: Record<string, string[]>;
+  activeMiddlePanelCategory: CategoryName | null; // English name from hook
+  confirmedCategories: CategoryName[]; // English names from hook
+  selectedKeywordsByCategory: Record<string, string[]>; // Key might be English or Korean based on usage
   toggleKeyword: (category: string, keyword: string) => void;
   directInputValues: {
-    accomodation: string;
+    accommodation: string; // Corrected spelling
     landmark: string;
     restaurant: string;
     cafe: string;
   };
   onDirectInputChange: {
-    accomodation: (value: string) => void;
+    accommodation: (value: string) => void; // Corrected spelling
     landmark: (value: string) => void;
     restaurant: (value: string) => void;
     cafe: (value: string) => void;
   };
   onConfirmCategory: {
-    accomodation: (finalKeywords: string[]) => void;
+    accommodation: (finalKeywords: string[]) => void; // Corrected spelling
     landmark: (finalKeywords: string[]) => void;
     restaurant: (finalKeywords: string[]) => void;
     cafe: (finalKeywords: string[]) => void;
   };
   handlePanelBack: {
-    accomodation: () => void;
+    accommodation: () => void; // Corrected spelling
     landmark: () => void;
     restaurant: () => void;
     cafe: () => void;
   };
-  isCategoryButtonEnabled: (category: string) => boolean;
-  isGenerating?: boolean; // 로딩 상태 prop 추가
+  isCategoryButtonEnabled: (category: CategoryNameKorean) => boolean; // Expects Korean name
+  isGenerating?: boolean;
 }
 
 const LeftPanelContent: React.FC<LeftPanelContentProps> = ({
@@ -55,8 +56,8 @@ const LeftPanelContent: React.FC<LeftPanelContentProps> = ({
   onCategoryClick,
   regionConfirmed,
   categoryStepIndex,
-  activeMiddlePanelCategory,
-  confirmedCategories,
+  activeMiddlePanelCategory, // English CategoryName or null
+  confirmedCategories, // English CategoryName[]
   selectedKeywordsByCategory,
   toggleKeyword,
   directInputValues,
@@ -64,8 +65,14 @@ const LeftPanelContent: React.FC<LeftPanelContentProps> = ({
   onConfirmCategory,
   handlePanelBack,
   isCategoryButtonEnabled,
-  isGenerating, // 이 prop은 현재 JSX 내에서 사용되지 않지만, 향후 UI 변경에 사용될 수 있습니다.
+  isGenerating,
 }) => {
+  const koreanCategoryOrder: CategoryNameKorean[] = ["숙소", "관광지", "음식점", "카페"];
+  
+  // Convert English CategoryNames to Korean for CategoryNavigation
+  const koreanConfirmedCategories = confirmedCategories.map(cat => toCategoryNameKorean(cat));
+  const koreanActiveMiddlePanelCategory = activeMiddlePanelCategory ? toCategoryNameKorean(activeMiddlePanelCategory) : null;
+
   return (
     <div className="flex-1 overflow-y-auto p-4 pb-24 space-y-6">
       <PanelHeader 
@@ -75,17 +82,17 @@ const LeftPanelContent: React.FC<LeftPanelContentProps> = ({
       />
 
       <CategoryNavigation
-        categoryOrder={["숙소", "관광지", "음식점", "카페"]}
+        categoryOrder={koreanCategoryOrder}
         currentCategoryIndex={categoryStepIndex}
-        onCategoryClick={onCategoryClick}
-        categorySelectionConfirmed={true} // 이 prop은 아마 regionConfirmed와 관련있을 수 있습니다. 확인 필요
-        confirmedCategories={confirmedCategories}
-        isCategoryButtonEnabled={() => true} // 이 로직은 isCategoryButtonEnabled prop으로 대체될 수 있습니다.
-        activeMiddlePanelCategory={activeMiddlePanelCategory}
+        onCategoryClick={onCategoryClick} // Passed directly as it expects Korean
+        categorySelectionConfirmed={regionConfirmed} // Assuming regionConfirmed implies category selection can start
+        confirmedCategories={koreanConfirmedCategories} // Pass converted Korean names
+        isCategoryButtonEnabled={isCategoryButtonEnabled} // Passed directly
+        activeMiddlePanelCategory={koreanActiveMiddlePanelCategory} // Pass converted Korean name
       />
 
       <CategoryPanels
-        activeMiddlePanelCategory={activeMiddlePanelCategory}
+        activeMiddlePanelCategory={activeMiddlePanelCategory} // This component might need English or Korean, check its definition. Assuming English for now.
         selectedKeywordsByCategory={selectedKeywordsByCategory}
         toggleKeyword={toggleKeyword}
         directInputValues={directInputValues}

@@ -1,8 +1,7 @@
-
 import { useCategoryOrder } from './use-category-order';
 import { useCategoryPanel } from './use-category-panel';
 import { useCategoryKeywords } from './use-category-keywords';
-import type { CategoryName } from '@/utils/categoryUtils';
+import type { CategoryName, CategoryNameKorean } from '@/types';
 
 export const useCategorySelection = () => {
   const {
@@ -44,12 +43,14 @@ export const useCategorySelection = () => {
       setConfirmedCategories([...confirmedCategories, categoryName]);
       
       const currentIndex = categoryOrder.indexOf(categoryName);
-      if (currentIndex + 1 < categoryOrder.length) {
+      if (currentIndex !== -1 && currentIndex + 1 < categoryOrder.length) {
         setStepIndex(currentIndex + 1);
+      } else if (currentIndex === -1) {
+        console.warn(`Category ${categoryName} not found in order for step update.`);
       }
     }
     
-    handlePanelBack();
+    handlePanelBack(categoryName);
   };
 
   const isCategoryButtonEnabled = (category: CategoryName) => {

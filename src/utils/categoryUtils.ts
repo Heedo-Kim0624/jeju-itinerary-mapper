@@ -1,8 +1,6 @@
 
 import { CategoryName, CategoryNameKorean, CATEGORY_MAPPING, CATEGORY_MAPPING_REVERSE, toCategoryName, toCategoryNameKorean } from '@/types';
 
-// Removed: export type CategoryName = '숙소' | '관광지' | '음식점' | '카페';
-
 // 카테고리 별 키워드 타입 정의 추가 - 키를 CategoryNameKorean으로 명시
 export type CategoryKeywords = Record<CategoryNameKorean, string[]>;
 
@@ -13,12 +11,12 @@ export const categoryKeywords: CategoryKeywords = {
   '카페': ['coffee', 'cake', 'view']
 };
 
-// 이제 @/types에 있는 CATEGORY_MAPPING 또는 toCategoryNameKorean 사용
+// 이제 @/types에 있는 CATEGORY_MAPPING_REVERSE 또는 toCategoryName 사용
 export const categoryToEnglish = (koreanName: CategoryNameKorean): CategoryName => {
   return CATEGORY_MAPPING_REVERSE[koreanName] || 'landmark'; // Default or error handling
 };
 
-// 이제 @/types에 있는 CATEGORY_MAPPING_REVERSE 또는 toCategoryName 사용
+// 이제 @/types에 있는 CATEGORY_MAPPING 또는 toCategoryNameKorean 사용
 export const englishToKorean = (englishName: CategoryName): CategoryNameKorean => {
   return CATEGORY_MAPPING[englishName] || '관광지'; // Default or error handling
 };
