@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { TravelCategory } from '@/types/travel';
 import { categoryTableMap, categoryRatingMap } from '@/lib/jeju/dbMapping';
 import { calculatePlaceScore } from '@/lib/jeju/placeScoring';
+import { CategoryName } from '@/types';
 
 // 필드명을 유연하게 찾는 함수
 export function normalizeField(obj: any, possibleFields: string[]): any {
@@ -15,6 +16,73 @@ export function normalizeField(obj: any, possibleFields: string[]): any {
   }
   
   return null;
+}
+
+// 추천 장소 가져오기 함수 추가
+interface RecommendedPlacesParams {
+  location: string;
+  category: string;
+  count: number;
+}
+
+export async function fetchRecommendedPlaces({
+  location,
+  category,
+  count
+}: RecommendedPlacesParams) {
+  console.log(`[fetchRecommendedPlaces] 카테고리 ${category}에서 ${count}개 장소 요청 (위치: ${location})`);
+  
+  // TravelCategory 타입으로 변환 (임시 매핑)
+  const travelCategory: TravelCategory = category as TravelCategory;
+  
+  try {
+    // 데이터 가져오기
+    const { places, ratings, categories, links, reviews } = await fetchPlaceData(
+      travelCategory,
+      [location]
+    );
+    
+    if (!places || places.length === 0) {
+      console.warn(`[fetchRecommendedPlaces] ${category} 카테고리에서 위치 ${location}에 대한 장소를 찾을 수 없습니다.`);
+      return [];
+    }
+    
+    // 각 장소에 가중치 계산
+    const processedPlaces = places.map(place => {
+      const { rating, weight } = processPlaceData(
+        place,
+        ratings,
+        categories,
+        links,
+        reviews
+      );
+      
+      return {
+        id: place.id,
+        name: place.name || place.title || place.place_name || '이름 없음',
+        x: place.x || place.longitude || 0,
+        y: place.y || place.latitude || 0,
+        address: place.address || place.addr || place.road_address || '',
+        phone: place.phone || place.tel || '',
+        description: place.description || place.review || '',
+        rating: rating || 0,
+        image_url: place.image_url || place.img_url || place.thumbnail || '',
+        road_address: place.road_address || place.addr || place.address || '',
+        homepage: place.homepage || place.url || '',
+        weight: weight || 0,
+        category: category as CategoryName
+      };
+    });
+    
+    // 가중치에 따라 내림차순 정렬 후 요청된 개수만큼 반환
+    return processedPlaces
+      .sort((a, b) => b.weight - a.weight)
+      .slice(0, count);
+      
+  } catch (error) {
+    console.error(`[fetchRecommendedPlaces] ${category} 장소 추천 중 오류:`, error);
+    return [];
+  }
 }
 
 export async function fetchPlaceData(

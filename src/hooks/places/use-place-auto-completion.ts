@@ -1,8 +1,9 @@
+
 import { useState, useCallback } from 'react';
 import { SelectedPlace, CategoryName, MINIMUM_RECOMMENDATION_COUNT, CATEGORIES } from '@/types/index';
 import { fetchRecommendedPlaces } from '@/services/placeService';
 
-interface PlaceAutoCompletionDeps {
+export interface PlaceAutoCompletionDeps {
   selectedPlaces: SelectedPlace[];
   candidatePlaces: SelectedPlace[];
   setCandidatePlaces: React.Dispatch<React.SetStateAction<SelectedPlace[]>>;
