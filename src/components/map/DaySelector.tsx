@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { ItineraryDay } from '@/types/core'; // Updated import
+import { ItineraryDay } from '@/types/supabase';
 import { Button } from '@/components/ui/button'; // Using shadcn Button for consistency
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"; // For better scrolling on many days
 

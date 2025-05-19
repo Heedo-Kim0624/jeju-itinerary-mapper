@@ -1,7 +1,8 @@
+
 import React from 'react';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ItineraryDay } from '@/types/core';
+import { ItineraryDay } from '@/types/supabase';
 import DaySelector from './DaySelector';
 import ScheduleViewer from './ScheduleViewer';
 

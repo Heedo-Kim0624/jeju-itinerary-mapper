@@ -5,8 +5,11 @@ import { Button } from '@/components/ui/button';
 import { format, addDays } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { categoryColors, getCategoryName } from '@/utils/categoryColors';
-import type { ItineraryDay, ItineraryPlaceWithTime } from '@/types/core'; // Updated import
-import type { ItineraryDay } from '@/hooks/use-itinerary'; // Alternative if types are conflicting
+import type { ItineraryDay, ItineraryPlaceWithTime } from '@/types/supabase'; // ItineraryDay from supabase might conflict if use-itinerary has a different one.
+// Assuming ItineraryDay from use-itinerary is intended here, or they are compatible.
+// For now, let's assume ItineraryDay from use-itinerary is the source of truth for this component.
+// If types/supabase defines a different ItineraryDay, this might need aliasing.
+// import type { ItineraryDay } from '@/hooks/use-itinerary'; // Alternative if types are conflicting
 import ScheduleViewer from './ScheduleViewer'; // Import ScheduleViewer
 
 interface ItineraryViewProps {

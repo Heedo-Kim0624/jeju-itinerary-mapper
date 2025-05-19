@@ -4,7 +4,7 @@ import MapMarkers from './MapMarkers';
 import MapLoadingOverlay from './MapLoadingOverlay';
 import GeoJsonLayer from './GeoJsonLayer';
 import MapControls from './MapControls';
-import type { Place, ItineraryDay } from '@/types/core';
+import type { Place, ItineraryDay } from '@/types/supabase';
 import { toast } from 'sonner';
 import { useMapItineraryVisualization } from '@/hooks/map/useMapItineraryVisualization';
 import DaySelectorMapOverlay from '@/components/map/DaySelector';

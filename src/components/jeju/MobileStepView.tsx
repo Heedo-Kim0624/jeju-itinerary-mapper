@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { ArrowLeft, ArrowRight, ChevronDown, ChevronUp, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -7,7 +8,7 @@ import DatePicker from '@/components/leftpanel/DatePicker';
 import PlaceList from '@/components/middlepanel/PlaceList';
 import ItineraryView from '@/components/leftpanel/ItineraryView';
 import DaySelector from '@/components/leftpanel/DaySelector';
-import type { Place, ItineraryDay, CategoryName } from '@/types/core';
+import type { Place, ItineraryDay } from '@/types/supabase';
 import Map from '@/components/rightpanel/Map';
 import { categoryColors, getCategoryName } from '@/utils/categoryColors';
 import PlaceDetailDialog from '@/components/places/PlaceDetailDialog';
@@ -21,7 +22,7 @@ interface MobileStepViewProps {
     endTime: string;
   };
   promptText: string;
-  selectedCategory: CategoryName | null;
+  selectedCategory: string | null;
   filteredPlaces: Place[];
   loading: boolean;
   selectedPlace: Place | null;
@@ -35,7 +36,7 @@ interface MobileStepViewProps {
   isPlaceListReady: boolean;
   onDatesSelected: (dates: any) => void;
   onPromptChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
-  onCategoryClick: (category: CategoryName) => void;
+  onCategoryClick: (category: string) => void;
   onSelectPlace: (place: Place) => void;
   onPageChange: (page: number) => void;
   onSearch: () => void;
@@ -154,8 +155,7 @@ const MobileStepView: React.FC<MobileStepViewProps> = ({
             
             {/* CategorySelector component inline for simplicity */}
             <div className="flex flex-wrap gap-2 mb-4">
-              {/* Ensure category strings match CategoryName literals if strict typing is enforced by onCategoryClick */}
-              {(['restaurant', 'cafe', 'attraction', 'accommodation'] as CategoryName[]).map((category) => (
+              {['restaurant', 'cafe', 'attraction', 'accommodation'].map((category) => (
                 <Button
                   key={category}
                   variant="category"
@@ -245,9 +245,9 @@ const MobileStepView: React.FC<MobileStepViewProps> = ({
         <Map
           places={filteredPlaces}
           selectedPlace={selectedPlace}
-          itinerary={itinerary} // This ItineraryDay[] should now be consistent
+          itinerary={itinerary}
           selectedDay={selectedItineraryDay}
-          selectedPlaces={[]} // Assuming selectedPlaces is also Place[]
+          selectedPlaces={[]}
         />
       </div>
       
@@ -262,12 +262,11 @@ const MobileStepView: React.FC<MobileStepViewProps> = ({
         )}
       </div>
       
-      {isPanelHidden && itinerary && dateRange.startDate && ( // Add null check for startDate
+      {isPanelHidden && itinerary && (
         <DaySelector 
-          itinerary={itinerary} // This ItineraryDay[] should now be consistent
+          itinerary={itinerary}
           selectedDay={selectedItineraryDay}
           onSelectDay={onSelectItineraryDay}
-          startDate={dateRange.startDate} // Pass startDate here
         />
       )}
       

@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
-import { Place, ItineraryDay, ItineraryPlaceWithTime, RouteData } from '@/types/core'; // Updated import
+import { Place } from '@/types/supabase'; // Assuming Place from supabase is compatible or use Place from @/types
+import { 
+    ItineraryDay as GlobalItineraryDay, 
+    ItineraryPlaceWithTime as GlobalItineraryPlaceWithTime,
+    RouteData // Import RouteData
+} from '@/types'; // Use the global type from index.ts
 import { useItineraryCreator, ItineraryDay as CreatorItineraryDay } from './use-itinerary-creator'; // This is from the read-only file
 import { toast } from 'sonner';
 
 // Export the global types so other files use the consistent definition
-// These are now effectively aliases to the types from core.ts if this file itself is imported,
-// but direct imports from '@/types/core' are preferred.
-// We can remove these re-exports if all consuming files are updated to import from '@/types/core'
-// export type ItineraryDay = GlobalItineraryDay; // GlobalItineraryDay is now ItineraryDay from core
-// export type ItineraryPlaceWithTime = GlobalItineraryPlaceWithTime; // GlobalItineraryPlaceWithTime is now ItineraryPlaceWithTime from core
+export type ItineraryDay = GlobalItineraryDay;
+export type ItineraryPlaceWithTime = GlobalItineraryPlaceWithTime;
 
 // Helper to get day of week string (e.g., "Mon")
 const getDayOfWeekString = (date: Date): string => {
