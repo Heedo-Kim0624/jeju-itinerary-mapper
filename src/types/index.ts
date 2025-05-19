@@ -1,5 +1,10 @@
+// 모든 타입 정의를 단일 파일로 통합 (Single Source of Truth)
 
-import { CategoryName } from '@/utils/categoryUtils';
+// CategoryName 타입 직접 정의 및 export
+export type CategoryName = '숙소' | '관광지' | '음식점' | '카페';
+
+// 영문 카테고리 타입 추가
+export type CategoryNameEn = 'accommodation' | 'attraction' | 'restaurant' | 'cafe';
 
 // 기본 장소 인터페이스
 export interface Place {
@@ -7,7 +12,7 @@ export interface Place {
   name: string;
   address: string;
   phone: string;
-  category: string; // Could be CategoryName or a broader string type
+  category: string; // 문자열 타입 (CategoryName 또는 더 넓은 범위)
   description: string;
   rating: number;
   x: number;
@@ -15,7 +20,7 @@ export interface Place {
   image_url: string;
   road_address: string;
   homepage: string;
-  operationTimeData?: { [key: string]: number; };
+  operationTimeData?: { [key: string]: number };
   isSelected?: boolean;
   isRecommended?: boolean;
   geoNodeId?: string;
@@ -32,7 +37,7 @@ export interface Place {
 
 // 선택된 장소 인터페이스
 export interface SelectedPlace extends Place {
-  category: CategoryName; // Strictly CategoryName here
+  category: CategoryName; // 엄격하게 CategoryName으로 제한
   isSelected: boolean;
   isCandidate: boolean;
 }
@@ -41,6 +46,14 @@ export interface SelectedPlace extends Place {
 export interface SchedulePlace {
   id: number | string;
   name: string;
+}
+
+// 여행 날짜와 시간
+export interface TripDateTime {
+  startDate: Date;
+  endDate: Date;
+  startTime: string;
+  endTime: string;
 }
 
 // 일정 생성 API 요청 페이로드
@@ -66,7 +79,7 @@ export interface ServerRouteSummaryItem {
   total_distance_m: number;      // 미터 단위 총 거리
   places_routed?: string[];      // 경로에 포함된 장소 이름 배열 (optional)
   places_scheduled?: string[];   // 일정에 포함된 장소 이름 배열 (optional)
-  interleaved_route: (string | number)[]; // NODE_ID와 LINK_ID가 번갈아 있는 배열 (string or number)
+  interleaved_route: (string | number)[]; // NODE_ID와 LINK_ID가 번갈아 있는 배열
 }
 
 // 서버 응답 인터페이스
@@ -74,13 +87,6 @@ export interface NewServerScheduleResponse {
   total_reward?: number;
   schedule: ServerScheduleItem[];
   route_summary: ServerRouteSummaryItem[];
-}
-
-// 경로 데이터 인터페이스
-export interface RouteData {
-  nodeIds: string[];
-  linkIds: string[];
-  segmentRoutes?: SegmentRoute[];
 }
 
 // 세그먼트 경로 인터페이스
@@ -91,11 +97,11 @@ export interface SegmentRoute {
   linkIds: string[];
 }
 
-// 서버 경로 응답 (지도 표시에 사용될 수 있음)
-export interface ServerRouteResponse {
-  nodeIds: number[]; // Note: Often these are numbers from server, converted to string in RouteData
-  linkIds: number[];
-  interleaved_route?: number[];
+// 경로 데이터 인터페이스 - 필수 필드로 통일
+export interface RouteData {
+  nodeIds: string[];
+  linkIds: string[];
+  segmentRoutes?: SegmentRoute[];
 }
 
 // 일정 장소 인터페이스 (Place에 시간 정보 추가)
@@ -105,35 +111,84 @@ export interface ItineraryPlaceWithTime extends Place {
   stayDuration?: number; // 분 단위
   travelTimeToNext?: string; // 다음 장소까지 이동 시간 (예: "30분")
   timeBlock?: string; // "09:00 - 10:00" 형식 또는 "09:00 도착" 등
-  // geoNodeId is already in Place
+  // geoNodeId는 이미 Place에 포함됨
 }
 
-// 일정 일자 인터페이스
+// 일정 일자 인터페이스 - 필수 필드로 통일
 export interface ItineraryDay {
   day: number;
   places: ItineraryPlaceWithTime[];
   totalDistance: number; // km 단위
-  routeData?: RouteData; // Made optional to match use-itinerary-creator.ts logic
-  interleaved_route?: (string | number)[];
+  routeData: RouteData; // 필수 필드로 변경
+  interleaved_route: (string | number)[]; // 필수 필드로 변경
   dayOfWeek: string; // 예: "Mon", "Tue"
   date: string;      // 예: "05/21" (MM/DD 형식)
 }
 
-// 타입 검사 함수 (값으로 사용되므로 import type이 아닌 일반 import 필요)
+// 서버 경로 응답 (지도 표시에 사용될 수 있음)
+export interface ServerRouteResponse {
+  nodeIds: number[]; // 서버에서는 숫자로 오지만 RouteData에서는 문자열로 변환
+  linkIds: number[];
+  interleaved_route?: number[];
+}
+
+// 서버 전체 일정 응답
+export interface ServerScheduleResponse {
+  schedule: {
+    id: number; // NODE_ID
+    place_name: string;
+    place_type: 'restaurant' | 'attraction' | 'cafe' | 'accommodation';
+    time_block: string; // 예: 'Tue_0900'
+  }[];
+  route_summary: {
+    day: string; // 예: 'Tue'
+    status: string;
+    total_distance_m: number;
+    interleaved_route: number[]; // 장소와 링크 ID가 섞여 있음: [NODE, LINK, NODE, LINK, ...]
+  }[];
+}
+
+// 경로 세그먼트 인터페이스
+export interface RouteSegment {
+  from: string; // 출발 노드 ID
+  to: string;   // 도착 노드 ID
+  links: string[]; // 링크 ID 배열
+}
+
+// 파싱된 경로 데이터
+export interface ParsedRouteData {
+  day: number;
+  segments: RouteSegment[];
+  totalDistanceMeters: number;
+}
+
+// 파싱된 경로
+export interface ParsedRoute {
+  from: string | number;
+  to: string | number;
+  links: (string | number)[];
+}
+
+// 추출된 경로 데이터
+export interface ExtractedRouteData {
+  nodeIds: string[];
+  linkIds: string[];
+}
+
+// 서버 응답이 NewServerScheduleResponse 타입인지 확인하는 타입 가드
 export function isNewServerScheduleResponse(obj: any): obj is NewServerScheduleResponse {
   return (
     obj !== null &&
     typeof obj === 'object' &&
     Array.isArray(obj.schedule) &&
     Array.isArray(obj.route_summary) &&
-    obj.route_summary.length > 0 && // Ensure route_summary is not empty
+    obj.route_summary.length > 0 &&
     obj.route_summary.every((item: any) =>
       item !== null &&
       typeof item === 'object' &&
       typeof item.day === 'string' &&
-      item.hasOwnProperty('status') && // Use hasOwnProperty for safer check
+      item.hasOwnProperty('status') &&
       item.hasOwnProperty('total_distance_m') &&
-      // places_scheduled and places_routed are now optional, so check if they exist before Array.isArray
       (item.places_scheduled === undefined || Array.isArray(item.places_scheduled)) &&
       (item.places_routed === undefined || Array.isArray(item.places_routed)) &&
       Array.isArray(item.interleaved_route)
@@ -141,11 +196,75 @@ export function isNewServerScheduleResponse(obj: any): obj is NewServerScheduleR
   );
 }
 
-// Raw Data Types (from user's previous plan)
+// Raw Data Types
 export interface RawServerResponse {
   total_reward?: number;
-  schedule?: ServerScheduleItem[]; // Use more specific type if possible
-  route_summary?: ServerRouteSummaryItem[]; // Use more specific type
-  [key: string]: any; // For any other properties
+  schedule?: ServerScheduleItem[];
+  route_summary?: ServerRouteSummaryItem[];
+  [key: string]: any; // 기타 속성
 }
 
+// 서버 응답 파싱 유틸리티 타입
+export interface ServerResponseParsingResult {
+  itineraryDays: ItineraryDay[];
+  error?: string;
+}
+
+// 플래너 서버 경로 응답
+export interface PlannerServerRouteResponse {
+  date: string;       // 예: '2025-05-21'
+  nodeIds: number[];  // 예: [장소1_ID, 링크1_ID, 중간노드1_ID, 링크2_ID, ..., 장소N_ID]
+}
+
+// 타입 변환 유틸리티 함수
+export function convertPlannerResponseToNewResponse(
+  plannerResponse: PlannerServerRouteResponse[]
+): NewServerScheduleResponse {
+  const routeSummaryItems: ServerRouteSummaryItem[] = plannerResponse.map(item => {
+    const date = new Date(item.date);
+    const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'short' });
+    return {
+      day: dayOfWeek,
+      status: 'OK',
+      total_distance_m: 0,
+      interleaved_route: item.nodeIds,
+      places_scheduled: [],
+      places_routed: [],
+    };
+  });
+
+  const scheduleItems: ServerScheduleItem[] = [];
+  plannerResponse.forEach(dayData => {
+    dayData.nodeIds.forEach((nodeId, index) => {
+      if (index % 2 === 0 && typeof nodeId === 'number') {
+        scheduleItems.push({
+          id: nodeId,
+          place_name: `장소 ${nodeId}`,
+          place_type: 'unknown',
+          time_block: '시간 정보 없음',
+        });
+      }
+    });
+  });
+  
+  return {
+    schedule: scheduleItems,
+    route_summary: routeSummaryItems,
+  };
+}
+
+// 서버 응답이 PlannerServerRouteResponse[] 타입인지 확인하는 타입 가드
+export function isPlannerServerRouteResponseArray(
+  response: any
+): response is PlannerServerRouteResponse[] {
+  return (
+    Array.isArray(response) &&
+    (response.length === 0 ||
+      (response.length > 0 &&
+        typeof response[0] === 'object' &&
+        response[0] !== null &&
+        typeof response[0].date === 'string' &&
+        Array.isArray(response[0].nodeIds) &&
+        response[0].nodeIds.every((id: any) => typeof id === 'number')))
+  );
+}
