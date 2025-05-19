@@ -1,17 +1,16 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useMapContext } from './MapContext';
-// Place, ItineraryDay, ItineraryPlaceWithTime 타입을 @/types/index.ts 에서 가져오도록 수정
-import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types';
+import { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/supabase';
 import { extractAllNodesFromRoute } from '@/utils/routeParser';
 
 interface MapMarkersProps {
-  places: Place[]; // Place[] 타입 사용
-  selectedPlace: Place | null; // Place | null 타입 사용
-  itinerary: ItineraryDay[] | null; // ItineraryDay[] 타입 사용
+  places: Place[]; 
+  selectedPlace: Place | null;
+  itinerary: ItineraryDay[] | null;
   selectedDay: number | null;
-  selectedPlaces?: Place[]; // Place[] 타입 사용
-  onPlaceClick?: (place: Place, index: number) => void; // Place 타입 콜백
+  selectedPlaces?: Place[];
+  onPlaceClick?: (place: Place, index: number) => void;
 }
 
 const MapMarkers: React.FC<MapMarkersProps> = ({
@@ -29,13 +28,13 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
     panTo,
     renderItineraryRoute,
     isGeoJsonLoaded,
-    mapPlacesWithGeoNodes, // 반환 타입이 Place[] 여야 함
+    mapPlacesWithGeoNodes,
     showRouteForPlaceIndex
   } = useMapContext();
   
-  const [markerRefs, setMarkerRefs] = useState<any[]>([]); // 마커 참조는 naver.maps.Marker[] 일 수 있음
+  const [markerRefs, setMarkerRefs] = useState<any[]>([]);
 
-  const handleMarkerClick = useCallback((place: Place, index: number) => { // place는 Place 타입
+  const handleMarkerClick = useCallback((place: Place, index: number) => {
     console.log(`마커 클릭: ${place.name} (${index + 1}번)`);
     
     if (isGeoJsonLoaded && place.geoNodeId) {
@@ -45,7 +44,7 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
     if (itinerary && selectedDay !== null) {
       const currentDayItinerary = itinerary.find(day => day.day === selectedDay);
       if (currentDayItinerary) {
-        const placeItineraryIndex = currentDayItinerary.places.findIndex(p => p.id === place.id); // p.id와 place.id는 string
+        const placeItineraryIndex = currentDayItinerary.places.findIndex(p => p.id === place.id);
         if (placeItineraryIndex !== -1) {
           showRouteForPlaceIndex(placeItineraryIndex, currentDayItinerary);
         } else {
@@ -57,7 +56,7 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
     if (onPlaceClick) {
       onPlaceClick(place, index);
     }
-  }, [itinerary, selectedDay, onPlaceClick, isGeoJsonLoaded, showRouteForPlaceIndex, places]); // places 추가
+  }, [itinerary, selectedDay, onPlaceClick, isGeoJsonLoaded, showRouteForPlaceIndex]);
 
   const renderMapData = useCallback(() => {
     if (!isMapInitialized) {
@@ -68,13 +67,12 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
     console.log("MapMarkers: 데이터 렌더링 시작");
     clearMarkersAndUiElements();
 
-    // mapPlacesWithGeoNodes가 Place[]를 반환하도록 수정됨
-    const mappedPlaces = (inputPlaces: Place[]): Place[] => 
-      isGeoJsonLoaded ? mapPlacesWithGeoNodes(inputPlaces) : inputPlaces;
+    const useMappedPlaces = isGeoJsonLoaded;
 
     if (selectedPlace) {
-      const placeToDisplay = mappedPlaces([selectedPlace])[0];
-      const markers = addMarkers([placeToDisplay], { highlight: true, onClick: handleMarkerClick }); // addMarkers는 Place[]를 받음
+      const placeToDisplay = useMappedPlaces ? 
+        mapPlacesWithGeoNodes([selectedPlace])[0] : selectedPlace;
+      const markers = addMarkers([placeToDisplay], { highlight: true, onClick: handleMarkerClick });
       setMarkerRefs(markers);
       if (placeToDisplay.x && placeToDisplay.y) {
         panTo({ lat: placeToDisplay.y, lng: placeToDisplay.x });
@@ -87,8 +85,21 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
       if (currentDayItinerary) {
         console.log(`[MapMarkers] 일정 ${selectedDay}일차 표시, 장소 ${currentDayItinerary.places.length}개`);
         
-        // currentDayItinerary.places는 ItineraryPlaceWithTime[]이고, 이는 Place를 확장하므로 호환됨
-        const placesForMarkers: Place[] = mappedPlaces(currentDayItinerary.places as Place[]); 
+        let placesForMarkers: ItineraryPlaceWithTime[] = currentDayItinerary.places;
+        
+        if (currentDayItinerary.interleaved_route) {
+            // 로그를 추가하여 interleaved_route 데이터 확인
+            console.log(`[MapMarkers] ${selectedDay}일차 interleaved_route:`, {
+              length: currentDayItinerary.interleaved_route.length,
+              sample: currentDayItinerary.interleaved_route.slice(0, 10)
+            });
+            
+            const placeNodeIdsFromRoute = extractAllNodesFromRoute(currentDayItinerary.interleaved_route)
+                .filter((_, index) => index % 2 === 0) 
+                .map(String); 
+            
+            console.log(`[MapMarkers] ${selectedDay}일차 경로에서 추출한 장소 노드 ID:`, placeNodeIdsFromRoute);
+        }
         
         const markers = addMarkers(placesForMarkers, { 
           isItinerary: true,
@@ -107,11 +118,11 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
         console.warn(`${selectedDay}일차 일정을 찾을 수 없습니다 (MapMarkers)`);
       }
     } else if (selectedPlaces && selectedPlaces.length > 0) {
-      const placesToDisplay = mappedPlaces(selectedPlaces);
+      const placesToDisplay = useMappedPlaces ? mapPlacesWithGeoNodes(selectedPlaces) : selectedPlaces;
       const markers = addMarkers(placesToDisplay, { highlight: true, useColorByCategory: true, onClick: handleMarkerClick });
       setMarkerRefs(markers);
     } else if (places && places.length > 0) {
-      const placesToDisplay = mappedPlaces(places);
+      const placesToDisplay = useMappedPlaces ? mapPlacesWithGeoNodes(places) : places;
       const markers = addMarkers(placesToDisplay, { useColorByCategory: true, onClick: handleMarkerClick });
       setMarkerRefs(markers);
     }
@@ -135,11 +146,11 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
     if (!isMapInitialized) return;
 
     console.log("MapMarkers: 데이터 변경 감지", {
-      placesCount: places?.length || 0,
+      placesCount: places.length,
       selectedPlaceExists: !!selectedPlace,
       itineraryDays: itinerary?.length || 0,
       selectedDay,
-      selectedPlacesCount: selectedPlaces?.length || 0
+      selectedPlacesCount: selectedPlaces.length
     });
 
     renderMapData();
@@ -151,7 +162,7 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
     selectedDay, 
     selectedPlaces, 
     isMapInitialized,
-    isGeoJsonLoaded, // isGeoJsonLoaded 변경 시에도 재렌더링
+    isGeoJsonLoaded,
     renderMapData
   ]);
 

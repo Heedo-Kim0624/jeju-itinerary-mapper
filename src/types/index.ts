@@ -1,13 +1,13 @@
 
-import type { CategoryName } from '@/utils/categoryUtils';
+import { CategoryName } from '@/utils/categoryUtils';
 
-// 기본 장소 인터페이스 - id를 string으로, category를 CategoryName으로 통일
+// 기본 장소 인터페이스
 export interface Place {
-  id: string; // 항상 string
+  id: string;
   name: string;
   address: string;
   phone: string;
-  category: CategoryName; // CategoryName으로 강제
+  category: string; // Could be CategoryName or a broader string type
   description: string;
   rating: number;
   x: number;
@@ -30,19 +30,20 @@ export interface Place {
   operatingHours?: string;
 }
 
-// 선택된 장소 인터페이스 - Place에서 파생되므로 id와 category 타입이 일치
+// 선택된 장소 인터페이스
 export interface SelectedPlace extends Place {
+  category: CategoryName; // Strictly CategoryName here
   isSelected: boolean;
   isCandidate: boolean;
 }
 
 // 서버로 전송할 장소 데이터 간소화 구조
 export interface SchedulePlace {
-  id: string; // 서버 API 스펙에 따라 string 또는 number. 여기서는 string으로 통일 시도
+  id: number | string;
   name: string;
 }
 
-// 일정 생성 API 요청 페이로드 (src/types/schedule.ts 와 중복 가능성 확인 필요)
+// 일정 생성 API 요청 페이로드
 export interface SchedulePayload {
   selected_places: SchedulePlace[];
   candidate_places: SchedulePlace[];
@@ -50,51 +51,101 @@ export interface SchedulePayload {
   end_datetime: string; // ISO8601 타임스탬프
 }
 
-// 여행 상세 정보 상태 (use-itinerary-actions 에서 필요)
-export interface TripDetailsState {
-  dates: {
-    startDate: Date;
-    endDate: Date;
-    startTime: string;
-    endTime: string;
-  } | null;
-  startDatetime: string | null;
-  endDatetime: string | null;
-  nDays: number | null;
+// 서버 스케줄 항목
+export interface ServerScheduleItem {
+  id?: number | string;
+  time_block: string;
+  place_name: string;
+  place_type: string;
 }
 
+// 서버 경로 요약 항목
+export interface ServerRouteSummaryItem {
+  day: string;                   // "Tue", "Wed", "Thu", "Fri" 등
+  status: string;                // "성공" 등
+  total_distance_m: number;      // 미터 단위 총 거리
+  places_routed?: string[];      // 경로에 포함된 장소 이름 배열 (optional)
+  places_scheduled?: string[];   // 일정에 포함된 장소 이름 배열 (optional)
+  interleaved_route: (string | number)[]; // NODE_ID와 LINK_ID가 번갈아 있는 배열 (string or number)
+}
 
-// src/types/schedule.ts 에서 가져와서 re-export
-export type {
-  ServerScheduleItem,
-  ServerRouteSummaryItem,
-  NewServerScheduleResponse,
-  RouteData,
-  SegmentRoute,
-  ServerRouteResponse,
-  ItineraryPlaceWithTime,
-  ItineraryDay,
-  ParsedRouteData, // 추가
-  RouteSegment, // 추가
-} from './schedule';
+// 서버 응답 인터페이스
+export interface NewServerScheduleResponse {
+  total_reward?: number;
+  schedule: ServerScheduleItem[];
+  route_summary: ServerRouteSummaryItem[];
+}
 
-export { isNewServerScheduleResponse } from './schedule';
+// 경로 데이터 인터페이스
+export interface RouteData {
+  nodeIds: string[];
+  linkIds: string[];
+  segmentRoutes?: SegmentRoute[];
+}
 
-// 카테고리 목록 (from categoryUtils.ts)
-export const CATEGORIES: CategoryName[] = ['숙소', '관광지', '음식점', '카페'];
+// 세그먼트 경로 인터페이스
+export interface SegmentRoute {
+  fromIndex: number;
+  toIndex: number;
+  nodeIds: string[];
+  linkIds: string[];
+}
 
-// 최소 추천 개수 (from use-place-auto-completion.ts)
-export const MINIMUM_RECOMMENDATION_COUNT = (nDays: number) => ({
-  touristSpot: 4 * Math.max(1, nDays),
-  restaurant: 3 * Math.max(1, nDays),
-  cafe: 3 * Math.max(1, nDays),
-  accommodation: 1 * Math.max(1, nDays), // nDays가 0이 될 수 있으므로 Math.max(1, nDays)
-});
+// 서버 경로 응답 (지도 표시에 사용될 수 있음)
+export interface ServerRouteResponse {
+  nodeIds: number[]; // Note: Often these are numbers from server, converted to string in RouteData
+  linkIds: number[];
+  interleaved_route?: number[];
+}
 
-// Raw Data Types (from user's previous plan) - src/types/schedule.ts 와 중복 가능성
+// 일정 장소 인터페이스 (Place에 시간 정보 추가)
+export interface ItineraryPlaceWithTime extends Place {
+  arriveTime?: string;
+  departTime?: string;
+  stayDuration?: number; // 분 단위
+  travelTimeToNext?: string; // 다음 장소까지 이동 시간 (예: "30분")
+  timeBlock?: string; // "09:00 - 10:00" 형식 또는 "09:00 도착" 등
+  // geoNodeId is already in Place
+}
+
+// 일정 일자 인터페이스
+export interface ItineraryDay {
+  day: number;
+  places: ItineraryPlaceWithTime[];
+  totalDistance: number; // km 단위
+  routeData?: RouteData; // Made optional to match use-itinerary-creator.ts logic
+  interleaved_route?: (string | number)[];
+  dayOfWeek: string; // 예: "Mon", "Tue"
+  date: string;      // 예: "05/21" (MM/DD 형식)
+}
+
+// 타입 검사 함수 (값으로 사용되므로 import type이 아닌 일반 import 필요)
+export function isNewServerScheduleResponse(obj: any): obj is NewServerScheduleResponse {
+  return (
+    obj !== null &&
+    typeof obj === 'object' &&
+    Array.isArray(obj.schedule) &&
+    Array.isArray(obj.route_summary) &&
+    obj.route_summary.length > 0 && // Ensure route_summary is not empty
+    obj.route_summary.every((item: any) =>
+      item !== null &&
+      typeof item === 'object' &&
+      typeof item.day === 'string' &&
+      item.hasOwnProperty('status') && // Use hasOwnProperty for safer check
+      item.hasOwnProperty('total_distance_m') &&
+      // places_scheduled and places_routed are now optional, so check if they exist before Array.isArray
+      (item.places_scheduled === undefined || Array.isArray(item.places_scheduled)) &&
+      (item.places_routed === undefined || Array.isArray(item.places_routed)) &&
+      Array.isArray(item.interleaved_route)
+    )
+  );
+}
+
+// Raw Data Types (from user's previous plan)
 export interface RawServerResponse {
   total_reward?: number;
-  schedule?: import('./schedule').ServerScheduleItem[];
-  route_summary?: import('./schedule').ServerRouteSummaryItem[];
+  schedule?: ServerScheduleItem[]; // Use more specific type if possible
+  route_summary?: ServerRouteSummaryItem[]; // Use more specific type
   [key: string]: any; // For any other properties
 }
+

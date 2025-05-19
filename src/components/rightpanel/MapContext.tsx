@@ -1,8 +1,8 @@
 
-import React, { createContext, useContext } from 'react';
-// ItineraryDay를 schedule.ts에서 가져오도록 수정 (index.ts가 schedule.ts를 re-export 가정)
-import type { Place, ItineraryDay, ServerRouteResponse } from '@/types'; // index.ts가 ServerRouteResponse도 re-export 한다고 가정
-
+import React, { createContext, useContext, useRef } from 'react';
+import { Place, ItineraryDay } from '@/types/supabase';
+import useMapCore from './useMapCore';
+import { ServerRouteSummaryItem, ServerRouteResponse } from '@/types/schedule';
 
 interface MapContextType {
   map: any;
@@ -15,20 +15,20 @@ interface MapContextType {
     isItinerary?: boolean; 
     useRecommendedStyle?: boolean;
     useColorByCategory?: boolean;
-    onClick?: (place: Place, index: number) => void; // Place 타입 사용
+    onClick?: (place: Place, index: number) => void;
   }) => any[];
-  calculateRoutes: (places: Place[]) => void; // Place 타입 사용
+  calculateRoutes: (places: Place[]) => void;
   clearMarkersAndUiElements: () => void;
   panTo: (locationOrCoords: string | {lat: number, lng: number}) => void;
   showGeoJson: boolean;
   toggleGeoJsonVisibility: () => void;
-  renderItineraryRoute: (itineraryDay: ItineraryDay | null) => void; // ItineraryDay 타입 사용
+  renderItineraryRoute: (itineraryDay: ItineraryDay | null) => void;
   clearAllRoutes: () => void;
   handleGeoJsonLoaded: (nodes: any[], links: any[]) => void;
-  highlightSegment: (fromIndex: number, toIndex: number, itineraryDay?: ItineraryDay) => void; // ItineraryDay 타입 사용
+  highlightSegment: (fromIndex: number, toIndex: number, itineraryDay?: ItineraryDay) => void;
   clearPreviousHighlightedPath: () => void;
   isGeoJsonLoaded: boolean;
-  checkGeoJsonMapping: (places: Place[]) => { // Place 타입 사용
+  checkGeoJsonMapping: (places: Place[]) => {
     totalPlaces: number;
     mappedPlaces: number;
     mappingRate: string;
@@ -36,16 +36,17 @@ interface MapContextType {
     success: boolean;
     message: string;
   };
-  mapPlacesWithGeoNodes: (places: Place[]) => Place[]; // Place 타입 사용
-  showRouteForPlaceIndex: (placeIndex: number, itineraryDay: ItineraryDay) => void; // ItineraryDay 타입 사용
+  mapPlacesWithGeoNodes: (places: Place[]) => Place[];
+  showRouteForPlaceIndex: (placeIndex: number, itineraryDay: ItineraryDay) => void;
   renderGeoJsonRoute: (nodeIds: string[], linkIds: string[], style?: any) => any[];
   geoJsonNodes: any[];
   geoJsonLinks: any[];
+  // 서버 경로 관련 기능 수정 - Aligning with error message for useMapCore's provided type
   setServerRoutes: (
     dayRoutes: Record<number, ServerRouteResponse> | 
                ((prevRoutes: Record<number, ServerRouteResponse>) => Record<number, ServerRouteResponse>)
   ) => void;
-  serverRoutesData: Record<number, ServerRouteResponse>;
+  serverRoutesData: Record<number, ServerRouteResponse>; // Align data type as well
 }
 
 const defaultContext: MapContextType = {
@@ -87,6 +88,7 @@ const MapContext = createContext<MapContextType>(defaultContext);
 
 export const useMapContext = () => useContext(MapContext);
 
+// Create a provider component that uses the useMapCore hook
 export const MapProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
   const mapCore = useMapCore();
   
