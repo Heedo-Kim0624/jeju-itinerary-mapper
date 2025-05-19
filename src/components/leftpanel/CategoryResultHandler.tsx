@@ -1,23 +1,23 @@
 
 import React from 'react';
 import CategoryResultPanel from '../middlepanel/CategoryResultPanel';
-import { Place } from '@/types/supabase';
-import type { CategoryName } from '@/utils/categoryUtils';
+import { Place, CategoryName, SelectedPlace as GlobalSelectedPlace } from '@/types'; // Renamed SelectedPlace to avoid conflict if any, and import CategoryName
+// import type { CategoryName } from '@/utils/categoryUtils'; // This was old, using from @/types
 
 interface CategoryResultHandlerProps {
   showCategoryResult: CategoryName | null;
   selectedRegions: string[];
-  selectedKeywordsByCategory: Record<string, string[]>;
+  selectedKeywords: string[]; // Added this prop
   onClose: () => void;
   onSelectPlace: (place: Place, checked: boolean, category: string | null) => void;
-  selectedPlaces: Place[];
-  onConfirmCategory?: (category: string, selectedPlaces: Place[], recommendedPlaces: Place[]) => void;
+  selectedPlaces: GlobalSelectedPlace[]; // Use imported GlobalSelectedPlace
+  onConfirmCategory?: (category: CategoryName, selectedPlaces: Place[], recommendedPlaces: Place[]) => void;
 }
 
 const CategoryResultHandler: React.FC<CategoryResultHandlerProps> = ({
   showCategoryResult,
   selectedRegions,
-  selectedKeywordsByCategory,
+  selectedKeywords, // Use this prop
   onClose,
   onSelectPlace,
   selectedPlaces,
@@ -26,7 +26,8 @@ const CategoryResultHandler: React.FC<CategoryResultHandlerProps> = ({
   if (!showCategoryResult) return null;
   
   const currentCategory = showCategoryResult;
-  const selectedKeywords = selectedKeywordsByCategory[currentCategory] || [];
+  // selectedKeywords is now directly passed as a prop
+  // const selectedKeywords = selectedKeywordsByCategory[currentCategory] || [];
   const isPlaceSelected = (id: string | number) => 
     selectedPlaces.some(p => p.id === id);
 
@@ -35,10 +36,10 @@ const CategoryResultHandler: React.FC<CategoryResultHandlerProps> = ({
     onSelectPlace(place, checked, currentCategory);
   };
 
-  const handleConfirm = (category: string, selectedPlaces: Place[], recommendedPlaces: Place[]) => {
-    console.log(`[CategoryResultHandler] ${category} 카테고리 확인됨 및 자동 보완 시작, 선택된 장소: ${selectedPlaces.length}개`);
+  const handleConfirm = (category: CategoryName, currentSelectedPlaces: Place[], recommendedPlaces: Place[]) => {
+    console.log(`[CategoryResultHandler] ${category} 카테고리 확인됨 및 자동 보완 시작, 선택된 장소: ${currentSelectedPlaces.length}개`);
     if (onConfirmCategory) {
-      onConfirmCategory(category, selectedPlaces, recommendedPlaces);
+      onConfirmCategory(category, currentSelectedPlaces, recommendedPlaces);
     }
   };
 
@@ -46,12 +47,12 @@ const CategoryResultHandler: React.FC<CategoryResultHandlerProps> = ({
     <CategoryResultPanel
       isOpen={!!showCategoryResult}
       onClose={onClose}
-      category={currentCategory}
+      category={currentCategory} // This is CategoryName
       regions={selectedRegions}
-      keywords={selectedKeywords}
+      keywords={selectedKeywords} // Pass the prop here
       onSelectPlace={handlePlaceSelection}
       isPlaceSelected={isPlaceSelected}
-      onConfirm={handleConfirm}
+      onConfirm={handleConfirm} // Ensure this signature matches CategoryResultPanel's onConfirm
     />
   );
 };

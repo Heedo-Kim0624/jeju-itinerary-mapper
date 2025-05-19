@@ -72,8 +72,8 @@ const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
       <div className="fixed top-0 left-0 w-[300px] h-full bg-white border-r border-gray-200 z-40 shadow-md">
         <ScheduleViewer
           schedule={itinerary} 
-          selectedDay={selectedItineraryDay} // Pass selectedItineraryDay as selectedDay
-          onDaySelect={onSelectDay}          // Pass onSelectDay as onDaySelect
+          selectedDay={selectedItineraryDay} 
+          onDaySelect={onSelectDay}          
           onClose={handleCloseItinerary}
           startDate={dates?.startDate || new Date()}
         />
@@ -115,6 +115,7 @@ const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
                   console.error("Error during onCreateItinerary from button click:", error);
                   setLocalButtonLoading(false);
                 }
+                // setLocalButtonLoading(false) should be handled by isGenerating prop change or success/failure of onCreateItinerary
               }
             }}
             disabled={!allCategoriesSelected || localButtonLoading}

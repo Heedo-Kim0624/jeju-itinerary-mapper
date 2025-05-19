@@ -1,20 +1,47 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useLeftPanel } from '@/hooks/use-left-panel';
-import { useItinerary, ItineraryDay } from '@/hooks/use-itinerary'; // ItineraryDay is already exported from use-itinerary
+import { useItinerary, ItineraryDay as HookItineraryDay } from '@/hooks/use-itinerary'; // Renamed to avoid conflict
 import LeftPanelContainer from './LeftPanelContainer';
 import LeftPanelContent from './LeftPanelContent';
 import RegionPanelHandler from './RegionPanelHandler';
 import CategoryResultHandler from './CategoryResultHandler';
-import ItineraryView from './ItineraryView'; // This is read-only, ScheduleViewer is used by LeftPanelContainer
-import { CategoryName } from '@/utils/categoryUtils';
-import { Place } from '@/types';
+import { CategoryName, Place, SelectedPlace } from '@/types'; // Added CategoryName
 import { toast } from 'sonner';
+
+// Helper to map Korean category names to English CategoryName type
+const mapKoreanToEnglishCategoryName = (koreanCategory: string): CategoryName | undefined => {
+  switch (koreanCategory) {
+    case '숙소':
+      return 'accommodation';
+    case '관광지':
+      return 'landmark';
+    case '음식점':
+      return 'restaurant';
+    case '카페':
+      return 'cafe';
+    default:
+      return undefined;
+  }
+};
+
+// Helper to map English CategoryName back to Korean for selectedKeywordsByCategory lookup
+const mapCategoryNameToKorean = (categoryName: CategoryName): string => {
+  switch (categoryName) {
+    case 'accommodation': return '숙소';
+    case 'landmark': return '관광지';
+    case 'restaurant': return '음식점';
+    case 'cafe': return '카페';
+    default: // Should not happen with CategoryName type
+      const exhaustiveCheck: never = categoryName;
+      return exhaustiveCheck;
+  }
+};
 
 const LeftPanel: React.FC = () => {
   const {
     regionSelection,
     categorySelection,
-    keywordsAndInputs, // This object was missing setShowCategoryResult
+    keywordsAndInputs,
     placesManagement,
     tripDetails,
     handleCreateItinerary: triggerCreateItineraryFromHook,
@@ -23,17 +50,16 @@ const LeftPanel: React.FC = () => {
 
   const {
     itinerary,
-    selectedItineraryDay, // Changed from selectedDay
+    selectedItineraryDay,
     showItinerary,
-    setItinerary,
-    setSelectedItineraryDay, // Changed from setSelectedDay
+    // setItinerary, // Removed as per user prompt implies it's not used here, or handled by useItinerary
+    // setSelectedItineraryDay, // Removed as per user prompt
     setShowItinerary,
-    handleSelectItineraryDay, // Changed from onDaySelect
+    handleSelectItineraryDay,
     isItineraryCreated
   } = useItinerary();
 
   const [isGeneratingItinerary, setIsGeneratingItinerary] = useState(false);
-  // Local state to manage visibility of CategoryResultHandler, as keywordsAndInputs seems to lack the setter.
   const [categoryResultPanelCategory, setCategoryResultPanelCategory] = useState<CategoryName | null>(null);
 
 
@@ -53,7 +79,7 @@ const LeftPanel: React.FC = () => {
   // Forcing a re-render or ensuring dependent components update might still be useful.
   useEffect(() => {
     const handleItineraryDataUpdate = (event: Event) => {
-      const customEvent = event as CustomEvent<{ itinerary: ItineraryDay[], selectedDay: number | null, showItinerary: boolean }>;
+      const customEvent = event as CustomEvent<{ itinerary: HookItineraryDay[], selectedDay: number | null, showItinerary: boolean }>;
       const { 
         itinerary: eventItinerary, 
         selectedDay: eventSelectedDay, 
@@ -75,51 +101,60 @@ const LeftPanel: React.FC = () => {
     return () => {
       window.removeEventListener('itineraryCreated', handleItineraryDataUpdate);
     };
-  }, [itinerary, showItinerary]); // Added dependencies
+  }, [showItinerary, itinerary?.length]); // Simplified dependencies as state setters are stable
 
-  const handlePanelBackByCategory = (category: string) => {
-    console.log(`${category} 카테고리 패널 뒤로가기`);
+  const handlePanelBackByCategory = (koreanCategory: string) => { // param is koreanCategory
+    console.log(`${koreanCategory} 카테고리 패널 뒤로가기`);
     categorySelection.handlePanelBack();
   };
 
   const handleResultClose = () => {
     console.log("카테고리 결과 화면 닫기");
-    setCategoryResultPanelCategory(null); // Use local state setter
+    setCategoryResultPanelCategory(null);
   };
 
-  const handleConfirmByCategory = (category: CategoryName, finalKeywords: string[]) => {
-    console.log(`카테고리 '${category}' 확인, 키워드: ${finalKeywords.join(', ')}`);
-    // This function in useLeftPanel should eventually trigger showing the category result panel.
-    // For now, we assume it prepares data, and we manually set the panel to show.
-    keywordsAndInputs.handleConfirmCategory(category, finalKeywords, true);
-    setCategoryResultPanelCategory(category); // Show results for this category
+  // This is called from LeftPanelContent's onConfirmCategory
+  const handleConfirmByCategoryKeywords = (koreanCategory: string, finalKeywords: string[]) => {
+    const englishCategoryName = mapKoreanToEnglishCategoryName(koreanCategory);
+    if (!englishCategoryName) {
+      toast.error(`잘못된 카테고리명입니다: ${koreanCategory}`);
+      console.error(`Invalid Korean category name for mapping: ${koreanCategory}`);
+      return false;
+    }
+
+    console.log(`카테고리 '${englishCategoryName}' (원래: ${koreanCategory}) 키워드 확인, 키워드: ${finalKeywords.join(', ')}`);
+    // keywordsAndInputs.handleConfirmCategory expects the English CategoryName string.
+    // The cast inside use-left-panel will be safe if englishCategoryName is a valid CategoryName.
+    keywordsAndInputs.handleConfirmCategory(englishCategoryName, finalKeywords, true);
+    setCategoryResultPanelCategory(englishCategoryName); 
     return true;
   };
-
-  const handleConfirmCategorySelection = ( 
-    category: CategoryName,
+  
+  // This is called from CategoryResultHandler's onConfirmCategory
+  const handleConfirmCategorySelectionAndAutocomplete = ( 
+    confirmedCategory: CategoryName, // This is already CategoryName
     userSelectedInPanel: Place[],
     recommendedPoolForCategory: Place[]
   ) => {
     const nDaysInNights = tripDetails.tripDuration;
     console.log(
-      `[LeftPanel] '${category}' 카테고리 결과 확인. 사용자가 패널에서 선택: ${userSelectedInPanel.length}개, 전체 추천 풀: ${recommendedPoolForCategory.length}개. 여행 기간(박): ${nDaysInNights}`
+      `[LeftPanel] '${confirmedCategory}' 카테고리 결과 확인 후 자동완성. 사용자가 패널에서 선택: ${userSelectedInPanel.length}개, 전체 추천 풀: ${recommendedPoolForCategory.length}개. 여행 기간(박): ${nDaysInNights}`
     );
 
     if (nDaysInNights === null) {
       console.warn("[LeftPanel] 여행 기간(tripDuration)이 null입니다. 자동 보완을 실행할 수 없습니다.");
       toast.error("여행 기간을 먼저 설정해주세요. 날짜 선택 후 다시 시도해주세요.");
-      setCategoryResultPanelCategory(null); // Use local state setter
+      setCategoryResultPanelCategory(null);
       return;
     }
     const actualTravelDays = nDaysInNights + 1;
     if (actualTravelDays <= 0) {
       toast.error("여행 기간이 올바르게 설정되지 않았습니다. 날짜를 다시 확인해주세요.");
-      setCategoryResultPanelCategory(null); // Use local state setter
+      setCategoryResultPanelCategory(null);
       return;
     }
-    placesManagement.handleAutoCompletePlaces(category, recommendedPoolForCategory, actualTravelDays);
-    setCategoryResultPanelCategory(null); // Use local state setter
+    placesManagement.handleAutoCompletePlaces(confirmedCategory, recommendedPoolForCategory, actualTravelDays);
+    setCategoryResultPanelCategory(null); 
   };
   
   const triggerCreateItinerary = useCallback(async () => {
@@ -132,6 +167,7 @@ const LeftPanel: React.FC = () => {
       
       if (success) {
         console.log("[LeftPanel] triggerCreateItineraryFromHook 호출 성공 (triggerCreateItinerary)");
+        // setIsGeneratingItinerary(false) will be handled by the event listener or isGenerating prop from container
       } else {
         console.log("[LeftPanel] triggerCreateItineraryFromHook 호출 실패 (triggerCreateItinerary)");
         toast.error("일정 생성에 실패했습니다. 다시 시도해주세요.");
@@ -175,9 +211,9 @@ const LeftPanel: React.FC = () => {
   return (
     <div className="relative h-full">
       <LeftPanelContainer
-        showItinerary={effectiveShowItinerary && !isGeneratingItinerary} // Pass effective state
+        showItinerary={effectiveShowItinerary && !isGeneratingItinerary} 
         onSetShowItinerary={setShowItinerary} 
-        selectedPlaces={placesManagement.selectedPlaces}
+        selectedPlaces={placesManagement.selectedPlaces as Place[]} // Cast to Place[]
         onRemovePlace={placesManagement.handleRemovePlace}
         onViewOnMap={placesManagement.handleViewOnMap}
         allCategoriesSelected={placesManagement.allCategoriesSelected}
@@ -186,20 +222,15 @@ const LeftPanel: React.FC = () => {
             onDateSelect={tripDetails.setDates}
             onOpenRegionPanel={() => regionSelection.setRegionSlidePanelOpen(true)}
             hasSelectedDates={!!tripDetails.dates.startDate && !!tripDetails.dates.endDate}
-            onCategoryClick={(categoryName) => {
-              // This might be where we want to show category specific input panels or results
-              // For now, it calls categorySelection.handleCategoryButtonClick
-              // which might set activeMiddlePanelCategory
+            onCategoryClick={(categoryName) => { // categoryName is Korean string e.g. "숙소"
               categorySelection.handleCategoryButtonClick(categoryName);
-              // If a category click should open the result panel for it:
-              // setCategoryResultPanelCategory(categoryName); 
             }}
             regionConfirmed={regionSelection.regionConfirmed}
             categoryStepIndex={categorySelection.stepIndex}
-            activeMiddlePanelCategory={categorySelection.activeMiddlePanelCategory}
-            confirmedCategories={categorySelection.confirmedCategories}
-            selectedKeywordsByCategory={categorySelection.selectedKeywordsByCategory}
-            toggleKeyword={categorySelection.toggleKeyword}
+            activeMiddlePanelCategory={categorySelection.activeMiddlePanelCategory} // This is Korean string
+            confirmedCategories={categorySelection.confirmedCategories} // Korean strings
+            selectedKeywordsByCategory={categorySelection.selectedKeywordsByCategory} // Keys are Korean strings
+            toggleKeyword={categorySelection.toggleKeyword} // First arg is Korean string
             directInputValues={{
               accomodation: keywordsAndInputs.directInputValues['숙소'] || '',
               landmark: keywordsAndInputs.directInputValues['관광지'] || '',
@@ -212,11 +243,11 @@ const LeftPanel: React.FC = () => {
               restaurant: (value: string) => keywordsAndInputs.onDirectInputChange('음식점', value),
               cafe: (value: string) => keywordsAndInputs.onDirectInputChange('카페', value)
             }}
-            onConfirmCategory={{ // This is for confirming keywords within a category panel
-              accomodation: (finalKeywords: string[]) => handleConfirmByCategory('숙소', finalKeywords),
-              landmark: (finalKeywords: string[]) => handleConfirmByCategory('관광지', finalKeywords),
-              restaurant: (finalKeywords: string[]) => handleConfirmByCategory('음식점', finalKeywords),
-              cafe: (finalKeywords: string[]) => handleConfirmByCategory('카페', finalKeywords)
+            onConfirmCategory={{ 
+              accomodation: (finalKeywords: string[]) => handleConfirmByCategoryKeywords('숙소', finalKeywords),
+              landmark: (finalKeywords: string[]) => handleConfirmByCategoryKeywords('관광지', finalKeywords),
+              restaurant: (finalKeywords: string[]) => handleConfirmByCategoryKeywords('음식점', finalKeywords),
+              cafe: (finalKeywords: string[]) => handleConfirmByCategoryKeywords('카페', finalKeywords)
             }}
             handlePanelBack={{
               accomodation: () => handlePanelBackByCategory('숙소'),
@@ -224,7 +255,7 @@ const LeftPanel: React.FC = () => {
               restaurant: () => handlePanelBackByCategory('음식점'),
               cafe: () => handlePanelBackByCategory('카페')
             }}
-            isCategoryButtonEnabled={categorySelection.isCategoryButtonEnabled}
+            isCategoryButtonEnabled={categorySelection.isCategoryButtonEnabled} // Arg is Korean string
             isGenerating={isGeneratingItinerary} 
           />
         }
@@ -236,8 +267,8 @@ const LeftPanel: React.FC = () => {
         }}
         onCreateItinerary={triggerCreateItinerary} 
         itinerary={itinerary} 
-        selectedItineraryDay={selectedItineraryDay} // Pass correct prop name
-        onSelectDay={handleSelectItineraryDay}      // Pass correct prop name
+        selectedItineraryDay={selectedItineraryDay} 
+        onSelectDay={handleSelectItineraryDay}      
         isGenerating={isGeneratingItinerary} 
       />
 
@@ -257,15 +288,13 @@ const LeftPanel: React.FC = () => {
       />
 
       <CategoryResultHandler
-        showCategoryResult={categoryResultPanelCategory} // Use local state
+        showCategoryResult={categoryResultPanelCategory} 
         selectedRegions={regionSelection.selectedRegions}
-        // selectedKeywordsByCategory={categorySelection.selectedKeywordsByCategory} // This might be needed by CategoryResultHandler
-        // For now, I will use the direct selectedKeywords for the active category if available
-        selectedKeywords={categoryResultPanelCategory ? categorySelection.selectedKeywordsByCategory[categoryResultPanelCategory] : []}
+        selectedKeywords={categoryResultPanelCategory ? (categorySelection.selectedKeywordsByCategory[mapCategoryNameToKorean(categoryResultPanelCategory)] || []) : []}
         onClose={handleResultClose}
         onSelectPlace={placesManagement.handleSelectPlace}
-        selectedPlaces={placesManagement.selectedPlaces}
-        onConfirmCategory={handleConfirmCategorySelection} 
+        selectedPlaces={placesManagement.selectedPlaces as SelectedPlace[]} // Cast to SelectedPlace[]
+        onConfirmCategory={handleConfirmCategorySelectionAndAutocomplete} 
       />
       
       {process.env.NODE_ENV === 'development' && (

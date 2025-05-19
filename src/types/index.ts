@@ -1,3 +1,4 @@
+
 // 기본 장소 인터페이스
 export interface Place {
   id: string | number; // Allow number for geoNodeId consistency
@@ -117,7 +118,7 @@ export interface ServerRouteResponse {
   interleaved_route?: number[]; // Optional as per original
 }
 
-// 타입 검�� 함수 (업데이트)
+// 타입 검 함수 (업데이트)
 export function isNewServerScheduleResponse(obj: any): obj is NewServerScheduleResponse {
   return (
     obj !== null &&
@@ -143,3 +144,7 @@ export interface RawServerResponse {
   route_summary?: ServerRouteSummaryItem[];
   [key: string]: any;
 }
+
+// 카테고리 이름 타입
+export type CategoryName = 'accommodation' | 'landmark' | 'restaurant' | 'cafe';
+
