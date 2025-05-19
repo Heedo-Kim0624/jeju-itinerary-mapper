@@ -6,7 +6,7 @@ import RegionPanelHandler from './RegionPanelHandler';
 import CategoryResultHandler from './CategoryResultHandler';
 import ItineraryView from './ItineraryView';
 import { CategoryName } from '@/utils/categoryUtils';
-import { Place, ItineraryDay as GlobalItineraryDay } from '@/types';
+import { Place, ItineraryDay } from '@/types';
 import { toast } from 'sonner';
 
 const LeftPanel: React.FC = () => {
@@ -38,7 +38,7 @@ const LeftPanel: React.FC = () => {
   // Event listener for 'itineraryCreated'
   useEffect(() => {
     const handleItineraryCreated = (event: Event) => {
-      const customEvent = event as CustomEvent<{ itinerary: GlobalItineraryDay[], selectedDay: number | null, showItinerary: boolean }>;
+      const customEvent = event as CustomEvent<{ itinerary: ItineraryDay[], selectedDay: number | null, showItinerary: boolean }>;
       const { itinerary, selectedDay, showItinerary: eventShowItinerary } = customEvent.detail;
       
       console.log('[LeftPanel] "itineraryCreated" 이벤트 수신:', {
@@ -48,20 +48,26 @@ const LeftPanel: React.FC = () => {
         현재패널표시상태_before: uiVisibility.showItinerary
       });
 
-      // Update states based on event detail
-      // itineraryManagement.setItinerary(itinerary); // useLeftPanel should handle this via its own event listener or direct update
-      // itineraryManagement.setSelectedItineraryDay(selectedDay); // Same as above
-      
-      // Crucially, update the visibility state
-      if (eventShowItinerary) {
-        uiVisibility.setShowItinerary(true);
-        console.log("[LeftPanel] setShowItinerary(true) 호출됨 (이벤트 핸들러)");
+      // Check if itineraryManagement and its methods exist before calling
+      if (itineraryManagement && typeof itineraryManagement.setItinerary === 'function') {
+        itineraryManagement.setItinerary(itinerary || []);
       } else {
-        // If event explicitly says not to show, or if itinerary is empty
-        uiVisibility.setShowItinerary(false);
-        console.log("[LeftPanel] setShowItinerary(false) 호출됨 (이벤트 핸들러 - 빈 일정 또는 명시적 숨김)");
+        console.warn("[LeftPanel] itineraryManagement.setItinerary is not available.");
       }
-      setIsGeneratingItinerary(false); // Stop local loading indicator
+
+      if (itineraryManagement && typeof itineraryManagement.setSelectedItineraryDay === 'function') {
+        itineraryManagement.setSelectedItineraryDay(selectedDay);
+      } else {
+        console.warn("[LeftPanel] itineraryManagement.setSelectedItineraryDay is not available.");
+      }
+      
+      if (uiVisibility && typeof uiVisibility.setShowItinerary === 'function') {
+        uiVisibility.setShowItinerary(eventShowItinerary && itinerary && itinerary.length > 0);
+         console.log(`[LeftPanel] setShowItinerary(${eventShowItinerary && itinerary && itinerary.length > 0}) 호출됨 (이벤트 핸들러)`);
+      } else {
+        console.warn("[LeftPanel] uiVisibility.setShowItinerary is not available.");
+      }
+      setIsGeneratingItinerary(false);
     };
     
     window.addEventListener('itineraryCreated', handleItineraryCreated);
@@ -69,8 +75,6 @@ const LeftPanel: React.FC = () => {
     // Optional: Listen to forceRerender if still needed for other purposes
     const handleForceRerender = () => {
       console.log("[LeftPanel] forceRerender 이벤트 수신. 로딩 상태 재확인.");
-      // This might be redundant if isLoading is managed well by the generating hook.
-      // setIsGeneratingItinerary(false); 
     };
     window.addEventListener('forceRerender', handleForceRerender);
 
@@ -78,7 +82,7 @@ const LeftPanel: React.FC = () => {
       window.removeEventListener('itineraryCreated', handleItineraryCreated);
       window.removeEventListener('forceRerender', handleForceRerender);
     };
-  }, [uiVisibility, itineraryManagement.setItinerary, itineraryManagement.setSelectedItineraryDay]);
+  }, [uiVisibility, itineraryManagement]); // Simplified dependency array, ensure itineraryManagement itself is stable or correctly includes its methods.
 
   const handlePanelBackByCategory = (category: string) => {
     console.log(`${category} 카테고리 패널 뒤로가기`);
@@ -96,7 +100,7 @@ const LeftPanel: React.FC = () => {
     return true;
   };
 
-  const handleConfirmCategorySelection = ( // Renamed from handleConfirmCategory to avoid conflict
+  const handleConfirmCategorySelection = ( 
     category: CategoryName,
     userSelectedInPanel: Place[],
     recommendedPoolForCategory: Place[]
@@ -104,7 +108,7 @@ const LeftPanel: React.FC = () => {
     const nDaysInNights = tripDetails.tripDuration;
 
     console.log(
-      `[LeftPanel] '${category}' 카테고리 결과 확인. 사용자가 패널에서 선택: ${userSelectedInPanel.length}개, 전체 추천 풀: ${recommendedPoolForCategory.length}개. 여행 기간(박): ${nDaysInNights}`
+      `[LeftPanel] '${category}' 카테고리 결과 확인. 사용자가 패널에서 선��: ${userSelectedInPanel.length}개, 전체 추천 풀: ${recommendedPoolForCategory.length}개. 여행 기간(박): ${nDaysInNights}`
     );
 
     if (nDaysInNights === null) {
@@ -134,36 +138,28 @@ const LeftPanel: React.FC = () => {
   };
   
   const triggerCreateItinerary = useCallback(async () => {
-    if (isGeneratingItinerary) return false; // Prevent multiple rapid clicks
+    if (isGeneratingItinerary) return false;
 
     setIsGeneratingItinerary(true);
     console.log("[LeftPanel] 일정 생성 시작 (triggerCreateItinerary), 로컬 로딩 상태 true");
     
     try {
-      // handleCreateItinerary is from useLeftPanel, which should orchestrate
-      // calling useItineraryHandlers.handleCreateItinerary, which in turn calls
-      // useScheduleGenerationRunner.runScheduleGenerationProcess
       const success = await handleCreateItinerary(); 
       
       if (success) {
         console.log("[LeftPanel] handleCreateItinerary 호출 성공 (triggerCreateItinerary)");
-        // The 'itineraryCreated' event from useScheduleGenerationRunner
-        // should now handle setting showItinerary and updating itinerary data.
-        // So, direct manipulation of uiVisibility.setShowItinerary(true) here might be redundant
-        // if the event system works correctly.
       } else {
         console.log("[LeftPanel] handleCreateItinerary 호출 실패 (triggerCreateItinerary)");
         toast.error("일정 생성에 실패했습니다. 다시 시도해주세요.");
-        setIsGeneratingItinerary(false); // Reset loading on explicit failure
+        setIsGeneratingItinerary(false); 
       }
       return success;
     } catch (error) {
       console.error("[LeftPanel] 일정 생성 중 오류 (triggerCreateItinerary):", error);
       toast.error("일정 생성 중 심각한 오류가 발생했습니다.");
-      setIsGeneratingItinerary(false); // Reset loading on catch
+      setIsGeneratingItinerary(false); 
       return false;
     }
-    // Note: setIsGeneratingItinerary(false) is primarily handled by the 'itineraryCreated' event listener now.
   }, [handleCreateItinerary, isGeneratingItinerary, setIsGeneratingItinerary]);
 
   const effectiveShowItinerary = uiVisibility.showItinerary && itineraryManagement.itinerary && itineraryManagement.itinerary.length > 0;
@@ -180,24 +176,23 @@ const LeftPanel: React.FC = () => {
 
   return (
     <div className="relative h-full">
-      {effectiveShowItinerary && !isGeneratingItinerary ? ( // Show itinerary if available and not currently generating
+      {effectiveShowItinerary && !isGeneratingItinerary ? ( 
         <div className="fixed top-0 left-0 w-[300px] h-full bg-white border-r border-gray-200 z-40 shadow-md">
           <ItineraryView
             itinerary={itineraryManagement.itinerary!}
             startDate={tripDetails.dates?.startDate || new Date()}
-            onSelectDay={itineraryManagement.handleSelectItineraryDay}
+            onDaySelect={itineraryManagement.handleSelectItineraryDay}
             selectedDay={itineraryManagement.selectedItineraryDay}
             onClose={() => {
-              handleCloseItinerary(); // This should also set showItinerary to false via useLeftPanel
+              handleCloseItinerary(); 
               console.log("[LeftPanel] ItineraryView closed.");
             }}
-            // debug prop might not be needed if console logs are sufficient
           />
         </div>
       ) : (
         <LeftPanelContainer
-          showItinerary={uiVisibility.showItinerary} // Pass down the state from useLeftPanel
-          onSetShowItinerary={uiVisibility.setShowItinerary} // Pass down the setter
+          showItinerary={uiVisibility.showItinerary} 
+          onSetShowItinerary={uiVisibility.setShowItinerary} 
           selectedPlaces={placesManagement.selectedPlaces}
           onRemovePlace={placesManagement.handleRemovePlace}
           onViewOnMap={placesManagement.handleViewOnMap}
@@ -239,7 +234,7 @@ const LeftPanel: React.FC = () => {
                 cafe: () => handlePanelBackByCategory('카페')
               }}
               isCategoryButtonEnabled={categorySelection.isCategoryButtonEnabled}
-              isGenerating={isGeneratingItinerary} // Pass local loading state
+              isGenerating={isGeneratingItinerary} 
             />
           }
           dates={{
@@ -248,11 +243,11 @@ const LeftPanel: React.FC = () => {
             startTime: tripDetails.dates?.startTime || "09:00",
             endTime: tripDetails.dates?.endTime || "21:00"
           }}
-          onCreateItinerary={triggerCreateItinerary} // Use the local wrapper
+          onCreateItinerary={triggerCreateItinerary} 
           itinerary={itineraryManagement.itinerary}
           selectedItineraryDay={itineraryManagement.selectedItineraryDay}
           onSelectDay={itineraryManagement.handleSelectItineraryDay}
-          isGenerating={isGeneratingItinerary} // Pass local loading state
+          isGenerating={isGeneratingItinerary} 
         />
       )}
 
@@ -278,7 +273,7 @@ const LeftPanel: React.FC = () => {
         onClose={handleResultClose}
         onSelectPlace={placesManagement.handleSelectPlace}
         selectedPlaces={placesManagement.selectedPlaces}
-        onConfirmCategory={handleConfirmCategorySelection} // Use renamed handler
+        onConfirmCategory={handleConfirmCategorySelection} 
       />
       
       {process.env.NODE_ENV === 'development' && (

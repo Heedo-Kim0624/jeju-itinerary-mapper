@@ -1,24 +1,22 @@
 
-import { CategoryName } from '@/utils/categoryUtils';
-
 // 기본 장소 인터페이스
 export interface Place {
-  id: string;
+  id: string | number; // Allow number for geoNodeId consistency
   name: string;
-  address: string;
-  phone: string;
-  category: string; // Could be CategoryName or a broader string type
-  description: string;
-  rating: number;
+  address?: string;
+  phone?: string;
+  category?: string; // Consider using CategoryName from '@/utils/categoryUtils' if appropriate
+  description?: string;
+  rating?: number;
   x: number;
   y: number;
-  image_url: string;
-  road_address: string;
-  homepage: string;
-  operationTimeData?: { [key: string]: number; };
+  image_url?: string;
+  road_address?: string;
+  homepage?: string;
+  operationTimeData?: { [key: string]: number };
   isSelected?: boolean;
   isRecommended?: boolean;
-  geoNodeId?: string;
+  geoNodeId?: string; // Typically string, but server might send number
   geoNodeDistance?: number;
   weight?: number;
   isCandidate?: boolean;
@@ -30,9 +28,10 @@ export interface Place {
   operatingHours?: string;
 }
 
-// 선택된 장소 인터페이스
+// 선택된 장소 인터페이스 (예시, 필요시 확장)
+// import { CategoryName } from '@/utils/categoryUtils'; // If strict category needed
 export interface SelectedPlace extends Place {
-  category: CategoryName; // Strictly CategoryName here
+  // category: CategoryName; 
   isSelected: boolean;
   isCandidate: boolean;
 }
@@ -51,35 +50,10 @@ export interface SchedulePayload {
   end_datetime: string; // ISO8601 타임스탬프
 }
 
-// 서버 스케줄 항목
-export interface ServerScheduleItem {
-  id?: number | string;
-  time_block: string;
-  place_name: string;
-  place_type: string;
-}
-
-// 서버 경로 요약 항목
-export interface ServerRouteSummaryItem {
-  day: string;                   // "Tue", "Wed", "Thu", "Fri" 등
-  status: string;                // "성공" 등
-  total_distance_m: number;      // 미터 단위 총 거리
-  places_routed?: string[];      // 경로에 포함된 장소 이름 배열 (optional)
-  places_scheduled?: string[];   // 일정에 포함된 장소 이름 배열 (optional)
-  interleaved_route: (string | number)[]; // NODE_ID와 LINK_ID가 번갈아 있는 배열 (string or number)
-}
-
-// 서버 응답 인터페이스
-export interface NewServerScheduleResponse {
-  total_reward?: number;
-  schedule: ServerScheduleItem[];
-  route_summary: ServerRouteSummaryItem[];
-}
-
-// 경로 데이터 인터페이스
+// 경로 데이터 인터페이스 (표준화)
 export interface RouteData {
-  nodeIds: string[];
-  linkIds: string[];
+  nodeIds: string[]; // 필수 속성으로 통일
+  linkIds: string[]; // 필수 속성으로 통일
   segmentRoutes?: SegmentRoute[];
 }
 
@@ -91,14 +65,7 @@ export interface SegmentRoute {
   linkIds: string[];
 }
 
-// 서버 경로 응답 (지도 표시에 사용될 수 있음)
-export interface ServerRouteResponse {
-  nodeIds: number[]; // Note: Often these are numbers from server, converted to string in RouteData
-  linkIds: number[];
-  interleaved_route?: number[];
-}
-
-// 일정 장소 인터페이스 (Place에 시간 정보 추가)
+// 일정 장소 인터페이스
 export interface ItineraryPlaceWithTime extends Place {
   arriveTime?: string;
   departTime?: string;
@@ -108,18 +75,50 @@ export interface ItineraryPlaceWithTime extends Place {
   // geoNodeId is already in Place
 }
 
-// 일정 일자 인터페이스
+// 일정 일자 인터페이스 (표준화)
 export interface ItineraryDay {
   day: number;
   places: ItineraryPlaceWithTime[];
   totalDistance: number; // km 단위
-  routeData?: RouteData; // Made optional to match use-itinerary-creator.ts logic
-  interleaved_route?: (string | number)[];
-  dayOfWeek: string; // 예: "Mon", "Tue"
-  date: string;      // 예: "05/21" (MM/DD 형식)
+  routeData: RouteData; // 필수 속성으로 통일, 내용도 필수
+  interleaved_route?: (string | number)[]; // 서버 응답 원본 유지용
+  dayOfWeek: string; // 예: "Mon", "Tue" (필수)
+  date: string;      // 예: "05/21" (MM/DD 형식) (필수)
 }
 
-// 타입 검사 함수 (값으로 사용되므로 import type이 아닌 일반 import 필요)
+// 서버 스케줄 항목
+export interface ServerScheduleItem {
+  id?: number | string;
+  time_block: string;
+  place_name: string;
+  place_type: string;
+}
+
+// 서버 경로 요약 항목 (사용자 제안에 따라 필수 항목 강화)
+export interface ServerRouteSummaryItem {
+  day: string;                   // "Tue", "Wed", "Thu", "Fri" 등
+  status: string;                // "성공" 등
+  total_distance_m: number;      // 미터 단위 총 거리
+  places_scheduled: string[];   // 일정에 포함된 장소 이름 배열 (필수)
+  places_routed: string[];      // 경로에 포함된 장소 이름 배열 (필수)
+  interleaved_route: number[]; // NODE_ID와 LINK_ID가 번갈아 있는 숫자 배열 (필수)
+}
+
+// 서버 응답 인터페이스 (사용자 제안에 따라 ServerRouteSummaryItem 변경 적용)
+export interface NewServerScheduleResponse {
+  total_reward?: number;
+  schedule: ServerScheduleItem[];
+  route_summary: ServerRouteSummaryItem[];
+}
+
+// 서버 경로 응답 (지도 표시에 사용될 수 있음)
+export interface ServerRouteResponse {
+  nodeIds: number[];
+  linkIds: number[];
+  interleaved_route?: number[]; // Optional as per original
+}
+
+// 타입 검사 함수 (사용자 제안 반영하여 ServerRouteSummaryItem 필드 검사 강화)
 export function isNewServerScheduleResponse(obj: any): obj is NewServerScheduleResponse {
   return (
     obj !== null &&
@@ -133,19 +132,17 @@ export function isNewServerScheduleResponse(obj: any): obj is NewServerScheduleR
       typeof item.day === 'string' &&
       item.hasOwnProperty('status') && // Use hasOwnProperty for safer check
       item.hasOwnProperty('total_distance_m') &&
-      // places_scheduled and places_routed are now optional, so check if they exist before Array.isArray
-      (item.places_scheduled === undefined || Array.isArray(item.places_scheduled)) &&
-      (item.places_routed === undefined || Array.isArray(item.places_routed)) &&
-      Array.isArray(item.interleaved_route)
+      Array.isArray(item.places_scheduled) && // Now required
+      Array.isArray(item.places_routed) &&    // Now required
+      Array.isArray(item.interleaved_route)   // Now required (and number[] as per ServerRouteSummaryItem)
     )
   );
 }
 
-// Raw Data Types (from user's previous plan)
+// Raw Data Types (from user's previous plan) - Can be removed if not used
 export interface RawServerResponse {
   total_reward?: number;
-  schedule?: ServerScheduleItem[]; // Use more specific type if possible
-  route_summary?: ServerRouteSummaryItem[]; // Use more specific type
-  [key: string]: any; // For any other properties
+  schedule?: ServerScheduleItem[];
+  route_summary?: ServerRouteSummaryItem[];
+  [key: string]: any;
 }
-
