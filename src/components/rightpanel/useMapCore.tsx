@@ -1,11 +1,13 @@
 
 import { useMapInitialization } from '@/hooks/map/useMapInitialization';
 import { useMapNavigation } from '@/hooks/map/useMapNavigation';
+// import { useMapMarkers } from '@/hooks/map/useMapMarkers'; // Deprecated
+// import { useMapItineraryRouting } from '@/hooks/map/useMapItineraryRouting'; // Older
 import { useGeoJsonState } from '@/hooks/map/useGeoJsonState';
 import { useServerRoutes } from '@/hooks/map/useServerRoutes';
 import { useMapFeatures } from '@/hooks/map/useMapFeatures';
 import { Place, ItineraryDay } from '@/types/supabase';
-import { ServerRouteResponse, SegmentRoute } from '@/types/schedule';
+import { ServerRouteResponse, SegmentRoute } from '@/types/schedule'; // SegmentRoute 추가
 
 /**
  * 지도 핵심 기능 통합 훅
@@ -15,7 +17,7 @@ const useMapCore = () => {
     map, 
     mapContainer, 
     isMapInitialized, 
-    isNaverLoaded,
+    isNaverLoaded, // isNaverLoaded를 여기서 가져옴
     isMapError
   } = useMapInitialization();
   
@@ -23,7 +25,7 @@ const useMapCore = () => {
   const features = useMapFeatures(map, isNaverLoaded); 
 
   const { 
-    clearAllMapElements, 
+    clearMarkersAndUiElements, 
   } = features;
 
   const { 
@@ -55,23 +57,20 @@ const useMapCore = () => {
         setServerRoutesBase(dayRoutes);
     }
   };
-
-  // renderItineraryRoute는 MapContextType의 시그니처와 일치해야 함
-  const renderItineraryRouteWrapper = (
+  
+  const renderItineraryRoute = (
     itineraryDay: ItineraryDay | null,
     allServerRoutesInput?: Record<number, ServerRouteResponse>,
     onCompleteInput?: () => void
   ) => {
-    // features.renderItineraryRoute 호출 시 모든 인자 전달
     features.renderItineraryRoute(
         itineraryDay,
-        allServerRoutesInput,
+        allServerRoutesInput ?? serverRoutesData,
         onCompleteInput
     );
   };
 
-  // showRouteForPlaceIndex wrapper - 시그니처 일치 확인
-  const showRouteForPlaceIndexWrapper = (
+  const showRouteForPlaceIndex = (
     placeIndex: number, 
     itineraryDay: ItineraryDay,
     onComplete?: () => void
@@ -83,24 +82,20 @@ const useMapCore = () => {
     );
   };
   
-  // calculateRoutesWrapper - 이 함수는 재검토 필요
   const calculateRoutesWrapper = (placesToRoute: Place[]) => {
     features.calculateRoutes(placesToRoute);
   };
   
-  // highlightSegmentWrapper
+  // highlightSegment의 타입이 (segment: SegmentRoute | null) => void 이므로,
+  // useMapCore에서 그대로 전달하면 됩니다.
+  // MapContextType에서 이 타입을 맞춰줘야 합니다.
   const highlightSegmentWrapper = (segment: SegmentRoute | null) => {
     features.highlightSegment(segment);
   };
 
-  // renderGeoJsonRouteWrapper는 renderItineraryRouteWrapper와 유사하게 동작
-  const renderGeoJsonRouteWrapperInternal = (
-    itineraryDay: ItineraryDay | null,
-    allServerRoutes?: Record<number, ServerRouteResponse>,
-    onComplete?: () => void
-  ) => {
-    // features.renderGeoJsonRoute 호출 시 모든 인자 전달
-    features.renderGeoJsonRoute(itineraryDay, allServerRoutes, onComplete);
+  // Fix for renderGeoJsonRoute to make it return void
+  const renderGeoJsonRouteWrapper = (route: SegmentRoute) => {
+    features.renderGeoJsonRoute(route);
   };
 
   return {
@@ -111,9 +106,7 @@ const useMapCore = () => {
     isMapError,
     addMarkers: features.addMarkers,
     calculateRoutes: calculateRoutesWrapper,
-    clearAllMapElements: features.clearAllMapElements,
-    clearAllRoutes: features.clearAllRoutes,
-    clearAllMarkers: features.clearAllMarkers,
+    clearMarkersAndUiElements,
     panTo,
     showGeoJson,
     toggleGeoJsonVisibility,
@@ -123,11 +116,12 @@ const useMapCore = () => {
     handleGeoJsonLoaded,
     checkGeoJsonMapping,
     mapPlacesWithGeoNodes: features.mapPlacesWithGeoNodes,
-    renderItineraryRoute: renderItineraryRouteWrapper, 
+    renderItineraryRoute, 
+    clearAllRoutes: features.clearAllRoutes,
     highlightSegment: highlightSegmentWrapper, 
     clearPreviousHighlightedPath: features.clearPreviousHighlightedPath,
-    showRouteForPlaceIndex: showRouteForPlaceIndexWrapper, 
-    renderGeoJsonRoute: renderGeoJsonRouteWrapperInternal,
+    showRouteForPlaceIndex, 
+    renderGeoJsonRoute: renderGeoJsonRouteWrapper,
     serverRoutesData,
     setServerRoutes
   };
