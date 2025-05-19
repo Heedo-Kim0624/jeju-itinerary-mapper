@@ -18,16 +18,16 @@ interface ContentSectionProps {
   totalPages: number;
   itinerary: ItineraryDay[] | null;
   dateRange: { startDate: Date | null, endDate: Date | null };
-  selectedItineraryDay: ItineraryDay | null;
+  selectedItineraryDay: number | null;
   isPlaceListReady: boolean;
   isCategorySelectionComplete: boolean;
   onSelectPlace: (place: Place) => void;
   onPageChange: (page: number) => void;
   onCreateItinerary: () => void;
-  onSelectItineraryDay: (day: ItineraryDay) => void; // 변경됨: number -> ItineraryDay
+  onSelectItineraryDay: (day: number) => void;
   setShowItinerary: (show: boolean) => void;
   setItinerary: (itinerary: ItineraryDay[] | null) => void;
-  setSelectedItineraryDay: (day: ItineraryDay | null) => void; // 변경됨: number | null -> ItineraryDay | null
+  setSelectedItineraryDay: (day: number | null) => void;
 }
 
 // Function to fetch place details directly from Supabase
@@ -305,14 +305,8 @@ const ContentSection: React.FC<ContentSectionProps> = ({
             <ItineraryView
               itinerary={itinerary}
               startDate={dateRange.startDate}
-              onSelectDay={(dayNum) => {
-                // day는 number로 전달되지만, ItineraryDay 객체가 필요함
-                const dayObj = itinerary.find(d => d.day === dayNum);
-                if (dayObj) {
-                  onSelectItineraryDay(dayObj);
-                }
-              }}
-              selectedDay={selectedItineraryDay?.day || null}
+              onSelectDay={onSelectItineraryDay}
+              selectedDay={selectedItineraryDay}
             />
           )}
         </>
