@@ -1,147 +1,83 @@
-
 import { useCallback } from 'react';
-import { SelectedPlace, ItineraryDay, ItineraryPlaceWithTime, CategoryName } from '@/types/supabase';
-import { NewServerScheduleResponse, ServerScheduleItem, ServerRouteSummaryItem } from '@/types/schedule';
-import { extractAllNodesFromRoute, extractAllLinksFromRoute } from '@/utils/routeParser';
+import { SelectedPlace, ItineraryDay, ItineraryPlaceWithTime, CategoryName, Place, toCategoryName, toCategoryNameKorean } from '@/types/index';
+import { NewServerScheduleResponse, ScheduleEntry, DailyRouteSummary, RouteData } from '@/types/schedule';
+import { extractAllNodesFromRoute, extractAllLinksFromRoute, parseInterleavedRoute } from '@/utils/routeParser';
 
 interface UseScheduleParserProps {
-  currentSelectedPlaces: SelectedPlace[];
+  currentSelectedPlaces: SelectedPlace[]; // raw 장소 정보 조회용
 }
 
-// Helper interface for GeoJSON nodes expected from MapContext
-interface MapContextGeoNode {
-  id: string; // This should be the NODE_ID
-  coordinates: [number, number]; // [longitude, latitude]
-}
-
-// Function to find coordinates from MapContext's GeoJSON nodes
-export const findCoordinatesFromMapContextNodes = (
-  nodeIdToFind: string | number,
-  mapContextGeoNodes: MapContextGeoNode[] | null
-): [number, number] | null => {
-  if (!mapContextGeoNodes) return null;
-  const nodeIdStr = String(nodeIdToFind);
-  const foundNode = mapContextGeoNodes.find(node => String(node.id) === nodeIdStr);
-  
-  if (foundNode && foundNode.coordinates) {
-    return foundNode.coordinates; // [longitude, latitude]
-  }
-  console.warn(`[findCoordinatesFromMapContextNodes] Coordinates not found for NODE_ID: ${nodeIdStr}`);
-  return null;
-};
-
-// Function to update itinerary places with coordinates
-export const updateItineraryWithCoordinates = (
-  itineraryDays: ItineraryDay[],
-  mapContextGeoNodes: MapContextGeoNode[] | null
-): ItineraryDay[] => {
-  if (!mapContextGeoNodes || !itineraryDays.length) {
-    if (!mapContextGeoNodes) console.warn("[updateItineraryWithCoordinates] mapContextGeoNodes is null or empty.");
-    if (!itineraryDays.length) console.warn("[updateItineraryWithCoordinates] itineraryDays is empty.");
-    return itineraryDays;
-  }
-  console.log("[updateItineraryWithCoordinates] Starting coordinate update. GeoNodes available:", mapContextGeoNodes.length > 0);
-
-  return itineraryDays.map(day => {
-    const updatedPlaces = day.places.map(place => {
-      const coordinates = findCoordinatesFromMapContextNodes(place.id, mapContextGeoNodes);
-      if (coordinates) {
-        return {
-          ...place,
-          x: coordinates[0], // longitude
-          y: coordinates[1], // latitude
-          geoNodeId: String(place.id),
-        };
-      }
-      return place;
-    });
-    return { ...day, places: updatedPlaces };
-  });
-};
+// GeoJSON 노드 관련 함수들은 MapContext 또는 GeoJsonLayer 내부로 이동하는 것이 적절해 보입니다.
+// 여기서는 일단 주석 처리합니다. 필요시 MapContext를 통해 좌표를 가져오는 로직으로 대체합니다.
+/*
+interface MapContextGeoNode { ... }
+export const findCoordinatesFromMapContextNodes = ( ... ) => { ... };
+export const updateItineraryWithCoordinates = ( ... ) => { ... };
+*/
 
 export const useScheduleParser = ({ currentSelectedPlaces }: UseScheduleParserProps) => {
-  const parseServerResponse = useCallback((
+  const parseSchedule = useCallback((
     response: NewServerScheduleResponse,
-    tripStartDate: Date | null
+    tripStartDateISO: string // ISO 문자열로 받음
   ): ItineraryDay[] => {
     console.log('[useScheduleParser] Processing server response:', response);
     if (!response || !response.schedule || !response.route_summary) {
-      console.error('[useScheduleParser] Invalid server response structure received:', response);
+      console.error('[useScheduleParser] Invalid server response structure:', response);
       return [];
     }
-    if (!tripStartDate) {
-      console.error("[useScheduleParser] Trip start date is required to parse server response days.");
+    if (!tripStartDateISO) {
+      console.error("[useScheduleParser] Trip start date (ISO string) is required.");
       return [];
     }
 
+    const tripStartDate = new Date(tripStartDateISO);
     const { schedule, route_summary } = response;
-    
-    const dayOfWeekMap: { [key: string]: number } = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
-    const tripStartDayOfWeekIndex = tripStartDate.getDay(); // 0 for Sun, 1 for Mon, ...
 
+    const dayOfWeekMap: { [key: string]: number } = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+    
     const formatDateForDisplay = (date: Date): string => {
-        return `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}`;
+      return `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}`;
     };
     const dayIndexToDayNameAbbrev = (index: number): string => {
-        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-        return dayNames[index % 7];
+      const dayNames = ['일', '월', '화', '수', '목', '금', '토']; // 한국어 요일
+      return dayNames[index % 7];
     };
 
-    // 이제 route_summary 배열로부터 ItineraryDay 객체 배열을 생성합니다.
-    const itineraryDays: ItineraryDay[] = route_summary.map((summaryItem: ServerRouteSummaryItem, index: number) => {
-      // 요일 계산 로직: Tue, Wed 등의 요일 문자열을 0부터 시작하는 요일 인덱스로 변환
-      const routeDayAbbrev = summaryItem.day.substring(0, 3); 
-      const routeDayOfWeekIndex = dayOfWeekMap[routeDayAbbrev];
-
-      // 여행 시작일로부터의 날짜 오프셋 계산
-      let dayNumberOffset = routeDayOfWeekIndex - tripStartDayOfWeekIndex;
-      if (dayNumberOffset < 0) dayNumberOffset += 7; 
-
-      // 해당 일자의 날짜 계산
+    const itineraryDays: ItineraryDay[] = route_summary.map((summaryItem: DailyRouteSummary, index: number) => {
+      // 서버에서 오는 day ("Tue", "Wed" 등)를 기반으로 날짜 계산
+      // 서버 응답의 요일 순서가 실제 날짜 순서와 일치한다고 가정
       const currentTripDate = new Date(tripStartDate);
-      currentTripDate.setDate(tripStartDate.getDate() + dayNumberOffset);
-      
-      // 여행 날짜 (1일차, 2일차, ...)
-      // 서버 응답 순서대로 1, 2, 3, 4로 설정 (대신 응답에서 day 필드를 활용)
-      const tripDayNumber = index + 1; 
+      currentTripDate.setDate(tripStartDate.getDate() + index); // index를 날짜 offset으로 사용
 
-      // interleaved_route에서 장소 노드 ID 추출
-      const placeNodeIdsInRoute = summaryItem.places_routed || [];
-      const interleaved_route = summaryItem.interleaved_route || [];
+      const tripDayNumber = index + 1; // 1일차, 2일차...
 
       // 이 날의 장소 정보 생성
       const placesForThisDay: ItineraryPlaceWithTime[] = [];
       
-      // places_routed와 schedule를 연결하여 각 장소에 대한 상세 정보 생성
-      const placesForDay = summaryItem.places_routed || [];
+      // schedule 항목에서 이 날짜에 해당하는 장소들을 필터링하고 순서대로 배치
+      // time_block (e.g., "Tue_0900")을 기준으로 필터링
+      const currentDayScheduleEntries = schedule.filter(entry => entry.time_block.startsWith(summaryItem.day));
       
-      placesForDay.forEach((placeName, placeIndex) => {
-        // 해당 장소 이름과 일치하는 schedule 항목 찾기
-        const matchingScheduleItems = schedule.filter(sItem => 
-          sItem.place_name === placeName && sItem.time_block.startsWith(summaryItem.day)
-        );
-        
-        if (matchingScheduleItems.length > 0) {
-          const matchingScheduleItem = matchingScheduleItems[0]; // 첫 번째 일치하는 항목 사용
-          
-          // 현재 선택된 장소들에서 추가 정보 찾기 (좌표, 주소 등)
-          const existingPlaceInfo = currentSelectedPlaces.find(p => p.name === matchingScheduleItem.place_name);
-          
-          // 시간 블록에서 시간 정보 추출 (예: 'Wed_09'에서 '09' 추출)
-          const timeBlockParts = matchingScheduleItem.time_block.split('_');
-          const timeStr = timeBlockParts.length > 1 ? timeBlockParts[1] : '';
-          // 시간은 그대로 유지 (시작/끝 특별 처리)
-          const formattedTime = timeStr === '시작' || timeStr === '끝' ? timeStr : timeStr;
-          
-          // 노드 ID 생성 (실제 ID가 없으면 인덱스 기반 임시 ID 사용)
-          const nodeId = placeIndex.toString(); // 일단 인덱스로 ID 설정
-          
-          // 각 장소에 대한 정보를 생성하여 배열에 추가
+      // interleaved_route에서 실제 장소 노드 ID (짝수 인덱스) 추출
+      const placeNodeIdsInRoute = summaryItem.interleaved_route.filter((_, i) => i % 2 === 0);
+
+      // places_routed 또는 places_scheduled가 있다면 그것을 기준으로 할 수도 있으나,
+      // 명세에서는 ScheduleEntry의 id가 NODE_ID와 일치한다고 했으므로 이를 활용
+      placeNodeIdsInRoute.forEach(nodeId => {
+        const matchingScheduleEntry = currentDayScheduleEntries.find(entry => entry.id === nodeId);
+        if (matchingScheduleEntry) {
+          const existingPlaceInfo = currentSelectedPlaces.find(p => p.name === matchingScheduleEntry.place_name) || 
+                                   currentSelectedPlaces.find(p => p.geoNodeId === nodeId); // geoNodeId로도 찾아보기
+
+          const timeStr = matchingScheduleEntry.time_block.split('_')[1] || ''; // "0900"
+          const formattedTime = timeStr ? `${timeStr.substring(0,2)}:${timeStr.substring(2,4)}` : '';
+
+
           placesForThisDay.push({
-            id: nodeId, // 임시 ID
-            name: matchingScheduleItem.place_name,
-            category: (matchingScheduleItem.place_type || 'unknown') as CategoryName,
-            timeBlock: formattedTime,
+            id: String(nodeId), // 일관성을 위해 string으로 변환
+            name: matchingScheduleEntry.place_name,
+            category: toCategoryName(matchingScheduleEntry.place_type), // 영문 CategoryName으로 변환
+            timeBlock: formattedTime, // "09:00" 형식
             x: existingPlaceInfo?.x || 0,
             y: existingPlaceInfo?.y || 0,
             address: existingPlaceInfo?.address || '',
@@ -153,42 +89,39 @@ export const useScheduleParser = ({ currentSelectedPlaces }: UseScheduleParserPr
             homepage: existingPlaceInfo?.homepage || '',
             isSelected: !!existingPlaceInfo?.isSelected,
             isCandidate: !!existingPlaceInfo?.isCandidate,
+            geoNodeId: String(nodeId), // geoNodeId 저장
           });
         } else {
-          console.warn(`[useScheduleParser] No schedule item found for place: ${placeName} in day ${summaryItem.day}.`);
-          // 일치하는 스케줄 항목이 없는 경우 플레이스홀더 추가
-          placesForThisDay.push({
-            id: placeIndex.toString(), // 임시 ID
-            name: placeName,
-            category: 'unknown' as CategoryName,
-            timeBlock: '',
-            x: 0, y: 0, address: '', phone: '', description: '', rating: 0, image_url: '', road_address: '', homepage: '',
-            isSelected: false, isCandidate: false,
-          });
+          // 스케줄 엔트리에 없지만 경로에는 있는 노드 (중간 경유지 등) - 필요시 처리
+          // console.warn(`Node ID ${nodeId} found in route but not in schedule for day ${summaryItem.day}`);
         }
       });
       
-      // ItineraryDay 객체 생성
+      // routeData 구성
+      const routeNodeIds = summaryItem.interleaved_route.filter((_, i) => i % 2 === 0);
+      const routeLinkIds = summaryItem.interleaved_route.filter((_, i) => i % 2 === 1);
+
       return {
-        day: tripDayNumber, // 1, 2, 3, 4 등으로 할당
+        day: tripDayNumber,
         places: placesForThisDay,
-        totalDistance: summaryItem.total_distance_m / 1000, // m에서 km로 변환
-        interleaved_route: interleaved_route, // 원본 interleaved_route 보존
-        routeData: {
-          nodeIds: extractAllNodesFromRoute(interleaved_route).map(String),
-          linkIds: extractAllLinksFromRoute(interleaved_route).map(String),
+        totalDistance: summaryItem.total_distance_m / 1000, // km로 변환
+        interleaved_route: summaryItem.interleaved_route, // 원본 숫자 배열 유지
+        routeData: { // RouteData 형식에 맞게
+          nodeIds: routeNodeIds,
+          linkIds: routeLinkIds,
         },
         dayOfWeek: dayIndexToDayNameAbbrev(currentTripDate.getDay()),
         date: formatDateForDisplay(currentTripDate),
       };
     });
 
-    // 일자순으로 정렬
     itineraryDays.sort((a, b) => a.day - b.day);
-    
-    console.log('[useScheduleParser] Processed itinerary days (before coord update):', JSON.parse(JSON.stringify(itineraryDays)));
+    console.log('[useScheduleParser] Processed itinerary days:', JSON.parse(JSON.stringify(itineraryDays)));
     return itineraryDays;
-  }, [currentSelectedPlaces]);
 
-  return { parseServerResponse };
+  }, [currentSelectedPlaces]);
+  
+  // updateItineraryWithCoordinates는 MapContext 또는 GeoJsonLayer에서 처리하도록 하고,
+  // 여기서는 파싱된 일정만 반환합니다. 좌표 주입은 별도 단계로.
+  return { parseSchedule };
 };

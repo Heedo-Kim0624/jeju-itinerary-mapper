@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { SchedulePayload, NewServerScheduleResponse } from '@/types/schedule';
+import { SchedulePayload, NewServerScheduleResponse } from '@/types/schedule'; // 타입 경로 수정
 import { toast } from 'sonner';
 
 // mockServerResponseData import removed

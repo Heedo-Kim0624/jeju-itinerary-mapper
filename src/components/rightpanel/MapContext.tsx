@@ -1,8 +1,7 @@
-
 import React, { createContext, useContext, useRef } from 'react';
-import { Place, ItineraryDay } from '@/types/supabase';
+import { Place, ItineraryDay } from '@/types/index';
 import useMapCore from './useMapCore';
-import { ServerRouteSummaryItem, ServerRouteResponse } from '@/types/schedule';
+import { ServerRouteResponse } from '@/types/schedule';
 
 interface MapContextType {
   map: any;
@@ -38,15 +37,14 @@ interface MapContextType {
   };
   mapPlacesWithGeoNodes: (places: Place[]) => Place[];
   showRouteForPlaceIndex: (placeIndex: number, itineraryDay: ItineraryDay) => void;
-  renderGeoJsonRoute: (nodeIds: string[], linkIds: string[], style?: any) => any[];
+  renderGeoJsonRoute: (nodeIds: (string|number)[], linkIds: (string|number)[], style?: any) => any[];
   geoJsonNodes: any[];
   geoJsonLinks: any[];
-  // 서버 경로 관련 기능 수정 - Aligning with error message for useMapCore's provided type
   setServerRoutes: (
     dayRoutes: Record<number, ServerRouteResponse> | 
                ((prevRoutes: Record<number, ServerRouteResponse>) => Record<number, ServerRouteResponse>)
   ) => void;
-  serverRoutesData: Record<number, ServerRouteResponse>; // Align data type as well
+  serverRoutesData: Record<number, ServerRouteResponse>;
 }
 
 const defaultContext: MapContextType = {
@@ -88,7 +86,6 @@ const MapContext = createContext<MapContextType>(defaultContext);
 
 export const useMapContext = () => useContext(MapContext);
 
-// Create a provider component that uses the useMapCore hook
 export const MapProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
   const mapCore = useMapCore();
   
