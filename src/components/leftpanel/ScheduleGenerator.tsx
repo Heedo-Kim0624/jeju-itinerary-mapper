@@ -78,6 +78,7 @@ export const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({
   }
 
   const panelStartDate = dates?.startDate || new Date();
+  const selectedItineraryDay = selectedDay ? itinerary.find(day => day.day === selectedDay) || null : null;
 
   console.log("[ScheduleGenerator] Rendering ItineraryPanel:", { 
     itineraryLength: itinerary.length, 
@@ -88,7 +89,10 @@ export const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({
     <ItineraryPanel 
       itinerary={itinerary} 
       startDate={panelStartDate}
-      onSelectDay={handleSelectDay}
+      onSelectDay={(dayNum) => {
+        // day는 number로 전달받아 handleSelectDay로 전달
+        handleSelectDay(dayNum);
+      }}
       onClose={onClose}
       selectedDay={selectedDay}
     />

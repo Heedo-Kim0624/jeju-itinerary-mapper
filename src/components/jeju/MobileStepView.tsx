@@ -29,7 +29,7 @@ interface MobileStepViewProps {
   currentPage: number;
   totalPages: number;
   itinerary: ItineraryDay[] | null;
-  selectedItineraryDay: number | null;
+  selectedItineraryDay: ItineraryDay | null; // 변경됨: number | null -> ItineraryDay | null
   isPanelHidden: boolean;
   isDateSelectionComplete: boolean;
   isSearchComplete: boolean;
@@ -41,7 +41,7 @@ interface MobileStepViewProps {
   onPageChange: (page: number) => void;
   onSearch: () => void;
   onCreateItinerary: () => void;
-  onSelectItineraryDay: (day: number) => void;
+  onSelectItineraryDay: (day: ItineraryDay) => void; // 변경됨: number -> ItineraryDay
   goToNextStep: () => void;
   goToPrevStep: () => void;
   togglePanel: () => void;
@@ -246,8 +246,8 @@ const MobileStepView: React.FC<MobileStepViewProps> = ({
           places={filteredPlaces}
           selectedPlace={selectedPlace}
           itinerary={itinerary}
-          selectedDay={selectedItineraryDay}
-          selectedPlaces={[]}
+          selectedItineraryDay={selectedItineraryDay}
+          selectedPlacesForMap={[]}
         />
       </div>
       
@@ -265,8 +265,14 @@ const MobileStepView: React.FC<MobileStepViewProps> = ({
       {isPanelHidden && itinerary && (
         <DaySelector 
           itinerary={itinerary}
-          selectedDay={selectedItineraryDay}
-          onSelectDay={onSelectItineraryDay}
+          selectedDay={selectedItineraryDay?.day || null}
+          onSelectDay={(dayNum) => {
+            // day는 number로 전달되지만, ItineraryDay 객체가 필요함
+            const dayObj = itinerary.find(d => d.day === dayNum);
+            if (dayObj) {
+              onSelectItineraryDay(dayObj);
+            }
+          }}
         />
       )}
       

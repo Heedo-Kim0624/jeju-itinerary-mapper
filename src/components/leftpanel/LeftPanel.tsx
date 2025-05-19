@@ -2,39 +2,28 @@
 import React, { useState, useEffect } from 'react';
 import { PanelLeftClose, PanelRightClose, GripVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import PlaceSearch from './PlaceSearch';
-import SelectedPlacesPanel from './SelectedPlacesPanel';
-import ItineraryPanel from './ItineraryPanel';
 import { useDebouncedCallback } from 'use-debounce';
-import type { Place, ItineraryDay, SelectedPlace } from '@/types'; // SelectedPlace 추가
-import { useSettings } from '@/hooks/useSettings';
-// useItinerary 훅을 사용 (selectedItineraryDay를 ItineraryDay 객체로 받음)
+import type { Place, ItineraryDay } from '@/types'; 
 import { useItinerary } from '@/hooks/use-itinerary'; 
-import { useScheduleStore } from '@/store/scheduleStore'; // 스토어 import (경로 확인 필요)
 
+// LeftPanel의 Props 정의
+interface LeftPanelProps {
+  // 필요한 속성 추가
+}
 
-const LeftPanel: React.FC = () => {
-  const { leftPanelWidth, setLeftPanelWidth, leftPanelOpen, setLeftPanelOpen } = useSettings();
+const LeftPanel: React.FC<LeftPanelProps> = () => {
+  // 기본 패널 관련 상태
+  const [leftPanelWidth, setLeftPanelWidth] = useState(320);
+  const [leftPanelOpen, setLeftPanelOpen] = useState(true);
   
-  // useItinerary 훅 사용. selectedItineraryDay는 ItineraryDay | null 타입
+  // useItinerary 훅 사용
   const { 
     itinerary, 
     selectedItineraryDay, 
-    handleSelectItineraryDay, // Day 객체로 받는 함수
+    setSelectedItineraryDay,
     showItinerary, 
     setShowItinerary 
   } = useItinerary();
-
-  // Zustand 스토어에서 상태 가져오기
-  const { 
-    selectedPlaces, 
-    candidatePlaces, 
-    // actions 
-  } = useScheduleStore(state => ({
-    selectedPlaces: state.selectedPlaces,
-    candidatePlaces: state.candidatePlaces,
-  }));
-
 
   const [isResizing, setIsResizing] = useState(false);
   const [currentView, setCurrentView] = useState<'search' | 'selected' | 'itinerary'>('search');
@@ -49,9 +38,7 @@ const LeftPanel: React.FC = () => {
     }
   };
   
-  // itinerary 생성/업데이트 시 자동으로 itinerary 뷰로 전환하는 로직은 useItinerary 훅 내부 또는
-  // itineraryCreated 이벤트 리스너에서 setShowItinerary(true) 호출로 처리될 수 있음.
-  // 여기서는 showItinerary 상태를 직접 사용하여 currentView를 설정.
+  // itinerary 생성/업데이트 시 자동으로 itinerary 뷰로 전환
   useEffect(() => {
     if (showItinerary && itinerary && itinerary.length > 0) {
       setCurrentView('itinerary');
@@ -60,8 +47,7 @@ const LeftPanel: React.FC = () => {
       // 일정이 닫히거나 없어지면 검색 뷰로 돌아갈 수 있음 (선택적)
       // setCurrentView('search'); 
     }
-  }, [showItinerary, itinerary, currentView, leftPanelOpen, setLeftPanelOpen]);
-
+  }, [showItinerary, itinerary, currentView, leftPanelOpen]);
 
   const startResizing = React.useCallback(() => {
     setIsResizing(true);
@@ -122,30 +108,61 @@ const LeftPanel: React.FC = () => {
       >
         <div className="flex-grow overflow-y-auto">
           {currentView === 'search' && (
-            <PlaceSearch 
-              onViewSelectedPlaces={() => setCurrentView('selected')}
-              onShowItinerary={handleShowItinerary} // 일정 보기 버튼에 연결
-            />
+            <div className="p-4">
+              <h2 className="text-lg font-medium mb-4">장소 검색</h2>
+              {/* PlaceSearch 컴포넌트 자리 */}
+            </div>
           )}
           {currentView === 'selected' && (
-            <SelectedPlacesPanel
-              onBack={() => setCurrentView('search')}
-              onShowItinerary={handleShowItinerary}
-            />
+            <div className="p-4">
+              <h2 className="text-lg font-medium mb-4">선택된 장소</h2>
+              {/* SelectedPlacesPanel 컴포넌트 자리 */}
+            </div>
           )}
           {currentView === 'itinerary' && itinerary && (
-            <ItineraryPanel
-              itinerary={itinerary}
-              // startDate는 useItinerary 훅에서 관리하거나, 생성 시점에 고정된 값을 사용해야 함.
-              // 여기서는 임시로 new Date() 사용. 실제로는 tripDetails 등에서 가져와야 함.
-              startDate={new Date()} 
-              selectedDay={selectedItineraryDay?.day || null} // ItineraryDay 객체에서 day 숫자만 전달
-              onSelectDay={(dayNum) => { // ItineraryPanel에서 day 숫자로 콜백
-                 const newSelectedDay = itinerary.find(d => d.day === dayNum);
-                 if (newSelectedDay) handleSelectItineraryDay(newSelectedDay); // ItineraryDay 객체로 변환하여 상태 업데이트
-              }}
-              onClose={handleClosePanelWithBackButton} // 'X' 버튼 대신 '뒤로' 버튼의 핸들러 사용
-            />
+            <div className="p-4">
+              <h2 className="text-lg font-medium mb-4">일정</h2>
+              {/* 일정 표시 컴포넌트 자리 */}
+              {/* 수평 스크롤 가능한 일자 버튼 */}
+              <div className="flex overflow-x-auto whitespace-nowrap pb-2 mb-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                {itinerary.map((day, index) => (
+                  <Button
+                    key={index}
+                    variant={selectedItineraryDay?.day === day.day ? "default" : "outline"}
+                    className="mr-2 flex-shrink-0"
+                    onClick={() => setSelectedItineraryDay(day)}
+                  >
+                    {`${day.day}일차`}
+                    <span className="ml-1 text-xs opacity-70">
+                      {day.date}
+                    </span>
+                  </Button>
+                ))}
+              </div>
+              
+              {/* 수직 스크롤 가능한 일정 내용 */}
+              <div className="h-[calc(100vh-300px)] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                {selectedItineraryDay && (
+                  <div>
+                    <h3 className="text-lg font-medium mb-2">
+                      {selectedItineraryDay.day}일차 ({selectedItineraryDay.date})
+                    </h3>
+                    <p className="text-sm text-gray-500 mb-4">
+                      총 이동 거리: {(selectedItineraryDay.totalDistance / 1000).toFixed(2)} km
+                    </p>
+                    
+                    {/* 장소 목록 */}
+                    {selectedItineraryDay.places.map((place, index) => (
+                      <div key={index} className="mb-4 border-l-2 border-blue-500 pl-4 relative">
+                        <div className="text-sm font-medium">{place.name}</div>
+                        <div className="text-xs text-gray-500">{place.category}</div>
+                        <div className="text-xs text-gray-500">{place.timeBlock}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           )}
         </div>
         
@@ -153,9 +170,9 @@ const LeftPanel: React.FC = () => {
         {leftPanelOpen && (
            <div className="p-2 border-t flex justify-center">
             <Button 
-              variant="outline" // 일반 버튼 스타일
-              onClick={handleClosePanelWithBackButton} // '뒤로' 버튼과 동일한 기능 또는 패널 닫기
-              className="text-blue-600 font-medium hover:bg-blue-50" // 요청된 스타일
+              variant="outline"
+              onClick={handleClosePanelWithBackButton}
+              className="text-blue-600 font-medium hover:bg-blue-50"
             >
               뒤로
             </Button>
@@ -167,7 +184,7 @@ const LeftPanel: React.FC = () => {
       {leftPanelOpen && (
         <div
           className="fixed top-0 h-full w-2 cursor-col-resize z-30 flex items-center justify-center bg-transparent group"
-          style={{ left: effectivePanelWidth - 4 }} // Resizer 위치 조정
+          style={{ left: effectivePanelWidth - 4 }}
           onMouseDown={startResizing}
         >
           <GripVertical className="h-8 w-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -190,4 +207,3 @@ const LeftPanel: React.FC = () => {
 };
 
 export default LeftPanel;
-

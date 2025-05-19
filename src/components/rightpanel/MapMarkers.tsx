@@ -3,7 +3,7 @@ import React, { useEffect, useRef } from 'react';
 import { useMapContext } from './MapContext';
 import { Place, ItineraryDay } from '@/types/supabase';
 import { addMarkersToMap, clearMarkers as clearDrawnMarkers, panToPosition, fitBoundsToPlaces, getMarkerIconOptions, createNaverMarker, createNaverLatLng } from '@/utils/map/mapDrawing';
-import { useMapFeatures } from '@/hooks/map/useMapFeatures'; // Import useMapFeatures
+import { useMapFeatures } from '@/hooks/map/useMapFeatures';
 
 interface MapMarkersProps {
   places: Place[];
@@ -24,10 +24,10 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
   onPlaceClick,
   highlightPlaceId, // This prop can be used to highlight a marker from search results
 }) => {
-  const { map, isMapInitialized, isNaverLoaded } = useMapContext();
+  const { map, isMapInitialized, isNaverLoaded, clearAllMapElements } = useMapContext();
   const markersRef = useRef<any[]>([]);
-  const { addMarkers: addMarkersFromFeatures, clearMarkersAndUiElements } = useMapFeatures(map, isNaverLoaded);
-
+  // useMapFeatures에서 addMarkers 함수만 분리해서 가져옵니다
+  const { addMarkers: addMarkersFromFeatures } = useMapFeatures(map, isNaverLoaded);
 
   useEffect(() => {
     if (!map || !isMapInitialized || !isNaverLoaded) {
@@ -44,7 +44,7 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
       globallySelectedPlacesCount: selectedPlaces.length
     });
     
-    // 기존 마커 모두 제거 (useMapFeatures의 clearMarkersAndUiElements 사용 또는 직접 markersRef 관리)
+    // 기존 마커 모두 제거
     clearDrawnMarkers(markersRef.current); // Clears markers stored in markersRef
     markersRef.current = [];
 
@@ -151,7 +151,8 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
     selectedPlaces, // globally selected
     onPlaceClick,
     addMarkersFromFeatures, // from hook
-    highlightPlaceId // prop for highlighting
+    highlightPlaceId, // prop for highlighting
+    clearAllMapElements
   ]);
 
   return null;

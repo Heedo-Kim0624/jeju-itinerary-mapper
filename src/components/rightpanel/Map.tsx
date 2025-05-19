@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useMapContext } from './MapContext';
 import MapMarkers from './MapMarkers';
@@ -46,6 +47,8 @@ const Map: React.FC<MapProps> = ({
     addMarkers,
     clearAllRoutes,
     clearAllMarkers,
+    geoJsonNodes,
+    geoJsonLinks,
   } = useMapContext();
 
   const {

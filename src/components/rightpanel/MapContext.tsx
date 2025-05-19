@@ -10,25 +10,25 @@ interface MapContextType {
   isMapInitialized: boolean;
   isNaverLoaded: boolean;
   isMapError: boolean;
-  addMarkers: ( // 시그니처 업데이트
+  addMarkers: (
     placesToAdd: Place[], 
     options?: {
       highlightPlaceId?: string;
       isItinerary?: boolean;
       useRecommendedStyle?: boolean;
       useColorByCategory?: boolean;
-      onMarkerClick?: (place: Place, index: number) => void; // index 추가
+      onMarkerClick?: (place: Place, index: number) => void; 
       itineraryOrder?: boolean;
     }
-  ) => any[]; // 마커 배열 반환 유지
-  calculateRoutes: (placesToRoute: Place[]) => void; // 이 함수는 재검토 필요
-  clearAllMapElements: () => void; // 통합 클리어 함수 추가
-  clearAllRoutes: () => void; // 경로만 클리어
-  clearAllMarkers: () => void; // 마커만 클리어
+  ) => any[];
+  calculateRoutes: (placesToRoute: Place[]) => void;
+  clearAllMapElements: () => void;
+  clearAllRoutes: () => void;
+  clearAllMarkers: () => void;
   panTo: (locationOrCoords: string | {lat: number, lng: number}) => void;
   showGeoJson: boolean;
   toggleGeoJsonVisibility: () => void;
-  renderItineraryRoute: ( // 시그니처 업데이트 (useMapFeatures와 일치)
+  renderItineraryRoute: (
     itineraryDay: ItineraryDay | null, 
     allServerRoutes?: Record<number, ServerRouteResponse>, 
     onComplete?: () => void
@@ -47,7 +47,7 @@ interface MapContextType {
   };
   mapPlacesWithGeoNodes: (places: Place[]) => Place[];
   showRouteForPlaceIndex: (placeIndex: number, itineraryDay: ItineraryDay, onComplete?: () => void) => void;
-  renderGeoJsonRoute: ( // 시그니처 업데이트 (renderItineraryRoute와 유사하게)
+  renderGeoJsonRoute: (
     itineraryDay: ItineraryDay | null, 
     allServerRoutes?: Record<number, ServerRouteResponse>, 
     onComplete?: () => void
