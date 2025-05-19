@@ -1,28 +1,25 @@
-import { useCallback } from 'react';
+
 import { 
     SelectedPlace, 
     ItineraryDay, 
     ItineraryPlaceWithTime, 
-    Place, // General Place
+    Place,
     NewServerScheduleResponse, 
     ServerScheduleItem, 
     ServerRouteSummaryItem,
-    RouteData // General RouteData
+    RouteData
 } from '@/types';
 import { CategoryName } from '@/utils/categoryUtils'; // Assuming CategoryName is still from here
-import { extractAllNodesFromRoute, extractAllLinksFromRoute } from '@/utils/routeParser';
 
 interface UseScheduleParserProps {
   currentSelectedPlaces: SelectedPlace[];
 }
 
-// Helper interface for GeoJSON nodes expected from MapContext
 interface MapContextGeoNode {
   id: string; 
   coordinates: [number, number]; 
 }
 
-// Function to find coordinates from MapContext's GeoJSON nodes
 export const findCoordinatesFromMapContextNodes = (
   nodeIdToFind: string | number,
   mapContextGeoNodes: MapContextGeoNode[] | null
@@ -38,11 +35,11 @@ export const findCoordinatesFromMapContextNodes = (
   return null;
 };
 
-// Function to update itinerary places with coordinates
+// Updated updateItineraryWithCoordinates function
 export const updateItineraryWithCoordinates = (
-  itineraryDays: ItineraryDay[], // Expects global ItineraryDay
-  mapContextGeoNodes: MapContextGeoNode[] | null
-): ItineraryDay[] => { // Returns global ItineraryDay
+  itineraryDays: ItineraryDay[],
+  mapContextGeoNodes: MapContextGeoNode[] | null // Changed any[] to MapContextGeoNode[]
+): ItineraryDay[] => {
   if (!mapContextGeoNodes || !itineraryDays.length) {
     if (!mapContextGeoNodes) console.warn("[updateItineraryWithCoordinates] mapContextGeoNodes is null or empty.");
     if (!itineraryDays.length) console.warn("[updateItineraryWithCoordinates] itineraryDays is empty.");
@@ -52,131 +49,189 @@ export const updateItineraryWithCoordinates = (
 
   return itineraryDays.map(day => {
     const updatedPlaces = day.places.map(place => {
-      // place.id can be string or number, ensure findCoordinatesFromMapContextNodes handles it
-      const coordinates = findCoordinatesFromMapContextNodes(place.id, mapContextGeoNodes);
-      if (coordinates) {
+      const nodeIdStr = String(place.id); // Use place.id which should correspond to a geoNodeId
+      const foundNode = mapContextGeoNodes.find(node => String(node.id) === nodeIdStr);
+      
+      if (foundNode && foundNode.coordinates) {
         return {
           ...place,
-          x: coordinates[0], 
-          y: coordinates[1], 
-          geoNodeId: String(place.id), // Ensure geoNodeId is string
+          x: foundNode.coordinates[0], 
+          y: foundNode.coordinates[1], 
+          geoNodeId: nodeIdStr, // Ensure geoNodeId is set
         };
       }
+      // If no direct match on place.id, try place.geoNodeId if it's different
+      if (place.geoNodeId && String(place.geoNodeId) !== nodeIdStr) {
+        const foundNodeByGeoNodeId = mapContextGeoNodes.find(node => String(node.id) === String(place.geoNodeId));
+        if (foundNodeByGeoNodeId && foundNodeByGeoNodeId.coordinates) {
+          return {
+            ...place,
+            x: foundNodeByGeoNodeId.coordinates[0],
+            y: foundNodeByGeoNodeId.coordinates[1],
+          };
+        }
+      }
+      console.warn(`[updateItineraryWithCoordinates] Coordinates not found for place ID: ${place.id} or geoNodeId: ${place.geoNodeId}`);
       return place;
     });
     return { ...day, places: updatedPlaces };
   });
 };
 
-export const useScheduleParser = ({ currentSelectedPlaces }: UseScheduleParserProps) => {
-  const parseServerResponse = useCallback((
-    response: NewServerScheduleResponse, // Uses global NewServerScheduleResponse
-    tripStartDate: Date | null
-  ): ItineraryDay[] => { // Returns global ItineraryDay[]
-    console.log('[useScheduleParser] Processing server response:', response);
-    if (!response || !response.schedule || !response.route_summary) {
-      console.error('[useScheduleParser] Invalid server response structure received:', response);
-      return [];
-    }
-    if (!tripStartDate) {
-      console.error("[useScheduleParser] Trip start date is required to parse server response days.");
-      return [];
-    }
-
-    const { schedule, route_summary } = response;
+// Standardized parseServerResponse function
+export function parseServerResponse(
+  serverResponse: NewServerScheduleResponse,
+  tripStartDate: Date | null
+): ItineraryDay[] {
+  if (!serverResponse || !serverResponse.route_summary || !serverResponse.schedule || !tripStartDate) {
+    console.warn('[parseServerResponse] 유효하지 않은 입력 데이터:', { serverResponse, tripStartDate });
+    return [];
+  }
+  
+  try {
+    const { schedule, route_summary } = serverResponse;
     
-    const dayOfWeekMap: { [key: string]: number } = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
-    // const tripStartDayOfWeekIndex = tripStartDate.getDay(); // Not directly used in current day mapping
-
+    const dayOfWeekMap: { [key: string]: number } = { 
+      Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 
+    };
+    
     const formatDateForDisplay = (date: Date): string => {
-        return `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}`;
+      return `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}`;
     };
+    
     const dayIndexToDayNameAbbrev = (index: number): string => {
-        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-        return dayNames[index % 7];
+      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      return dayNames[index % 7];
     };
-
+    
+    const tripStartDayOfWeekIndex = tripStartDate.getDay();
+    
     const itineraryDays: ItineraryDay[] = route_summary.map((summaryItem: ServerRouteSummaryItem, index: number) => {
-      // summaryItem.day is "Tue", "Wed" etc.
-      // Calculate currentTripDate based on index relative to tripStartDate
+      const routeDayAbbrev = summaryItem.day.substring(0, 3);
+      const routeDayOfWeekIndex = dayOfWeekMap[routeDayAbbrev] !== undefined ? dayOfWeekMap[routeDayAbbrev] : new Date(tripStartDate.getFullYear(), tripStartDate.getMonth(), tripStartDate.getDate() + index).getDay();
+      
+      let dayNumberOffset = routeDayOfWeekIndex - tripStartDayOfWeekIndex;
+      // This logic for dayNumberOffset might be complex if summaryItem.day is not strictly sequential from tripStartDate.
+      // A simpler approach is to use the index if days are ordered.
+      // Assuming route_summary is ordered by day:
       const currentTripDate = new Date(tripStartDate);
-      currentTripDate.setDate(tripStartDate.getDate() + index); // Assuming summaryItems are in order of trip days
+      currentTripDate.setDate(tripStartDate.getDate() + index); // Day 1 is index 0, Day 2 is index 1 etc.
       
-      const tripDayNumber = index + 1; 
-
-      // places_routed and interleaved_route are now required string[] and number[] respectively in ServerRouteSummaryItem
-      const places_routed = summaryItem.places_routed; // Directly use, it's string[]
-      const interleaved_route_numbers = summaryItem.interleaved_route; // Directly use, it's number[]
-      const interleaved_route_mixed: (string | number)[] = interleaved_route_numbers.map(String); // Convert to string for routeParser if needed, or keep as number if parser handles it. Let's convert to string for now for consistency with existing routeParser.
-
-
+      const tripDayNumber = index + 1;
+      
       const placesForThisDay: ItineraryPlaceWithTime[] = [];
+      const placesRoutedNames = summaryItem.places_routed || [];
       
-      places_routed.forEach((placeName, placeIndexInRoute) => {
-        const matchingScheduleItems = schedule.filter(sItem => 
-          sItem.place_name === placeName //&& sItem.time_block.startsWith(summaryItem.day) - Time block matching might be too strict if day format differs
+      placesRoutedNames.forEach((placeName: string, placeIndexInRoute: number) => {
+        const matchingScheduleItems = schedule.filter((sItem: ServerScheduleItem) => 
+          sItem.place_name === placeName // Consider if day matching in time_block is still needed: && sItem.time_block.startsWith(summaryItem.day)
         );
         
         const matchingScheduleItem = matchingScheduleItems.length > 0 ? matchingScheduleItems[0] : null;
-        const existingPlaceInfo = currentSelectedPlaces.find(p => p.name === placeName);
         
         let timeStr = '';
         if (matchingScheduleItem) {
           const timeBlockParts = matchingScheduleItem.time_block.split('_');
-          timeStr = timeBlockParts.length > 1 ? timeBlockParts[timeBlockParts.length -1] : ''; // Get last part e.g. 09 from Tue_09
+          timeStr = timeBlockParts.length > 1 ? timeBlockParts[timeBlockParts.length -1] : ''; // Get last part e.g. 09 from Tue_09 or day from Mon
+          if (timeStr.toLowerCase() === summaryItem.day.toLowerCase()) timeStr = ''; // if it's just the day name
         }
-        const formattedTime = timeStr === '시작' || timeStr === '끝' ? timeStr : timeStr;
 
-        // Use geoNodeId from existingPlaceInfo if available, otherwise, a temporary ID might be needed
-        // The server response's interleaved_route contains actual node IDs.
-        // We need to map placeName to its actual ID from interleaved_route or selectedPlaces.
-        // For now, using existingPlaceInfo.id or a temp one.
-        const placeId = existingPlaceInfo?.id || `temp_${placeName}_${placeIndexInRoute}`;
-          
+        // Use a temporary ID or try to find a real one if available.
+        // The server's interleaved_route contains geoNodeIds. We need to map placeName to its ID.
+        // For now, we'll use an index-based ID as a placeholder for the place.id.
+        // The geoNodeId should ideally come from currentSelectedPlaces or be resolved from interleaved_route.
+        const placeIdForSchedule = `${tripDayNumber}-${placeIndexInRoute}-${placeName.replace(/\s+/g, '')}`;
+        
         placesForThisDay.push({
-          id: placeId, 
+          id: placeIdForSchedule, // Placeholder ID
           name: placeName,
-          category: (matchingScheduleItem?.place_type || existingPlaceInfo?.category || 'unknown') as CategoryName,
-          timeBlock: formattedTime,
-          x: existingPlaceInfo?.x || 0,
-          y: existingPlaceInfo?.y || 0,
-          address: existingPlaceInfo?.address || '',
-          phone: existingPlaceInfo?.phone || '',
-          description: existingPlaceInfo?.description || '',
-          rating: existingPlaceInfo?.rating || 0,
-          image_url: existingPlaceInfo?.image_url || '',
-          road_address: existingPlaceInfo?.road_address || '',
-          homepage: existingPlaceInfo?.homepage || '',
-          isSelected: !!existingPlaceInfo?.isSelected,
-          isCandidate: !!existingPlaceInfo?.isCandidate,
-          geoNodeId: existingPlaceInfo?.geoNodeId || String(placeId), // Fallback
+          category: (matchingScheduleItem?.place_type || 'unknown') as CategoryName,
+          timeBlock: timeStr,
+          x: 0, 
+          y: 0,
+          address: '',
+          phone: '',
+          description: '',
+          rating: 0,
+          image_url: '',
+          road_address: '',
+          homepage: '',
+          isSelected: false,
+          isCandidate: false,
+          // geoNodeId will be crucial for map linking; this needs careful handling.
+          // It should correspond to an ID in mapContextGeoNodes.
+          // If summaryItem.interleaved_route contains the geoNodeIds for these places, that's the source.
+          // For now, assume interleaved_route[placeIndexInRoute * 2] is the geoNodeId.
+          geoNodeId: summaryItem.interleaved_route && summaryItem.interleaved_route[placeIndexInRoute * 2] ? String(summaryItem.interleaved_route[placeIndexInRoute * 2]) : placeIdForSchedule,
         });
       });
       
-      const routeDataForDay: RouteData = {
-        // interleaved_route_mixed is (string|number)[], extractAllNodes/Links expect this.
-        // Resulting nodeIds/linkIds must be string[] as per RouteData type.
-        nodeIds: extractAllNodesFromRoute(interleaved_route_mixed).map(String),
-        linkIds: extractAllLinksFromRoute(interleaved_route_mixed).map(String),
-        // segmentRoutes can be omitted as it's optional in RouteData
+      const extractNodes = (route: (string | number)[]): string[] => {
+        return route.filter((_, idx) => idx % 2 === 0).map(String);
+      };
+      const extractLinks = (route: (string | number)[]): string[] => {
+        return route.filter((_, idx) => idx % 2 !== 0).map(String);
+      };
+
+      const routeData: RouteData = {
+        nodeIds: extractNodes(summaryItem.interleaved_route?.map(String) || []),
+        linkIds: extractLinks(summaryItem.interleaved_route?.map(String) || []),
       };
       
       return {
         day: tripDayNumber,
         places: placesForThisDay,
         totalDistance: summaryItem.total_distance_m / 1000,
-        interleaved_route: interleaved_route_mixed, 
-        routeData: routeDataForDay, // Conforms to new RouteData
-        dayOfWeek: dayIndexToDayNameAbbrev(currentTripDate.getDay()), // Add dayOfWeek
-        date: formatDateForDisplay(currentTripDate), // Add date
+        routeData: routeData,
+        interleaved_route: summaryItem.interleaved_route?.map(String) || [],
+        dayOfWeek: dayIndexToDayNameAbbrev(currentTripDate.getDay()),
+        date: formatDateForDisplay(currentTripDate),
       };
     });
-
-    itineraryDays.sort((a, b) => a.day - b.day);
     
-    console.log('[useScheduleParser] Processed itinerary days (before coord update):', JSON.parse(JSON.stringify(itineraryDays)));
+    itineraryDays.sort((a, b) => a.day - b.day);
+    console.log('[parseServerResponse] Processed itinerary days:', JSON.parse(JSON.stringify(itineraryDays)));
     return itineraryDays;
+  } catch (error) {
+    console.error('[parseServerResponse] 파싱 중 오류 발생:', error);
+    return [];
+  }
+}
+
+
+export const useScheduleParser = ({ currentSelectedPlaces }: UseScheduleParserProps) => {
+  // The parseServerResponse function is now standalone, so this hook might just export it
+  // or use it internally if it had more specific logic tied to currentSelectedPlaces for enrichment.
+  // For now, parseServerResponse takes all it needs.
+  // If currentSelectedPlaces is needed for more detailed place info AFTER basic parsing:
+  const enrichParsedResponse = useCallback((
+    parsedDays: ItineraryDay[]
+  ): ItineraryDay[] => {
+    return parsedDays.map(day => ({
+      ...day,
+      places: day.places.map(place => {
+        const existingPlaceInfo = currentSelectedPlaces.find(p => p.name === place.name || String(p.id) === String(place.geoNodeId) || String(p.geoNodeId) === String(place.geoNodeId) );
+        if (existingPlaceInfo) {
+          return {
+            ...place,
+            address: existingPlaceInfo.address || place.address,
+            phone: existingPlaceInfo.phone || place.phone,
+            description: existingPlaceInfo.description || place.description,
+            rating: existingPlaceInfo.rating || place.rating,
+            image_url: existingPlaceInfo.image_url || place.image_url,
+            road_address: existingPlaceInfo.road_address || place.road_address,
+            homepage: existingPlaceInfo.homepage || place.homepage,
+            category: (existingPlaceInfo.category || place.category) as CategoryName,
+            // x and y coordinates should be updated by updateItineraryWithCoordinates
+            x: place.x || existingPlaceInfo.x || 0,
+            y: place.y || existingPlaceInfo.y || 0,
+            geoNodeId: existingPlaceInfo.geoNodeId || place.geoNodeId || String(existingPlaceInfo.id),
+          };
+        }
+        return place;
+      })
+    }));
   }, [currentSelectedPlaces]);
 
-  return { parseServerResponse };
+  return { parseServerResponse, enrichParsedResponse, updateItineraryWithCoordinates };
 };
