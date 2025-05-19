@@ -1,6 +1,6 @@
 
-import { SelectedPlace, SchedulePlace, SchedulePayload as LocalSchedulePayload } from '@/types/supabase';
 import { toast } from 'sonner';
+import { SelectedPlace, SchedulePlace, SchedulePayload } from '@/types'; // Import from @/types
 
 interface UseSchedulePayloadBuilderProps {
   // No props needed for the hook itself, but for the returned function
@@ -9,10 +9,10 @@ interface UseSchedulePayloadBuilderProps {
 export const useSchedulePayloadBuilder = (/* props: UseSchedulePayloadBuilderProps */) => {
   const prepareSchedulePayload = (
     userSelectedPlacesInput: SelectedPlace[], 
-    candidatePlacesInput: SelectedPlace[], // Explicitly pass candidatePlaces
+    candidatePlacesInput: SelectedPlace[], 
     startDatetimeISO: string | null, 
     endDatetimeISO: string | null
-  ): LocalSchedulePayload | null => {
+  ): SchedulePayload | null => { // Use SchedulePayload from @/types
     console.log('[prepareSchedulePayload] 함수 호출됨, 인자:', {
       userSelectedPlacesCount: userSelectedPlacesInput.length,
       candidatePlacesCount: candidatePlacesInput.length,
@@ -26,21 +26,25 @@ export const useSchedulePayloadBuilder = (/* props: UseSchedulePayloadBuilderPro
       return null;
     }
     
+    // Filter out candidate places from userSelectedPlacesInput if they are handled separately
+    // Assuming userSelectedPlacesInput are places explicitly chosen by user for the main list
     const directlySelectedPlaces = userSelectedPlacesInput.filter(p => !p.isCandidate);
 
-    const selectedPlacesForPayload: SchedulePlace[] = directlySelectedPlaces.map(p => ({
-      id: typeof p.id === 'string' ? parseInt(p.id, 10) || p.id : p.id, // Ensure ID is number if possible
+    // Prepare selected_places for payload
+    const selectedPlacesForPayload: SchedulePlace[] = directlySelectedPlaces.map(p => ({ // Use SchedulePlace from @/types
+      id: typeof p.id === 'string' ? parseInt(p.id, 10) || p.id : p.id,
       name: p.name || 'Unknown Place'
     }));
     
-    const candidatePlacesForPayload: SchedulePlace[] = candidatePlacesInput.map(p => ({
-      id: typeof p.id === 'string' ? parseInt(p.id, 10) || p.id : p.id, // Ensure ID is number if possible
+    // Prepare candidate_places for payload
+    const candidatePlacesForPayload: SchedulePlace[] = candidatePlacesInput.map(p => ({ // Use SchedulePlace from @/types
+      id: typeof p.id === 'string' ? parseInt(p.id, 10) || p.id : p.id,
       name: p.name || 'Unknown Place'
     }));
         
-    const payload: LocalSchedulePayload = {
-      selected_places: selectedPlacesForPayload,
-      candidate_places: candidatePlacesForPayload,
+    const payload: SchedulePayload = { // Use SchedulePayload from @/types
+      selected_places: selectedPlacesForPayload, // This property exists on SchedulePayload from @/types
+      candidate_places: candidatePlacesForPayload, // This property also exists
       start_datetime: startDatetimeISO,
       end_datetime: endDatetimeISO
     };

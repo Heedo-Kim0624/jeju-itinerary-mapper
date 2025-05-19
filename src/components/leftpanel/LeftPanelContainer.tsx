@@ -1,15 +1,14 @@
-
 import React, { useState, useEffect } from 'react';
 import { Place } from '@/types/supabase';
 import { ItineraryDay } from '@/hooks/use-itinerary';
-import PlaceCart from './PlaceCart'; // PlaceCart component import restored
+import PlaceCart from './PlaceCart';
 import ScheduleViewer from './ScheduleViewer';
 
 interface LeftPanelContainerProps {
   showItinerary: boolean;
   onSetShowItinerary: (show: boolean) => void;
   selectedPlaces: Place[];
-  onRemovePlace: (id: string) => void; // Maintaining original type
+  onRemovePlace: (id: string) => void;
   onViewOnMap: (place: Place) => void;
   allCategoriesSelected: boolean;
   children: React.ReactNode;
@@ -30,8 +29,8 @@ const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
   showItinerary,
   onSetShowItinerary,
   selectedPlaces,
-  onRemovePlace, // Props destructuring confirmed
-  onViewOnMap,   // Props destructuring confirmed
+  onRemovePlace, 
+  onViewOnMap,   
   allCategoriesSelected,
   children,
   dates,
@@ -51,7 +50,11 @@ const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
   useEffect(() => {
     const handleForceRerender = () => {
       console.log("[LeftPanelContainer] forceRerender event received, checking and clearing loading state");
-      setLocalIsGenerating(false);
+      // Only set generating to false if it's currently true
+      // This prevents prematurely setting it to false if another process is still running.
+      if (localIsGenerating) {
+        // setLocalIsGenerating(false); // This might be too aggressive. Let the runner manage its state.
+      }
     };
     
     window.addEventListener('forceRerender', handleForceRerender);
@@ -59,13 +62,23 @@ const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
     return () => {
       window.removeEventListener('forceRerender', handleForceRerender);
     };
-  }, []);
+  }, [localIsGenerating]); // Add localIsGenerating to dependencies
 
   const handleCloseItinerary = () => {
     onSetShowItinerary(false);
   };
 
-  if (showItinerary && itinerary) {
+  // Debug log for itinerary state
+  useEffect(() => {
+    console.log("[LeftPanelContainer] Itinerary State:", {
+      showItinerary,
+      itineraryLength: itinerary?.length,
+      selectedItineraryDay,
+      isGenerating: localIsGenerating
+    });
+  }, [showItinerary, itinerary, selectedItineraryDay, localIsGenerating]);
+
+  if (showItinerary && itinerary && itinerary.length > 0) { // Added itinerary.length > 0 check
     console.log("LeftPanelContainer: Rendering ScheduleViewer directly");
     return (
       <div className="fixed top-0 left-0 w-[300px] h-full bg-white border-r border-gray-200 z-40 shadow-md">
@@ -86,14 +99,12 @@ const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
         {children}
       </div>
       <div className="px-4 py-4 border-t">
-        {/* Selected places list restored - PlaceCart component */}
         <PlaceCart 
           selectedPlaces={selectedPlaces} 
           onRemovePlace={onRemovePlace}
           onViewOnMap={onViewOnMap}
         />
         
-        {/* Schedule generation button - displays differently based on loading state */}
         {localIsGenerating ? (
           <div className="w-full py-3 bg-blue-500 text-white text-center rounded-md flex items-center justify-center cursor-wait" aria-busy="true" aria-live="polite">
             <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -107,7 +118,12 @@ const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
             className={`w-full py-3 ${
               allCategoriesSelected ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-gray-300 text-gray-500 cursor-not-allowed'
             } rounded-md font-medium transition-colors`}
-            onClick={() => allCategoriesSelected && onCreateItinerary()}
+            onClick={() => {
+              if (allCategoriesSelected && !localIsGenerating) { // Prevent multiple clicks
+                // setLocalIsGenerating(true); // Set loading state immediately on click
+                onCreateItinerary();
+              }
+            }}
             disabled={!allCategoriesSelected || localIsGenerating}
           >
             경로 생성하기
