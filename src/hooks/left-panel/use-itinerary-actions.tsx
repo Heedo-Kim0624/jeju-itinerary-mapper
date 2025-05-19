@@ -1,18 +1,14 @@
-import React, { useCallback } from 'react';
-import { useAtom } from 'jotai';
-import { itineraryAtom, selectedDayAtom, showItineraryPanelAtom } from '@/store/itineraryStore';
-import { ItineraryDay, TripDetailsState } from '@/types/index';
-import { useMapContext } from '@/components/rightpanel/MapContext';
+import { useState } from 'react';
+import { Place, SchedulePayload, ItineraryPlaceWithTime, CategoryName } from '@/types/supabase';
+import { useItineraryCreator, ItineraryDay } from '../use-itinerary-creator';
+import { useScheduleGenerator } from '../use-schedule-generator';
+import { toast } from 'sonner';
+import { NewServerScheduleResponse, isNewServerScheduleResponse, ServerScheduleItem } from '@/types/schedule';
 
-interface UseItineraryActionsProps {
-  tripDetails: TripDetailsState | null;
-  // ... other props
-}
-
-export const useItineraryActions = (/* props: UseItineraryActionsProps */) => {
-  const [itinerary, setItinerary] = useAtom(itineraryAtom);
-  const [selectedItineraryDay, setSelectedItineraryDay] = useAtom(selectedDayAtom);
-  const [showItinerary, setShowItinerary] = useAtom(showItineraryPanelAtom);
+export const useItineraryActions = () => {
+  const [itinerary, setItinerary] = useState<ItineraryDay[] | null>(null);
+  const [selectedItineraryDay, setSelectedItineraryDay] = useState<number | null>(null);
+  const [showItinerary, setShowItinerary] = useState<boolean>(false);
   const { createItinerary } = useItineraryCreator();
   const { generateSchedule, isGenerating } = useScheduleGenerator();
 
@@ -225,21 +221,6 @@ export const useItineraryActions = (/* props: UseItineraryActionsProps */) => {
     return result;
   };
 
-  const handleForceClientSideGeneration = useCallback(() => {
-    // This is a placeholder. Actual implementation depends on how client-side generation is triggered.
-    // Potentially, it could involve resetting server-generated itinerary and running a client-side one.
-    console.log("TODO: Implement force client-side generation");
-    toast.info("클라이언트 사이드 일정 생성 로직 (구현 예정)");
-  }, []);
-
-  const regenerateItinerary = useCallback(async () => {
-    // This would likely involve re-fetching or re-calculating the itinerary.
-    // It might need access to the original inputs (selected places, dates, etc.)
-    console.log("TODO: Implement itinerary regeneration");
-    toast.info("일정 재생성 로직 (구현 예정)");
-    // Example: await runScheduleGenerationProcess(); // if that function is accessible here
-  }, []);
-
   return {
     itinerary,
     selectedItineraryDay,
@@ -249,8 +230,6 @@ export const useItineraryActions = (/* props: UseItineraryActionsProps */) => {
     setShowItinerary,
     handleSelectItineraryDay,
     handleCreateItinerary,
-    isGenerating,
-    handleForceClientSideGeneration,
-    regenerateItinerary
+    isGenerating
   };
 };

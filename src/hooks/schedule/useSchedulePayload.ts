@@ -1,6 +1,7 @@
-import { useMemo } from 'react';
-import { SelectedPlace } from '@/types/index';
-import { SchedulePayload, SchedulePlace } from '@/types/schedule';
+
+import { useCallback } from 'react';
+import { SelectedPlace } from '@/types/supabase';
+import { SchedulePayload } from '@/types/schedule';
 
 interface UseSchedulePayloadProps {
   selectedPlaces: SelectedPlace[];
@@ -13,7 +14,7 @@ export const useSchedulePayload = ({
   startDatetimeISO,
   endDatetimeISO,
 }: UseSchedulePayloadProps) => {
-  const preparePayload = useMemo((): SchedulePayload | null => {
+  const preparePayload = useCallback((): SchedulePayload | null => {
     if (!startDatetimeISO || !endDatetimeISO) {
       console.error("[useSchedulePayload] Start or end datetime is missing.");
       return null;

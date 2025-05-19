@@ -1,5 +1,6 @@
+
 import { useState, useCallback } from 'react';
-import { ServerRouteResponse } from '@/types/schedule'; // ServerRouteResponse는 DailyRouteSummary
+import { ServerRouteResponse } from '@/types/schedule';
 
 /**
  * 서버 경로 데이터 관리 훅
