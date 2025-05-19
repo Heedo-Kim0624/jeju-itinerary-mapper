@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useMapContext } from '@/components/rightpanel/MapContext';
 import { Button } from '@/components/ui/button';
@@ -6,7 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import PlaceList from '@/components/middlepanel/PlaceList';
 import PlaceDetailDialog from '@/components/places/PlaceDetailDialog';
-import { Place } from '@/types/supabase';
+import { Place, CategoryName } from '@/types/core'; // Updated import
 import { 
   parsePrompt, 
   fetchWeightedResults, 

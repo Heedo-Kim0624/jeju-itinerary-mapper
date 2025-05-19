@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Place } from '@/types/supabase';
+import { Place, CategoryName } from '@/types/core';
 import { useMapContext } from '../rightpanel/MapContext';
 import PlaceDetailDialog from '../places/PlaceDetailDialog';
 import { useCategoryResults } from '@/hooks/use-category-results';
@@ -11,14 +11,14 @@ import { Button } from '@/components/ui/button';
 import { CheckIcon } from 'lucide-react';
 
 interface CategoryResultPanelProps {
-  category: '숙소' | '관광지' | '음식점' | '카페';
+  category: CategoryName;
   regions: string[];
   keywords: string[];
   onClose: () => void;
   onSelectPlace: (place: Place, checked: boolean) => void;
   isPlaceSelected: (id: string | number) => boolean;
   isOpen: boolean;
-  onConfirm?: (category: string, selectedPlaces: Place[], recommendedPlaces: Place[]) => void;
+  onConfirm?: (category: CategoryName, selectedPlaces: Place[], recommendedPlaces: Place[]) => void;
 }
 
 const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
@@ -119,7 +119,6 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
                 places={recommendedPlaces}
                 title={`🌟 추천 장소 (${safeRegions.join(', ')})`}
                 isLoading={isLoading}
-                // selectedPlaces prop 제거
                 onSelectPlace={handlePlaceSelect}
                 onViewOnMap={handleViewDetails}
                 isPlaceSelected={isPlaceSelected}
@@ -130,7 +129,6 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
                   places={normalPlaces}
                   title="📍 주변 장소"
                   isLoading={isLoading}
-                  // selectedPlaces prop 제거
                   onSelectPlace={handlePlaceSelect}
                   onViewOnMap={handleViewDetails}
                   isPlaceSelected={isPlaceSelected}
@@ -140,7 +138,6 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
           )}
         </div>
 
-        {/* Replace "Select Complete" and "Confirm" buttons with a single "Confirm" button */}
         <div className="p-4 border-t border-gray-200">
           <Button 
             onClick={handleConfirm}

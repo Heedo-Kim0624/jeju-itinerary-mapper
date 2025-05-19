@@ -1,6 +1,5 @@
-
 import { useState, useCallback } from 'react';
-import { ServerRouteResponse } from '@/types/schedule';
+import { ServerRouteResponse } from '@/types/core';
 
 /**
  * 서버 경로 데이터 관리 훅

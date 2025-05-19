@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import { ItineraryDay, ItineraryPlaceWithTime } from '@/types/supabase';
+import { ItineraryDay, ItineraryPlaceWithTime } from '@/types/core';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Clock, Navigation } from 'lucide-react';

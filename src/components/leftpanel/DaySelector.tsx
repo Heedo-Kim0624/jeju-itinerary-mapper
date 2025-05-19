@@ -1,7 +1,6 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { ItineraryDay } from '@/types/supabase';
+import { ItineraryDay } from '@/types/core';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 

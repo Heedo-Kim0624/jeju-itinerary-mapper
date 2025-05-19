@@ -5,8 +5,7 @@ import { useMapItineraryRouting } from '@/hooks/map/useMapItineraryRouting';
 import { useGeoJsonState } from '@/hooks/map/useGeoJsonState';
 import { useServerRoutes } from '@/hooks/map/useServerRoutes';
 import { useMapFeatures } from '@/hooks/map/useMapFeatures';
-import { Place, ItineraryDay } from '@/types/supabase';
-import { ServerRouteResponse } from '@/types/schedule';
+import { Place, ItineraryDay, ServerRouteResponse } from '@/types/core';
 
 /**
  * 지도 핵심 기능 통합 훅

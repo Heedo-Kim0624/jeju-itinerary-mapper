@@ -1,8 +1,6 @@
-
 import React, { createContext, useContext, useRef } from 'react';
-import { Place, ItineraryDay } from '@/types/supabase';
+import { Place, ItineraryDay, ServerRouteResponse } from '@/types/core';
 import useMapCore from './useMapCore';
-import { ServerRouteSummaryItem, ServerRouteResponse } from '@/types/schedule';
 
 interface MapContextType {
   map: any;
@@ -41,12 +39,11 @@ interface MapContextType {
   renderGeoJsonRoute: (nodeIds: string[], linkIds: string[], style?: any) => any[];
   geoJsonNodes: any[];
   geoJsonLinks: any[];
-  // 서버 경로 관련 기능 수정 - Aligning with error message for useMapCore's provided type
   setServerRoutes: (
     dayRoutes: Record<number, ServerRouteResponse> | 
                ((prevRoutes: Record<number, ServerRouteResponse>) => Record<number, ServerRouteResponse>)
   ) => void;
-  serverRoutesData: Record<number, ServerRouteResponse>; // Align data type as well
+  serverRoutesData: Record<number, ServerRouteResponse>;
 }
 
 const defaultContext: MapContextType = {
