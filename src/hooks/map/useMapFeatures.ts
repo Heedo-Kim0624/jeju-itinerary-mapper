@@ -7,17 +7,14 @@ import {
   createNaverLatLng,
   fitBoundsToCoordinates
 } from '@/utils/map/mapDrawing';
-import { useMapContext } from '@/components/rightpanel/MapContext';
 import { useGeoJsonState } from '@/hooks/map/useGeoJsonState';
-import { getCategoryColor, mapCategoryNameToKey } from '@/utils/categoryColors'; // Import category utils
+import { getCategoryColor, mapCategoryNameToKey } from '@/utils/categoryColors';
 
-// Define a default color for routes if not specified
-const DEFAULT_ROUTE_COLOR = '#007bff'; // Blue
+const DEFAULT_ROUTE_COLOR = '#007bff';
 
-export const useMapFeatures = (map: any) => {
+export const useMapFeatures = (map: any, isNaverLoadedParam: boolean) => {
   const activePolylines = useRef<any[]>([]);
   const highlightedPathRef = useRef<any>(null);
-  const mapContext = useMapContext();
   const geoJsonState = useGeoJsonState();
 
   const drawRoutePath = useCallback((
@@ -28,7 +25,7 @@ export const useMapFeatures = (map: any) => {
     opacity: number = 0.7,
     zIndex: number = 1
   ) => {
-    if (!currentMap || !mapContext.isNaverLoaded || pathCoordinates.length < 2) return null;
+    if (!currentMap || !isNaverLoadedParam || pathCoordinates.length < 2) return null;
 
     const naverPath = pathCoordinates.map(coord => createNaverLatLng(coord.lat, coord.lng));
     if (naverPath.some(p => p === null)) {
@@ -43,7 +40,7 @@ export const useMapFeatures = (map: any) => {
       zIndex: zIndex,
     });
     return polyline;
-  }, [mapContext.isNaverLoaded]);
+  }, [isNaverLoadedParam]);
 
   const clearAllRoutes = useCallback(() => {
     console.log('[MapFeatures] Clearing all routes and UI elements.');
@@ -76,14 +73,13 @@ export const useMapFeatures = (map: any) => {
     });
   }, [geoJsonState.geoJsonNodes]);
 
-
   const renderItineraryRoute = useCallback(
     (
       itineraryDay: ItineraryDay | null,
       _allServerRoutesInput?: Record<number, ServerRouteResponse>, 
       onComplete?: () => void
     ) => {
-      if (!map || !mapContext.isNaverLoaded) {
+      if (!map || !isNaverLoadedParam) {
         console.log('[MapFeatures] Map not ready for rendering itinerary route.');
         if (onComplete) onComplete();
         return;
@@ -128,7 +124,7 @@ export const useMapFeatures = (map: any) => {
       const nodeCoordsMap = new Map<string, { lat: number; lng: number }>();
       geoJsonState.geoJsonNodes.forEach(node => {
         if (node.geometry.type === 'Point') {
-          const [lng, lat] = (node.geometry.coordinates as [number, number]); // Type assertion
+          const [lng, lat] = (node.geometry.coordinates as [number, number]);
           nodeCoordsMap.set(String(node.properties.NODE_ID), {
             lng: lng,
             lat: lat,
@@ -190,12 +186,12 @@ export const useMapFeatures = (map: any) => {
 
       if (onComplete) onComplete();
     },
-    [map, mapContext.isNaverLoaded, geoJsonState.geoJsonNodes, drawRoutePath, clearAllRoutes, mapPlacesWithGeoNodes]
+    [map, isNaverLoadedParam, geoJsonState.geoJsonNodes, drawRoutePath, clearAllRoutes, mapPlacesWithGeoNodes]
   );
 
   const showRouteForPlaceIndex = useCallback(
     (placeIndex: number, itineraryDay: ItineraryDay, onComplete?: () => void) => {
-      if (!map || !mapContext.isNaverLoaded || !itineraryDay || !itineraryDay.places) {
+      if (!map || !isNaverLoadedParam || !itineraryDay || !itineraryDay.places) {
         if (onComplete) onComplete();
         return;
       }
@@ -213,11 +209,11 @@ export const useMapFeatures = (map: any) => {
 
       if (onComplete) onComplete();
     },
-    [map, mapContext.isNaverLoaded] 
+    [map, isNaverLoadedParam] 
   );
   
   const renderGeoJsonRoute = useCallback((route: SegmentRoute) => {
-    if (!map || !mapContext.isNaverLoaded || !route || !route.nodeIds || !route.linkIds) {
+    if (!map || !isNaverLoadedParam || !route || !route.nodeIds || !route.linkIds) {
       console.warn('[MapFeatures] Cannot render GeoJSON route: invalid input or map not ready');
       return;
     }
@@ -255,7 +251,7 @@ export const useMapFeatures = (map: any) => {
     if (naverCoords.length > 0) {
       fitBoundsToCoordinates(map, naverCoords);
     }
-  }, [map, mapContext.isNaverLoaded, geoJsonState.geoJsonNodes, drawRoutePath, clearAllRoutes]);
+  }, [map, isNaverLoadedParam, geoJsonState.geoJsonNodes, drawRoutePath, clearAllRoutes]);
 
   const highlightSegment = useCallback((segment: SegmentRoute | null) => {
     if (highlightedPathRef.current) {
@@ -263,7 +259,7 @@ export const useMapFeatures = (map: any) => {
       highlightedPathRef.current = null;
     }
 
-    if (!map || !mapContext.isNaverLoaded || !segment || !segment.nodeIds || segment.nodeIds.length < 2) {
+    if (!map || !isNaverLoadedParam || !segment || !segment.nodeIds || segment.nodeIds.length < 2) {
       return;
     }
 
@@ -299,7 +295,7 @@ export const useMapFeatures = (map: any) => {
     if (naverCoords.length > 0) {
       fitBoundsToCoordinates(map, naverCoords);
     }
-  }, [map, mapContext.isNaverLoaded, geoJsonState.geoJsonNodes, drawRoutePath]);
+  }, [map, isNaverLoadedParam, geoJsonState.geoJsonNodes, drawRoutePath]);
   
   const clearPreviousHighlightedPath = useCallback(() => {
     if (highlightedPathRef.current) {
@@ -319,7 +315,7 @@ export const useMapFeatures = (map: any) => {
       itineraryOrder?: boolean; 
     } = {}
   ): any[] => {
-    if (!map || !mapContext.isNaverLoaded || !placesToAdd || placesToAdd.length === 0) return [];
+    if (!map || !isNaverLoadedParam || !placesToAdd || placesToAdd.length === 0) return [];
 
     const { 
       highlightPlaceId, 
@@ -428,10 +424,10 @@ export const useMapFeatures = (map: any) => {
     });
     
     return createdMarkers;
-  }, [map, mapContext.isNaverLoaded, getCategoryColor, mapCategoryNameToKey]);
+  }, [map, isNaverLoadedParam, getCategoryColor, mapCategoryNameToKey]);
 
   const calculateRoutes = useCallback((placesToRoute: Place[]) => { // This returns any[]
-    if (!map || !mapContext.isNaverLoaded || placesToRoute.length < 2) return [];
+    if (!map || !isNaverLoadedParam || placesToRoute.length < 2) return [];
 
     const polylines: any[] = [];
     const pathCoordinates = placesToRoute
@@ -447,7 +443,7 @@ export const useMapFeatures = (map: any) => {
     }
     
     return polylines; 
-  }, [map, mapContext.isNaverLoaded, drawRoutePath]);
+  }, [map, isNaverLoadedParam, drawRoutePath]);
 
   return {
     addMarkers,

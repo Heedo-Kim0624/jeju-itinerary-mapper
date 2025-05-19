@@ -1,7 +1,8 @@
+
 import React, { createContext, useContext } from 'react';
 import { Place, ItineraryDay } from '@/types/supabase';
-import useMapCore from './useMapCore'; // Assuming useMapCore is in the same directory
-import { ServerRouteResponse } from '@/types/schedule';
+import useMapCore from './useMapCore';
+import { ServerRouteResponse, SegmentRoute } from '@/types/schedule'; // SegmentRoute 추가
 
 interface MapContextType {
   map: any;
@@ -16,7 +17,7 @@ interface MapContextType {
     useColorByCategory?: boolean;
     onClick?: (place: Place, index: number) => void;
   }) => any[];
-  calculateRoutes: (placesToRoute: Place[]) => void; // Changed signature
+  calculateRoutes: (placesToRoute: Place[]) => void;
   clearMarkersAndUiElements: () => void;
   panTo: (locationOrCoords: string | {lat: number, lng: number}) => void;
   showGeoJson: boolean;
@@ -25,11 +26,11 @@ interface MapContextType {
     itineraryDay: ItineraryDay | null, 
     allServerRoutes?: Record<number, ServerRouteResponse>, 
     onComplete?: () => void
-    // onClear 제거됨: useMapFeatures의 renderItineraryRoute 시그니처와 불일치
   ) => void;
   clearAllRoutes: () => void;
   handleGeoJsonLoaded: (nodes: any[], links: any[]) => void;
-  highlightSegment: (fromIndex: number, toIndex: number, itineraryDay?: ItineraryDay) => void;
+  // highlightSegment 시그니처 수정
+  highlightSegment: (segment: SegmentRoute | null) => void;
   clearPreviousHighlightedPath: () => void;
   isGeoJsonLoaded: boolean;
   checkGeoJsonMapping: (places: Place[]) => {
@@ -41,8 +42,8 @@ interface MapContextType {
     message: string;
   };
   mapPlacesWithGeoNodes: (places: Place[]) => Place[];
-  showRouteForPlaceIndex: (placeIndex: number, itineraryDay: ItineraryDay, onComplete?: () => void) => void; // Added onComplete
-  renderGeoJsonRoute: (nodeIds: string[], linkIds: string[], style?: any) => any[];
+  showRouteForPlaceIndex: (placeIndex: number, itineraryDay: ItineraryDay, onComplete?: () => void) => void;
+  renderGeoJsonRoute: (route: SegmentRoute) => any[]; // renderGeoJsonRoute 파라미터 타입 수정
   geoJsonNodes: any[];
   geoJsonLinks: any[];
   setServerRoutes: (
@@ -59,7 +60,7 @@ const defaultContext: MapContextType = {
   isNaverLoaded: false,
   isMapError: false,
   addMarkers: () => [],
-  calculateRoutes: (placesToRoute: Place[]) => {}, // Changed signature
+  calculateRoutes: (placesToRoute: Place[]) => {},
   clearMarkersAndUiElements: () => {},
   panTo: () => {},
   showGeoJson: false,
@@ -67,7 +68,8 @@ const defaultContext: MapContextType = {
   renderItineraryRoute: (itineraryDay, allServerRoutes, onComplete) => {}, 
   clearAllRoutes: () => {},
   handleGeoJsonLoaded: (nodes, links) => {},
-  highlightSegment: (fromIndex, toIndex, itineraryDay) => {},
+  // highlightSegment 기본값 수정
+  highlightSegment: (segment) => {}, 
   clearPreviousHighlightedPath: () => {},
   isGeoJsonLoaded: false,
   checkGeoJsonMapping: (places) => ({ 
@@ -76,11 +78,12 @@ const defaultContext: MapContextType = {
     mappingRate: '0%', 
     averageDistance: 'N/A',
     success: false,
-    message: 'GeoJSON 데이터�� 로드되지 않았습니다.'
+    message: 'GeoJSON 데이터가 로드되지 않았습니다.'
   }),
   mapPlacesWithGeoNodes: (places) => places,
-  showRouteForPlaceIndex: (placeIndex, itineraryDay, onComplete) => {}, // Added onComplete
-  renderGeoJsonRoute: (nodeIds, linkIds, style) => [],
+  showRouteForPlaceIndex: (placeIndex, itineraryDay, onComplete) => {},
+  // renderGeoJsonRoute 기본값 수정
+  renderGeoJsonRoute: (route) => [], 
   geoJsonNodes: [],
   geoJsonLinks: [],
   setServerRoutes: (dayRoutes) => {},
@@ -101,7 +104,8 @@ export const MapProvider: React.FC<{children: React.ReactNode}> = ({ children })
     isGeoJsonLoaded: mapCoreValues.isGeoJsonLoaded,
     geoJsonNodesCount: mapCoreValues.geoJsonNodes?.length || 0,
     geoJsonLinksCount: mapCoreValues.geoJsonLinks?.length || 0,
-    serverRoutesDataCount: Object.keys(mapCoreValues.serverRoutesData || {}).length || 0
+    serverRoutesDataCount: Object.keys(mapCoreValues.serverRoutesData || {}).length || 0,
+    highlightSegmentType: typeof mapCoreValues.highlightSegment // 타입 확인용
   });
   
   return (

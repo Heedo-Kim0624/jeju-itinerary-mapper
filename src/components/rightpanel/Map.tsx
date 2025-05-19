@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { useMapContext } from './MapContext';
 import MapMarkers from './MapMarkers';
@@ -70,11 +69,11 @@ const Map: React.FC<MapProps> = ({
           toggleGeoJsonVisibility();
         }
         
-        // 지도에 경로 표시
-        renderItineraryRoute(currentDayData, serverRoutesData, () => {}, clearAllRoutes);
+        // clearAllRoutes 인자 제거
+        renderItineraryRoute(currentDayData, serverRoutesData, () => {});
       }
     }
-  }, [itinerary, selectedDay, isMapInitialized, isGeoJsonLoaded, showGeoJson, toggleGeoJsonVisibility, renderItineraryRoute, serverRoutesData, clearAllRoutes]);
+  }, [itinerary, selectedDay, isMapInitialized, isGeoJsonLoaded, showGeoJson, toggleGeoJsonVisibility, renderItineraryRoute, serverRoutesData]);
 
   // 서버 경로 데이터가 변경될 때마다 로그 출력 및 처리
   useEffect(() => {
@@ -96,11 +95,12 @@ const Map: React.FC<MapProps> = ({
         const currentDayData = itinerary.find(day => day.day === selectedDay);
         if (currentDayData) {
           console.log(`[Map] 서버 경로 데이터 업데이트 후 ${selectedDay}일차 일정 경로 시각화 중...`);
-          renderItineraryRoute(currentDayData, serverRoutesData, () => {}, clearAllRoutes);
+          // clearAllRoutes 인자 제거
+          renderItineraryRoute(currentDayData, serverRoutesData, () => {});
         }
       }
     }
-  }, [serverRoutesData, isGeoJsonLoaded, showGeoJson, toggleGeoJsonVisibility, selectedDay, itinerary, renderItineraryRoute, clearAllRoutes]);
+  }, [serverRoutesData, isGeoJsonLoaded, showGeoJson, toggleGeoJsonVisibility, selectedDay, itinerary, renderItineraryRoute]);
 
   // 장소와 GeoJSON 매핑 검사
   useEffect(() => {

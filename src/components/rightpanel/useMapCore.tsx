@@ -1,12 +1,12 @@
 import { useMapInitialization } from '@/hooks/map/useMapInitialization';
 import { useMapNavigation } from '@/hooks/map/useMapNavigation';
-import { useMapMarkers } from '@/hooks/map/useMapMarkers'; // This hook might be deprecated or its functionality moved to useMapFeatures
-// import { useMapItineraryRouting } from '@/hooks/map/useMapItineraryRouting'; // This seems to be an older routing mechanism
+// import { useMapMarkers } from '@/hooks/map/useMapMarkers'; // Deprecated
+// import { useMapItineraryRouting } from '@/hooks/map/useMapItineraryRouting'; // Older
 import { useGeoJsonState } from '@/hooks/map/useGeoJsonState';
 import { useServerRoutes } from '@/hooks/map/useServerRoutes';
-import { useMapFeatures } from '@/hooks/map/useMapFeatures'; // Primary hook for features
+import { useMapFeatures } from '@/hooks/map/useMapFeatures';
 import { Place, ItineraryDay } from '@/types/supabase';
-import { ServerRouteResponse } from '@/types/schedule';
+import { ServerRouteResponse, SegmentRoute } from '@/types/schedule'; // SegmentRoute 추가
 
 /**
  * 지도 핵심 기능 통합 훅
@@ -16,11 +16,12 @@ const useMapCore = () => {
     map, 
     mapContainer, 
     isMapInitialized, 
-    isNaverLoaded,
+    isNaverLoaded, // isNaverLoaded를 여기서 가져옴
     isMapError
   } = useMapInitialization();
   
-  const features = useMapFeatures(map); 
+  // useMapFeatures에 isNaverLoaded 전달
+  const features = useMapFeatures(map, isNaverLoaded); 
 
   const { 
     clearMarkersAndUiElements, 
@@ -83,6 +84,13 @@ const useMapCore = () => {
   const calculateRoutesWrapper = (placesToRoute: Place[]) => {
     features.calculateRoutes(placesToRoute);
   };
+  
+  // highlightSegment의 타입이 (segment: SegmentRoute | null) => void 이므로,
+  // useMapCore에서 그대로 전달하면 됩니다.
+  // MapContextType에서 이 타입을 맞춰줘야 합니다.
+  const highlightSegmentWrapper = (segment: SegmentRoute | null) => {
+    features.highlightSegment(segment);
+  };
 
   return {
     map,
@@ -104,7 +112,7 @@ const useMapCore = () => {
     mapPlacesWithGeoNodes: features.mapPlacesWithGeoNodes,
     renderItineraryRoute, 
     clearAllRoutes: features.clearAllRoutes,
-    highlightSegment: features.highlightSegment,
+    highlightSegment: highlightSegmentWrapper, // 수정된 wrapper 사용 또는 features.highlightSegment 직접 사용
     clearPreviousHighlightedPath: features.clearPreviousHighlightedPath,
     showRouteForPlaceIndex, 
     renderGeoJsonRoute: features.renderGeoJsonRoute,

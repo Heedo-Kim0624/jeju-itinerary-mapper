@@ -20,33 +20,25 @@ const LeftPanel: React.FC = () => {
     tripDetails,
     uiVisibility,
     itineraryManagement,
-    handleCreateItinerary, // This is async () => Promise<boolean>
+    handleCreateItinerary, 
     handleCloseItinerary
   } = useLeftPanel();
 
-  // 로컬 로딩 상태 관리 추가
   const [isGenerating, setIsGenerating] = useState(false);
-  // 일정 생성 이벤트 처리를 위한 상태
   const [itineraryReceived, setItineraryReceived] = useState(false);
-  // 빈 일정 패널도 표시하기 위한 강제 표시 상태
-  // const [forceShowPanel, setForceShowPanel] = useState(false); // 이제 uiVisibility.showItinerary로 대체됨
 
-  // 일정 상태 변화 감지를 위한 useEffect
   useEffect(() => {
     console.log("LeftPanel - 일정 관련 상태 변화 감지:", {
       일정생성됨: !!itineraryManagement.itinerary,
       일정패널표시: uiVisibility.showItinerary,
-      강제패널표시: forceShowPanel,
       선택된일자: itineraryManagement.selectedItineraryDay,
       일정길이: itineraryManagement.itinerary ? itineraryManagement.itinerary.length : 0,
       로딩상태: isGenerating,
       일정수신완료: itineraryReceived
     });
     
-    // 로딩이 완료되고 일정 수신이 완료됐으면 강제로 패널을 표시하도록 설정
     if (!isGenerating && itineraryReceived) {
-      console.log("LeftPanel - 로딩 완료 및 일정 수신 완료, 패널 강제 표시");
-      // setForceShowPanel(true); // 이제 itineraryCreated 이벤트에서 직접 showItinerary를 true로 설정
+      console.log("LeftPanel - 로딩 완료 및 일정 수신 완료, 패널 표시 로직은 use-left-panel에서 담당");
       // uiVisibility.setShowItinerary(true); // use-left-panel에서 관리
     }
   }, [
@@ -55,7 +47,6 @@ const LeftPanel: React.FC = () => {
     itineraryManagement.selectedItineraryDay,
     isGenerating,
     itineraryReceived,
-    // uiVisibility.setShowItinerary // No longer directly set here
   ]);
   
   // 개선된 이벤트 리스너 설정
@@ -179,13 +170,7 @@ const LeftPanel: React.FC = () => {
           console.log("[LeftPanel] handleCreateItinerary Promise 성공. 이벤트 대기 중...");
           // 안전장치: 15초 후에도 로딩 중이면 강제로 상태 업데이트 시도
           setTimeout(() => {
-            // setIsGenerating의 최신 상태를 확인하기 위해 함수형 업데이트를 사용하거나,
-            // 이 시점의 isGenerating 상태를 직접 참조합니다.
-            // 여기서는 isGenerating 상태를 직접 확인합니다.
-            // useState의 isGenerating 상태를 직접 참조합니다.
-            // 클로저 문제를 피하려면 이 부분에서 isGenerating 상태를 다시 가져오거나,
-            // 혹은 isGenerating 상태를 업데이트하는 로직이 timeout 내부에서 올바르게 동작하도록 해야합니다.
-            // 간단하게는, 상태가 아직 true이면 업데이트합니다.
+            // isGenerating 상태를 직접 참조 (클로저 문제 가능성 있음, 필요시 함수형 업데이트 고려)
             if (isGenerating) { 
               console.warn("[LeftPanel] 15초 경과, 여전히 로딩 중. 강제 상태 업데이트 시도.");
               setIsGenerating(false); 
@@ -224,7 +209,6 @@ const LeftPanel: React.FC = () => {
       isGenerating,
       itineraryExists: !!itineraryManagement.itinerary,
       itineraryLength: itineraryManagement.itinerary?.length || 0,
-      // forceShowPanel은 이제 사용하지 않음
       최종결과_shouldShowItineraryView: shouldShowItineraryView
     });
   }, [uiVisibility.showItinerary, isGenerating, itineraryManagement.itinerary, shouldShowItineraryView]);
@@ -355,7 +339,6 @@ const LeftPanel: React.FC = () => {
         <div className="fixed bottom-4 left-4 bg-black bg-opacity-70 text-white p-2 rounded text-xs z-[100]"> {/* Debug 패널 z-index 최상위 */}
           [Dev Debug Info]<br/>
           LP.showItinerary (Hook): {uiVisibility.showItinerary ? 'true' : 'false'}<br />
-          {/* forceShowPanel: {forceShowPanel ? 'true' : 'false'}<br /> */}
           LP.itinerary (Hook): {itineraryManagement.itinerary ? `${itineraryManagement.itinerary.length}일 (${itineraryManagement.itinerary[0]?.places?.length || 0}곳)` : 'null'}<br />
           LP.selectedDay (Hook): {itineraryManagement.selectedItineraryDay || 'null'}<br />
           LP.isGenerating: {isGenerating ? 'true' : 'false'}<br />
