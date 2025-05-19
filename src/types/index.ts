@@ -64,9 +64,9 @@ export interface ServerRouteSummaryItem {
   day: string;                   // "Tue", "Wed", "Thu", "Fri" 등
   status: string;                // "성공" 등
   total_distance_m: number;      // 미터 단위 총 거리
-  places_routed: string[];       // 경로에 포함된 장소 이름 배열
-  places_scheduled: string[];    // 일정에 포함된 장소 이름 배열
-  interleaved_route: number[];    // NODE_ID와 LINK_ID가 번갈아 있는 배열
+  places_routed?: string[];      // 경로에 포함된 장소 이름 배열 (optional)
+  places_scheduled?: string[];   // 일정에 포함된 장소 이름 배열 (optional)
+  interleaved_route: (string | number)[]; // NODE_ID와 LINK_ID가 번갈아 있는 배열 (string or number)
 }
 
 // 서버 응답 인터페이스
@@ -113,8 +113,8 @@ export interface ItineraryDay {
   day: number;
   places: ItineraryPlaceWithTime[];
   totalDistance: number; // km 단위
-  routeData: RouteData;
-  interleaved_route?: (string | number)[]; // Can be mixed if IDs are strings
+  routeData?: RouteData; // Made optional to match use-itinerary-creator.ts logic
+  interleaved_route?: (string | number)[];
   dayOfWeek: string; // 예: "Mon", "Tue"
   date: string;      // 예: "05/21" (MM/DD 형식)
 }
@@ -133,8 +133,9 @@ export function isNewServerScheduleResponse(obj: any): obj is NewServerScheduleR
       typeof item.day === 'string' &&
       item.hasOwnProperty('status') && // Use hasOwnProperty for safer check
       item.hasOwnProperty('total_distance_m') &&
-      Array.isArray(item.places_scheduled) &&
-      Array.isArray(item.places_routed) &&
+      // places_scheduled and places_routed are now optional, so check if they exist before Array.isArray
+      (item.places_scheduled === undefined || Array.isArray(item.places_scheduled)) &&
+      (item.places_routed === undefined || Array.isArray(item.places_routed)) &&
       Array.isArray(item.interleaved_route)
     )
   );
