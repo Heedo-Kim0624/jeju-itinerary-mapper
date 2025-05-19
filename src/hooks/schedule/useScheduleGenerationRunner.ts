@@ -1,14 +1,15 @@
 
 import { useCallback } from 'react';
 import { toast } from 'sonner';
-import { SelectedPlace } from '@/types/supabase';
-import { NewServerScheduleResponse, ServerRouteResponse, isNewServerScheduleResponse } from '@/types/schedule';
+import { SelectedPlace, NewServerScheduleResponse, isNewServerScheduleResponse, ServerRouteResponse, ItineraryDay as CreatorItineraryDay } from '@/types'; // Updated imports
 import { useScheduleGenerator as useScheduleGeneratorHook } from '@/hooks/use-schedule-generator';
-import { useItineraryCreator, ItineraryDay as CreatorItineraryDay } from '@/hooks/use-itinerary-creator';
+// ItineraryDay from use-itinerary-creator is CreatorItineraryDay
+import { useItineraryCreator } from '@/hooks/use-itinerary-creator'; 
 import { useMapContext } from '@/components/rightpanel/MapContext';
 import { useSchedulePayload } from './useSchedulePayload';
 import { useScheduleParser, updateItineraryWithCoordinates } from './useScheduleParser';
-import { extractAllNodesFromRoute, extractAllLinksFromRoute } from '@/utils/routeParser';
+// extractAllNodesFromRoute and extractAllLinksFromRoute are not used here, consider removing if not needed elsewhere
+// import { extractAllNodesFromRoute, extractAllLinksFromRoute } from '@/utils/routeParser';
 
 const DEBUG_MODE = true;
 
@@ -26,6 +27,8 @@ interface UseScheduleGenerationRunnerProps {
   setItinerary: (itinerary: CreatorItineraryDay[]) => void;
   setSelectedDay: (day: number | null) => void;
   setIsLoadingState: (loading: boolean) => void;
+  // Add setShowItinerary if it's managed by the caller of this hook
+  // For now, assuming it's handled through events or by useItinerary hook directly
 }
 
 export const useScheduleGenerationRunner = ({
@@ -53,6 +56,7 @@ export const useScheduleGenerationRunner = ({
     setIsLoadingState(true);
     
     let finalItineraryForEvent: CreatorItineraryDay[] = [];
+    let itineraryCreatedSuccessfully = false;
     
     try {
       const payload = preparePayload();
@@ -60,16 +64,14 @@ export const useScheduleGenerationRunner = ({
       
       if (!payload) {
         toast.error("일정 생성에 필요한 정보가 부족합니다.");
-        setIsLoadingState(false);
+        // setIsLoadingState(false); // Moved to finally block
         return;
       }
 
-      // 서버에 일정 생성 요청을 보내고 응답을 받습니다
       const serverResponse = await generateScheduleViaHook(payload);
       console.log('[useScheduleGenerationRunner] 서버 원본 응답:', serverResponse);
       debugLog('Raw server response (useScheduleGenerationRunner):', serverResponse);
       
-      // 서버 응답 상세 정보 로깅
       console.log('[useScheduleGenerationRunner] 서버 응답 타입 분석:', {
         응답존재: !!serverResponse,
         객체타입: typeof serverResponse === 'object',
@@ -82,26 +84,16 @@ export const useScheduleGenerationRunner = ({
         isNewResponse: isNewServerScheduleResponse(serverResponse)
       });
 
-      // 서버 응답 검증 로직 추가 - 더 명확하고 강력하게
-      if (serverResponse && 
-          typeof serverResponse === 'object' && 
-          !Array.isArray(serverResponse) &&
-          Array.isArray(serverResponse.schedule) && 
-          Array.isArray(serverResponse.route_summary) &&
-          serverResponse.route_summary.length > 0) {
-        
+      if (serverResponse && isNewServerScheduleResponse(serverResponse)) {
         console.log('[useScheduleGenerationRunner] 서버 응답이 유효합니다. 일정 파싱을 시작합니다.');
         
-        // 저장해둔 서버 응답을 ItineraryDay 배열로 변환
         let parsedItinerary = parseServerResponse(serverResponse, dates?.startDate || new Date());
         console.log("[useScheduleGenerationRunner] 파싱된 일정 (좌표 업데이트 전):", JSON.parse(JSON.stringify(parsedItinerary)));
         
-        // 유효성 검사: 빈 일정이 아닌지 확인
         if (parsedItinerary.length === 0) {
           console.error('[useScheduleGenerationRunner] 서버 응답 파싱 결과가 빈 배열입니다.');
           toast.error('서버 응답을 처리할 수 없습니다. 다시 시도해 주세요.');
           
-          // 대체 일정 생성 로직
           if (dates && selectedPlaces.length > 0) {
             const fallbackItinerary = createItinerary(
               selectedPlaces,
@@ -112,51 +104,44 @@ export const useScheduleGenerationRunner = ({
             );
             
             if (fallbackItinerary.length > 0) {
-              // 대체 일정 저장 및 이벤트 발생을 위한 설정
               setItinerary(fallbackItinerary);
               finalItineraryForEvent = fallbackItinerary;
               setSelectedDay(fallbackItinerary[0].day);
               toast.info('클라이언트에서 대체 일정을 생성했습니다.');
+              itineraryCreatedSuccessfully = true;
             }
           }
-          
-          setIsLoadingState(false);
+          // setIsLoadingState(false); // Moved to finally block
           return;
         }
         
-        // GeoJSON에서 좌표 정보 추가
         const itineraryWithCoords = updateItineraryWithCoordinates(parsedItinerary, geoJsonNodes as any);
         console.log("[useScheduleGenerationRunner] 좌표가 추가된 일정:", JSON.parse(JSON.stringify(itineraryWithCoords)));
         
-        // 상태에 일정 데이터를 저장
         setItinerary(itineraryWithCoords);
         finalItineraryForEvent = itineraryWithCoords;
         
-        // MapContext에 경로 데이터 전달
         const routesForMapContext: Record<number, ServerRouteResponse> = {};
-        
         itineraryWithCoords.forEach(dayWithCoords => {
-            // 각 일자마다 MapContext에 서버 경로 데이터 설정
             routesForMapContext[dayWithCoords.day] = {
-                nodeIds: dayWithCoords.routeData?.nodeIds || [],
-                linkIds: dayWithCoords.routeData?.linkIds || [],
-                interleaved_route: dayWithCoords.interleaved_route,
+                nodeIds: (dayWithCoords.routeData?.nodeIds.map(id => Number(id))) || [], // Ensure numbers if server expects numbers
+                linkIds: (dayWithCoords.routeData?.linkIds.map(id => Number(id))) || [], // Ensure numbers
+                interleaved_route: dayWithCoords.interleaved_route?.map(id => typeof id === 'string' ? Number(id) : id),
             };
         });
         
         console.log("[useScheduleGenerationRunner] 지도 콘텍스트에 경로 데이터 설정:", routesForMapContext);
         setServerRoutes(routesForMapContext);
         
-        // 첫 날짜 선택 및 성공 메시지
         if (itineraryWithCoords.length > 0) {
           setSelectedDay(itineraryWithCoords[0].day);
           toast.success(`${itineraryWithCoords.length}일 일정이 성공적으로 생성되었습니다!`);
+          itineraryCreatedSuccessfully = true;
         }
       } else {
-        console.error('[useScheduleGenerationRunner] 서버 응답이 필요한 형식을 충족하지 않습니다:', serverResponse);
-        toast.error("서버 응답 형식이 올바르지 않습니다. 다시 시도해 주세요.");
+        console.error('[useScheduleGenerationRunner] 서버 응답이 필요한 형식을 충족하지 않거나 null입니다.:', serverResponse);
+        // toast.error("서버 응답 형식이 올바르지 않습니다. 다시 시도해 주세요."); // Potentially redundant if fallback is created
         
-        // 대체 일정 생성
         if (dates && selectedPlaces.length > 0) {
             const fallbackItinerary = createItinerary(
               selectedPlaces,
@@ -171,15 +156,19 @@ export const useScheduleGenerationRunner = ({
             
             if (fallbackItinerary.length > 0) {
               setSelectedDay(fallbackItinerary[0].day);
-              toast.info("클라이언트에서 기본 일정이 생성되었습니다.");
+              toast.info("서버 응답 문제로 클라이언트에서 기본 일정이 생성되었습니다.");
+              itineraryCreatedSuccessfully = true;
+            } else {
+              toast.error("대체 일정 생성에도 실패했습니다.");
             }
+        } else {
+           toast.error("서버 응답이 없어 대체 일정을 생성할 수 없습니다.");
         }
       }
     } catch (error) {
       console.error("일정 생성 중 오류 발생 (useScheduleGenerationRunner):", error);
       toast.error("일정 생성 중 오류가 발생했습니다.");
       
-      // 에러 발생 시 대체 일정 생성
       if (dates && selectedPlaces.length > 0) {
         const fallbackItinerary = createItinerary(
           selectedPlaces,
@@ -195,54 +184,63 @@ export const useScheduleGenerationRunner = ({
         if (fallbackItinerary.length > 0) {
           setSelectedDay(fallbackItinerary[0].day);
           toast.info("오류 발생으로 인해 기본 일정을 생성했습니다.");
+          itineraryCreatedSuccessfully = true;
         }
       }
     } finally {
-      console.log("[useScheduleGenerationRunner] finally 블록 진입. isLoadingState를 false로 설정합니다.");
+      console.log("[useScheduleGenerationRunner] finally 블록 진입.");
       
-      // 로딩 상태 해제는 이벤트 발생 후에 하도록 지연시킵니다
-      // 일정 생성 이벤트 발생
-      if (finalItineraryForEvent.length > 0) {
+      if (itineraryCreatedSuccessfully && finalItineraryForEvent.length > 0) {
         console.log("[useScheduleGenerationRunner] 'itineraryCreated' 이벤트 발생:", JSON.parse(JSON.stringify(finalItineraryForEvent)));
         
         const event = new CustomEvent('itineraryCreated', { 
           detail: { 
             itinerary: finalItineraryForEvent,
-            selectedDay: finalItineraryForEvent.length > 0 ? finalItineraryForEvent[0].day : null
+            selectedDay: finalItineraryForEvent.length > 0 ? finalItineraryForEvent[0].day : null,
+            showItinerary: true // 중요: 이벤트에 showItinerary 상태 포함
           } 
         });
         window.dispatchEvent(event);
         
-        // 일정 데이터 보존을 확인한 후 로딩 상태 해제
-        setTimeout(() => {
-          console.log("[useScheduleGenerationRunner] 'forceRerender' 이벤트 발생");
-          window.dispatchEvent(new Event('forceRerender'));
-          
-          // 좌표가 포함된 일정 이벤트 발생
-          const coordsEvent = new CustomEvent('itineraryWithCoordinatesReady', {
-            detail: { itinerary: finalItineraryForEvent }
-          });
-          console.log("[useScheduleGenerationRunner] 'itineraryWithCoordinatesReady' 이벤트 발생");
-          window.dispatchEvent(coordsEvent);
-          
-          // 이벤트 발생 후 로딩 상태를 해제
-          setIsLoadingState(false);
-        }, 100);
-      } else {
-        console.log("[useScheduleGenerationRunner] 'itineraryCreated' 이벤트 발생 (빈 일정)");
-        const event = new CustomEvent('itineraryCreated', {
+        // Optional: Dispatch 'itineraryWithCoordinatesReady' if still needed by other parts of the app
+        // const coordsEvent = new CustomEvent('itineraryWithCoordinatesReady', {
+        //   detail: { itinerary: finalItineraryForEvent }
+        // });
+        // console.log("[useScheduleGenerationRunner] 'itineraryWithCoordinatesReady' 이벤트 발생");
+        // window.dispatchEvent(coordsEvent);
+
+      } else if (itineraryCreatedSuccessfully && finalItineraryForEvent.length === 0) {
+        // This case might happen if fallback itinerary was also empty
+        console.log("[useScheduleGenerationRunner] 'itineraryCreated' 이벤트 발생 (빈 일정, 생성은 시도됨)");
+         const event = new CustomEvent('itineraryCreated', {
           detail: {
             itinerary: [],
-            selectedDay: null
+            selectedDay: null,
+            showItinerary: false // No itinerary to show
           }
         });
         window.dispatchEvent(event);
-        
-        // 이벤트 발생 후 로딩 상태를 해제
-        setTimeout(() => {
-          setIsLoadingState(false);
-        }, 100);
+      } else {
+        // If no itinerary was successfully created (neither server nor fallback)
+        console.log("[useScheduleGenerationRunner] 일정 생성 실패, 'itineraryCreated' 이벤트 (빈 일정, 실패 상태)");
+        const event = new CustomEvent('itineraryCreated', {
+          detail: {
+            itinerary: [],
+            selectedDay: null,
+            showItinerary: false 
+          }
+        });
+        window.dispatchEvent(event);
       }
+      
+      // Always set loading to false after all operations
+      // Delay slightly to allow event processing
+      setTimeout(() => {
+        setIsLoadingState(false);
+        console.log("[useScheduleGenerationRunner] isLoadingState를 false로 설정 (지연 후).");
+        // Dispatch forceRerender if needed, but ensure it doesn't cause loops
+        // window.dispatchEvent(new Event('forceRerender')); 
+      }, 100);
     }
   }, [
     preparePayload,
@@ -255,10 +253,11 @@ export const useScheduleGenerationRunner = ({
     createItinerary,
     setItinerary,
     setSelectedDay,
-    setIsLoadingState,
+    setIsLoadingState, // Ensure this is stable or correctly memoized
   ]);
 
   return { 
     runScheduleGenerationProcess,
   };
 };
+
