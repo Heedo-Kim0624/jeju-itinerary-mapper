@@ -295,12 +295,10 @@ const LeftPanel: React.FC = () => {
           <div className="absolute top-2 right-2 z-10">
             <Button 
               variant="ghost" 
-              size="icon" 
               onClick={handleClosePanelWithBackButton}
-              className="rounded-full bg-white shadow-sm hover:bg-gray-100"
+              className="rounded-full bg-white shadow-sm hover:bg-gray-100 text-blue-500 font-medium"
             >
-              <X className="h-4 w-4" />
-              <span className="sr-only">뒤로 가기</span>
+              뒤로
             </Button>
           </div>
           <ItineraryView

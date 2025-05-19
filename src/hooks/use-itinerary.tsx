@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import type { Place, ItineraryDay, ItineraryPlaceWithTime, RouteData } from '@/types'; // @/types 에서 타입 가져오기 (core.ts 재수출)
 import { useItineraryCreator, ItineraryDay as CreatorItineraryDay } from './use-itinerary-creator'; // 읽기 전용 파일의 타입은 별칭으로 구분
@@ -21,6 +22,122 @@ export const useItinerary = () => {
   const [showItinerary, setShowItinerary] = useState<boolean>(false);
   const [isItineraryCreated, setIsItineraryCreated] = useState<boolean>(false);
   const { createItinerary } = useItineraryCreator();
+
+  // 서버 응답을 ItineraryDay[] 형태로 파싱하는 함수
+  const parseServerResponse = (serverResponse: any): ItineraryDay[] => {
+    try {
+      console.log("[useItinerary] parseServerResponse 시작:", {
+        schedule: serverResponse.schedule?.length,
+        route_summary: serverResponse.route_summary?.length,
+        schedule_first: serverResponse.schedule?.[0],
+        route_first: serverResponse.route_summary?.[0]
+      });
+      
+      if (!serverResponse.schedule || !serverResponse.route_summary || 
+          !Array.isArray(serverResponse.schedule) || !Array.isArray(serverResponse.route_summary)) {
+        console.error("[useItinerary] 서버 응답 형식이 올바르지 않습니다.");
+        return [];
+      }
+      
+      // 날짜별로 그룹화
+      const dayGroups: Record<string, any[]> = {};
+      serverResponse.schedule.forEach((item: any) => {
+        console.log("[useItinerary] 일정 항목 처리:", item);
+        const dayMatch = item.time_block?.match(/^([A-Za-z]+)_/);
+        if (dayMatch && dayMatch[1]) {
+          const day = dayMatch[1]; // 'Mon', 'Tue' 등
+          if (!dayGroups[day]) {
+            dayGroups[day] = [];
+          }
+          dayGroups[day].push(item);
+        } else {
+          console.warn("[useItinerary] 일정 항목에서 day를 추출할 수 없음:", item);
+        }
+      });
+      
+      console.log("[useItinerary] 날짜별 그룹화 결과:", Object.keys(dayGroups).map(day => ({
+        day,
+        count: dayGroups[day].length
+      })));
+      
+      // route_summary와 매칭하여 ItineraryDay[] 생성
+      const result: ItineraryDay[] = [];
+      let dayIndex = 1;
+      
+      for (const routeInfo of serverResponse.route_summary) {
+        console.log("[useItinerary] 경로 정보 처리:", routeInfo);
+        const day = routeInfo.day; // 'Mon', 'Tue' 등
+        const dayPlaces = dayGroups[day] || [];
+        
+        console.log(`[useItinerary] ${day}일 장소 데이터:`, {
+          count: dayPlaces.length,
+          places: dayPlaces.map((p: any) => p.place_name || p.id)
+        });
+        
+        // 장소 정보를 ItineraryPlaceWithTime 형태로 변환
+        const places: ItineraryPlaceWithTime[] = dayPlaces.map((place: any) => {
+          const timeMatch = place.time_block?.match(/_([^_]+)$/);
+          const timeBlock = timeMatch ? timeMatch[1] : '';
+          
+          const placeData = {
+            id: place.id?.toString() || Math.random().toString(36).substring(7),
+            name: place.place_name || '이름 없는 장소',
+            category: place.place_type || 'unknown',
+            timeBlock: timeBlock,
+            address: place.address || '',
+            x: parseFloat(place.x || '0') || 0,
+            y: parseFloat(place.y || '0') || 0,
+            arriveTime: timeBlock,
+            departTime: '',
+            stayDuration: 60,
+            travelTimeToNext: place.travel_time_to_next_min ? `${place.travel_time_to_next_min}분` : '',
+            phone: place.phone || '',
+            description: '',
+            image_url: '',
+            rating: 0,
+            road_address: '',
+            homepage: '',
+            geoNodeId: place.id?.toString() || '',
+          } as ItineraryPlaceWithTime;
+          
+          return placeData;
+        });
+        
+        // 현재 날짜 계산 (startDate 기준으로 dayIndex만큼 더함)
+        const currentDate = new Date();
+        currentDate.setDate(currentDate.getDate() + dayIndex - 1);
+        
+        // ItineraryDay 객체 생성
+        const itineraryDay: ItineraryDay = {
+          day: dayIndex,
+          dayOfWeek: day, // 'Mon', 'Tue' 등
+          date: getDateStringMMDD(currentDate),
+          places: places,
+          totalDistance: (routeInfo.total_distance_m / 1000) || 0,
+          routeData: {
+            nodeIds: routeInfo.places_routed?.map((p: any) => p.toString()) || [],
+            linkIds: routeInfo.links_routed?.map((l: any) => l.toString()) || [],
+            segmentRoutes: []
+          },
+          interleaved_route: routeInfo.interleaved_route?.map((id: any) => id.toString()) || []
+        };
+        
+        result.push(itineraryDay);
+        dayIndex++;
+      }
+      
+      console.log("[useItinerary] parseServerResponse 완료:", {
+        생성된일정수: result.length,
+        첫날장소수: result[0]?.places?.length || 0,
+        첫날장소목록: result[0]?.places?.map(p => p.name) || []
+      });
+      
+      return result;
+    } catch (error) {
+      console.error("[useItinerary] parseServerResponse 오류:", error);
+      return [];
+    }
+  };
 
   const handleSelectItineraryDay = (day: number) => {
     setSelectedItineraryDay(day);
@@ -226,6 +343,50 @@ export const useItinerary = () => {
     }
     return result;
   };
+
+  // rawServerResponseReceived 이벤트 리스너 추가
+  useEffect(() => {
+    const handleRawServerResponse = (event: Event) => {
+      console.log("[useItinerary] rawServerResponseReceived 이벤트 수신", (event as CustomEvent).detail);
+      const serverResponse = (event as CustomEvent).detail?.response;
+      
+      if (serverResponse && serverResponse.schedule && serverResponse.route_summary) {
+        // 서버 응답을 ItineraryDay[] 형태로 파싱
+        const parsedItinerary = parseServerResponse(serverResponse);
+        console.log("[useItinerary] 서버 응답 파싱 결과:", parsedItinerary);
+        
+        if (parsedItinerary && parsedItinerary.length > 0) {
+          // 파싱된 결과로 상태 업데이트
+          setItinerary(parsedItinerary);
+          setIsItineraryCreated(true);
+          setShowItinerary(true);
+          setSelectedItineraryDay(parsedItinerary[0].day);
+          
+          // itineraryCreated 이벤트 발생
+          const itineraryCreatedEvent = new CustomEvent('itineraryCreated', {
+            detail: { 
+              itinerary: parsedItinerary,
+              selectedDay: parsedItinerary[0].day
+            }
+          });
+          console.log("[useItinerary] itineraryCreated 이벤트 발생");
+          window.dispatchEvent(itineraryCreatedEvent);
+        } else {
+          console.error("[useItinerary] 서버 응답 파싱 결과가 비어있습니다.");
+          toast.error("일정 생성에 실패했습니다. 다시 시도해주세요.");
+        }
+      } else {
+        console.error("[useItinerary] 서버 응답이 유효하지 않습니다:", serverResponse);
+        toast.error("서버 응답이 유효하지 않습니다. 다시 시도해주세요.");
+      }
+    };
+    
+    window.addEventListener('rawServerResponseReceived', handleRawServerResponse);
+    
+    return () => {
+      window.removeEventListener('rawServerResponseReceived', handleRawServerResponse);
+    };
+  }, [setItinerary, setSelectedItineraryDay, setShowItinerary, setIsItineraryCreated]);
 
   useEffect(() => {
     const handleItineraryCreated = (event: Event) => {
