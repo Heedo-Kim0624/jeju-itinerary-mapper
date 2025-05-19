@@ -6,6 +6,8 @@ import LeftPanelContent from './LeftPanelContent';
 import RegionPanelHandler from './RegionPanelHandler';
 import CategoryResultHandler from './CategoryResultHandler';
 import ItineraryView from './ItineraryView';
+import { X } from 'lucide-react'; // Import X icon for back button
+import { Button } from '@/components/ui/button'; // Import Button component
 import { CategoryName } from '@/utils/categoryUtils';
 import { Place } from '@/types/supabase';
 import { toast } from 'sonner';
@@ -28,33 +30,26 @@ const LeftPanel: React.FC = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   // 일정 생성 이벤트 처리를 위한 상태
   const [itineraryReceived, setItineraryReceived] = useState(false);
+  // 빈 일정 패널도 표시하기 위한 강제 표시 상태
+  const [forceShowPanel, setForceShowPanel] = useState(false);
   
   // 일정 상태 변화 감지를 위한 useEffect
   useEffect(() => {
     console.log("LeftPanel - 일정 관련 상태 변화 감지:", {
       일정생성됨: !!itineraryManagement.itinerary,
       일정패널표시: uiVisibility.showItinerary,
+      강제패널표시: forceShowPanel,
       선택된일자: itineraryManagement.selectedItineraryDay,
       일정길이: itineraryManagement.itinerary ? itineraryManagement.itinerary.length : 0,
       로딩상태: isGenerating,
       일정수신완료: itineraryReceived
     });
     
-    // 일정이 존재하고 itineraryReceived가 true인 경우 일정 패널을 표시하고 로딩 상태를 해제합니다
-    if (itineraryManagement.itinerary && 
-        itineraryManagement.itinerary.length > 0 && 
-        itineraryReceived) {
-      console.log("LeftPanel - 일정이 존재하고 수신이 완료되어 일정 패널 표시 및 로딩 상태 해제");
+    // 로딩이 완료되고 일정 수신이 완료됐으면 강제로 패널을 표시하도록 설정
+    if (!isGenerating && itineraryReceived) {
+      console.log("LeftPanel - 로딩 완료 및 일정 수신 완료, 패널 강제 표시");
+      setForceShowPanel(true);
       uiVisibility.setShowItinerary(true);
-      setIsGenerating(false);
-    }
-    // 일정이 없는데 로딩 중이 아닌 경우도 처리
-    else if ((!itineraryManagement.itinerary || itineraryManagement.itinerary.length === 0) && 
-             !isGenerating && 
-             itineraryReceived) {
-      console.log("LeftPanel - 일정이 없고 로딩 중이 아니므로 일정 패널 숨김");
-      uiVisibility.setShowItinerary(false);
-      setItineraryReceived(false); // 이벤트 처리 완료
     }
   }, [
     itineraryManagement.itinerary, 
@@ -65,7 +60,7 @@ const LeftPanel: React.FC = () => {
     uiVisibility.setShowItinerary
   ]);
   
-  // 이벤트 리스너 추가 - 개선된 버전
+  // 개선된 이벤트 리스너 설정
   useEffect(() => {
     const handleForceRerender = () => {
       console.log("[LeftPanel] forceRerender 이벤트 수신");
@@ -90,15 +85,20 @@ const LeftPanel: React.FC = () => {
         // 로딩 상태 즉시 해제
         setIsGenerating(false);
         
-        // 일정 패널을 표시하도록 명시적으로 설정
+        // 패널 표시 강제 및 일정 패널 표시 활성화
+        setForceShowPanel(true);
         uiVisibility.setShowItinerary(true);
       } else {
         console.warn("[LeftPanel] itineraryCreated 이벤트에 유효한 일정 데이터가 없습니다");
+        // 로딩 상태 즉시 해제하고 빈 패널이라도 표시
         setIsGenerating(false);
+        setForceShowPanel(true);
+        uiVisibility.setShowItinerary(true);
+        toast.warning("생성된 일정이 비어있습니다. 다른 장소를 선택하고 다시 시도해주세요.");
       }
     };
     
-    // itineraryWithCoordinatesReady 이벤트 리스너 추가
+    // itineraryWithCoordinatesReady 이벤트 리스너
     const handleItineraryWithCoords = (event: Event) => {
       console.log("[LeftPanel] itineraryWithCoordinatesReady 이벤트 수신", (event as CustomEvent).detail);
       
@@ -110,29 +110,33 @@ const LeftPanel: React.FC = () => {
         // 로딩 상태 즉시 해제
         setIsGenerating(false);
         
-        // 일정 패널을 표시하도록 명시적으로 설정
+        // 패널 표시 강제 및 일정 패널 표시 활성화
+        setForceShowPanel(true);
         uiVisibility.setShowItinerary(true);
       }
     };
     
-    // rawServerResponseReceived 이벤트 핸들러 추가 - 서버 응답을 받았을 때 무한 로딩 문제 해결
+    // rawServerResponseReceived 이벤트 핸들러 - 여기가 핵심!
     const handleRawServerResponse = (event: Event) => {
       console.log("[LeftPanel] rawServerResponseReceived 이벤트 수신", (event as CustomEvent).detail);
       
-      // 서버 응답을 받은 시점에서 짧은 타임아웃 후 로딩 상태를 점검
+      // 서버 응답 수신 표시
+      setItineraryReceived(true);
+      
+      // 서버 응답을 받은 후, 짧은 타임아웃 후 상태 업데이트
       setTimeout(() => {
-        // 서버 응답으로부터 3초가 지났는데도 로딩 상태라면 강제로 해제
-        if (isGenerating) {
-          console.log("[LeftPanel] 서버 응답 후 3초가 지났는데도 로딩 중. 강제로 로딩 상태 해제");
-          setIsGenerating(false);
-          setItineraryReceived(true);
-          
-          // 일정 패널을 표시하도록 명시적으로 설정
-          if (itineraryManagement.itinerary && itineraryManagement.itinerary.length > 0) {
-            uiVisibility.setShowItinerary(true);
-          }
+        // 로딩 상태 해제
+        setIsGenerating(false);
+        
+        // 패널 표시 강제 및 일정 패널 표시 활성화 
+        setForceShowPanel(true);
+        uiVisibility.setShowItinerary(true);
+        
+        // 유효한 일정 데이터가 아직 없는 경우 사용자에게 알림
+        if (!itineraryManagement.itinerary || itineraryManagement.itinerary.length === 0) {
+          toast.warning("서버에서 일정을 받았으나 데이터가 비어있습니다. 다시 시도해주세요.");
         }
-      }, 3000);
+      }, 500);
     };
     
     window.addEventListener('forceRerender', handleForceRerender);
@@ -146,8 +150,14 @@ const LeftPanel: React.FC = () => {
       window.removeEventListener('itineraryWithCoordinatesReady', handleItineraryWithCoords);
       window.removeEventListener('rawServerResponseReceived', handleRawServerResponse);
     };
-  }, [isGenerating, itineraryManagement.itinerary, uiVisibility.setShowItinerary]);
+  }, [itineraryManagement.itinerary, uiVisibility.setShowItinerary]);
 
+  // 패널 닫기 핸들러 (뒤로 버튼용)
+  const handleClosePanelWithBackButton = () => {
+    console.log("[LeftPanel] 뒤로 버튼으로 패널 닫기");
+    setForceShowPanel(false);
+    handleCloseItinerary();
+  };
 
   const handlePanelBackByCategory = (category: string) => {
     console.log(`${category} 카테고리 패널 뒤로가기`);
@@ -224,10 +234,14 @@ const LeftPanel: React.FC = () => {
           if (isGenerating) {
             console.log("[LeftPanel] 10초가 지났는데도 로딩 중. 강제로 로딩 상태 해제");
             setIsGenerating(false);
+            setItineraryReceived(true);
+            setForceShowPanel(true);
             
             // 일정이 있으면 표시
             if (itineraryManagement.itinerary && itineraryManagement.itinerary.length > 0) {
               uiVisibility.setShowItinerary(true);
+            } else {
+              toast.warning("일정 생성 시간이 초과되었습니다. 다시 시도해주세요.");
             }
           }
         }, 10000);
@@ -243,27 +257,27 @@ const LeftPanel: React.FC = () => {
       // 오류 발생 시 로딩 상태 즉시 해제
       setIsGenerating(false);
       setItineraryReceived(false);
+      toast.error("일정 생성 중 오류가 발생했습니다.");
       return false;
     }
   };
   
-  // 조건부 렌더링: 개선된 로직
+  // 개선된 조건부 렌더링: 강제 표시 조건 추가
   const shouldShowItineraryView = 
-    uiVisibility.showItinerary && 
-    itineraryManagement.itinerary && 
-    itineraryManagement.itinerary.length > 0 &&
-    !isGenerating; // 로딩 중이 아닐 때
+    (uiVisibility.showItinerary || forceShowPanel) && 
+    !isGenerating;
 
   // 디버깅을 위한 추가 상태 로깅
   useEffect(() => {
     console.log("LeftPanel - shouldShowItineraryView 결정 요소:", {
       showItinerary: uiVisibility.showItinerary,
+      forceShowPanel,
       itineraryExists: !!itineraryManagement.itinerary,
       itineraryLength: itineraryManagement.itinerary ? itineraryManagement.itinerary.length : 0,
       isGenerating,
       결과: shouldShowItineraryView
     });
-  }, [uiVisibility.showItinerary, itineraryManagement.itinerary, isGenerating, shouldShowItineraryView]);
+  }, [uiVisibility.showItinerary, forceShowPanel, itineraryManagement.itinerary, isGenerating, shouldShowItineraryView]);
 
   return (
     <div className="relative h-full">
@@ -276,16 +290,27 @@ const LeftPanel: React.FC = () => {
           />
         </div>
       ) : shouldShowItineraryView ? (
-        // 일정이 있고 로딩 중이 아닐 때 일정 패널 표시 (z-index 값 높게 설정)
+        // 일정 패널 표시 (z-index 값 높게 설정) - 뒤로 가기 버튼 추가
         <div className="fixed top-0 left-0 w-[300px] h-full bg-white border-r border-gray-200 z-50 shadow-md">
+          <div className="absolute top-2 right-2 z-10">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={handleClosePanelWithBackButton}
+              className="rounded-full bg-white shadow-sm hover:bg-gray-100"
+            >
+              <X className="h-4 w-4" />
+              <span className="sr-only">뒤로 가기</span>
+            </Button>
+          </div>
           <ItineraryView
-            itinerary={itineraryManagement.itinerary!} // Null 체크는 shouldShowItineraryView에서 이미 수행
+            itinerary={itineraryManagement.itinerary || []} // 빈 배열로 폴백하여 에러 방지
             startDate={tripDetails.dates?.startDate || new Date()}
             onSelectDay={itineraryManagement.handleSelectItineraryDay}
             selectedDay={itineraryManagement.selectedItineraryDay}
-            onClose={handleCloseItinerary} // ItineraryView에 onClose prop 추가
-            debug={{ // ItineraryView의 debug prop이 있다면 전달
-              itineraryLength: itineraryManagement.itinerary!.length,
+            onClose={handleCloseItinerary}
+            debug={{
+              itineraryLength: itineraryManagement.itinerary?.length || 0,
               selectedDay: itineraryManagement.selectedItineraryDay,
               showItinerary: uiVisibility.showItinerary
             }}
@@ -385,6 +410,7 @@ const LeftPanel: React.FC = () => {
       {process.env.NODE_ENV === 'development' && (
         <div className="fixed bottom-4 left-4 bg-black bg-opacity-70 text-white p-2 rounded text-xs z-50">
           showItinerary: {uiVisibility.showItinerary ? 'true' : 'false'}<br />
+          forceShowPanel: {forceShowPanel ? 'true' : 'false'}<br />
           itinerary: {itineraryManagement.itinerary ? `${itineraryManagement.itinerary.length}일` : 'null'}<br />
           selectedDay: {itineraryManagement.selectedItineraryDay || 'null'}<br />
           isGenerating: {isGenerating ? 'true' : 'false'}<br />

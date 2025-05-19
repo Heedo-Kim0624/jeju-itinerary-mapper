@@ -73,7 +73,7 @@ const useMapCore = () => {
     allServerRoutesInput?: Record<number, ServerRouteResponse>,
     onCompleteInput?: () => void
   ) => {
-    // Correcting function call: Pass all three arguments to features.renderItineraryRoute
+    // Call features.renderItineraryRoute with all three arguments
     features.renderItineraryRoute(
         itineraryDay,
         allServerRoutesInput ?? serverRoutesData,
@@ -87,8 +87,12 @@ const useMapCore = () => {
     itineraryDay: ItineraryDay,
     onComplete?: () => void
   ) => {
-    // Correcting function call: Pass all three arguments to features.showRouteForPlaceIndex
-    features.showRouteForPlaceIndex(placeIndex, itineraryDay, onComplete);
+    // Call features.showRouteForPlaceIndex with all three arguments
+    features.showRouteForPlaceIndex(
+        placeIndex, 
+        itineraryDay, 
+        onComplete
+    );
   };
 
   return {
