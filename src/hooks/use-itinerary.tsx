@@ -1,14 +1,14 @@
-import { useState, useEffect } from 'react';
-import { Place } from '@/types/supabase'; // Assuming Place from supabase is compatible or use Place from @/types
+import { useState, useEffect, useCallback } from 'react';
+import { Place } from '@/types/supabase';
 import { 
     ItineraryDay as GlobalItineraryDay, 
     ItineraryPlaceWithTime as GlobalItineraryPlaceWithTime,
-    RouteData // Import RouteData
-} from '@/types'; // Use the global type from index.ts
-import { useItineraryCreator, ItineraryDay as CreatorItineraryDay } from './use-itinerary-creator'; // This is from the read-only file
+    RouteData 
+} from '@/types';
+import { useItineraryCreator } from './use-itinerary-creator';
 import { toast } from 'sonner';
+import { convertToStandardItineraryDay } from '@/utils/type-converters';
 
-// Export the global types so other files use the consistent definition
 export type ItineraryDay = GlobalItineraryDay;
 export type ItineraryPlaceWithTime = GlobalItineraryPlaceWithTime;
 
@@ -25,37 +25,31 @@ const getDateStringMMDD = (date: Date): string => {
 };
 
 export const useItinerary = () => {
-  const [itinerary, setItinerary] = useState<ItineraryDay[] | null>(null); // Uses global ItineraryDay
+  const [itinerary, setItinerary] = useState<ItineraryDay[]>([]); // Initialize with empty array
   const [selectedItineraryDay, setSelectedItineraryDay] = useState<number | null>(null);
   const [showItinerary, setShowItinerary] = useState<boolean>(false);
-  const [isItineraryCreated, setIsItineraryCreated] = useState<boolean>(false); // Added state
+  const [isItineraryCreated, setIsItineraryCreated] = useState<boolean>(false);
   const { createItinerary } = useItineraryCreator();
 
   // Standard function name for selecting a day
-  const onDaySelect = (day: number) => {
+  const handleSelectItineraryDay = useCallback((day: number) => { // Renamed from onDaySelect, made useCallback
     setSelectedItineraryDay(day);
-  };
+  }, []);
 
-  // Keeping the original function as well for backward compatibility
-  const handleSelectItineraryDay = (day: number) => {
-    setSelectedItineraryDay(day);
-  };
-
-  const generateItinerary = (
-    placesToUse: Place[], // Ensure this Place type is compatible
+  const generateItinerary = useCallback((
+    placesToUse: Place[], 
     startDate: Date,
     endDate: Date,
     startTime: string,
     endTime: string
-  ): ItineraryDay[] => { // Returns global ItineraryDay[]
+  ): ItineraryDay[] => {
     try {
       if (placesToUse.length === 0) {
         toast.error("선택된 장소가 없습니다.");
         return [];
       }
 
-      // createItinerary returns CreatorItineraryDayTypeOnly[]
-      const creatorItineraryResult: ReturnType<typeof createItinerary> = createItinerary(
+      const creatorItineraryResult = createItinerary(
         placesToUse,
         startDate,
         endDate,
@@ -67,30 +61,13 @@ export const useItinerary = () => {
         toast.error("일정을 생성할 수 없습니다. 더 많은 장소를 선택해주세요.");
         return [];
       }
-
-      // Map CreatorItineraryDayTypeOnly[] to global ItineraryDay[]
-      const mappedItinerary: ItineraryDay[] = creatorItineraryResult.map((creatorDay, index) => {
-        const currentDayDate = new Date(startDate);
-        currentDayDate.setDate(startDate.getDate() + index); 
-
-        const mappedPlaces = (creatorDay.places as ItineraryPlaceWithTime[]).map(p => ({
-          ...p,
-        }));
-
-        return {
-          ...creatorDay, 
-          places: mappedPlaces,
-          dayOfWeek: getDayOfWeekString(currentDayDate),
-          date: getDateStringMMDD(currentDayDate),
-          // Ensure routeData is compliant with the new ItineraryDay type
-          routeData: (creatorDay as any).routeData || { nodeIds: [], linkIds: [], segmentRoutes: [] },
-          interleaved_route: (creatorDay as any).interleaved_route || [],
-        };
-      });
+      
+      // Use convertToStandardItineraryDay for mapping
+      const mappedItinerary = convertToStandardItineraryDay(creatorItineraryResult, startDate);
 
       setItinerary(mappedItinerary);
-      setIsItineraryCreated(true); // Set created flag
-      setSelectedItineraryDay(1); // Default to day 1
+      setIsItineraryCreated(true); 
+      setSelectedItineraryDay(mappedItinerary.length > 0 ? mappedItinerary[0].day : null); 
       setShowItinerary(true);
 
       console.log("일정 생성 완료 (useItinerary):", {
@@ -104,10 +81,9 @@ export const useItinerary = () => {
       toast.error("일정 생성 중 오류가 발생했습니다.");
       return [];
     }
-  };
+  }, [createItinerary]); // Added createItinerary to dependencies
 
-  // 서버 응답 처리 함수 - 개선된 로직
-  const handleServerItineraryResponse = (serverItinerary: ItineraryDay[]) => { // Expects global ItineraryDay[]
+  const handleServerItineraryResponse = useCallback((serverItinerary: ItineraryDay[]) => { 
     console.log("서버 일정 응답 처리 시작 (useItinerary):", {
       일수: serverItinerary?.length || 0,
       첫날장소수: serverItinerary?.[0]?.places?.length || 0
@@ -118,19 +94,26 @@ export const useItinerary = () => {
       setItinerary([]); 
       setShowItinerary(false); 
       setIsItineraryCreated(false); 
+      setSelectedItineraryDay(null); // Clear selected day
       return []; 
     }
 
     try {
-      setItinerary(serverItinerary);
+      // Ensure serverItinerary conforms to ItineraryDay[] fully before setting
+      const standardizedItinerary = convertToStandardItineraryDay(serverItinerary, serverItinerary[0]?.date ? new Date(serverItinerary[0].date) : new Date());
+
+      setItinerary(standardizedItinerary);
       setIsItineraryCreated(true); 
       
       console.log("[useItinerary] handleServerItineraryResponse: 일정 패널 표시 활성화");
       setShowItinerary(true);
       
-      if (serverItinerary.length > 0) {
-        console.log(`[useItinerary] handleServerItineraryResponse: 첫 번째 일자(${serverItinerary[0].day}) 선택`);
-        setSelectedItineraryDay(serverItinerary[0].day);
+      if (standardizedItinerary.length > 0) {
+        const dayToSelect = standardizedItinerary[0].day;
+        console.log(`[useItinerary] handleServerItineraryResponse: 첫 번째 일자(${dayToSelect}) 선택`);
+        setSelectedItineraryDay(dayToSelect);
+      } else {
+        setSelectedItineraryDay(null);
       }
 
       setTimeout(() => {
@@ -138,32 +121,35 @@ export const useItinerary = () => {
         window.dispatchEvent(new Event('forceRerender'));
         
         const event = new CustomEvent('itineraryWithCoordinatesReady', {
-          detail: { itinerary: serverItinerary }
+          detail: { itinerary: standardizedItinerary }
         });
         console.log("[useItinerary] handleServerItineraryResponse: itineraryWithCoordinatesReady 이벤트 발생");
         window.dispatchEvent(event);
 
         const itineraryCreatedEvent = new CustomEvent('itineraryCreated', {
           detail: { 
-            itinerary: serverItinerary,
-            selectedDay: serverItinerary.length > 0 ? serverItinerary[0].day : null,
-            showItinerary: true // Ensure event carries showItinerary true
+            itinerary: standardizedItinerary,
+            selectedDay: standardizedItinerary.length > 0 ? standardizedItinerary[0].day : null,
+            showItinerary: true 
           }
         });
         console.log("[useItinerary] handleServerItineraryResponse: itineraryCreated 이벤트 발생");
         window.dispatchEvent(itineraryCreatedEvent);
       }, 100);
 
-      return serverItinerary;
+      return standardizedItinerary;
     } catch (error) {
       console.error("[useItinerary] handleServerItineraryResponse 처리 중 오류:", error);
+      setItinerary([]); // Clear itinerary on error
+      setShowItinerary(false);
       setIsItineraryCreated(false); 
-      return serverItinerary; 
+      setSelectedItineraryDay(null);
+      return []; // Return empty array on error
     }
-  };
+  }, []); // Empty dependency array if convertToStandardItineraryDay is pure
 
   // Debugging function within useItinerary
-  const createDebugItinerary = (startDateInput: Date | null): ItineraryDay[] => { // startDate can be null
+  const createDebugItinerary = useCallback((startDateInput: Date | null): ItineraryDay[] => {
     const result: ItineraryDay[] = [];
     const startDate = startDateInput || new Date(); 
     
@@ -197,17 +183,17 @@ export const useItinerary = () => {
         });
       }
       
-      const nodeIdsNumStr = places.map(p => String(p.id)); // Ensure string for RouteData
+      const nodeIdsNumStr = places.map(p => String(p.id)); 
       const linkIdsNumStr: string[] = [];
       for (let j = 0; j < nodeIdsNumStr.length - 1; j++) {
-        linkIdsNumStr.push(String(5060000000 + i * 10000 + j * 100)); // Ensure string
+        linkIdsNumStr.push(String(5060000000 + i * 10000 + j * 100)); 
       }
       
       const interleavedRouteMixed: (string | number)[] = [];
       for (let j = 0; j < nodeIdsNumStr.length; j++) {
-        interleavedRouteMixed.push(nodeIdsNumStr[j]); // string
+        interleavedRouteMixed.push(nodeIdsNumStr[j]); 
         if (j < linkIdsNumStr.length) {
-          interleavedRouteMixed.push(linkIdsNumStr[j]); // string
+          interleavedRouteMixed.push(linkIdsNumStr[j]); 
         }
       }
 
@@ -215,29 +201,31 @@ export const useItinerary = () => {
         day: i + 1,
         places: places,
         totalDistance: parseFloat((10 + Math.random() * 20).toFixed(2)),
-        routeData: { // Conforms to new RouteData
+        routeData: { 
           nodeIds: nodeIdsNumStr,
           linkIds: linkIdsNumStr,
           segmentRoutes: [] 
         },
         interleaved_route: interleavedRouteMixed, 
-        dayOfWeek: getDayOfWeekString(currentDate),
-        date: getDateStringMMDD(currentDate),
+        dayOfWeek: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][currentDate.getDay()], // simplified
+        date: `${(currentDate.getMonth() + 1).toString().padStart(2, '0')}/${currentDate.getDate().toString().padStart(2, '0')}`, // simplified
       });
     }
     return result;
-  };
+  }, []);
 
-  // useEffect for itineraryCreated event listener
   useEffect(() => {
-    const handleItineraryCreated = (event: Event) => {
-      const customEvent = event as CustomEvent<{ itinerary: ItineraryDay[], selectedDay: number | null, showItinerary: boolean }>; // Added showItinerary to detail
+    const handleItineraryCreatedListener = (event: Event) => { // Renamed to avoid conflict
+      const customEvent = event as CustomEvent<{ itinerary: ItineraryDay[], selectedDay: number | null, showItinerary: boolean }>;
       console.log("[useItinerary] 'itineraryCreated' 이벤트 수신:", customEvent.detail);
       
       const { itinerary: eventItinerary, selectedDay: eventSelectedDay, showItinerary: eventShowItinerary } = customEvent.detail;
 
       if (eventItinerary && Array.isArray(eventItinerary)) {
-        if (eventItinerary.length === 0 && !eventShowItinerary) { // If explicitly told not to show or empty
+        // Standardize incoming event itinerary
+        const standardizedEventItinerary = convertToStandardItineraryDay(eventItinerary, eventItinerary[0]?.date ? new Date(eventItinerary[0].date) : new Date());
+
+        if (standardizedEventItinerary.length === 0 && !eventShowItinerary) { 
           console.warn("[useItinerary] 수신된 일정 데이터가 비어 있고, 표시하지 않도록 지시받았습니다.");
           setItinerary([]);
           setShowItinerary(false);
@@ -246,25 +234,21 @@ export const useItinerary = () => {
           return;
         }
         
-        const validItinerary = eventItinerary.filter(day => 
-          day && typeof day.day === 'number' && day.places && Array.isArray(day.places)
-        );
+        setItinerary(standardizedEventItinerary); 
+        setIsItineraryCreated(standardizedEventItinerary.length > 0);
+        setShowItinerary(eventShowItinerary); 
         
-        setItinerary(validItinerary); // Update itinerary even if empty, if showItinerary is true
-        setIsItineraryCreated(validItinerary.length > 0);
-        setShowItinerary(eventShowItinerary); // Use showItinerary from event detail
-        
-        const dayToSelect = eventSelectedDay !== null && validItinerary.find(d => d.day === eventSelectedDay)
+        const dayToSelect = eventSelectedDay !== null && standardizedEventItinerary.find(d => d.day === eventSelectedDay)
           ? eventSelectedDay
-          : (validItinerary.length > 0 ? validItinerary[0].day : null);
+          : (standardizedEventItinerary.length > 0 ? standardizedEventItinerary[0].day : null);
         
         setSelectedItineraryDay(dayToSelect);
         
         console.log("[useItinerary] 이벤트에서 상태 업데이트 완료:", {
-          일정길이: validItinerary.length,
+          일정길이: standardizedEventItinerary.length,
           선택된일자: dayToSelect,
           일정패널표시: eventShowItinerary,
-          일정생성됨: validItinerary.length > 0
+          일정생성됨: standardizedEventItinerary.length > 0
         });
         
         setTimeout(() => {
@@ -280,26 +264,26 @@ export const useItinerary = () => {
       }
     };
     
-    window.addEventListener('itineraryCreated', handleItineraryCreated);
+    window.addEventListener('itineraryCreated', handleItineraryCreatedListener);
     
     return () => {
-      window.removeEventListener('itineraryCreated', handleItineraryCreated);
+      window.removeEventListener('itineraryCreated', handleItineraryCreatedListener);
     };
-  }, [setItinerary, setSelectedItineraryDay, setShowItinerary, setIsItineraryCreated]); // Dependencies kept simple
+  }, []); 
 
   return {
     itinerary,
-    selectedItineraryDay,
+    selectedItineraryDay, // Use this name
     showItinerary,
-    isItineraryCreated, // expose this state
+    isItineraryCreated,
     setItinerary,
-    setSelectedItineraryDay,
+    setSelectedItineraryDay, // Use this name
     setShowItinerary,
-    setIsItineraryCreated, // expose setter
-    handleSelectItineraryDay,
-    onDaySelect, // Add standardized function name
+    setIsItineraryCreated,
+    handleSelectItineraryDay, // Use this name
+    // onDaySelect: handleSelectItineraryDay, // Keep if other components use onDaySelect from this hook
     generateItinerary,
     handleServerItineraryResponse,
-    createDebugItinerary // expose for debugging if needed
+    createDebugItinerary
   };
 };

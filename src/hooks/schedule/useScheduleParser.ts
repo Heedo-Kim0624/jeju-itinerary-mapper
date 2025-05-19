@@ -1,4 +1,3 @@
-
 import { 
     SelectedPlace, 
     ItineraryDay, 
@@ -9,7 +8,8 @@ import {
     ServerRouteSummaryItem,
     RouteData
 } from '@/types';
-import { CategoryName } from '@/utils/categoryUtils'; // Assuming CategoryName is still from here
+import { CategoryName } from '@/utils/categoryUtils';
+import { useCallback } from 'react';
 
 interface UseScheduleParserProps {
   currentSelectedPlaces: SelectedPlace[];
@@ -198,12 +198,7 @@ export function parseServerResponse(
   }
 }
 
-
 export const useScheduleParser = ({ currentSelectedPlaces }: UseScheduleParserProps) => {
-  // The parseServerResponse function is now standalone, so this hook might just export it
-  // or use it internally if it had more specific logic tied to currentSelectedPlaces for enrichment.
-  // For now, parseServerResponse takes all it needs.
-  // If currentSelectedPlaces is needed for more detailed place info AFTER basic parsing:
   const enrichParsedResponse = useCallback((
     parsedDays: ItineraryDay[]
   ): ItineraryDay[] => {

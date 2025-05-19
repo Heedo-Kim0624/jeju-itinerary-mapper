@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { Place, ItineraryDay } from '@/types'; 
+import { Place, ItineraryDay, CategoryName } from '@/types'; 
 import PlaceCart from './PlaceCart';
 import ScheduleViewer from './ScheduleViewer'; 
 
@@ -60,7 +59,6 @@ const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
       localButtonLoading: localButtonLoading,
       render_condition_met: showItinerary && itinerary && itinerary.length > 0 && !isGenerating
     });
-     // 중요: 일정이 있고 showItinerary가 true이면 강제로 패널 표시 (디버깅용)
     if (itinerary && itinerary.length > 0 && showItinerary) {
       console.log("LeftPanelContainer - 일정 패널 표시 조건 충족 (useEffect)");
     }
@@ -73,9 +71,9 @@ const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
     return (
       <div className="fixed top-0 left-0 w-[300px] h-full bg-white border-r border-gray-200 z-40 shadow-md">
         <ScheduleViewer
-          schedule={itinerary} // Prop name for ScheduleViewer
-          selectedDay={selectedItineraryDay}
-          onDaySelect={onSelectDay}
+          schedule={itinerary} 
+          selectedDay={selectedItineraryDay} // Pass selectedItineraryDay as selectedDay
+          onDaySelect={onSelectDay}          // Pass onSelectDay as onDaySelect
           onClose={handleCloseItinerary}
           startDate={dates?.startDate || new Date()}
         />
@@ -115,6 +113,7 @@ const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
                   await onCreateItinerary(); 
                 } catch (error) {
                   console.error("Error during onCreateItinerary from button click:", error);
+                  setLocalButtonLoading(false);
                 }
               }
             }}
