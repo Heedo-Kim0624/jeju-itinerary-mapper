@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Place, ItineraryDay, ItineraryPlaceWithTime, RouteData } from '@/types'; // @/types will re-export from core.ts
-import { useItineraryCreator, ItineraryDay as CreatorItineraryDay } from './use-itinerary-creator';
+import type { Place, ItineraryDay, ItineraryPlaceWithTime, RouteData } from '@/types'; // @/types 에서 타입 가져오기 (core.ts 재수출)
+import { useItineraryCreator, ItineraryDay as CreatorItineraryDay } from './use-itinerary-creator'; // 읽기 전용 파일의 타입은 별칭으로 구분
 import { toast } from 'sonner';
 
 // Helper to get day of week string (e.g., "Mon")
@@ -16,7 +16,7 @@ const getDateStringMMDD = (date: Date): string => {
 };
 
 export const useItinerary = () => {
-  const [itinerary, setItinerary] = useState<ItineraryDay[] | null>(null);
+  const [itinerary, setItinerary] = useState<ItineraryDay[] | null>(null); // 상태 타입은 @/types의 ItineraryDay 사용
   const [selectedItineraryDay, setSelectedItineraryDay] = useState<number | null>(null);
   const [showItinerary, setShowItinerary] = useState<boolean>(false);
   const [isItineraryCreated, setIsItineraryCreated] = useState<boolean>(false);
@@ -26,19 +26,21 @@ export const useItinerary = () => {
     setSelectedItineraryDay(day);
   };
 
+  // generateItinerary 함수가 @/types의 ItineraryDay[]를 반환하도록 보장
   const generateItinerary = (
-    placesToUse: Place[],
+    placesToUse: Place[], // Place 타입은 @/types에서 온 것
     startDate: Date,
     endDate: Date,
     startTime: string,
     endTime: string
-  ): ItineraryDay[] => {
+  ): ItineraryDay[] => { // 반환 타입 명시: @/types의 ItineraryDay[]
     try {
       if (placesToUse.length === 0) {
         toast.error("선택된 장소가 없습니다.");
         return [];
       }
 
+      // use-itinerary-creator.ts (읽기 전용)의 결과물 타입은 CreatorItineraryDay[]
       const creatorItineraryResult: CreatorItineraryDay[] = createItinerary(
         placesToUse,
         startDate,
@@ -52,61 +54,55 @@ export const useItinerary = () => {
         return [];
       }
 
+      // CreatorItineraryDay[]를 @/types의 ItineraryDay[]로 정확히 매핑
       const mappedItinerary: ItineraryDay[] = creatorItineraryResult.map((creatorDay, index) => {
         const currentDayDate = new Date(startDate);
         currentDayDate.setDate(startDate.getDate() + index);
 
-        // CreatorItineraryDay.places가 ItineraryPlaceWithTime과 호환되도록 매핑
-        // CreatorItineraryDay.places의 각 P는 Place 타입의 일부만 가질 수 있으므로,
-        // ItineraryPlaceWithTime 타입으로 변환하기 위해 필요한 모든 속성을 확인하고 채워야 합니다.
-        // 현재 CreatorItineraryDay.places의 각 장소는 Place 인터페이스를 따르지만, ItineraryPlaceWithTime의 추가 속성은 없을 수 있습니다.
-        const mappedPlaces = creatorDay.places.map(p_creator => {
-            // p_creator는 Place 타입의 속성을 가지고 있음.
-            // ItineraryPlaceWithTime은 Place를 확장하므로, p_creator를 기본으로 사용.
-            // timeBlock, arriveTime, departTime 등은 creatorDay.places에 이미 있을 수 있음.
-            // (use-itinerary-creator.ts 확인 결과, 해당 필드들이 추가됨)
+        // creatorDay.places (PlaceWithUsedFlag[])를 ItineraryPlaceWithTime[] (@/types 기준)으로 매핑
+        // PlaceWithUsedFlag는 Place를 확장하며, use-itinerary-creator는 arriveTime 등을 추가함.
+        // ItineraryPlaceWithTime은 Place를 확장하므로, 호환 가능성이 높음. 명시적 캐스팅 사용.
+        const mappedPlaces: ItineraryPlaceWithTime[] = creatorDay.places.map(p_creator => {
             return {
-                ...p_creator, // 기존 장소 정보 (id, name, address, x, y, category:string 등)
-                // ItineraryPlaceWithTime에만 있는 선택적 속성들의 기본값 처리
-                // use-itinerary-creator.ts에서 arriveTime, timeBlock, travelTimeToNext 등이 이미 할당됨.
-                // geoNodeId는 Place에 이미 있음.
-            } as ItineraryPlaceWithTime; // 타입 단언
+                ...p_creator, // id, name, address, x, y, category, arriveTime, timeBlock 등 포함
+            } as ItineraryPlaceWithTime; // @/types의 ItineraryPlaceWithTime으로 단언
         });
 
-
-        // ItineraryDay (from core.ts) 타입에 맞게 모든 필수 필드 제공
-        return {
+        // @/types의 ItineraryDay 객체 구성 (모든 필수 필드 포함)
+        const coreItineraryDay: ItineraryDay = {
           day: creatorDay.day,
           places: mappedPlaces,
           totalDistance: creatorDay.totalDistance,
-          // 필수 필드 추가 (core.ts 정의 기준)
+          // --- @/types/core.ts ItineraryDay 필수 필드 ---
           dayOfWeek: getDayOfWeekString(currentDayDate),
           date: getDateStringMMDD(currentDayDate),
-          routeData: { nodeIds: [], linkIds: [], segmentRoutes: [] }, // 기본 빈 RouteData
-          interleaved_route: [], // 기본 빈 배열
+          routeData: { nodeIds: [], linkIds: [], segmentRoutes: [] }, // 기본값 제공
+          interleaved_route: [], // 기본값 제공
         };
+        return coreItineraryDay;
       });
 
-      setItinerary(mappedItinerary);
+      setItinerary(mappedItinerary); // 여기서 setItinerary는 useItinerary 내부의 상태를 업데이트
       setIsItineraryCreated(true);
       setSelectedItineraryDay(1);
       setShowItinerary(true);
 
-      console.log("일정 생성 완료 (useItinerary):", {
+      console.log("일정 생성 완료 (useItinerary - generateItinerary):", {
         일수: mappedItinerary.length,
         총장소수: mappedItinerary.reduce((sum, day) => sum + day.places.length, 0),
-        첫날장소: mappedItinerary[0]?.places.map(p => p.name).join(', ')
       });
 
-      return mappedItinerary;
+      return mappedItinerary; // @/types의 ItineraryDay[] 반환
     } catch (error) {
-      console.error("일정 생성 오류 (useItinerary):", error);
+      console.error("일정 생성 오류 (useItinerary - generateItinerary):", error);
       toast.error("일정 생성 중 오류가 발생했습니다.");
       return [];
     }
   };
 
-  const handleServerItineraryResponse = (serverItinerary: ItineraryDay[]) => {
+  // handleServerItineraryResponse 함수는 서버에서 이미 @/types/core 기준 ItineraryDay[]를 받는다고 가정.
+  // (useScheduleParser.ts에서 그렇게 파싱한다고 되어 있음)
+  const handleServerItineraryResponse = (serverItinerary: ItineraryDay[]) => { // 매개변수 타입은 @/types의 ItineraryDay[]
     console.log("서버 일정 응답 처리 시작 (useItinerary):", {
       일수: serverItinerary?.length || 0,
       첫날장소수: serverItinerary?.[0]?.places?.length || 0
@@ -114,10 +110,10 @@ export const useItinerary = () => {
 
     if (!serverItinerary || serverItinerary.length === 0) {
       console.warn("[useItinerary] handleServerItineraryResponse: 빈 일정이 전달되었습니다.");
-      setItinerary([]); // Set to empty array instead of returning
-      setShowItinerary(false); // Hide itinerary panel if empty
-      setIsItineraryCreated(false); // Reset created flag
-      return []; // Return empty array for consistency
+      setItinerary([]);
+      setShowItinerary(false);
+      setIsItineraryCreated(false);
+      return [];
     }
 
     try {
@@ -158,20 +154,21 @@ export const useItinerary = () => {
       return serverItinerary;
     } catch (error) {
       console.error("[useItinerary] handleServerItineraryResponse 처리 중 오류:", error);
-      setIsItineraryCreated(false); // Reset on error
-      return serverItinerary; // Or handle error by returning empty array
+      setIsItineraryCreated(false);
+      return serverItinerary;
     }
   };
   
-  const createDebugItinerary = (startDateInput: Date): ItineraryDay[] => {
-    const result: ItineraryDay[] = [];
-    const startDate = startDateInput || new Date(); // Fallback if startDate is null
+  // createDebugItinerary 함수가 @/types의 ItineraryDay[]를 반환하도록 보장
+  const createDebugItinerary = (startDateInput: Date | null): ItineraryDay[] => { // 반환 타입 명시
+    const result: ItineraryDay[] = []; // 결과 배열 타입 명시
+    const startDate = startDateInput || new Date(); 
     
     for (let i = 0; i < 3; i++) {
       const currentDate = new Date(startDate);
       currentDate.setDate(startDate.getDate() + i);
       
-      const places: ItineraryPlaceWithTime[] = [];
+      const places: ItineraryPlaceWithTime[] = []; // @/types의 ItineraryPlaceWithTime[]
       for (let j = 0; j < 3 + Math.floor(Math.random() * 2); j++) {
         const placeIdNum = 4060000000 + i * 10000 + j * 100;
         const placeIdStr = String(placeIdNum);
@@ -196,7 +193,7 @@ export const useItinerary = () => {
           departTime: `${(9 + j * 2 + 1).toString().padStart(2, '0')}:00`,
           stayDuration: 60,
           travelTimeToNext: "15분",
-        });
+        } as ItineraryPlaceWithTime); // 명시적 타입 단언
       }
       
       const nodeIdsNum = places.map(p => Number(p.id));
@@ -205,11 +202,11 @@ export const useItinerary = () => {
         linkIdsNum.push(5060000000 + i * 10000 + j * 100);
       }
       
-      const interleavedRouteNum: number[] = [];
+      const interleavedRouteNum: (string | number)[] = [];
       for (let j = 0; j < nodeIdsNum.length; j++) {
-        interleavedRouteNum.push(nodeIdsNum[j]);
+        interleavedRouteNum.push(String(nodeIdsNum[j]));
         if (j < linkIdsNum.length) {
-          interleavedRouteNum.push(linkIdsNum[j]);
+          interleavedRouteNum.push(String(linkIdsNum[j]));
         }
       }
 

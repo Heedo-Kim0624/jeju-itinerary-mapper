@@ -2,14 +2,14 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSelectedPlaces } from './use-selected-places';
 import { useTripDetails } from './use-trip-details';
 import { useCategoryResults } from './use-category-results';
-import { useItinerary, ItineraryDay } from './use-itinerary'; // ItineraryDay should now be correctly exported
+import { useItinerary } from './use-itinerary'; // ItineraryDay는 여기서 직접 가져오지 않습니다.
+import type { Place, SelectedPlace, ItineraryDay } from '@/types'; // ItineraryDay를 @/types에서 가져옵니다.
 import { useRegionSelection } from './use-region-selection';
 import { useCategorySelection } from './use-category-selection';
 import { useCategoryHandlers } from './left-panel/use-category-handlers';
 import { useItineraryHandlers } from './left-panel/use-itinerary-handlers';
 import { useInputState } from './left-panel/use-input-state';
-import { Place, SelectedPlace } from '@/types'; // Using Place and SelectedPlace from @/types
-import { CategoryName } from '@/utils/categoryUtils';
+import type { CategoryName } from '@/types'; // CategoryName도 @/types (core.ts) 에서 가져옵니다.
 import { toast } from 'sonner';
 
 /**
@@ -72,16 +72,16 @@ export const useLeftPanel = () => {
 
   // 일정 관리 기능 (from useItinerary)
   const { 
-    itinerary,
+    itinerary, // 이 itinerary는 useItinerary()가 반환하는 상태이며, 해당 훅 내부에서 @/types의 ItineraryDay[] | null 로 관리됩니다.
     selectedItineraryDay,
     showItinerary,
-    isItineraryCreated, // consume this
+    isItineraryCreated,
     setItinerary, 
     setSelectedItineraryDay,
     setShowItinerary,
-    setIsItineraryCreated, // consume this
+    setIsItineraryCreated,
     handleSelectItineraryDay,
-    generateItinerary // This is the client-side fallback generator
+    generateItinerary // 클라이언트 사이드 대체 생성기
   } = useItinerary();
 
   const itineraryManagement = {
@@ -90,7 +90,7 @@ export const useLeftPanel = () => {
     setItinerary, 
     setSelectedItineraryDay,
     handleSelectItineraryDay,
-    generateItinerary, // Keep client-side generator for fallback
+    generateItinerary,
     isItineraryCreated,
     setIsItineraryCreated
   };
@@ -222,10 +222,9 @@ export const useLeftPanel = () => {
     tripDetails,
     uiVisibility,
     itineraryManagement: { // Pass through from useItinerary
-        itinerary: itineraryManagement.itinerary,
+        itinerary: itineraryManagement.itinerary, // ItineraryDay[] | null 타입 (@/types 기준)
         selectedItineraryDay: itineraryManagement.selectedItineraryDay,
         handleSelectItineraryDay: itineraryManagement.handleSelectItineraryDay,
-        // generateItinerary is not directly called by LeftPanel, but by handleInitiateItineraryCreation as fallback
     },
     handleCreateItinerary: handleInitiateItineraryCreation, // This is the main action button call
     selectedCategory,
