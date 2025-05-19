@@ -2,77 +2,77 @@
 import { useState } from 'react';
 import { usePanelVisibility } from '../use-panel-visibility';
 import { useMapContext } from '@/components/rightpanel/MapContext';
-import type { CategoryName, CategoryNameKorean } from '@/types';
-import { toCategoryNameKorean, toCategoryName } from '@/types'; // Import converters
+import type { CategoryName } from '@/utils/categoryUtils';
 
 export const usePanelHandlers = () => {
+  // Panel visibility functionality
   const {
     showItinerary,
     setShowItinerary,
-    showCategoryResult, // This state from usePanelVisibility is likely CategoryNameKorean | null based on setter error
-    setShowCategoryResult, // Setter expects CategoryNameKorean | null
+    showCategoryResult,
+    setShowCategoryResult,
   } = usePanelVisibility();
 
   const [isItineraryMode, setIsItineraryMode] = useState(false);
   const { panTo } = useMapContext();
 
+  // Result close handler
   const handleResultClose = () => {
-    setShowCategoryResult(null); // This is fine as null is assignable
+    setShowCategoryResult(null);
   };
 
   // Generate category-specific confirmation handlers
   const handleConfirmByCategory = {
-    accommodation: (finalKeywords: string[], clearSelection: boolean = false) => {
-      const englishCategory: CategoryName = 'accommodation';
-      handleConfirmCategory(englishCategory, finalKeywords, clearSelection);
-      setShowCategoryResult(toCategoryNameKorean(englishCategory)); // Pass Korean
+    accomodation: (finalKeywords: string[], clearSelection: boolean = false) => {
+      handleConfirmCategory('숙소', finalKeywords, clearSelection);
+      setShowCategoryResult('숙소');
       if (selectedRegions.length > 0) panTo(selectedRegions[0]);
     },
     landmark: (finalKeywords: string[], clearSelection: boolean = false) => {
-      const englishCategory: CategoryName = 'landmark';
-      handleConfirmCategory(englishCategory, finalKeywords, clearSelection);
-      setShowCategoryResult(toCategoryNameKorean(englishCategory)); // Pass Korean
+      handleConfirmCategory('관광지', finalKeywords, clearSelection);
+      setShowCategoryResult('관광지');
       if (selectedRegions.length > 0) panTo(selectedRegions[0]);
     },
     restaurant: (finalKeywords: string[], clearSelection: boolean = false) => {
-      const englishCategory: CategoryName = 'restaurant';
-      handleConfirmCategory(englishCategory, finalKeywords, clearSelection);
-      setShowCategoryResult(toCategoryNameKorean(englishCategory)); // Pass Korean
+      handleConfirmCategory('음식점', finalKeywords, clearSelection);
+      setShowCategoryResult('음식점');
       if (selectedRegions.length > 0) panTo(selectedRegions[0]);
     },
     cafe: (finalKeywords: string[], clearSelection: boolean = false) => {
-      const englishCategory: CategoryName = 'cafe';
-      handleConfirmCategory(englishCategory, finalKeywords, clearSelection);
-      setShowCategoryResult(toCategoryNameKorean(englishCategory)); // Pass Korean
+      handleConfirmCategory('카페', finalKeywords, clearSelection);
+      setShowCategoryResult('카페');
       if (selectedRegions.length > 0) panTo(selectedRegions[0]);
     }
   };
 
   // Panel back handlers by category
-  // handlePanelBack itself expects English CategoryName
   const handlePanelBackByCategory = {
-    accommodation: () => handlePanelBack('accommodation'),
-    landmark: () => handlePanelBack('landmark'),
-    restaurant: () => handlePanelBack('restaurant'),
-    cafe: () => handlePanelBack('cafe')
+    accomodation: () => handlePanelBack(),
+    landmark: () => handlePanelBack(),
+    restaurant: () => handlePanelBack(),
+    cafe: () => handlePanelBack()
   };
 
+  // 일정 모드 설정 함수
   const setItineraryMode = (value: boolean) => {
     setIsItineraryMode(value);
+    
+    // 일정 모드가 활성화되면 일정 화면을 자동으로 표시
     if (value && !showItinerary) {
       setShowItinerary(true);
     }
   };
 
+  // These functions will be provided by props from use-left-panel
   let selectedRegions: any[] = [];
-  // These functions expect English CategoryName
   let handleConfirmCategory = (category: CategoryName, keywords: string[], clear?: boolean) => {};
-  let handlePanelBack = (category: CategoryName) => {}; 
+  let handlePanelBack = () => {};
 
+  // Setup function to inject dependencies from parent hook
   const setup = (
     regions: any[],
     confirmCategoryFn: (category: CategoryName, keywords: string[], clear?: boolean) => void,
-    panelBackFn: (category: CategoryName) => void
+    panelBackFn: () => void
   ) => {
     selectedRegions = regions;
     handleConfirmCategory = confirmCategoryFn;
@@ -83,8 +83,8 @@ export const usePanelHandlers = () => {
     uiVisibility: {
       showItinerary,
       setShowItinerary,
-      showCategoryResult, // This state variable itself (if used) would be CategoryNameKorean | null
-      setShowCategoryResult, // Setter expects CategoryNameKorean | null
+      showCategoryResult,
+      setShowCategoryResult,
       handleResultClose,
     },
     handleConfirmByCategory,

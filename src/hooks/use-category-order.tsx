@@ -1,36 +1,38 @@
 
-import { useState, useMemo } from 'react';
-// Removed CategoryName import from '@/utils/categoryUtils'
-import { CategoryName, CategoryNameKorean, toCategoryName, toCategoryNameKorean } from '@/types';
-import { CATEGORIES as DEFAULT_KOREAN_CATEGORIES } from '@/utils/categoryUtils'; // This is CategoryNameKorean[]
+import { useState } from 'react';
+import { CategoryName } from '@/utils/categoryUtils';
 
 export const useCategoryOrder = () => {
-  // Internal order uses English CategoryName for consistency with other state like activeMiddlePanelCategory
-  const categoryOrder: CategoryName[] = useMemo(() => DEFAULT_KOREAN_CATEGORIES.map(kc => toCategoryName(kc)), [DEFAULT_KOREAN_CATEGORIES]);
+  const [stepIndex, setStepIndex] = useState<number>(0);
+  // Add the missing properties
+  const categoryOrder: CategoryName[] = ["숙소", "관광지", "음식점", "카페"];
+  const [categorySelectionConfirmed, setCategorySelectionConfirmed] = useState<boolean>(true);
   
-  const [categorySelectionConfirmed, setCategorySelectionConfirmed] = useState(false); // This might be tied to region confirmation
-  const [stepIndex, setStepIndex] = useState(0); // Index for categoryOrder (English names)
-
-  const handleCategoryClick = (koreanCategoryName: CategoryNameKorean) => {
-    const englishCategoryName = toCategoryName(koreanCategoryName);
-    const index = categoryOrder.indexOf(englishCategoryName);
-    if (index !== -1) {
-      setStepIndex(index);
-      // This might also trigger opening the specific category panel, handled by useCategoryPanel's handleCategoryButtonClick
-    }
+  const handleCategoryClick = (categoryName: CategoryName) => {
+    // No-op since we no longer need category ordering
   };
   
-  // Use this to get Korean names for display in UI (e.g., CategoryNavigation)
-  const koreanCategoryOrderForDisplay: CategoryNameKorean[] = useMemo(() => categoryOrder.map(ec => toCategoryNameKorean(ec)), [categoryOrder]);
-
+  // Add the getRecommendedWeight method
+  const getRecommendedWeight = (category: string): number => {
+    // Default weight is 1.0
+    const weights: Record<string, number> = {
+      "숙소": 1.0,
+      "관광지": 1.0,
+      "음식점": 1.0, 
+      "카페": 1.0
+    };
+    
+    return weights[category] || 1.0;
+  };
 
   return {
-    categoryOrder, // English CategoryName[]
-    koreanCategoryOrderForDisplay, // CategoryNameKorean[]
+    stepIndex,
+    setStepIndex,
+    handleCategoryClick,
+    // Return the new properties
+    categoryOrder,
     categorySelectionConfirmed,
     setCategorySelectionConfirmed,
-    stepIndex, // Refers to index in English categoryOrder
-    setStepIndex,
-    handleCategoryClick, // Expects Korean name from UI, internally manages English stepIndex
+    getRecommendedWeight
   };
 };

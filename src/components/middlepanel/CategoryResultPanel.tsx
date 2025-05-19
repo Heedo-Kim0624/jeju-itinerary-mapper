@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Place, CategoryName, CategoryNameKorean, toCategoryNameKorean } from '@/types';
+import { Place } from '@/types/supabase';
 import { useMapContext } from '../rightpanel/MapContext';
 import PlaceDetailDialog from '../places/PlaceDetailDialog';
 import { useCategoryResults } from '@/hooks/use-category-results';
@@ -11,18 +11,18 @@ import { Button } from '@/components/ui/button';
 import { CheckIcon } from 'lucide-react';
 
 interface CategoryResultPanelProps {
-  category: CategoryName; // This is English CategoryName
+  category: '숙소' | '관광지' | '음식점' | '카페';
   regions: string[];
   keywords: string[];
   onClose: () => void;
   onSelectPlace: (place: Place, checked: boolean) => void;
   isPlaceSelected: (id: string | number) => boolean;
   isOpen: boolean;
-  onConfirm?: (category: CategoryName, selectedPlaces: Place[], recommendedPlaces: Place[]) => void; // category here is English
+  onConfirm?: (category: string, selectedPlaces: Place[], recommendedPlaces: Place[]) => void;
 }
 
 const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
-  category, // English CategoryName
+  category,
   regions,
   keywords,
   onClose,
@@ -31,41 +31,47 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
   isOpen,
   onConfirm
 }) => {
-  const [selectedPlaceDetail, setSelectedPlaceDetail] = useState<Place | null>(null);
+  const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const { panTo, addMarkers, clearMarkersAndUiElements } = useMapContext();
-  const [userSelectedPlacesInPanel, setUserSelectedPlacesInPanel] = useState<Place[]>([]);
-
+  const [userSelectedPlaces, setUserSelectedPlaces] = useState<Place[]>([]);
+  
+  // 안전하게 regions 배열을 처리 - regions가 undefined일 경우 빈 배열 사용
   const safeRegions = Array.isArray(regions) ? regions : [];
   
-  // Convert English CategoryName to Korean CategoryNameKorean for useCategoryResults hook
-  const categoryForHook = toCategoryNameKorean(category);
-  const { isLoading, error, recommendedPlaces, normalPlaces } = useCategoryResults(categoryForHook, keywords, safeRegions);
+  // useCategoryResults에 regions 대신 safeRegions 전달
+  const { isLoading, error, recommendedPlaces, normalPlaces } = useCategoryResults(category, keywords, safeRegions);
 
   useEffect(() => {
     clearMarkersAndUiElements();
     
-    if (isOpen && recommendedPlaces.length > 0) {
+    if (recommendedPlaces.length > 0) {
       console.log(`[CategoryResultPanel] 장소 표시: ${recommendedPlaces.length}개 추천 장소 (지역: ${safeRegions.join(', ')})`);
       
+      // 첫번째 장소가 있으면 지도 중앙을 해당 위치로 이동
       if (recommendedPlaces[0] && recommendedPlaces[0].x && recommendedPlaces[0].y) {
         panTo({ lat: recommendedPlaces[0].y, lng: recommendedPlaces[0].x });
       } else if (safeRegions.length > 0) {
+        // 장소가 없으면 선택된 지역으로 이동
         panTo(safeRegions[0]);
       }
       
+      addMarkers(recommendedPlaces, { useRecommendedStyle: true });
+      
+      // Log successful places loaded
       console.log(`장소 로딩 완료: 추천 장소 ${recommendedPlaces.length}개, 주변 장소 ${normalPlaces.length}개`);
     }
-  }, [isOpen, recommendedPlaces, normalPlaces, safeRegions, clearMarkersAndUiElements, panTo]);
+  }, [recommendedPlaces, normalPlaces, safeRegions, clearMarkersAndUiElements, panTo, addMarkers]);
 
   useEffect(() => {
+    // Keep track of selected places when isPlaceSelected changes
     const selected = [...recommendedPlaces, ...normalPlaces].filter(
       place => isPlaceSelected(place.id)
     );
-    setUserSelectedPlacesInPanel(selected);
+    setUserSelectedPlaces(selected);
   }, [recommendedPlaces, normalPlaces, isPlaceSelected]);
 
   const handleViewDetails = (place: Place) => {
-    setSelectedPlaceDetail(place);
+    setSelectedPlace(place);
     if (place.x && place.y) {
       clearMarkersAndUiElements();
       addMarkers([place], { highlight: true });
@@ -73,33 +79,34 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
     }
   };
 
-  const handlePlaceSelectInternal = (place: Place, checked: boolean) => {
+  const handlePlaceSelect = (place: Place, checked: boolean) => {
+    // Track locally selected places to pass to confirmation handler
     if (checked) {
-      setUserSelectedPlacesInPanel(prev => [...prev, place]);
+      setUserSelectedPlaces(prev => [...prev, place]);
     } else {
-      setUserSelectedPlacesInPanel(prev => prev.filter(p => p.id !== place.id));
+      setUserSelectedPlaces(prev => prev.filter(p => p.id !== place.id));
     }
+    
+    // Call the parent handler
     onSelectPlace(place, checked);
   };
 
-  const handleConfirmClick = () => {
-    console.log(`[카테고리 확인] ${category} 카테고리 선택 완료 및 자동 보완 시작: ${userSelectedPlacesInPanel.length}개 장소`);
+  const handleConfirm = () => {
+    console.log(`[카테고리 확인] ${category} 카테고리 선택 완료 및 자동 보완 시작: ${userSelectedPlaces.length}개 장소`);
+    
     if (onConfirm) {
-      // onConfirm expects English CategoryName, and 'category' prop is already English
-      onConfirm(category, userSelectedPlacesInPanel, recommendedPlaces);
+      // Pass the category, user-selected places, and all recommended places for auto-completion
+      onConfirm(category, userSelectedPlaces, recommendedPlaces);
     }
+    
+    // Close the panel after confirmation
     onClose();
   };
-
-  if (!isOpen) return null;
-
-  // ResultHeader expects Korean category name for display
-  const displayCategoryName = toCategoryNameKorean(category);
 
   return (
     <div className="fixed top-0 left-[300px] w-[300px] h-full bg-white border-l border-r border-gray-200 z-40 shadow-md">
       <div className="h-full flex flex-col">
-        <ResultHeader category={displayCategoryName} onClose={onClose} />
+        <ResultHeader category={category} onClose={onClose} />
 
         <div className="flex-1 overflow-auto">
           {isLoading && <LoadingState />}
@@ -112,7 +119,8 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
                 places={recommendedPlaces}
                 title={`🌟 추천 장소 (${safeRegions.join(', ')})`}
                 isLoading={isLoading}
-                onSelectPlace={handlePlaceSelectInternal}
+                // selectedPlaces prop 제거
+                onSelectPlace={handlePlaceSelect}
                 onViewOnMap={handleViewDetails}
                 isPlaceSelected={isPlaceSelected}
               />
@@ -122,7 +130,8 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
                   places={normalPlaces}
                   title="📍 주변 장소"
                   isLoading={isLoading}
-                  onSelectPlace={handlePlaceSelectInternal}
+                  // selectedPlaces prop 제거
+                  onSelectPlace={handlePlaceSelect}
                   onViewOnMap={handleViewDetails}
                   isPlaceSelected={isPlaceSelected}
                 />
@@ -131,9 +140,10 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
           )}
         </div>
 
+        {/* Replace "Select Complete" and "Confirm" buttons with a single "Confirm" button */}
         <div className="p-4 border-t border-gray-200">
           <Button 
-            onClick={handleConfirmClick}
+            onClick={handleConfirm}
             className="w-full" 
             variant="default"
           >
@@ -142,10 +152,10 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
         </div>
       </div>
 
-      {selectedPlaceDetail && (
+      {selectedPlace && (
         <PlaceDetailDialog
-          place={selectedPlaceDetail}
-          onClose={() => setSelectedPlaceDetail(null)}
+          place={selectedPlace}
+          onClose={() => setSelectedPlace(null)}
         />
       )}
     </div>

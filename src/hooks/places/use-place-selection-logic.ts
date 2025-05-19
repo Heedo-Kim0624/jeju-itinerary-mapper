@@ -1,79 +1,57 @@
 
 import { useCallback } from 'react';
-// Removed CategoryName import from '@/utils/categoryUtils'
-import { Place, SelectedPlace, CategoryName, CategoryNameKorean, toCategoryName, toCategoryNameKorean } from '@/types';
-import { useMapContext } from '@/components/rightpanel/MapContext';
+import { Place, SelectedPlace } from '@/types/supabase';
+import { CategoryName, CATEGORIES } from '@/utils/categoryUtils';
+import { toast } from 'sonner';
 
-interface PlaceSelectionLogicDeps {
-  selectedPlaces: SelectedPlace[];
+interface UsePlaceSelectionLogicProps {
   setSelectedPlaces: React.Dispatch<React.SetStateAction<SelectedPlace[]>>;
-  candidatePlaces: Place[];
-  setCandidatePlaces: React.Dispatch<React.SetStateAction<Place[]>>;
-  isAccommodationLimitReached: (category: CategoryNameKorean) => boolean;
   tripDuration: number | null;
 }
 
-export const usePlaceSelectionLogic = (deps: PlaceSelectionLogicDeps) => {
-  const {
-    selectedPlaces,
-    setSelectedPlaces,
-    candidatePlaces,
-    setCandidatePlaces,
-    isAccommodationLimitReached,
-    tripDuration,
-  } = deps;
-  const { panTo, addMarkers, clearMarkersAndUiElements } = useMapContext();
+export const usePlaceSelectionLogic = ({
+  setSelectedPlaces,
+  tripDuration,
+}: UsePlaceSelectionLogicProps) => {
+  const handleSelectPlace = useCallback((place: Place, checked: boolean, categoryOverride?: CategoryName) => {
+    const placeCategory = categoryOverride || place.category as CategoryName;
 
-  const handleSelectPlace = useCallback(
-    (place: Place, checked: boolean, categoryFromPanel: string | null) => {
-      const placeCategoryKorean = toCategoryNameKorean(categoryFromPanel || place.category || 'landmark');
-      const placeCategoryEnglish = toCategoryName(categoryFromPanel || place.category || 'landmark');
+    if (!placeCategory || !CATEGORIES.includes(placeCategory)) {
+      console.warn(`[장소 선택] 유효하지 않은 카테고리 (${placeCategory}) 또는 장소 정보 부족:`, place);
+      toast.error("장소 정보에 오류가 있어 선택할 수 없습니다.");
+      return;
+    }
+
+    setSelectedPlaces(prev => {
+      const newSelectedPlace: SelectedPlace = {
+        ...place,
+        category: placeCategory,
+        isSelected: checked,
+        isCandidate: false,
+      };
 
       if (checked) {
-        if (placeCategoryKorean === '숙소' && isAccommodationLimitReached(placeCategoryKorean)) {
-          // alert('숙소는 최대 ' + (tripDuration ?? 0) + '개까지 선택할 수 있습니다.');
-          return; // Prevent selection
+        if (placeCategory === '숙소') {
+          const currentAccommodations = prev.filter(p => p.category === '숙소');
+          // n박 -> n개 숙소. 0박 (당일치기) -> 1개 숙소
+          const maxAccommodations = tripDuration !== null && tripDuration >= 0 ? Math.max(tripDuration, 1) : 1;
+
+          if (currentAccommodations.length >= maxAccommodations) {
+            toast.info(`숙소는 최대 ${maxAccommodations}개까지 선택할 수 있습니다. 기존 숙소를 변경하려면 먼저 삭제해주세요.`);
+            return prev;
+          }
         }
-        setSelectedPlaces((prev) => [
-          ...prev,
-          { ...place, category: placeCategoryEnglish, isSelected: true, isCandidate: false },
-        ]);
-        setCandidatePlaces((prev) => prev.filter((p) => p.id !== place.id));
+        if (!prev.find(p => p.id === place.id)) {
+          return [...prev, newSelectedPlace];
+        }
+        return prev;
       } else {
-        setSelectedPlaces((prev) => prev.filter((p) => p.id !== place.id));
-        // Optionally add back to candidates if it was from a recommended pool and not a direct search
-        // For simplicity, not adding back to candidates automatically here.
+        return prev.filter(p => p.id !== place.id);
       }
-    },
-    [selectedPlaces, setSelectedPlaces, setCandidatePlaces, isAccommodationLimitReached, tripDuration]
-  );
+    });
+  }, [setSelectedPlaces, tripDuration]);
 
-  const handleRemovePlace = useCallback(
-    (placeId: string | number) => {
-      setSelectedPlaces((prev) => prev.filter((p) => p.id !== placeId));
-      // console.log(`장소 제거됨: ${placeId}`);
-    },
-    [setSelectedPlaces]
-  );
-
-  const handleViewOnMap = useCallback(
-    (place: Place) => {
-      if (place.y && place.x) {
-        panTo({ lat: place.y, lng: place.x });
-        clearMarkersAndUiElements(); // Clear previous single markers
-        addMarkers([place], { highlight: true }); // Add and highlight this one
-      }
-    },
-    [panTo, addMarkers, clearMarkersAndUiElements]
-  );
-  
-  const isPlaceSelected = useCallback(
-    (placeId: string | number): boolean => {
-      return selectedPlaces.some(p => p.id === placeId);
-    },
-    [selectedPlaces]
-  );
-
-
-  return { handleSelectPlace, handleRemovePlace, handleViewOnMap, isPlaceSelected };
+  return {
+    handleSelectPlace,
+  };
 };

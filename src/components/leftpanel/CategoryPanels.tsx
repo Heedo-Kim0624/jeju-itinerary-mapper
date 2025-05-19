@@ -1,35 +1,34 @@
 
 import React from 'react';
-import AccomodationPanel from '../middlepanel/AccomodationPanel'; // This component name might need to be AccommodationPanel
+import AccomodationPanel from '../middlepanel/AccomodationPanel';
 import LandmarkPanel from '../middlepanel/LandmarkPanel';
 import RestaurantPanel from '../middlepanel/RestaurantPanel';
 import CafePanel from '../middlepanel/CafePanel';
-import { CategoryName, toCategoryNameKorean } from '@/types'; // Import CategoryName for keys
 
 interface CategoryPanelsProps {
-  activeMiddlePanelCategory: CategoryName | null; // Expect English CategoryName
-  selectedKeywordsByCategory: Record<CategoryName, string[]>; // Expect English CategoryName keys
-  toggleKeyword: (category: CategoryName, keyword: string) => void; // Expect English CategoryName
+  activeMiddlePanelCategory: string | null;
+  selectedKeywordsByCategory: Record<string, string[]>;
+  toggleKeyword: (category: string, keyword: string) => void;
   directInputValues: {
-    accommodation: string; // Corrected spelling
+    accomodation: string;
     landmark: string;
     restaurant: string;
     cafe: string;
   };
   onDirectInputChange: {
-    accommodation: (value: string) => void; // Corrected spelling
+    accomodation: (value: string) => void;
     landmark: (value: string) => void;
     restaurant: (value: string) => void;
     cafe: (value: string) => void;
   };
   onConfirmCategory: {
-    accommodation: (finalKeywords: string[]) => void; // Corrected spelling
+    accomodation: (finalKeywords: string[]) => void;
     landmark: (finalKeywords: string[]) => void;
     restaurant: (finalKeywords: string[]) => void;
     cafe: (finalKeywords: string[]) => void;
   };
   handlePanelBack: {
-    accommodation: () => void; // Corrected spelling
+    accomodation: () => void;
     landmark: () => void;
     restaurant: () => void;
     cafe: () => void;
@@ -37,7 +36,7 @@ interface CategoryPanelsProps {
 }
 
 const CategoryPanels: React.FC<CategoryPanelsProps> = ({
-  activeMiddlePanelCategory, // This is English: 'accommodation', 'landmark', etc.
+  activeMiddlePanelCategory,
   selectedKeywordsByCategory,
   toggleKeyword,
   directInputValues,
@@ -45,28 +44,23 @@ const CategoryPanels: React.FC<CategoryPanelsProps> = ({
   onConfirmCategory,
   handlePanelBack,
 }) => {
-  // The individual panels (AccomodationPanel, LandmarkPanel etc.) internally
-  // might use Korean display names or English keywords.
-  // Here, we map the English activeMiddlePanelCategory to the correct panel
-  // and pass props using the English keys.
-
   return (
     <>
-      {activeMiddlePanelCategory === 'accommodation' && (
-        <AccomodationPanel // Assuming AccomodationPanel is the correct component name
-          selectedKeywords={selectedKeywordsByCategory['accommodation'] || []}
-          onToggleKeyword={(kw) => toggleKeyword('accommodation', kw)}
-          directInputValue={directInputValues.accommodation}
-          onDirectInputChange={onDirectInputChange.accommodation}
-          onConfirmAccomodation={(kw) => onConfirmCategory.accommodation(kw)}
-          onClose={() => handlePanelBack.accommodation()}
+      {activeMiddlePanelCategory === '숙소' && (
+        <AccomodationPanel
+          selectedKeywords={selectedKeywordsByCategory['숙소'] || []}
+          onToggleKeyword={(kw) => toggleKeyword('숙소', kw)}
+          directInputValue={directInputValues.accomodation}
+          onDirectInputChange={onDirectInputChange.accomodation}
+          onConfirmAccomodation={(kw) => onConfirmCategory.accomodation(kw)}
+          onClose={() => handlePanelBack.accomodation()}
         />
       )}
 
-      {activeMiddlePanelCategory === 'landmark' && (
+      {activeMiddlePanelCategory === '관광지' && (
         <LandmarkPanel
-          selectedKeywords={selectedKeywordsByCategory['landmark'] || []}
-          onToggleKeyword={(kw) => toggleKeyword('landmark', kw)}
+          selectedKeywords={selectedKeywordsByCategory['관광지'] || []}
+          onToggleKeyword={(kw) => toggleKeyword('관광지', kw)}
           directInputValue={directInputValues.landmark}
           onDirectInputChange={onDirectInputChange.landmark}
           onConfirmLandmark={(kw) => onConfirmCategory.landmark(kw)}
@@ -74,10 +68,10 @@ const CategoryPanels: React.FC<CategoryPanelsProps> = ({
         />
       )}
 
-      {activeMiddlePanelCategory === 'restaurant' && (
+      {activeMiddlePanelCategory === '음식점' && (
         <RestaurantPanel
-          selectedKeywords={selectedKeywordsByCategory['restaurant'] || []}
-          onToggleKeyword={(kw) => toggleKeyword('restaurant', kw)}
+          selectedKeywords={selectedKeywordsByCategory['음식점'] || []}
+          onToggleKeyword={(kw) => toggleKeyword('음식점', kw)}
           directInputValue={directInputValues.restaurant}
           onDirectInputChange={onDirectInputChange.restaurant}
           onConfirmRestaurant={(kw) => onConfirmCategory.restaurant(kw)}
@@ -85,10 +79,10 @@ const CategoryPanels: React.FC<CategoryPanelsProps> = ({
         />
       )}
 
-      {activeMiddlePanelCategory === 'cafe' && (
+      {activeMiddlePanelCategory === '카페' && (
         <CafePanel
-          selectedKeywords={selectedKeywordsByCategory['cafe'] || []}
-          onToggleKeyword={(kw) => toggleKeyword('cafe', kw)}
+          selectedKeywords={selectedKeywordsByCategory['카페'] || []}
+          onToggleKeyword={(kw) => toggleKeyword('카페', kw)}
           directInputValue={directInputValues.cafe}
           onDirectInputChange={onDirectInputChange.cafe}
           onConfirmCafe={(kw) => onConfirmCategory.cafe(kw)}

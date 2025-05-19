@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { Calendar, Clock, MapPin, Navigation } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -6,16 +5,20 @@ import { Button } from '@/components/ui/button';
 import { format, addDays } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { categoryColors, getCategoryName } from '@/utils/categoryColors';
-import { ItineraryDay, ItineraryPlaceWithTime } from '@/types'; 
-import ScheduleViewer from './ScheduleViewer'; 
+import type { ItineraryDay, ItineraryPlaceWithTime } from '@/types/supabase'; // ItineraryDay from supabase might conflict if use-itinerary has a different one.
+// Assuming ItineraryDay from use-itinerary is intended here, or they are compatible.
+// For now, let's assume ItineraryDay from use-itinerary is the source of truth for this component.
+// If types/supabase defines a different ItineraryDay, this might need aliasing.
+// import type { ItineraryDay } from '@/hooks/use-itinerary'; // Alternative if types are conflicting
+import ScheduleViewer from './ScheduleViewer'; // Import ScheduleViewer
 
-export interface ItineraryViewProps {
-  itinerary: ItineraryDay[]; 
+interface ItineraryViewProps {
+  itinerary: ItineraryDay[]; // Using ItineraryDay from the local scope or an imported one
   startDate: Date;
   onSelectDay: (day: number) => void;
   selectedDay: number | null;
-  onClose?: () => void;
-  debug?: {
+  onClose?: () => void; // Added onClose prop
+  debug?: { // Added debug prop
     itineraryLength: number;
     selectedDay: number | null;
     showItinerary: boolean;
@@ -27,7 +30,7 @@ const ItineraryView: React.FC<ItineraryViewProps> = ({
   startDate,
   onSelectDay,
   selectedDay,
-  onClose,
+  onClose, // Added onClose
   debug 
 }) => {
   useEffect(() => {
@@ -68,11 +71,19 @@ const ItineraryView: React.FC<ItineraryViewProps> = ({
     );
   }
 
+  // This console log was already here, keeping it.
+  // console.log("ItineraryView 렌더링", {
+  //   일수: itinerary.length,
+  //   선택일자: selectedDay
+  // });
+
+  // const currentDayItinerary = selectedDay ? itinerary.find(day => day.day === selectedDay) : null; // This was for the old structure, ScheduleViewer handles current day
+
   return (
     <div className="w-full h-full flex flex-col">
       <div className="flex items-center justify-between p-4 border-b">
         <h2 className="text-lg font-semibold">생성된 여행 일정</h2>
-        {onClose && (
+        {onClose && ( // Added back button
           <button
             onClick={onClose}
             className="text-sm text-blue-600 hover:underline"
@@ -82,9 +93,11 @@ const ItineraryView: React.FC<ItineraryViewProps> = ({
         )}
       </div>
       
+      {/* 날짜 버튼 UI */}
       <div className="flex overflow-x-auto pb-2 p-4 gap-2 border-b">
         {itinerary.map((dayItem) => {
           const dayDate = new Date(startDate);
+          // Ensure dayItem.day is a number before using in addDays or setDate
           const currentDayNumber = typeof dayItem.day === 'number' ? dayItem.day : parseInt(String(dayItem.day), 10);
           if (isNaN(currentDayNumber)) {
             console.error("Invalid day number in itinerary:", dayItem);
@@ -107,11 +120,16 @@ const ItineraryView: React.FC<ItineraryViewProps> = ({
         })}
       </div>
       
+      {/* 선택된 날짜의 일정 표시 via ScheduleViewer */}
+      {/* ScheduleViewer needs the full schedule to allow day switching if onDaySelect is passed for its own day buttons */}
       <ScheduleViewer
-        schedule={itinerary}
+        schedule={itinerary} // Pass full schedule
         selectedDay={selectedDay}
-        onDaySelect={onSelectDay}
+        onDaySelect={onSelectDay} // Allow ScheduleViewer's internal day buttons (if any) to also work
         startDate={startDate}
+        // itineraryDay prop is for when ScheduleViewer shows only one specific day's details
+        // Here, ItineraryView handles the day selection, ScheduleViewer just displays the selected one
+        // So we find the current day's data to pass if ScheduleViewer expects only one day's data via itineraryDay
         itineraryDay={selectedDay !== null ? itinerary.find(d => d.day === selectedDay) : null}
       />
     </div>
