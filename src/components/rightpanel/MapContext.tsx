@@ -1,8 +1,8 @@
 
 import React, { createContext, useContext } from 'react';
 import { Place, ItineraryDay } from '@/types/supabase';
-import useMapCore from './useMapCore';
-import { ServerRouteSummaryItem, ServerRouteResponse } from '@/types/schedule';
+import useMapCore from './useMapCore'; // Assuming useMapCore is in the same directory
+import { ServerRouteResponse } from '@/types/schedule';
 
 interface MapContextType {
   map: any;
@@ -17,12 +17,12 @@ interface MapContextType {
     useColorByCategory?: boolean;
     onClick?: (place: Place, index: number) => void;
   }) => any[];
-  calculateRoutes: (places: Place[]) => void;
+  calculateRoutes: () => void; // Kept as () => void as per useMapFeatures's deprecation message
   clearMarkersAndUiElements: () => void;
   panTo: (locationOrCoords: string | {lat: number, lng: number}) => void;
   showGeoJson: boolean;
   toggleGeoJsonVisibility: () => void;
-  renderItineraryRoute: (
+  renderItineraryRoute: ( // Ensure this signature is correct
     itineraryDay: ItineraryDay | null, 
     allServerRoutes?: Record<number, ServerRouteResponse>, 
     onComplete?: () => void, 
@@ -37,7 +37,7 @@ interface MapContextType {
     totalPlaces: number;
     mappedPlaces: number;
     mappingRate: string;
-    averageDistance: number | string;
+    averageDistance: number | string; // Can be string 'N/A'
     success: boolean;
     message: string;
   };
@@ -65,26 +65,27 @@ const defaultContext: MapContextType = {
   panTo: () => {},
   showGeoJson: false,
   toggleGeoJsonVisibility: () => {},
-  renderItineraryRoute: () => {}, // Updated to a simple function for default
+  // Corrected default signature for renderItineraryRoute
+  renderItineraryRoute: (itineraryDay, allServerRoutes, onComplete, onClear) => {}, 
   clearAllRoutes: () => {},
-  handleGeoJsonLoaded: () => {},
-  highlightSegment: () => {},
+  handleGeoJsonLoaded: (nodes, links) => {},
+  highlightSegment: (fromIndex, toIndex, itineraryDay) => {},
   clearPreviousHighlightedPath: () => {},
   isGeoJsonLoaded: false,
-  checkGeoJsonMapping: () => ({ 
-    totalPlaces: 0, 
+  checkGeoJsonMapping: (places) => ({ 
+    totalPlaces: places.length, 
     mappedPlaces: 0, 
     mappingRate: '0%', 
-    averageDistance: 0,
+    averageDistance: 'N/A',
     success: false,
-    message: '초기화되지 않음'
+    message: 'GeoJSON 데이터가 로드되지 않았습니다.'
   }),
   mapPlacesWithGeoNodes: (places) => places,
-  showRouteForPlaceIndex: () => {},
-  renderGeoJsonRoute: () => [],
+  showRouteForPlaceIndex: (placeIndex, itineraryDay) => {},
+  renderGeoJsonRoute: (nodeIds, linkIds, style) => [],
   geoJsonNodes: [],
   geoJsonLinks: [],
-  setServerRoutes: () => {},
+  setServerRoutes: (dayRoutes) => {},
   serverRoutesData: {}
 };
 
@@ -92,24 +93,22 @@ const MapContext = createContext<MapContextType>(defaultContext);
 
 export const useMapContext = () => useContext(MapContext);
 
-// Create a provider component that uses the useMapCore hook
 export const MapProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
-  const mapCore = useMapCore();
+  const mapCoreValues = useMapCore(); // Renamed to avoid conflict if mapCore was used directly
   
   // Debug output for GeoJSON loading
   console.log("[MapProvider] MapContext 제공 상태:", {
-    isMapInitialized: mapCore.isMapInitialized,
-    isNaverLoaded: mapCore.isNaverLoaded,
-    isGeoJsonLoaded: mapCore.isGeoJsonLoaded,
-    geoJsonNodesCount: mapCore.geoJsonNodes?.length || 0,
-    geoJsonLinksCount: mapCore.geoJsonLinks?.length || 0,
-    serverRoutesDataCount: Object.keys(mapCore.serverRoutesData || {}).length || 0
+    isMapInitialized: mapCoreValues.isMapInitialized,
+    isNaverLoaded: mapCoreValues.isNaverLoaded,
+    isGeoJsonLoaded: mapCoreValues.isGeoJsonLoaded,
+    geoJsonNodesCount: mapCoreValues.geoJsonNodes?.length || 0,
+    geoJsonLinksCount: mapCoreValues.geoJsonLinks?.length || 0,
+    serverRoutesDataCount: Object.keys(mapCoreValues.serverRoutesData || {}).length || 0
   });
   
   return (
-    <MapContext.Provider value={mapCore}>
+    <MapContext.Provider value={mapCoreValues}>
       {children}
     </MapContext.Provider>
   );
 };
-

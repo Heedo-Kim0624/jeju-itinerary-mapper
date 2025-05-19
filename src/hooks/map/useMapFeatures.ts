@@ -1,21 +1,21 @@
 import {
-  calculateDistance,
-  createNaverLatlng,
+  createNaverLatLng, // Corrected typo
   createNaverMarker,
   createNaverPolyline,
   getMarkerIconOptions,
   panToPosition,
-  fitBoundsToCoordinates,
+  fitBoundsToPlaces, // Assuming this is used, if not, can be removed from imports
+  fitBoundsToCoordinates, // Added import
   clearMarkers as clearDrawnMarkers,
   clearPolylines as clearDrawnPolylines,
-  clearInfoWindows as clearDrawnInfoWindows,
-  fitBoundsToPlaces,
-  clearOverlayByCondition
+  clearInfoWindows, // Added import
+  clearOverlayByCondition, // Added import
 } from '@/utils/map/mapDrawing';
-import { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/supabase';
-import { ParsedRoute, ServerRouteResponse, SegmentRoute } from '@/types/schedule'; // SegmentRoute 추가
+import { Place, ItineraryDay } from '@/types/supabase';
+import { ParsedRoute, ServerRouteResponse } from '@/types/schedule';
 import { parseInterleavedRoute, extractAllNodesFromRoute, extractAllLinksFromRoute } from '@/utils/routeParser';
 import { useRef, useState, useEffect } from 'react';
+import { calculateDistance } from '@/utils/distance'; // Import from new location
 
 /**
  * 지도 기능 관련 훅
@@ -53,8 +53,8 @@ export const useMapFeatures = (map: any) => {
   const addMarkers = (places: Place[], opts?: { 
     highlight?: boolean; 
     isItinerary?: boolean; 
-    useRecommendedStyle?: boolean;
-    useColorByCategory?: boolean;
+    useRecommendedStyle?: boolean; // This was mapped to isCandidate
+    useColorByCategory?: boolean; // New option
     onClick?: (place: Place, index: number) => void;
   }) => {
     if (!map || !window.naver) {
@@ -69,8 +69,24 @@ export const useMapFeatures = (map: any) => {
         return;
       }
       
-      const position = createNaverLatlng(place.y, place.x);
-      const iconOptions = getMarkerIconOptions(place, opts?.highlight, opts?.useRecommendedStyle, opts?.isItinerary, opts?.useColorByCategory);
+      const position = createNaverLatLng(place.y, place.x);
+      if (!position) {
+        console.warn(`[useMapFeatures] 장소 '${place.name}'의 위치 객체를 생성할 수 없습니다.`);
+        return;
+      }
+      
+      // Correctly map opts to getMarkerIconOptions parameters
+      // opts.highlight -> isSelected
+      // opts.useRecommendedStyle -> isCandidate
+      // opts.isItinerary -> isItineraryPlace
+      // opts.useColorByCategory -> useColorByCategory
+      const iconOptions = getMarkerIconOptions(
+        place, 
+        opts?.highlight || false, 
+        opts?.useRecommendedStyle || false, 
+        opts?.isItinerary || false,
+        opts?.useColorByCategory // Pass the 5th argument
+      );
       
       const marker = createNaverMarker(map, position, iconOptions, place.name);
       
@@ -134,7 +150,7 @@ export const useMapFeatures = (map: any) => {
       return null;
     }
   
-    const pathCoordinates = [createNaverLatlng(fromNodeGeo.coordinates[1], fromNodeGeo.coordinates[0])];
+    const pathCoordinates = [createNaverLatLng(fromNodeGeo.coordinates[1], fromNodeGeo.coordinates[0])];
   
     segment.links.forEach(linkId => {
       const linkGeo = geoJsonLinksRef.current.find(l => String(l.id) === String(linkId));
@@ -142,7 +158,7 @@ export const useMapFeatures = (map: any) => {
         linkGeo.coordinates.forEach((coordPair: [number, number]) => {
           // 첫번째 좌표는 fromNodeGeo와 겹치므로 건너뛰고, 마지막 좌표는 toNodeGeo와 겹치므로 나중에 추가
           // 여기서는 링크의 모든 중간 좌표를 추가한다고 가정
-          pathCoordinates.push(createNaverLatlng(coordPair[1], coordPair[0]));
+          pathCoordinates.push(createNaverLatLng(coordPair[1], coordPair[0]));
         });
       } else {
         console.warn(`[drawRouteSegment] 링크 ID ${linkId}에 대한 GeoJSON 데이터를 찾을 수 없습니다.`);
@@ -151,7 +167,7 @@ export const useMapFeatures = (map: any) => {
   
     // Ensure the last coordinate of the TO_NODE is included if not already by links
     const lastLinkCoord = pathCoordinates[pathCoordinates.length -1];
-    const toNodeCoord = createNaverLatlng(toNodeGeo.coordinates[1], toNodeGeo.coordinates[0]);
+    const toNodeCoord = createNaverLatLng(toNodeGeo.coordinates[1], toNodeGeo.coordinates[0]);
     if (!lastLinkCoord || !lastLinkCoord.equals(toNodeCoord)) {
        pathCoordinates.push(toNodeCoord);
     }
@@ -191,15 +207,17 @@ export const useMapFeatures = (map: any) => {
       return [];
     }
 
-    // 이전 하이라이트 경로 지우기 (특정 조건, 예를 들어 타입이 'highlight'인 경우)
-    clearOverlayByCondition(mapOverlaysRef.current, (overlay) => overlay.type === 'highlight');
-    mapOverlaysRef.current = mapOverlaysRef.current.filter(overlay => overlay.type !== 'highlight');
+    // 이전 하이라이트 경로 지우기
+    // clearOverlayByCondition now returns the updated list
+    mapOverlaysRef.current = clearOverlayByCondition(
+      mapOverlaysRef.current, 
+      (overlay) => overlay.type === 'highlight'
+    );
     
     console.log(`[highlightSegmentByInterleavedRoute] Highlighting ${parsedSegments.length} segments.`);
 
     const highlightedPaths: any[] = [];
     parsedSegments.forEach((segment, index) => {
-      // Ensure from and to are strings for drawRouteSegment
       const segmentWithStringIds: { from: string; to: string; links: string[] } = {
         from: String(segment.from),
         to: String(segment.to),
@@ -210,7 +228,7 @@ export const useMapFeatures = (map: any) => {
       const path = drawRouteSegment(
         segmentWithStringIds,
         highlightStyle || { strokeColor: '#FF0000', strokeWeight: 5, strokeOpacity: 0.8 },
-        'highlight' // type을 'highlight'로 지정
+        'highlight'
       );
       if (path) {
         highlightedPaths.push(path);
@@ -221,14 +239,17 @@ export const useMapFeatures = (map: any) => {
   
   // 이전에 하이라이트된 경로 제거
   const clearPreviousHighlightedPath = () => {
-    clearOverlayByCondition(mapOverlaysRef.current, (overlay) => overlay.type === 'highlight');
-    mapOverlaysRef.current = mapOverlaysRef.current.filter(overlay => overlay.type !== 'highlight');
+    // clearOverlayByCondition now returns the updated list
+    mapOverlaysRef.current = clearOverlayByCondition(
+      mapOverlaysRef.current, 
+      (overlay) => overlay.type === 'highlight'
+    );
   };
   
   // 일정 경로 렌더링
   const renderItineraryRoute = (
     itineraryDay: ItineraryDay | null,
-    allServerRoutes?: Record<number, ServerRouteResponse>,
+    allServerRoutes?: Record<number, ServerRouteResponse>, // This param is available but might not be directly used if interleaved_route is primary
     onComplete?: () => void,
     onClear?: () => void
   ): void => {
@@ -265,16 +286,16 @@ export const useMapFeatures = (map: any) => {
     
     if (drawnPath && drawnPath.length > 0) {
        console.log(`[useMapFeatures] ${itineraryDay.day}일차 경로 ${drawnPath.length}개 세그먼트 렌더링 완료.`);
-       // Fit map to the new route if needed
        const nodeIds = extractAllNodesFromRoute(itineraryDay.interleaved_route);
        if (nodeIds.length > 0 && geoJsonNodesRef.current.length > 0) {
            const routeNodeCoordinates = nodeIds.map(nodeId => {
                const node = geoJsonNodesRef.current.find(n => String(n.id) === String(nodeId));
-               return node ? createNaverLatlng(node.coordinates[1], node.coordinates[0]) : null;
-           }).filter(coord => coord !== null) as any[];
+               // Ensure createNaverLatLng is called correctly
+               return node ? createNaverLatLng(node.coordinates[1], node.coordinates[0]) : null;
+           }).filter(coord => coord !== null) as any[]; // Filter out nulls if createNaverLatLng can return null
            
            if (routeNodeCoordinates.length > 0) {
-               fitBoundsToCoordinates(map, routeNodeCoordinates);
+               fitBoundsToCoordinates(map, routeNodeCoordinates); // Corrected call
            }
        }
     } else {
@@ -372,7 +393,7 @@ export const useMapFeatures = (map: any) => {
     // 임시 구현: 전체 경로에서 해당 구간만 하이라이트
     if (itineraryDay.interleaved_route && itineraryDay.interleaved_route.length > 0) {
       // interleaved_route에서 해당 구간 추출 로직 필요
-      // 현재는 전체 경로를 하이라이트
+      // 현재는 전체 경로를 하이라��트
       highlightSegmentByInterleavedRoute(
         itineraryDay.interleaved_route,
         { strokeColor: '#FF5722', strokeWeight: 5, strokeOpacity: 0.8 }
@@ -498,7 +519,7 @@ export const useMapFeatures = (map: any) => {
     
     // 임시 구현: 전체 경로 표시
     if (itineraryDay.interleaved_route && itineraryDay.interleaved_route.length > 0) {
-      highlightSegmentByInterleavedRoute(
+      highlightSegmentByInterleavedRoute( // This is from useMapFeatures
         itineraryDay.interleaved_route,
         { strokeColor: '#4CAF50', strokeWeight: 4, strokeOpacity: 0.8 }
       );
@@ -528,23 +549,23 @@ export const useMapFeatures = (map: any) => {
     isNaverLoaded,
     isMapError,
     addMarkers,
-    calculateRoutes: () => console.warn("calculateRoutes is deprecated"),
+    calculateRoutes: () => console.warn("calculateRoutes is deprecated and not implemented in useMapFeatures"),
     clearMarkersAndUiElements,
     panTo,
     showGeoJson,
     toggleGeoJsonVisibility,
-    renderItineraryRoute,
+    renderItineraryRoute, // This has 4 params now
     clearAllRoutes,
     handleGeoJsonLoaded,
-    geoJsonNodes: geoJsonNodesRef.current,
-    geoJsonLinks: geoJsonLinksRef.current,
+    geoJsonNodes: geoJsonNodesRef.current, // Expose the ref's current value
+    geoJsonLinks: geoJsonLinksRef.current, // Expose the ref's current value
     highlightSegment,
     clearPreviousHighlightedPath,
-    isGeoJsonLoaded: isGeoJsonLoadedRef.current,
+    isGeoJsonLoaded: isGeoJsonLoadedRef.current, // Expose the ref's current value
     checkGeoJsonMapping,
     mapPlacesWithGeoNodes,
-    showRouteForPlaceIndex,
-    renderGeoJsonRoute, // Make sure this is correctly implemented and returned
+    showRouteForPlaceIndex, // This has 2 params
+    renderGeoJsonRoute,
     setServerRoutes,
     serverRoutesData
   };

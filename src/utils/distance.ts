@@ -1,24 +1,20 @@
 
-import { Place } from '@/types/supabase';
-
-export const calculateDistance = (p1: Place, p2: Place): number => {
-  const dx = p1.x - p2.x;
-  const dy = p1.y - p2.y;
-  return Math.sqrt(dx * dx + dy * dy) * 111;
-};
-
-export const calculateTotalDistance = (places: Place[]): number => {
-  if (places.length <= 1) return 0;
-  let totalDistance = 0;
-  
-  for (let i = 0; i < places.length - 1; i++) {
-    totalDistance += calculateDistance(places[i], places[i + 1]);
-  }
-  
-  // Add distance back to starting point if there are multiple places
-  if (places.length > 1) {
-    totalDistance += calculateDistance(places[places.length - 1], places[0]);
-  }
-  
-  return totalDistance;
+/**
+ * Calculates the distance between two geographical coordinates using the Haversine formula.
+ * @param lat1 Latitude of the first point.
+ * @param lon1 Longitude of the first point.
+ * @param lat2 Latitude of the second point.
+ * @param lon2 Longitude of the second point.
+ * @returns The distance in meters.
+ */
+export const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+  const R = 6371; // Radius of the Earth in kilometers
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c * 1000; // Distance in meters
 };

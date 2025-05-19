@@ -43,6 +43,10 @@ export const createNaverMap = (mapContainerId: string, center: { lat: number; ln
 };
 
 export const createNaverLatLng = (lat: number, lng: number) => {
+  if (!window.naver || !window.naver.maps) {
+    // console.error("Naver Maps API is not initialized when calling createNaverLatLng."); // Reduced console noise
+    return null; // Return null or throw error, depending on desired handling
+  }
   return new window.naver.maps.LatLng(lat, lng);
 };
 
@@ -124,20 +128,28 @@ export const getMarkerIconOptions = (
   place: Place,
   isSelected: boolean,
   isCandidate: boolean,
-  isItineraryPlace: boolean // 현재 선택된 날짜의 일정에 포함된 장소인지 여부
+  isItineraryPlace: boolean,
+  useColorByCategory?: boolean // New optional parameter
 ): { url?: string; size?: { width: number; height: number }; anchor?: { x: number; y: number }; content?: string } => {
-  if (isItineraryPlace) { // 최우선: 일정에 포함된 장소는 빨간 점으로
+  if (isItineraryPlace) {
     return {
       content: '<div style="width:10px;height:10px;background-color:red;border-radius:50%;border:1px solid darkred;box-shadow: 0 0 3px rgba(0,0,0,0.5);"></div>',
-      anchor: { x: 5, y: 5 } // 점의 중심으로 앵커 설정
+      anchor: { x: 5, y: 5 }
     };
   }
   if (isSelected) {
     return { url: SELECTED_MARKER_ICON_URL, size: { width: 30, height: 40 }, anchor: { x: 15, y: 40 } };
   }
-  if (isCandidate) {
+  if (isCandidate) { // This was often used for 'recommended style' or similar general highlighting
     return { url: CANDIDATE_MARKER_ICON_URL, size: { width: 28, height: 36 }, anchor: { x: 14, y: 36 } };
   }
+  
+  // If useColorByCategory is true, prioritize category markers
+  if (useColorByCategory && place.category && CATEGORY_MARKERS[place.category]) {
+    return { url: CATEGORY_MARKERS[place.category], size: { width: 25, height: 34 }, anchor: { x: 12.5, y: 34 } };
+  }
+  
+  // Fallback to default or existing category logic if not using color by category explicitly or if category marker doesn't exist
   const iconUrl = CATEGORY_MARKERS[place.category] || DEFAULT_MARKER_ICON_URL;
   return { url: iconUrl, size: { width: 25, height: 34 }, anchor: { x: 12.5, y: 34 } };
 };
@@ -201,4 +213,64 @@ export const fitBoundsToPlaces = (map: any, places: Place[]) => {
   } catch (error) {
     console.error("fitBounds 중 오류 발생:", error);
   }
+};
+
+// Added function: fitBoundsToCoordinates
+export const fitBoundsToCoordinates = (map: any, coordinates: any[]) => { // coordinates are naver.maps.LatLng[]
+  if (!map || !window.naver || !window.naver.maps || coordinates.length === 0) {
+    console.warn("fitBoundsToCoordinates: 지도 객체가 없거나, 좌표 목록이 비어 있습니다.");
+    return;
+  }
+
+  const bounds = new window.naver.maps.LatLngBounds();
+  coordinates.forEach(coord => {
+    if (coord instanceof window.naver.maps.LatLng) {
+      bounds.extend(coord);
+    } else {
+      console.warn("fitBoundsToCoordinates: Invalid coordinate object passed.");
+    }
+  });
+
+  if (bounds.isEmpty()) {
+    console.warn("fitBoundsToCoordinates: No valid coordinates to fit bounds.");
+    return;
+  }
+  
+  try {
+    map.fitBounds(bounds);
+  } catch (error) {
+    console.error("fitBoundsToCoordinates 중 오류 발생:", error);
+  }
+};
+
+// Added function: clearInfoWindows
+export const clearInfoWindows = (infoWindows: any[]) => {
+  infoWindows.forEach(iw => {
+    if (iw && typeof iw.close === 'function') { // Naver InfoWindow uses close()
+      iw.close();
+    } else if (iw && typeof iw.setMap === 'function') { // Some might use setMap(null)
+      iw.setMap(null);
+    }
+  });
+  // This function might need to manage a ref similar to markers/polylines if these are stored in a shared ref
+};
+
+// Added function: clearOverlayByCondition
+// This function now returns the array of overlays that were KEPT.
+// The caller is responsible for updating its reference to this new array.
+export const clearOverlayByCondition = (
+  mapOverlays: Array<{overlay: any; type: string; [key: string]: any}>,
+  conditionToRemove: (overlayDetail: { overlay: any; type: string; [key: string]: any }) => boolean
+): Array<{overlay: any; type: string; [key: string]: any}> => {
+  const overlaysToKeep: Array<{ overlay: any; type: string; [key: string]: any }> = [];
+  mapOverlays.forEach(overlayDetail => {
+    if (conditionToRemove(overlayDetail)) {
+      if (overlayDetail.overlay && typeof overlayDetail.overlay.setMap === 'function') {
+        overlayDetail.overlay.setMap(null); // Remove from map
+      }
+    } else {
+      overlaysToKeep.push(overlayDetail); // Keep this one
+    }
+  });
+  return overlaysToKeep;
 };
