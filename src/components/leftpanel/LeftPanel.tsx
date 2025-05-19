@@ -83,7 +83,22 @@ const LeftPanel: React.FC = () => {
       // 일정 데이터 확인
       const detail = (event as CustomEvent).detail;
       if (detail && detail.itinerary && detail.itinerary.length > 0) {
-        console.log("[LeftPanel] itineraryCreated 이벤트에서 유효한 일정 데이터 확인");
+        console.log("[LeftPanel] itineraryCreated 이벤트에서 유효한 일정 데이터 확인:", {
+          일정길이: detail.itinerary.length,
+          첫날장소수: detail.itinerary[0]?.places?.length || 0
+        });
+        
+        // 로딩 상태 즉시 해제
+        setIsGenerating(false);
+        
+        // 일정 패널을 표시하도록 명시적으로 설정
+        setTimeout(() => {
+          console.log("[LeftPanel] itineraryCreated 이벤트 후 일정 패널 표시 시도");
+          uiVisibility.setShowItinerary(true);
+        }, 100);
+      } else {
+        console.warn("[LeftPanel] itineraryCreated 이벤트에 유효한 일정 데이터가 없습니다");
+        setIsGenerating(false);
       }
     };
     
@@ -95,6 +110,9 @@ const LeftPanel: React.FC = () => {
       const detail = (event as CustomEvent).detail;
       if (detail && detail.itinerary && detail.itinerary.length > 0) {
         console.log("[LeftPanel] itineraryWithCoordinatesReady 이벤트에서 유효한 일정 데이터 확인");
+        
+        // 로딩 상태 즉시 해제
+        setIsGenerating(false);
         
         // 일정 패널을 표시하도록 명시적으로 설정
         setTimeout(() => {

@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useRef } from 'react';
+import React, { createContext, useContext } from 'react';
 import { Place, ItineraryDay } from '@/types/supabase';
 import useMapCore from './useMapCore';
 import { ServerRouteSummaryItem, ServerRouteResponse } from '@/types/schedule';
@@ -41,12 +41,11 @@ interface MapContextType {
   renderGeoJsonRoute: (nodeIds: string[], linkIds: string[], style?: any) => any[];
   geoJsonNodes: any[];
   geoJsonLinks: any[];
-  // 서버 경로 관련 기능 수정 - Aligning with error message for useMapCore's provided type
   setServerRoutes: (
     dayRoutes: Record<number, ServerRouteResponse> | 
                ((prevRoutes: Record<number, ServerRouteResponse>) => Record<number, ServerRouteResponse>)
   ) => void;
-  serverRoutesData: Record<number, ServerRouteResponse>; // Align data type as well
+  serverRoutesData: Record<number, ServerRouteResponse>;
 }
 
 const defaultContext: MapContextType = {
@@ -91,6 +90,16 @@ export const useMapContext = () => useContext(MapContext);
 // Create a provider component that uses the useMapCore hook
 export const MapProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
   const mapCore = useMapCore();
+  
+  // Debug output for GeoJSON loading
+  console.log("[MapProvider] MapContext 제공 상태:", {
+    isMapInitialized: mapCore.isMapInitialized,
+    isNaverLoaded: mapCore.isNaverLoaded,
+    isGeoJsonLoaded: mapCore.isGeoJsonLoaded,
+    geoJsonNodesCount: mapCore.geoJsonNodes?.length || 0,
+    geoJsonLinksCount: mapCore.geoJsonLinks?.length || 0,
+    serverRoutesDataCount: Object.keys(mapCore.serverRoutesData || {}).length || 0
+  });
   
   return (
     <MapContext.Provider value={mapCore}>

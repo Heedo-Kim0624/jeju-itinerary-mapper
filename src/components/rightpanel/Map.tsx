@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { useMapContext } from './MapContext';
 import MapMarkers from './MapMarkers';
@@ -37,7 +38,9 @@ const Map: React.FC<MapProps> = ({
     checkGeoJsonMapping,
     serverRoutesData,
     geoJsonNodes,
-    geoJsonLinks
+    geoJsonLinks,
+    renderItineraryRoute,
+    clearAllRoutes
   } = useMapContext();
 
   const {
@@ -45,7 +48,6 @@ const Map: React.FC<MapProps> = ({
     currentDay: visualizedCurrentDay,
     totalDistance: visualizedTotalDistance,
     visualizeDayRoute,
-    // clearAllVisualizations
   } = useMapItineraryVisualization(map, geoJsonNodes, geoJsonLinks);
 
   // GeoJSON이 로드되면 사용자에게 알림
@@ -55,20 +57,29 @@ const Map: React.FC<MapProps> = ({
     }
   }, [isGeoJsonLoaded, showGeoJson]);
 
-  // 일정을 선택했을 때 GeoJSON 자동 활성화
+  // 일정 데이터가 변경될 때 경로 시각화
   useEffect(() => {
-    if (isGeoJsonLoaded && visualizedItinerary && visualizedItinerary.length > 0 && visualizedCurrentDay !== null) {
-      console.log("시각화된 일정이 있습니다. GeoJSON 표시를 활성화합니다.");
-      if (!showGeoJson) {
-        toggleGeoJsonVisibility();
+    if (isMapInitialized && isGeoJsonLoaded && itinerary && itinerary.length > 0 && selectedDay !== null) {
+      const currentDayData = itinerary.find(day => day.day === selectedDay);
+      if (currentDayData) {
+        console.log(`[Map] 선택된 ${selectedDay}일차 일정 경로 시각화 중...`);
+        
+        // GeoJSON 표시 활성화
+        if (!showGeoJson) {
+          console.log("[Map] GeoJSON 표시를 활성화합니다.");
+          toggleGeoJsonVisibility();
+        }
+        
+        // 지도에 경로 표시
+        renderItineraryRoute(currentDayData, serverRoutesData, () => {}, clearAllRoutes);
       }
     }
-  }, [visualizedItinerary, visualizedCurrentDay, isGeoJsonLoaded, showGeoJson, toggleGeoJsonVisibility]);
+  }, [itinerary, selectedDay, isMapInitialized, isGeoJsonLoaded, showGeoJson, toggleGeoJsonVisibility, renderItineraryRoute, serverRoutesData, clearAllRoutes]);
 
-  // 서버 경로 데이터가 변경될 때마다 로그 출력
+  // 서버 경로 데이터가 변경될 때마다 로그 출력 및 처리
   useEffect(() => {
     if (Object.keys(serverRoutesData).length > 0) {
-      console.log("지도: 서버 경로 데이터가 업데이트됨:", {
+      console.log("[Map] 서버 경로 데이터가 업데이트됨:", {
         일수: Object.keys(serverRoutesData).length,
         첫날_노드: serverRoutesData[1]?.nodeIds?.length || 0,
         첫날_링크: serverRoutesData[1]?.linkIds?.length || 0,
@@ -76,23 +87,32 @@ const Map: React.FC<MapProps> = ({
       });
       
       if (isGeoJsonLoaded && !showGeoJson) {
-        console.log("지도: 서버 경로 데이터가 있어 GeoJSON 표시를 활성화합니다.");
+        console.log("[Map] 서버 경로 데이터가 있어 GeoJSON 표시를 활성화합니다.");
         toggleGeoJsonVisibility();
       }
+      
+      // 현재 선택된 날짜가 있으면 해당 날짜의 경로 시각화
+      if (selectedDay !== null && itinerary && itinerary.length > 0) {
+        const currentDayData = itinerary.find(day => day.day === selectedDay);
+        if (currentDayData) {
+          console.log(`[Map] 서버 경로 데이터 업데이트 후 ${selectedDay}일차 일정 경로 시각화 중...`);
+          renderItineraryRoute(currentDayData, serverRoutesData, () => {}, clearAllRoutes);
+        }
+      }
     }
-  }, [serverRoutesData, isGeoJsonLoaded, showGeoJson, toggleGeoJsonVisibility]);
+  }, [serverRoutesData, isGeoJsonLoaded, showGeoJson, toggleGeoJsonVisibility, selectedDay, itinerary, renderItineraryRoute, clearAllRoutes]);
 
   // 장소와 GeoJSON 매핑 검사
   useEffect(() => {
     if (isGeoJsonLoaded && places.length > 0 && isMapInitialized) {
       const timer = setTimeout(() => {
         const mappingResult = checkGeoJsonMapping(places);
-        console.log('GeoJSON 매핑 결과:', mappingResult);
+        console.log('[Map] GeoJSON 매핑 결과:', mappingResult);
         
         if (mappingResult.success) {
-          console.log(`✅ 장소-GeoJSON 매핑 성공: ${mappingResult.mappedPlaces}/${mappingResult.totalPlaces} 장소, 평균 거리: ${mappingResult.averageDistance}m`);
+          console.log(`✅ [Map] 장소-GeoJSON 매핑 성공: ${mappingResult.mappedPlaces}/${mappingResult.totalPlaces} 장소, 평균 거리: ${mappingResult.averageDistance}m`);
         } else {
-          console.warn(`⚠️ 장소-GeoJSON 매핑 부족: ${mappingResult.mappingRate} 매핑됨, 평균 거리: ${mappingResult.averageDistance}m`);
+          console.warn(`⚠️ [Map] 장소-GeoJSON 매핑 부족: ${mappingResult.mappingRate} 매핑됨, 평균 거리: ${mappingResult.averageDistance}m`);
         }
       }, 1000);
       
@@ -101,10 +121,18 @@ const Map: React.FC<MapProps> = ({
   }, [isGeoJsonLoaded, places, isMapInitialized, checkGeoJsonMapping]);
 
   const handlePlaceClick = (place: Place, index: number) => {
-    console.log(`장소 클릭됨: ${place.name} (${index + 1}번)`);
-    // Potentially pan to place or show info
-    // If part of visualized itinerary, could highlight segment, etc.
-    // This might conflict or complement MapMarkers.tsx's handleMarkerClick
+    console.log(`[Map] 장소 클릭됨: ${place.name} (${index + 1}번)`);
+    // 선택된 일정이 있고 현재 선택된 날짜가 있으면 해당 장소의 경로를 하이라이트
+    if (itinerary && itinerary.length > 0 && selectedDay !== null) {
+      const currentDayData = itinerary.find(day => day.day === selectedDay);
+      if (currentDayData) {
+        const placeIndex = currentDayData.places.findIndex(p => p.id === place.id);
+        if (placeIndex !== -1) {
+          console.log(`[Map] 일정 내 장소 클릭: ${place.name} (일차: ${selectedDay}, 인덱스: ${placeIndex})`);
+          // 여기서 필요한 하이라이트 로직 호출 가능
+        }
+      }
+    }
   };
 
   const isNewVisualizationActive = visualizedItinerary && visualizedItinerary.length > 0;
@@ -114,8 +142,8 @@ const Map: React.FC<MapProps> = ({
       <MapMarkers
         places={places}
         selectedPlace={selectedPlace}
-        itinerary={isNewVisualizationActive ? null : visualizedItinerary}
-        selectedDay={isNewVisualizationActive ? null : visualizedCurrentDay}
+        itinerary={isNewVisualizationActive ? null : itinerary}
+        selectedDay={isNewVisualizationActive ? null : selectedDay}
         selectedPlaces={selectedPlaces}
         onPlaceClick={handlePlaceClick}
       />

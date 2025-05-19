@@ -6,85 +6,87 @@ import { ParsedRoute } from '@/types/schedule';
  * @param interleavedRoute 서버에서 받은 노드-링크-노드-... 배열
  * @returns 출발지-도착지-링크 형태로 구성된 세그먼트 배열
  */
-export function parseInterleavedRoute(interleavedRoute?: (string | number)[]): ParsedRoute[] {
+export function parseInterleavedRoute(interleavedRoute: (string | number)[]): ParsedRoute[] {
   if (!interleavedRoute || interleavedRoute.length < 3) {
-    console.warn("파싱할 경로 데이터가 없거나 불완전합니다.");
+    console.warn('[parseInterleavedRoute] 경로 데이터가 너무 짧거나 없습니다.');
     return [];
   }
   
-  const segments: ParsedRoute[] = [];
-  let currentSegment: ParsedRoute = {
-    from: interleavedRoute[0],
-    to: "",
-    links: []
-  };
+  // 첫 노드는 항상 NODE_ID
+  const result: ParsedRoute[] = [];
+  let currentSegment: { from: string; to: string; links: string[] } | null = null;
   
-  let i = 1;
-  // 노드-링크-노드-링크-... 패턴에서 각 세그먼트 추출
-  while (i < interleavedRoute.length - 1) {
-    // 링크 추가 (홀수 인덱스)
-    if (i % 2 === 1) {
-      currentSegment.links.push(interleavedRoute[i]);
-    } 
-    // 다음 노드가 새로운 세그먼트의 시작인 경우 (짝수 인덱스)
-    else {
-      currentSegment.to = interleavedRoute[i];
-      segments.push({...currentSegment});
-      
-      // 새 세그먼트 시작 (현재 노드가 다음 세그먼트의 출발지)
-      currentSegment = {
-        from: interleavedRoute[i],
-        to: "",
-        links: []
-      };
+  // 경로에서 각 세그먼트(노드-링크-노드) 추출
+  for (let i = 0; i < interleavedRoute.length; i++) {
+    const current = String(interleavedRoute[i]);
+    
+    // 홀수 인덱스는 항상 링크, 짝수 인덱스는 항상 노드
+    if (i % 2 === 0) { // 노드 (시작 또는 도착)
+      if (i === 0) { // 첫 번째 노드는 첫 세그먼트의 출발지
+        currentSegment = { from: current, to: '', links: [] };
+      } else { // 그 이후 노드는 이전 세그먼트의 도착지이자 새 세그먼트의 출발지
+        if (currentSegment) {
+          currentSegment.to = current;
+          result.push({ ...currentSegment });
+          
+          // 마지막 노드가 아니면 새 세그먼트 시작
+          if (i < interleavedRoute.length - 1) {
+            currentSegment = { from: current, to: '', links: [] };
+          } else {
+            currentSegment = null;
+          }
+        } else {
+          console.warn(`[parseInterleavedRoute] 인덱스 ${i}에서 currentSegment가 null입니다.`);
+        }
+      }
+    } else { // 링크
+      if (currentSegment) {
+        currentSegment.links.push(current);
+      } else {
+        console.warn(`[parseInterleavedRoute] 인덱스 ${i}에서 링크를 추가하려 했으나 currentSegment가 null입니다.`);
+      }
     }
-    i++;
   }
   
-  // 마지막 세그먼트 완성 (있는 경우)
-  if (i === interleavedRoute.length - 1) {
-    currentSegment.to = interleavedRoute[i];
-    segments.push(currentSegment);
-  }
-  
-  console.log(`[경로 파싱] ${segments.length}개의 경로 세그먼트 추출 완료`);
-  return segments;
+  return result;
 }
 
 /**
- * 특정 날짜의 경로 데이터에서 모든 링크 ID를 추출
- * 지도 시각화에 필요한 모든 링크 배열 반환
+ * interleaved_route 배열에서 모든 NODE_ID를 추출
+ * @param interleavedRoute 서버에서 받은 노드-링크-노드-... 배열
+ * @returns NODE_ID 배열
  */
-export function extractAllLinksFromRoute(interleavedRoute?: (string | number)[]): (string | number)[] {
-  if (!interleavedRoute || interleavedRoute.length < 3) {
+export function extractAllNodesFromRoute(interleavedRoute: (string | number)[]): string[] {
+  if (!interleavedRoute || interleavedRoute.length === 0) {
+    console.warn('[extractAllNodesFromRoute] 경로 데이터가 없습니다.');
     return [];
   }
   
-  const allLinks: (string | number)[] = [];
-  
-  // 홀수 인덱스는 모두 링크 ID
-  for (let i = 1; i < interleavedRoute.length; i += 2) {
-    allLinks.push(interleavedRoute[i]);
-  }
-  
-  return allLinks;
-}
-
-/**
- * 특정 날짜의 경로 데이터에서 모든 노드 ID를 추출
- * 지도 시각화에 필요한 모든 노드 배열 반환
- */
-export function extractAllNodesFromRoute(interleavedRoute?: (string | number)[]): (string | number)[] {
-  if (!interleavedRoute || interleavedRoute.length < 1) {
-    return [];
-  }
-  
-  const allNodes: (string | number)[] = [];
-  
-  // 짝수 인덱스는 모두 노드 ID
+  const nodes: string[] = [];
+  // 짝수 인덱스는 항상 노드
   for (let i = 0; i < interleavedRoute.length; i += 2) {
-    allNodes.push(interleavedRoute[i]);
+    nodes.push(String(interleavedRoute[i]));
   }
   
-  return allNodes;
+  return nodes;
+}
+
+/**
+ * interleaved_route 배열에서 모든 LINK_ID를 추출
+ * @param interleavedRoute 서버에서 받은 노드-링크-노드-... 배열
+ * @returns LINK_ID 배열
+ */
+export function extractAllLinksFromRoute(interleavedRoute: (string | number)[]): string[] {
+  if (!interleavedRoute || interleavedRoute.length < 3) {
+    console.warn('[extractAllLinksFromRoute] 경로 데이터가 너무 짧거나 없습니다.');
+    return [];
+  }
+  
+  const links: string[] = [];
+  // 홀수 인덱스는 항상 링크
+  for (let i = 1; i < interleavedRoute.length; i += 2) {
+    links.push(String(interleavedRoute[i]));
+  }
+  
+  return links;
 }
