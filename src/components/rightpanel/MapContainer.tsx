@@ -18,14 +18,18 @@ const MapContainer: React.FC<MapContainerProps> = ({
   selectedDay,
   selectedPlaces = [],
 }) => {
+  // selectedDay가 number 타입으로 오지만, Map에는 ItineraryDay | null이 필요함
+  const selectedItineraryDay = selectedDay !== null && itinerary ? 
+    itinerary.find(day => day.day === selectedDay) || null : null;
+
   return (
     <div className="w-full h-full">
       <Map
         places={places}
         selectedPlace={selectedPlace}
         itinerary={itinerary}
-        selectedDay={selectedDay}
-        selectedPlaces={selectedPlaces}
+        selectedItineraryDay={selectedItineraryDay}
+        selectedPlacesForMap={selectedPlaces}
       />
     </div>
   );

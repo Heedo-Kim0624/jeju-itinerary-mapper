@@ -2,7 +2,7 @@
 import React, { createContext, useContext } from 'react';
 import { Place, ItineraryDay } from '@/types/supabase';
 import useMapCore from './useMapCore';
-import { ServerRouteResponse, SegmentRoute } from '@/types/schedule'; // SegmentRoute 추가
+import { ServerRouteResponse, SegmentRoute } from '@/types/schedule';
 
 interface MapContextType {
   map: any;
@@ -10,26 +10,30 @@ interface MapContextType {
   isMapInitialized: boolean;
   isNaverLoaded: boolean;
   isMapError: boolean;
-  addMarkers: (places: Place[], opts?: { 
-    highlight?: boolean; 
-    isItinerary?: boolean; 
-    useRecommendedStyle?: boolean;
-    useColorByCategory?: boolean;
-    onClick?: (place: Place, index: number) => void;
-  }) => any[];
+  addMarkers: (
+    placesToAdd: Place[], 
+    options?: {
+      highlightPlaceId?: string;
+      isItinerary?: boolean;
+      useRecommendedStyle?: boolean;
+      useColorByCategory?: boolean;
+      onMarkerClick?: (place: Place, index: number) => void; 
+      itineraryOrder?: boolean;
+    }
+  ) => any[];
   calculateRoutes: (placesToRoute: Place[]) => void;
-  clearMarkersAndUiElements: () => void;
+  clearAllMapElements: () => void;
+  clearAllRoutes: () => void;
+  clearAllMarkers: () => void;
   panTo: (locationOrCoords: string | {lat: number, lng: number}) => void;
   showGeoJson: boolean;
   toggleGeoJsonVisibility: () => void;
-  renderItineraryRoute: ( 
+  renderItineraryRoute: (
     itineraryDay: ItineraryDay | null, 
     allServerRoutes?: Record<number, ServerRouteResponse>, 
     onComplete?: () => void
   ) => void;
-  clearAllRoutes: () => void;
   handleGeoJsonLoaded: (nodes: any[], links: any[]) => void;
-  // highlightSegment 시그니처 수정
   highlightSegment: (segment: SegmentRoute | null) => void;
   clearPreviousHighlightedPath: () => void;
   isGeoJsonLoaded: boolean;
@@ -43,7 +47,11 @@ interface MapContextType {
   };
   mapPlacesWithGeoNodes: (places: Place[]) => Place[];
   showRouteForPlaceIndex: (placeIndex: number, itineraryDay: ItineraryDay, onComplete?: () => void) => void;
-  renderGeoJsonRoute: (route: SegmentRoute) => void; // Changed return type to void
+  renderGeoJsonRoute: (
+    itineraryDay: ItineraryDay | null, 
+    allServerRoutes?: Record<number, ServerRouteResponse>, 
+    onComplete?: () => void
+  ) => void;
   geoJsonNodes: any[];
   geoJsonLinks: any[];
   setServerRoutes: (
@@ -53,23 +61,23 @@ interface MapContextType {
   serverRoutesData: Record<number, ServerRouteResponse>;
 }
 
-const defaultContext: MapContextType = {
+const defaultContextValue: MapContextType = {
   map: null,
   mapContainer: { current: null } as React.RefObject<HTMLDivElement>,
   isMapInitialized: false,
   isNaverLoaded: false,
   isMapError: false,
   addMarkers: () => [],
-  calculateRoutes: (placesToRoute: Place[]) => {},
-  clearMarkersAndUiElements: () => {},
+  calculateRoutes: () => {},
+  clearAllMapElements: () => {},
+  clearAllRoutes: () => {},
+  clearAllMarkers: () => {},
   panTo: () => {},
   showGeoJson: false,
   toggleGeoJsonVisibility: () => {},
-  renderItineraryRoute: (itineraryDay, allServerRoutes, onComplete) => {}, 
-  clearAllRoutes: () => {},
-  handleGeoJsonLoaded: (nodes, links) => {},
-  // highlightSegment 기본값 수정
-  highlightSegment: (segment) => {}, 
+  renderItineraryRoute: () => {}, 
+  handleGeoJsonLoaded: () => {},
+  highlightSegment: () => {}, 
   clearPreviousHighlightedPath: () => {},
   isGeoJsonLoaded: false,
   checkGeoJsonMapping: (places) => ({ 
@@ -81,16 +89,15 @@ const defaultContext: MapContextType = {
     message: 'GeoJSON 데이터가 로드되지 않았습니다.'
   }),
   mapPlacesWithGeoNodes: (places) => places,
-  showRouteForPlaceIndex: (placeIndex, itineraryDay, onComplete) => {},
-  // Changed return type to void
-  renderGeoJsonRoute: (route) => {}, 
+  showRouteForPlaceIndex: () => {},
+  renderGeoJsonRoute: () => {}, 
   geoJsonNodes: [],
   geoJsonLinks: [],
-  setServerRoutes: (dayRoutes) => {},
+  setServerRoutes: () => {},
   serverRoutesData: {}
 };
 
-const MapContext = createContext<MapContextType>(defaultContext);
+const MapContext = createContext<MapContextType>(defaultContextValue);
 
 export const useMapContext = () => useContext(MapContext);
 
@@ -105,7 +112,7 @@ export const MapProvider: React.FC<{children: React.ReactNode}> = ({ children })
     geoJsonNodesCount: mapCoreValues.geoJsonNodes?.length || 0,
     geoJsonLinksCount: mapCoreValues.geoJsonLinks?.length || 0,
     serverRoutesDataCount: Object.keys(mapCoreValues.serverRoutesData || {}).length || 0,
-    highlightSegmentType: typeof mapCoreValues.highlightSegment // 타입 확인용
+    highlightSegmentType: typeof mapCoreValues.highlightSegment 
   });
   
   return (

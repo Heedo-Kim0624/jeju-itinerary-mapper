@@ -49,7 +49,7 @@ const TravelPromptSearch: React.FC<TravelPromptSearchProps> = ({ onPlacesFound }
     e.preventDefault();
     setLoading(true);
     setSelectedPlace(null);
-    mapCtx.clearMarkersAndUiElements();
+    mapCtx.clearAllMapElements(); // clearMarkersAndUiElements -> clearAllMapElements
     
     try {
       // 1. Parse the prompt
@@ -103,8 +103,13 @@ const TravelPromptSearch: React.FC<TravelPromptSearchProps> = ({ onPlacesFound }
       if (convertedPlaces.length && mapCtx) {
         const recommended = convertedPlaces.slice(0, 4) as Place[];
         const others = convertedPlaces.slice(4) as Place[];
-        mapCtx.addMarkers(recommended, { highlight: true });
-        mapCtx.addMarkers(others, { highlight: false });
+        mapCtx.addMarkers(recommended, { 
+          highlightPlaceId: recommended[0]?.id, // highlight -> highlightPlaceId
+          useRecommendedStyle: true 
+        });
+        mapCtx.addMarkers(others, { 
+          useRecommendedStyle: false 
+        });
         
         if (convertedPlaces[0]) {
           mapCtx.panTo({ lat: convertedPlaces[0].y, lng: convertedPlaces[0].x });
