@@ -1,3 +1,4 @@
+
 import { useMapInitialization } from '@/hooks/map/useMapInitialization';
 import { useMapNavigation } from '@/hooks/map/useMapNavigation';
 // import { useMapMarkers } from '@/hooks/map/useMapMarkers'; // Deprecated
@@ -92,6 +93,11 @@ const useMapCore = () => {
     features.highlightSegment(segment);
   };
 
+  // Fix for renderGeoJsonRoute to make it return void
+  const renderGeoJsonRouteWrapper = (route: SegmentRoute) => {
+    features.renderGeoJsonRoute(route);
+  };
+
   return {
     map,
     mapContainer,
@@ -112,10 +118,10 @@ const useMapCore = () => {
     mapPlacesWithGeoNodes: features.mapPlacesWithGeoNodes,
     renderItineraryRoute, 
     clearAllRoutes: features.clearAllRoutes,
-    highlightSegment: highlightSegmentWrapper, // 수정된 wrapper 사용 또는 features.highlightSegment 직접 사용
+    highlightSegment: highlightSegmentWrapper, 
     clearPreviousHighlightedPath: features.clearPreviousHighlightedPath,
     showRouteForPlaceIndex, 
-    renderGeoJsonRoute: features.renderGeoJsonRoute,
+    renderGeoJsonRoute: renderGeoJsonRouteWrapper,
     serverRoutesData,
     setServerRoutes
   };

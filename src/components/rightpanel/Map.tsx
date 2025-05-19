@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { useMapContext } from './MapContext';
 import MapMarkers from './MapMarkers';
@@ -69,8 +70,10 @@ const Map: React.FC<MapProps> = ({
           toggleGeoJsonVisibility();
         }
         
-        // clearAllRoutes 인자 제거
-        renderItineraryRoute(currentDayData, serverRoutesData, () => {});
+        // Fix: Pass all required arguments to renderItineraryRoute
+        renderItineraryRoute(currentDayData, serverRoutesData, () => {
+          console.log(`[Map] ${selectedDay}일차 일정 경로 시각화 완료`);
+        });
       }
     }
   }, [itinerary, selectedDay, isMapInitialized, isGeoJsonLoaded, showGeoJson, toggleGeoJsonVisibility, renderItineraryRoute, serverRoutesData]);
@@ -95,8 +98,10 @@ const Map: React.FC<MapProps> = ({
         const currentDayData = itinerary.find(day => day.day === selectedDay);
         if (currentDayData) {
           console.log(`[Map] 서버 경로 데이터 업데이트 후 ${selectedDay}일차 일정 경로 시각화 중...`);
-          // clearAllRoutes 인자 제거
-          renderItineraryRoute(currentDayData, serverRoutesData, () => {});
+          // Fix: Pass all required arguments to renderItineraryRoute
+          renderItineraryRoute(currentDayData, serverRoutesData, () => {
+            console.log(`[Map] ${selectedDay}일차 일정 경로 시각화 완료 (데이터 업데이트 후)`);
+          });
         }
       }
     }

@@ -43,7 +43,7 @@ interface MapContextType {
   };
   mapPlacesWithGeoNodes: (places: Place[]) => Place[];
   showRouteForPlaceIndex: (placeIndex: number, itineraryDay: ItineraryDay, onComplete?: () => void) => void;
-  renderGeoJsonRoute: (route: SegmentRoute) => any[]; // renderGeoJsonRoute 파라미터 타입 수정
+  renderGeoJsonRoute: (route: SegmentRoute) => void; // Changed return type to void
   geoJsonNodes: any[];
   geoJsonLinks: any[];
   setServerRoutes: (
@@ -82,8 +82,8 @@ const defaultContext: MapContextType = {
   }),
   mapPlacesWithGeoNodes: (places) => places,
   showRouteForPlaceIndex: (placeIndex, itineraryDay, onComplete) => {},
-  // renderGeoJsonRoute 기본값 수정
-  renderGeoJsonRoute: (route) => [], 
+  // Changed return type to void
+  renderGeoJsonRoute: (route) => {}, 
   geoJsonNodes: [],
   geoJsonLinks: [],
   setServerRoutes: (dayRoutes) => {},

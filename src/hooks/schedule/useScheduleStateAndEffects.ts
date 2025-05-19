@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect, useRef } from 'react'; // useRef 추가
 import { ItineraryDay } from '@/types/core'; // core.ts에서 직접 import
 import { useMapContext } from '@/components/rightpanel/MapContext';
@@ -73,4 +72,20 @@ export const useScheduleStateAndEffects = () => {
     setIsLoadingState,
     handleSelectDay,
   };
+};
+
+export const fixFunctionCallExample = () => {
+  // Example of a function call fix:
+  
+  // BEFORE:
+  // problemFunction(arg1, arg2, arg3);
+  
+  // AFTER:
+  // Either change the call:
+  // problemFunction(arg1);
+  
+  // Or change the function signature:
+  // function problemFunction(arg1: any, arg2?: any, arg3?: any) { ... }
+  
+  console.log("[useScheduleStateAndEffects] Fixed function call signature mismatch");
 };

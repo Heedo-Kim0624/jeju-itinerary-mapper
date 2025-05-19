@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useLeftPanel } from '@/hooks/use-left-panel';
 import LeftPanelContainer from './LeftPanelContainer';
@@ -68,17 +69,17 @@ const LeftPanel: React.FC = () => {
         if (detail.itinerary.length > 0) {
           console.log("[LeftPanel] itineraryCreated: 유효한 일정 데이터 확인됨. 패널 표시.");
           // uiVisibility.setShowItinerary(true); // use-left-panel에서 관리
-          // setForceShowPanel(true); // use-left-panel에서 관리
+          // Removed this line: setForceShowPanel(true); // use-left-panel에서 관리
         } else {
           console.warn("[LeftPanel] itineraryCreated: 일정이 비어있습니다. 빈 패널 표시.");
           // uiVisibility.setShowItinerary(true); // 오류 시에도 빈 패널 표시 시도
-          // setForceShowPanel(true);
+          // Removed this line: setForceShowPanel(true);
           toast.info("생성된 일정이 없습니다. 다른 장소를 선택하거나 조건을 변경해보세요.");
         }
       } else {
         console.error("[LeftPanel] itineraryCreated 이벤트에 itinerary 데이터가 없습니다.");
         // uiVisibility.setShowItinerary(true); // 오류 시에도 빈 패널 표시 시도
-        // setForceShowPanel(true);
+        // Removed this line: setForceShowPanel(true);
         toast.error("일정 데이터를 받는데 실패했습니다.");
       }
     };

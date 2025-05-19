@@ -1,6 +1,6 @@
 import { useCallback, useRef, useEffect, useState } from 'react';
 import { Place, ItineraryDay } from '@/types/supabase';
-import { GeoNode } from '../../components/rightpanel/geojson/GeoJsonTypes';
+import type { GeoNode } from '@/components/rightpanel/geojson/GeoJsonTypes';
 import { ServerRouteResponse, SegmentRoute } from '@/types/schedule';
 import {
   createNaverPolyline,
@@ -27,19 +27,35 @@ export const useMapFeatures = (map: any, isNaverLoadedParam: boolean) => {
   ) => {
     if (!currentMap || !isNaverLoadedParam || pathCoordinates.length < 2) return null;
 
-    const naverPath = pathCoordinates.map(coord => createNaverLatLng(coord.lat, coord.lng));
+    // Filter out invalid coordinates
+    const validCoords = pathCoordinates.filter(coord => 
+      coord && typeof coord.lat === 'number' && typeof coord.lng === 'number' &&
+      !isNaN(coord.lat) && !isNaN(coord.lng)
+    );
+
+    if (validCoords.length < 2) {
+      console.warn('[MapFeatures] drawRoutePath: Not enough valid coordinates for path.');
+      return null;
+    }
+
+    const naverPath = validCoords.map(coord => createNaverLatLng(coord.lat, coord.lng));
     if (naverPath.some(p => p === null)) {
       console.warn('[MapFeatures] drawRoutePath: Some LatLng conversions failed.');
       return null;
     }
 
-    const polyline = createNaverPolyline(currentMap, naverPath, {
-      strokeColor: color,
-      strokeWeight: weight,
-      strokeOpacity: opacity,
-      zIndex: zIndex,
-    });
-    return polyline;
+    try {
+      const polyline = createNaverPolyline(currentMap, naverPath, {
+        strokeColor: color,
+        strokeWeight: weight,
+        strokeOpacity: opacity,
+        zIndex: zIndex,
+      });
+      return polyline;
+    } catch (error) {
+      console.error('[MapFeatures] Error creating polyline:', error);
+      return null;
+    }
   }, [isNaverLoadedParam]);
 
   const clearAllRoutes = useCallback(() => {
@@ -76,7 +92,7 @@ export const useMapFeatures = (map: any, isNaverLoadedParam: boolean) => {
   const renderItineraryRoute = useCallback(
     (
       itineraryDay: ItineraryDay | null,
-      _allServerRoutesInput?: Record<number, ServerRouteResponse>, 
+      allServerRoutesInput?: Record<number, ServerRouteResponse>, 
       onComplete?: () => void
     ) => {
       if (!map || !isNaverLoadedParam) {
@@ -84,6 +100,7 @@ export const useMapFeatures = (map: any, isNaverLoadedParam: boolean) => {
         if (onComplete) onComplete();
         return;
       }
+
       clearAllRoutes();
 
       if (!itineraryDay || !itineraryDay.places || itineraryDay.places.length < 1) {
@@ -99,94 +116,149 @@ export const useMapFeatures = (map: any, isNaverLoadedParam: boolean) => {
         return;
       }
 
-      const { places, interleaved_route } = itineraryDay; 
-      const mappedPlaces = mapPlacesWithGeoNodes(places); 
+      try {
+        const { places, interleaved_route } = itineraryDay; 
+        const mappedPlaces = mapPlacesWithGeoNodes(places); 
 
-      if (interleaved_route.length === 0 && mappedPlaces.length > 1) {
-        console.log("[MapFeatures] No interleaved_route, drawing direct lines between mapped places.");
-        const pathCoordinates = mappedPlaces.filter(p => typeof p.x === 'number' && typeof p.y === 'number').map(p => ({ lat: p.y as number, lng: p.x as number }));
-        if (pathCoordinates.length > 1) {
+        if (interleaved_route.length === 0 && mappedPlaces.length > 1) {
+          console.log("[MapFeatures] No interleaved_route, drawing direct lines between mapped places.");
+          
+          // Filter out places with invalid coordinates
+          const validPlaces = mappedPlaces.filter(p => 
+            typeof p.x === 'number' && typeof p.y === 'number' && 
+            !isNaN(p.x) && !isNaN(p.y)
+          );
+          
+          if (validPlaces.length > 1) {
+            const pathCoordinates = validPlaces.map(p => ({ 
+              lat: p.y as number, 
+              lng: p.x as number 
+            }));
+            
             const polyline = drawRoutePath(map, pathCoordinates, DEFAULT_ROUTE_COLOR, 3);
             if (polyline) activePolylines.current.push(polyline);
+            
             const naverCoords = pathCoordinates.map(c => createNaverLatLng(c.lat, c.lng)).filter(p => p !== null) as any[];
-            if (naverCoords.length > 0) fitBoundsToCoordinates(map, naverCoords);
+            if (naverCoords.length > 0) {
+              try {
+                fitBoundsToCoordinates(map, naverCoords);
+              } catch (error) {
+                console.error("[MapFeatures] Error fitting bounds:", error);
+              }
+            }
+          } else {
+            console.warn("[MapFeatures] Not enough valid places for direct line routing");
+          }
+          
+          if (onComplete) onComplete();
+          return;
         }
-        if (onComplete) onComplete();
-        return;
-      }
-      
-      if (interleaved_route.length === 0) {
-         console.log('[MapFeatures] No route to draw for day', itineraryDay.day);
-         if (onComplete) onComplete();
-         return;
-      }
+        
+        if (interleaved_route.length === 0) {
+           console.log('[MapFeatures] No route to draw for day', itineraryDay.day);
+           if (onComplete) onComplete();
+           return;
+        }
 
-      const nodeCoordsMap = new Map<string, { lat: number; lng: number }>();
-      geoJsonState.geoJsonNodes.forEach(node => {
-        if (node.geometry.type === 'Point') {
-          const [lng, lat] = (node.geometry.coordinates as [number, number]);
-          nodeCoordsMap.set(String(node.properties.NODE_ID), {
-            lng: lng,
-            lat: lat,
+        const nodeCoordsMap = new Map<string, { lat: number; lng: number }>();
+        
+        // Extract coordinates from geoJsonNodes
+        if (geoJsonState.geoJsonNodes && geoJsonState.geoJsonNodes.length > 0) {
+          geoJsonState.geoJsonNodes.forEach(node => {
+            if (node && node.geometry && node.geometry.type === 'Point' && node.properties?.NODE_ID) {
+              const coordinates = node.geometry.coordinates;
+              if (Array.isArray(coordinates) && coordinates.length >= 2) {
+                const [lng, lat] = coordinates;
+                if (typeof lng === 'number' && typeof lat === 'number') {
+                  nodeCoordsMap.set(String(node.properties.NODE_ID), {
+                    lng: lng,
+                    lat: lat,
+                  });
+                }
+              }
+            }
           });
         }
-      });
-      
-      mappedPlaces.forEach(place => { 
-        const placeIdStr = String(place.geoNodeId || place.id);
-        if (!nodeCoordsMap.has(placeIdStr) && typeof place.x === 'number' && typeof place.y === 'number') {
-           nodeCoordsMap.set(placeIdStr, { lat: place.y as number, lng: place.x as number });
-        }
-      });
-
-      let currentPathSegment: { lat: number; lng: number }[] = [];
-      const allRouteCoordinatesForBounds: any[] = [];
-
-      interleaved_route.forEach((id, index) => {
-        const nodeIdStr = String(id);
-        const coords = nodeCoordsMap.get(nodeIdStr);
-
-        if (coords) {
-          currentPathSegment.push(coords);
-          const naverCoord = createNaverLatLng(coords.lat, coords.lng);
-          if (naverCoord) allRouteCoordinatesForBounds.push(naverCoord);
-
-          const nextIdStr = interleaved_route[index + 1] ? String(interleaved_route[index + 1]) : null;
-          const isNextItemAPlaceNode = nextIdStr ? nodeCoordsMap.has(nextIdStr) : false;
-          
-          if (currentPathSegment.length >= 2 && (!isNextItemAPlaceNode || index === interleaved_route.length - 1)) {
-            const polyline = drawRoutePath(map, currentPathSegment, DEFAULT_ROUTE_COLOR);
-            if (polyline) activePolylines.current.push(polyline);
-            currentPathSegment = isNextItemAPlaceNode && coords ? [coords] : []; 
-          } else if (currentPathSegment.length === 1 && !isNextItemAPlaceNode && index === interleaved_route.length -1){
-            currentPathSegment = [];
+        
+        // Add coordinates from places
+        mappedPlaces.forEach(place => { 
+          const placeIdStr = String(place.geoNodeId || place.id);
+          if (!nodeCoordsMap.has(placeIdStr) && 
+              typeof place.x === 'number' && typeof place.y === 'number' && 
+              !isNaN(place.x) && !isNaN(place.y)) {
+             nodeCoordsMap.set(placeIdStr, { lat: place.y as number, lng: place.x as number });
           }
+        });
 
-        } else {
-          if (currentPathSegment.length >= 2) {
-            const polyline = drawRoutePath(map, currentPathSegment, DEFAULT_ROUTE_COLOR);
-            if (polyline) activePolylines.current.push(polyline);
+        // Process interleaved_route to create path segments
+        let currentPathSegment: { lat: number; lng: number }[] = [];
+        const allRouteCoordinatesForBounds: any[] = [];
+        let missingNodeCount = 0;
+
+        interleaved_route.forEach((id, index) => {
+          const nodeIdStr = String(id);
+          const coords = nodeCoordsMap.get(nodeIdStr);
+
+          if (coords) {
+            currentPathSegment.push(coords);
+            const naverCoord = createNaverLatLng(coords.lat, coords.lng);
+            if (naverCoord) allRouteCoordinatesForBounds.push(naverCoord);
+
+            const nextIdStr = interleaved_route[index + 1] ? String(interleaved_route[index + 1]) : null;
+            const isNextItemAPlaceNode = nextIdStr ? nodeCoordsMap.has(nextIdStr) : false;
+            
+            if (currentPathSegment.length >= 2 && (!isNextItemAPlaceNode || index === interleaved_route.length - 1)) {
+              const polyline = drawRoutePath(map, currentPathSegment, DEFAULT_ROUTE_COLOR);
+              if (polyline) activePolylines.current.push(polyline);
+              currentPathSegment = isNextItemAPlaceNode && coords ? [coords] : []; 
+            } else if (currentPathSegment.length === 1 && !isNextItemAPlaceNode && index === interleaved_route.length - 1) {
+              currentPathSegment = [];
+            }
+          } else {
+            if (currentPathSegment.length >= 2) {
+              const polyline = drawRoutePath(map, currentPathSegment, DEFAULT_ROUTE_COLOR);
+              if (polyline) activePolylines.current.push(polyline);
+            }
+            currentPathSegment = []; 
+            missingNodeCount++;
+            console.warn(`[MapFeatures] Node ID ${nodeIdStr} from interleaved_route not found in geoJsonNodes or mappedPlaces.`);
           }
-          currentPathSegment = []; 
-          console.warn(`[MapFeatures] Node ID ${nodeIdStr} from interleaved_route not found in geoJsonNodes or mappedPlaces.`);
+        });
+        
+        if (currentPathSegment.length >= 2) { 
+          const polyline = drawRoutePath(map, currentPathSegment, DEFAULT_ROUTE_COLOR);
+          if (polyline) activePolylines.current.push(polyline);
         }
-      });
-      
-      if (currentPathSegment.length >= 2) { 
-        const polyline = drawRoutePath(map, currentPathSegment, DEFAULT_ROUTE_COLOR);
-        if (polyline) activePolylines.current.push(polyline);
-      }
-      
-      if (allRouteCoordinatesForBounds.length > 0) {
-        fitBoundsToCoordinates(map, allRouteCoordinatesForBounds.filter(c => c !== null));
-      } else if (mappedPlaces.length > 0) { 
-        const fallbackCoords = mappedPlaces.map(p => createNaverLatLng(p.y as number, p.x as number)).filter(c => c !== null) as any[];
-        if (fallbackCoords.length > 0) fitBoundsToCoordinates(map, fallbackCoords);
+        
+        console.log(`[MapFeatures] Rendered ${activePolylines.current.length} route segments. Missing nodes: ${missingNodeCount}`);
+        
+        if (allRouteCoordinatesForBounds.length > 1) {
+          try {
+            fitBoundsToCoordinates(map, allRouteCoordinatesForBounds.filter(c => c !== null));
+          } catch (error) {
+            console.error("[MapFeatures] Error fitting bounds to route:", error);
+          }
+        } else if (mappedPlaces.length > 0) { 
+          const fallbackCoords = mappedPlaces
+            .filter(p => typeof p.y === 'number' && typeof p.x === 'number' && !isNaN(p.y) && !isNaN(p.x))
+            .map(p => createNaverLatLng(p.y as number, p.x as number))
+            .filter(c => c !== null) as any[];
+            
+          if (fallbackCoords.length > 0) {
+            try {
+              fitBoundsToCoordinates(map, fallbackCoords);
+            } catch (error) {
+              console.error("[MapFeatures] Error fitting bounds to places:", error);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("[MapFeatures] Error rendering itinerary route:", error);
       }
 
       if (onComplete) onComplete();
     },
-    [map, isNaverLoadedParam, geoJsonState.geoJsonNodes, drawRoutePath, clearAllRoutes, mapPlacesWithGeoNodes]
+    [map, isNaverLoadedParam, geoJsonState.geoJsonNodes, drawRoutePath, mapPlacesWithGeoNodes]
   );
 
   const showRouteForPlaceIndex = useCallback(
@@ -304,6 +376,7 @@ export const useMapFeatures = (map: any, isNaverLoadedParam: boolean) => {
     }
   }, []);
 
+  // Update addMarkers function signature to match MapContext
   const addMarkers = useCallback((
     placesToAdd: Place[], 
     options: {
@@ -324,14 +397,21 @@ export const useMapFeatures = (map: any, isNaverLoadedParam: boolean) => {
       onMarkerClick,
       itineraryOrder = false 
     } = options;
+    
+    // Filter out places with invalid coordinates
+    const validPlaces = placesToAdd.filter(place => 
+      place && typeof place.x === 'number' && typeof place.y === 'number' && 
+      !isNaN(place.x) && !isNaN(place.y)
+    );
+    
+    if (validPlaces.length === 0) {
+      console.warn('[MapFeatures - addMarkers] No valid coordinates in places array');
+      return [];
+    }
+
     const createdMarkers: any[] = [];
 
-    placesToAdd.forEach((place, index) => {
-      if (typeof place.x !== 'number' || typeof place.y !== 'number' || isNaN(place.x) || isNaN(place.y)) {
-        console.warn(`[MapFeatures - addMarkers] Place '${place.name}' (ID: ${place.id}) has invalid or missing coordinates (x: ${place.x}, y: ${place.y}). Skipping marker.`);
-        return; 
-      }
-
+    validPlaces.forEach((place, index) => {
       const position = createNaverLatLng(place.y, place.x);
       if (!position) { 
         console.warn(`[MapFeatures - addMarkers] Failed to create LatLng for '${place.name}'. Skipping marker.`);
@@ -387,44 +467,48 @@ export const useMapFeatures = (map: any, isNaverLoadedParam: boolean) => {
         };
       }
 
-      const marker = new window.naver.maps.Marker({
-        position: position,
-        map: map,
-        title: place.name,
-        icon: markerIcon,
-        zIndex: isHighlighted ? 200 : (isItinerary && itineraryOrder ? 100 - index : 50)
-      });
+      try {
+        const marker = new window.naver.maps.Marker({
+          position: position,
+          map: map,
+          title: place.name,
+          icon: markerIcon,
+          zIndex: isHighlighted ? 200 : (isItinerary && itineraryOrder ? 100 - index : 50)
+        });
 
-      const contentString = `
-        <div style="padding: 8px; max-width: 180px; font-size: 12px;">
-          <h3 style="font-weight: bold; margin-bottom: 4px; font-size: 13px;">${place.name}</h3>
-          ${place.category ? `<p style="color: ${resolvedCategoryColor}; margin: 2px 0; font-size: 11px;">${place.category}</p>` : ''}
-          ${isItinerary && itineraryOrder ? `<strong style="color: ${markerBaseColor}; font-size: 13px;">Visit order: ${index + 1}</strong>` : ''}
-        </div>
-      `;
+        const contentString = `
+          <div style="padding: 8px; max-width: 180px; font-size: 12px;">
+            <h3 style="font-weight: bold; margin-bottom: 4px; font-size: 13px;">${place.name}</h3>
+            ${place.category ? `<p style="color: ${resolvedCategoryColor}; margin: 2px 0; font-size: 11px;">${place.category}</p>` : ''}
+            ${isItinerary && itineraryOrder ? `<strong style="color: ${markerBaseColor}; font-size: 13px;">Visit order: ${index + 1}</strong>` : ''}
+          </div>
+        `;
 
-      const infoWindow = new window.naver.maps.InfoWindow({
-        content: contentString,
-        maxWidth: 200,
-        backgroundColor: "white",
-        borderColor: "#ccc",
-        borderWidth: 1,
-        anchorSize: new window.naver.maps.Size(8, 8),
-        pixelOffset: new window.naver.maps.Point(0, -15) 
-      });
+        const infoWindow = new window.naver.maps.InfoWindow({
+          content: contentString,
+          maxWidth: 200,
+          backgroundColor: "white",
+          borderColor: "#ccc",
+          borderWidth: 1,
+          anchorSize: new window.naver.maps.Size(8, 8),
+          pixelOffset: new window.naver.maps.Point(0, -15) 
+        });
 
-      window.naver.maps.Event.addListener(marker, 'click', () => {
-        infoWindow.open(map, marker); 
-        if (onMarkerClick) {
-          onMarkerClick(place, index);
-        }
-      });
+        window.naver.maps.Event.addListener(marker, 'click', () => {
+          infoWindow.open(map, marker); 
+          if (onMarkerClick) {
+            onMarkerClick(place, index);
+          }
+        });
 
-      createdMarkers.push(marker);
+        createdMarkers.push(marker);
+      } catch (error) {
+        console.error(`[MapFeatures - addMarkers] Error creating marker for ${place.name}:`, error);
+      }
     });
     
     return createdMarkers;
-  }, [map, isNaverLoadedParam, getCategoryColor, mapCategoryNameToKey]);
+  }, [map, isNaverLoadedParam]);
 
   const calculateRoutes = useCallback((placesToRoute: Place[]) => { // This returns any[]
     if (!map || !isNaverLoadedParam || placesToRoute.length < 2) return [];

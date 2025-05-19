@@ -26,7 +26,7 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
 }) => {
   const { map, isMapInitialized, isNaverLoaded } = useMapContext();
   const markersRef = useRef<any[]>([]);
-  const { addMarkers: addMarkersFromFeatures, clearMarkersAndUiElements } = useMapFeatures(map);
+  const { addMarkers: addMarkersFromFeatures, clearMarkersAndUiElements } = useMapFeatures(map, isNaverLoaded);
 
 
   useEffect(() => {
@@ -70,9 +70,25 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
     console.log("[MapMarkers] 데이터 렌더링 시작. 표시할 장소 수:", placesToDisplayOnMap.length);
 
     if (placesToDisplayOnMap.length > 0) {
+      // Filter out places with invalid coordinates
+      const validPlaces = placesToDisplayOnMap.filter(place => {
+        if (!place.x || !place.y || isNaN(Number(place.x)) || isNaN(Number(place.y))) {
+          console.warn(`[MapMarkers] 장소 '${place.name}'의 좌표가 없거나 유효하지 않습니다. 마커를 생성하지 않습니다.`);
+          return false;
+        }
+        return true;
+      });
+
+      if (validPlaces.length === 0) {
+        console.warn("[MapMarkers] 유효한 좌표를 가진 장소가 없습니다.");
+        return;
+      }
+
+      console.log(`[MapMarkers] 유효한 좌표를 가진 장소 ${validPlaces.length}개를 표시합니다.`);
+      
       // useMapFeatures에서 가져온 addMarkers 사용
       const newMarkers = addMarkersFromFeatures(
-        placesToDisplayOnMap,
+        validPlaces,
         {
           highlightPlaceId: selectedPlace?.id || highlightPlaceId, // If selectedPlace is for infoWindow, use highlightPlaceId for general highlight
           isItinerary: isDisplayingItineraryDayMode,
@@ -94,12 +110,12 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
       // 지도 범위 조정 (selectedPlace가 없거나, 특정 장소 하이라이트가 아닐 때)
       // selectedPlace는 정보창 대상, highlightPlaceId는 일반 하이라이트.
       // 일정 모드일 때는 항상 fitBounds. 그 외에는 placesToDisplayOnMap이 있고, 특정 장소 확대가 아닐 때.
-      if (isDisplayingItineraryDayMode && placesToDisplayOnMap.length > 0) {
+      if (isDisplayingItineraryDayMode && validPlaces.length > 0) {
         console.log("[MapMarkers] 일정 모드: 마커에 맞게 지도 범위 조정");
-        fitBoundsToPlaces(map, placesToDisplayOnMap);
-      } else if (placesToDisplayOnMap.length > 0 && !highlightPlaceId && !selectedPlace) {
+        fitBoundsToPlaces(map, validPlaces);
+      } else if (validPlaces.length > 0 && !highlightPlaceId && !selectedPlace) {
          console.log("[MapMarkers] 일반 모드: 마커에 맞게 지도 범위 조정 (하이라이트 없음)");
-         fitBoundsToPlaces(map, placesToDisplayOnMap);
+         fitBoundsToPlaces(map, validPlaces);
       }
 
     } else {
