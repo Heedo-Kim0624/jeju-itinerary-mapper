@@ -1,4 +1,3 @@
-
 import { toast } from 'sonner';
 import type { ItineraryDay, Place, SelectedPlace as CoreSelectedPlace } from '@/types'; // CoreSelectedPlace 추가
 
@@ -6,8 +5,11 @@ import { useItineraryState } from './itinerary/useItineraryState';
 import { useItineraryParser } from './itinerary/useItineraryParser'; // 경로 수정
 import { useItineraryGenerator } from './itinerary/useItineraryGenerator';
 import { useItineraryEvents } from './itinerary/useItineraryEvents';
-// useScheduleStore import 추가
-import { useScheduleStore } from '@/store/useScheduleStore'; // Assuming this store exists and provides selectedPlaces
+// useScheduleStore import 추가 (가이드에는 없었지만, parseServerResponse에서 사용될 수 있음)
+// 만약 useScheduleStore가 이 파일에서 직접 사용되지 않는다면, 이 import는 필요 없습니다.
+// useItineraryParser 내부에서 currentSelectedPlaces를 인자로 받으므로,
+// 이 파일에서는 useScheduleStore를 직접 참조할 필요가 없을 수 있습니다.
+// import { useScheduleStore } from '@/store/useScheduleStore';
 
 export const useItinerary = () => {
   const {
@@ -22,8 +24,8 @@ export const useItinerary = () => {
     handleSelectItineraryDay,
   } = useItineraryState();
 
+  // useItineraryParser hook 사용법 수정
   const itineraryParser = useItineraryParser(); 
-  const { selectedPlaces: currentSelectedPlacesFromStore } = useScheduleStore(); // Get selected places from store
 
   const { generateItinerary, createDebugItinerary } = useItineraryGenerator({
     setItinerary,
@@ -32,17 +34,13 @@ export const useItinerary = () => {
     setIsItineraryCreated,
   });
 
-  // useItineraryEvents에 parseServerResponse 함수 전달 시, 래퍼 함수 사용
+  // useItineraryEvents에 parseServerResponse 함수 전달 시, 올바른 함수를 전달하도록 수정
   useItineraryEvents({
     setItinerary,
     setSelectedItineraryDay,
     setShowItinerary,
     setIsItineraryCreated,
-    parseServerResponse: (serverResponse: any) => { 
-      // Wrapper function to match the expected signature.
-      // It uses currentSelectedPlacesFromStore from the hook's scope.
-      return itineraryParser.parseServerResponse(serverResponse, currentSelectedPlacesFromStore || []);
-    },
+    parseServerResponse: itineraryParser.parseServerResponse, // 수정된 부분
   });
   
   const handleServerItineraryResponse = (
@@ -50,11 +48,10 @@ export const useItinerary = () => {
     currentSelectedPlaces: CoreSelectedPlace[] // currentSelectedPlaces 인자 추가
   ): ItineraryDay[] => {
     console.log("서버 일정 응답 처리 시작 (useItinerary):", {
-      일수: serverItineraryData?.schedule?.length || 0,
+      일수: serverItineraryData?.schedule?.length || 0, // serverItineraryData가 실제 서버 응답 객체라고 가정
     });
 
     // itineraryParser.parseServerResponse를 사용하여 파싱
-    // This call is correct as currentSelectedPlaces is passed directly as an argument
     const parsedItinerary = itineraryParser.parseServerResponse(serverItineraryData, currentSelectedPlaces);
 
     if (!parsedItinerary || parsedItinerary.length === 0) {
@@ -109,4 +106,3 @@ export const useItinerary = () => {
     createDebugItinerary,
   };
 };
-
