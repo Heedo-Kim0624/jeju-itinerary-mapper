@@ -1,6 +1,6 @@
 
 import { useCallback, useEffect } from 'react';
-import { Place } from '@/types/supabase';
+import { Place, SelectedPlace } from '@/types/supabase'; // Ensure SelectedPlace is imported if it's used, Place is used for handleViewOnMap
 import { useTripDetails } from './use-trip-details';
 
 import { usePlaceCoreState } from './places/use-place-core-state';
@@ -42,21 +42,17 @@ export const useSelectedPlaces = () => {
 
   const { prepareSchedulePayload: buildSchedulePayload } = useSchedulePayloadBuilder();
   
-  // Wrapper for prepareSchedulePayload to maintain original signature if needed,
-  // or adjust callers to pass candidatePlaces directly.
-  // The original prepareSchedulePayload took selectedPlaces and implicitly used candidatePlaces from state.
-  // The new one takes both explicitly.
+  // Updated wrapper for prepareSchedulePayload.
+  // It no longer accepts `userSelectedPlacesInput` as it was ignored.
+  // It directly uses `selectedPlaces` and `candidatePlaces` from the hook's scope.
   const prepareSchedulePayload = useCallback(
     (
-      userSelectedPlacesInput: Place[], // Original type was SelectedPlace[]
       startDatetimeISO: string | null,
       endDatetimeISO: string | null
     ) => {
-      // The `userSelectedPlacesInput` here is the combined list of selected and candidate places
-      // from the perspective of who calls this (e.g. useLeftPanel -> handleCreateItinerary).
-      // However, our new buildSchedulePayload expects `selectedPlaces` (non-candidates) and `candidatePlaces` separately.
-      // The `selectedPlaces` state from `usePlaceCoreState` are the non-candidate ones.
-      // The `candidatePlaces` state from `usePlaceCoreState` are the candidate ones.
+      // `selectedPlaces` from usePlaceCoreState are non-candidate (user-selected).
+      // `candidatePlaces` from usePlaceCoreState are auto-completed.
+      // This aligns with what `buildSchedulePayload` (from useSchedulePayloadBuilder) expects.
       return buildSchedulePayload(selectedPlaces, candidatePlaces, startDatetimeISO, endDatetimeISO);
     },
     [selectedPlaces, candidatePlaces, buildSchedulePayload]
@@ -86,9 +82,8 @@ export const useSelectedPlaces = () => {
     isPlaceSelected, // from usePlaceCoreState
     handleAutoCompletePlaces, // from usePlaceAutoCompletion
     prepareSchedulePayload, // refactored wrapper
-    // Exposing setters for advanced use cases or if other hooks need them,
-    // though generally direct manipulation should be through handlers.
     setCandidatePlaces, // from usePlaceCoreState
     setSelectedPlaces, // from usePlaceCoreState
   };
 };
+

@@ -69,16 +69,17 @@ export const useLeftPanel = () => {
   );
 
   // Itinerary creation logic
-  const itineraryCreation = useItineraryCreation(
+  const itineraryCreation = useItineraryCreation({
     tripDetails,
-    placesManagement.selectedPlaces,
-    placesManagement.prepareSchedulePayload,
-    itineraryManagement.generateItinerary,
-    itineraryManagement.setShowItinerary,
-    leftPanelState.setCurrentPanel,
-    leftPanelState.setIsGenerating,
-    leftPanelState.setItineraryReceived
-  );
+    userDirectlySelectedPlaces: placesManagement.selectedPlaces, // Pass non-candidate places
+    autoCompleteCandidatePlaces: placesManagement.candidatePlaces, // Pass candidate places
+    prepareSchedulePayload: placesManagement.prepareSchedulePayload,
+    generateItinerary: itineraryManagement.generateItinerary,
+    setShowItinerary: itineraryManagement.setShowItinerary,
+    setCurrentPanel: leftPanelState.setCurrentPanel,
+    setIsGenerating: leftPanelState.setIsGenerating,
+    setItineraryReceived: leftPanelState.setItineraryReceived,
+  });
 
   // Category results from API
   const { 
@@ -114,9 +115,8 @@ export const useLeftPanel = () => {
   }, [
     itineraryManagement.isItineraryCreated, 
     itineraryManagement.itinerary, 
-    uiVisibility.showItinerary, // Keep uiVisibility.showItinerary as dependency
+    uiVisibility.showItinerary, 
     leftPanelState.currentPanel,
-    // Add missing dependencies from leftPanelState and uiVisibility used in the effect
     leftPanelState.setCurrentPanel,
     uiVisibility.setShowItinerary
   ]);
@@ -133,7 +133,6 @@ export const useLeftPanel = () => {
       itinerary: itineraryManagement.itinerary,
       selectedItineraryDay: itineraryManagement.selectedItineraryDay,
       handleSelectItineraryDay: itineraryManagement.handleSelectItineraryDay,
-      // Consider exposing isItineraryCreated directly if needed elsewhere
     },
     handleCreateItinerary: itineraryCreation.handleInitiateItineraryCreation,
     handleCloseItinerary: itineraryCreation.handleCloseItineraryPanel,
@@ -142,11 +141,10 @@ export const useLeftPanel = () => {
     isCategoryLoading,
     categoryError,
     categoryResults,
-    categoryResultHandlers, // Expose all category result handlers
+    categoryResultHandlers, 
     handleCategorySelect: (category: string) => 
       categoryHandlers.handleCategorySelect(category, refetch),
-    // Removed handleCloseCategoryResult and handleConfirmCategory as they are part of categoryResultHandlers and categoryHandlers respectively
     isGeneratingItinerary: leftPanelState.isGenerating,
-    itineraryReceived: leftPanelState.itineraryReceived, // Exposed itineraryReceived
+    itineraryReceived: leftPanelState.itineraryReceived,
   };
 };

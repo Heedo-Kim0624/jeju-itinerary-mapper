@@ -1,144 +1,127 @@
 
 import { useCallback } from 'react';
 import { toast } from 'sonner';
-import type { Place } from '@/types';
+import { TripDetails } from '@/hooks/use-trip-details';
+import { Place, ItineraryDay, SchedulePayload } from '@/types'; // Ensure correct types are imported
 
-/**
- * Manages the logic for creating itineraries and handling itinerary-related events
- */
-export const useItineraryCreation = (
-  tripDetails: any,
-  selectedPlaces: Place[],
-  prepareSchedulePayload: (places: Place[], startISO: string | null, endISO: string | null) => any,
-  generateItinerary: (places: Place[], startDate: Date | null, endDate: Date | null, startTime: string, endTime: string) => any,
-  setShowItinerary: (show: boolean) => void,
-  setCurrentPanel: (panel: 'region' | 'date' | 'category' | 'itinerary') => void,
-  setIsGenerating: (isGenerating: boolean) => void,
-  setItineraryReceived: (received: boolean) => void
-) => {
-  /**
-   * Initiates the itinerary creation process
-   * Will try server-side first, then fall back to client-side if needed
-   */
-  const handleInitiateItineraryCreation = useCallback(async () => {
-    console.log('[useItineraryCreation] handleInitiateItineraryCreation called');
-    
-    // Ensure tripDetails and selectedPlaces are valid before calling
-    if (!tripDetails.dates || !tripDetails.startDatetime || !tripDetails.endDatetime) {
-      toast.error("여행 날짜와 시간을 먼저 설정해주세요.");
-      return false;
-    }
-    if (selectedPlaces.length === 0) {
-      toast.error("선택된 장소가 없습니다. 장소를 선택해주세요.");
-      return false;
-    }
+interface UseItineraryCreationProps {
+  tripDetails: TripDetails;
+  // selectedPlaces from useSelectedPlaces hook (non-candidate)
+  userDirectlySelectedPlaces: Place[]; 
+  // candidatePlaces from useSelectedPlaces hook
+  autoCompleteCandidatePlaces: Place[];
+  // The prepareSchedulePayload from useSelectedPlaces (now with updated signature)
+  prepareSchedulePayload: (
+    startDatetimeISO: string | null,
+    endDatetimeISO: string | null
+  ) => SchedulePayload | null;
+  generateItinerary: (payload: SchedulePayload) => Promise<ItineraryDay[] | null>;
+  setShowItinerary: (show: boolean) => void;
+  setCurrentPanel: (panel: 'region' | 'date' | 'category' | 'itinerary' | null) => void;
+  setIsGenerating: (generating: boolean) => void;
+  setItineraryReceived: (received: boolean) => void;
+}
 
-    // Call the server-side itinerary creation logic
-    // This function now primarily calls the server. Client fallback is inside it.
-    const success = await handleCreateItinerary();
-    
-    if (success) {
-      console.log('[useItineraryCreation] Itinerary creation process initiated (server or client). Waiting for itineraryCreated event.');
-      // No direct setShowItinerary(true) here; let the event handler in useItinerary do it.
-    } else {
-      console.log('[useItineraryCreation] Itinerary creation process failed to initiate or complete.');
-      // Ensure loading states are properly reset if failure happens early.
-    }
-    
-    return success;
-  }, [
-    tripDetails, 
-    selectedPlaces,
-    setShowItinerary, 
-    setCurrentPanel
-  ]);
-  
-  /**
-   * Handles the actual itinerary creation by calling the appropriate service
-   */
-  const handleCreateItinerary = useCallback(async () => {
-    setItineraryReceived(false);
+export const useItineraryCreation = ({
+  tripDetails,
+  userDirectlySelectedPlaces,
+  autoCompleteCandidatePlaces,
+  prepareSchedulePayload,
+  generateItinerary,
+  setShowItinerary,
+  setCurrentPanel,
+  setIsGenerating,
+  setItineraryReceived,
+}: UseItineraryCreationProps) => {
+  const handleInitiateItineraryCreation = useCallback(async (): Promise<boolean> => {
+    console.log("[ItineraryCreation] 일정 생성 시작 요청됨");
     setIsGenerating(true);
-    
-    try {
-      // Call server-side itinerary generation service (implemented in useItineraryHandlers)
-      const itineraryHandlersCreateItinerary = async () => {
-        try {
-          console.log('[useItineraryCreation] Preparing schedule payload');
-          const payload = prepareSchedulePayload(
-            selectedPlaces,
-            tripDetails.startDatetime,
-            tripDetails.endDatetime
-          );
-          
-          if (!payload) {
-            console.error('[useItineraryCreation] Failed to prepare schedule payload');
-            return null;
-          }
-          
-          console.log('[useItineraryCreation] Schedule payload prepared:', payload);
-          
-          // Normally there would be a server API call here
-          // For fallback/demo, use client-side generation
-          const clientItinerary = generateItinerary(
-            selectedPlaces,
-            tripDetails.dates?.startDate || null,
-            tripDetails.dates?.endDate || null,
-            tripDetails.dates?.startTime || "10:00",
-            tripDetails.dates?.endTime || "22:00"
-          );
-          
-          if (clientItinerary) {
-            // Dispatch itinerary created event
-            const event = new CustomEvent('itineraryCreated', {
-              detail: { itinerary: clientItinerary }
-            });
-            window.dispatchEvent(event);
-            return true;
-          }
-          
-          return false;
-        } catch (error) {
-          console.error('[useItineraryCreation] Error creating itinerary:', error);
-          return false;
-        }
-      };
-      
-      const success = await itineraryHandlersCreateItinerary();
-      
-      if (!success) {
-        setIsGenerating(false);
-        setItineraryReceived(false);
-        toast.error("일정 생성에 실패했습니다.");
-      }
-      
-      return success;
-    } catch (error) {
-      console.error('[useItineraryCreation] Error in handleCreateItinerary:', error);
+    setItineraryReceived(false); // Reset before new generation
+
+    if (!tripDetails.dates || !tripDetails.startDatetime || !tripDetails.endDatetime) {
+      toast.error("여행 날짜와 시간을 먼저 선택해주세요.");
       setIsGenerating(false);
-      setItineraryReceived(false);
-      toast.error("일정 생성 중 오류가 발생했습니다.");
       return false;
     }
+
+    // Combine user-selected and auto-completed places for validation or other pre-checks if needed.
+    // This list itself is not directly passed to the (new) prepareSchedulePayload.
+    const allPlacesForValidation = [...userDirectlySelectedPlaces, ...autoCompleteCandidatePlaces];
+
+    if (allPlacesForValidation.length === 0) {
+      toast.info("경로를 생성하려면 최소한 하나 이상의 장소를 선택해주세요.");
+      setIsGenerating(false);
+      return false;
+    }
+    
+    // Ensure all places for payload have IDs (checking combined list before payload prep)
+    if (allPlacesForValidation.some(p => p.id === undefined || p.id === null)) {
+      console.error("[ItineraryCreation] Some places for payload are missing IDs:", allPlacesForValidation.filter(p => p.id === undefined || p.id === null));
+      toast.error("일부 장소 정보에 오류가 있어 일정을 생성할 수 없습니다. 장소 선택을 다시 확인해주세요.");
+      setIsGenerating(false);
+      return false;
+    }
+    
+    // Call the updated prepareSchedulePayload (it uses selectedPlaces and candidatePlaces from its own closure)
+    const payload = prepareSchedulePayload(
+      tripDetails.startDatetime,
+      tripDetails.endDatetime
+    );
+
+    if (!payload) {
+      // Error message already handled by prepareSchedulePayload or date checks
+      setIsGenerating(false);
+      return false;
+    }
+
+    try {
+      console.log("[ItineraryCreation] 생성기 호출 직전, Payload:", JSON.stringify(payload, null, 2));
+      const itineraryResult = await generateItinerary(payload);
+      console.log("[ItineraryCreation] 생성기로부터 결과 받음:", itineraryResult ? `${itineraryResult.length}일치 일정` : "결과 없음");
+
+      if (itineraryResult && itineraryResult.length > 0) {
+        setShowItinerary(true);
+        setCurrentPanel('itinerary');
+        setItineraryReceived(true); // Mark as received
+        // No need to set isGenerating to false here, it should be handled by event listeners or parent component
+        console.log("[ItineraryCreation] 일정 생성 성공 및 표시됨");
+        return true;
+      } else {
+        toast.error("일정 생성에 실패했거나, 생성된 일정이 없습니다. 조건을 변경하여 다시 시도해 주세요.");
+        // setItineraryReceived(false); // Explicitly false if no itinerary or error
+        setIsGenerating(false); // Explicitly set isGenerating to false on failure here
+        return false;
+      }
+    } catch (error) {
+      console.error("[ItineraryCreation] 일정 생성 중 오류:", error);
+      toast.error(`일정 생성 중 오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
+      // setItineraryReceived(false);
+      setIsGenerating(false); // Explicitly set isGenerating to false on catch
+      return false;
+    }
+    // The isGenerating state might be managed by listeners for 'itineraryGenerated' or 'generationFailed' events
+    // For now, let's ensure it's reset in error/empty cases directly.
+    // If successful, the 'itineraryGenerated' event should eventually lead to isGenerating being false.
   }, [
     tripDetails,
-    selectedPlaces,
+    // userDirectlySelectedPlaces and autoCompleteCandidatePlaces are used for allPlacesForValidation
+    userDirectlySelectedPlaces, 
+    autoCompleteCandidatePlaces,
     prepareSchedulePayload,
     generateItinerary,
+    setShowItinerary,
+    setCurrentPanel,
     setIsGenerating,
-    setItineraryReceived
+    setItineraryReceived,
   ]);
-  
-  /**
-   * Closes the itinerary panel and resets related states
-   */
+
   const handleCloseItineraryPanel = useCallback(() => {
     setShowItinerary(false);
-    setCurrentPanel('category');
+    setCurrentPanel(null); // Or 'category' or appropriate previous panel
   }, [setShowItinerary, setCurrentPanel]);
 
   return {
     handleInitiateItineraryCreation,
-    handleCloseItineraryPanel
+    handleCloseItineraryPanel,
   };
 };
