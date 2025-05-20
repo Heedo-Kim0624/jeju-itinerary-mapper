@@ -198,78 +198,78 @@ export const panToPosition = (map: any, lat: number, lng: number) => {
 };
 
 export const fitBoundsToPlaces = (map: any, places: Place[]) => {
-  if (!map || !window.naver || !window.naver.maps || places.length === 0) {
-    console.warn("지도 객체가 없거나, 장소 목록이 비어 있습니다.");
+  if (!map || !window.naver || !window.naver.maps || !places || places.length === 0) {
+    console.warn("[mapDrawing] fitBoundsToPlaces: 지도 객체가 없거나, 장소 목록이 비어 있습니다.");
     return;
   }
 
-  const bounds = new window.naver.maps.LatLngBounds();
-  let hasValidCoords = false;
-
-  places.forEach(place => {
-    if (place.y && place.x && !isNaN(Number(place.y)) && !isNaN(Number(place.x))) {
-      bounds.extend(new window.naver.maps.LatLng(place.y, place.x));
-      hasValidCoords = true;
-    }
-  });
-
   try {
+    const bounds = new window.naver.maps.LatLngBounds();
+    let hasValidCoords = false;
+
+    places.forEach(place => {
+      if (place.y && place.x && !isNaN(Number(place.y)) && !isNaN(Number(place.x))) {
+        bounds.extend(new window.naver.maps.LatLng(Number(place.y), Number(place.x)));
+        hasValidCoords = true;
+      }
+    });
+
     if (hasValidCoords) {
       const ne = bounds.getNE();
       const sw = bounds.getSW();
       
-      // Check if bounds is valid before calling fitBounds
-      if (ne && sw && !ne.equals(sw)) {
-        map.fitBounds(bounds);
+      if (ne && sw && !ne.equals(sw)) { // Check if bounds are valid (not empty or single point)
+        map.fitBounds(bounds, { top: 50, right: 50, bottom: 50, left: 50 });
+      } else if (ne && sw && ne.equals(sw) && places.length === 1) { // Single point, pan and zoom
+        map.setCenter(ne);
+        map.setZoom(14); // Default zoom for a single point
       } else {
-        console.warn("fitBoundsToPlaces: 유효한 경계를 계산할 수 없습니다.");
+        console.warn("[mapDrawing] fitBoundsToPlaces: 유효한 경계를 계산할 수 없거나 단일 지점입니다.");
       }
     } else {
-      console.warn("fitBoundsToPlaces: 유효한 좌표가 없습니다.");
+      console.warn("[mapDrawing] fitBoundsToPlaces: 유효한 좌표가 있는 장소가 없습니다.");
     }
   } catch (error) {
-    console.error("fitBounds 중 오류 발생:", error);
+    console.error("[mapDrawing] fitBoundsToPlaces 중 오류 발생:", error);
   }
 };
 
-// Fixed fitBoundsToCoordinates function
-export const fitBoundsToCoordinates = (map: any, coordinates: any[]) => { 
-  if (!map || !window.naver || !window.naver.maps || coordinates.length === 0) {
-    console.warn("fitBoundsToCoordinates: 지도 객체가 없거나, 좌표 목록이 비어 있습니다.");
+export const fitBoundsToCoordinates = (map: any, coordinates: { lat: number; lng: number }[]) => { 
+  if (!map || !window.naver || !window.naver.maps || !coordinates || !Array.isArray(coordinates) || coordinates.length === 0) {
+    console.warn("[mapDrawing] fitBoundsToCoordinates: 지도 객체가 없거나, 좌표 목록이 비어 있습니다.");
     return;
   }
 
-  const bounds = new window.naver.maps.LatLngBounds();
-  let hasValidCoords = false;
-
-  coordinates.forEach(coord => {
-    if (coord instanceof window.naver.maps.LatLng) {
-      bounds.extend(coord);
-      hasValidCoords = true;
-    } else if (coord && typeof coord.lat === 'number' && typeof coord.lng === 'number') {
-      bounds.extend(new window.naver.maps.LatLng(coord.lat, coord.lng));
-      hasValidCoords = true;
-    } else {
-      console.warn("fitBoundsToCoordinates: Invalid coordinate object passed:", coord);
-    }
-  });
-
   try {
+    const bounds = new window.naver.maps.LatLngBounds();
+    let hasValidCoords = false;
+
+    coordinates.forEach(coord => {
+      if (coord && typeof coord.lat === 'number' && typeof coord.lng === 'number' && !isNaN(coord.lat) && !isNaN(coord.lng)) {
+        bounds.extend(new window.naver.maps.LatLng(coord.lat, coord.lng));
+        hasValidCoords = true;
+      } else {
+        console.warn("[mapDrawing] fitBoundsToCoordinates: Invalid coordinate object passed:", coord);
+      }
+    });
+    
     if (hasValidCoords) {
       const ne = bounds.getNE();
       const sw = bounds.getSW();
       
-      // Check if bounds is valid before calling fitBounds
-      if (ne && sw && !ne.equals(sw)) {
-        map.fitBounds(bounds);
+      if (ne && sw && !ne.equals(sw)) { // Check if bounds are valid
+        map.fitBounds(bounds, { top: 50, right: 50, bottom: 50, left: 50 });
+      } else if (ne && sw && ne.equals(sw) && coordinates.length === 1) { // Single point
+        map.setCenter(ne);
+        map.setZoom(14);
       } else {
-        console.warn("fitBoundsToCoordinates: 유효한 경계를 계산할 수 없습니다.");
+        console.warn("[mapDrawing] fitBoundsToCoordinates: 유효한 경계를 계산할 수 없거나 단일 지점입니다.");
       }
     } else {
-      console.warn("fitBoundsToCoordinates: 유효한 좌표가 없습니다.");
+      console.warn("[mapDrawing] fitBoundsToCoordinates: 유효한 좌표가 없습니다.");
     }
   } catch (error) {
-    console.error("fitBoundsToCoordinates 중 오류 발생:", error);
+    console.error("[mapDrawing] fitBoundsToCoordinates 중 오류 발생:", error);
   }
 };
 

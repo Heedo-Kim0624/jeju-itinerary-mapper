@@ -10,12 +10,17 @@ import {
 import { useGeoJsonState } from '@/hooks/map/useGeoJsonState';
 import { getCategoryColor, mapCategoryNameToKey } from '@/utils/categoryColors';
 
-const DEFAULT_ROUTE_COLOR = '#007bff';
+const DEFAULT_ROUTE_COLOR = '#007bff'; // Default color, will be overridden by user's request
+const USER_ROUTE_COLOR = '#2563EB'; // User requested blue
+const USER_ROUTE_WEIGHT = 5;
+const USER_ROUTE_OPACITY = 0.7;
+const USER_ROUTE_ZINDEX = 100;
+
 
 export const useMapFeatures = (map: any, isNaverLoadedParam: boolean) => {
   const activePolylines = useRef<any[]>([]);
   const highlightedPathRef = useRef<any>(null);
-  const geoJsonState = useGeoJsonState();
+  const geoJsonState = useGeoJsonState(); // Contains geoJsonNodes and geoJsonLinks
 
   const drawRoutePath = useCallback((
     currentMap: any,
@@ -74,18 +79,29 @@ export const useMapFeatures = (map: any, isNaverLoadedParam: boolean) => {
   const mapPlacesWithGeoNodes = useCallback((places: Place[]): Place[] => {
     if (!geoJsonState.geoJsonNodes || geoJsonState.geoJsonNodes.length === 0) {
       console.warn("[MapFeatures] GeoJSON nodes not available for mapping places.");
-      return places.map(p => ({ ...p, x: p.x || 0, y: p.y || 0 }));
+      // Ensure x, y are numbers, defaulting to 0 if undefined/null, or keeping existing if valid
+      return places.map(p => ({ 
+        ...p, 
+        x: (typeof p.x === 'number' && !isNaN(p.x)) ? p.x : 0, 
+        y: (typeof p.y === 'number' && !isNaN(p.y)) ? p.y : 0 
+      }));
     }
 
     return places.map(place => {
       if (place.geoNodeId) {
         const node = geoJsonState.geoJsonNodes.find(n => String(n.properties.NODE_ID) === String(place.geoNodeId));
         if (node && node.geometry.type === 'Point') {
-          const [lng, lat] = (node.geometry.coordinates as [number, number]); // Type assertion
+          const [lng, lat] = (node.geometry.coordinates as [number, number]);
           return { ...place, x: lng, y: lat };
+        } else {
+            console.warn(`[MapFeatures] geoNodeId ${place.geoNodeId} for place ${place.name} not found in geoJsonNodes. Keeping original/default coords.`);
         }
       }
-      return { ...place, x: place.x || 0, y: place.y || 0 };
+      return { 
+        ...place, 
+        x: (typeof place.x === 'number' && !isNaN(place.x)) ? place.x : 0, 
+        y: (typeof place.y === 'number' && !isNaN(p.y)) ? p.y : 0 
+      };
     });
   }, [geoJsonState.geoJsonNodes]);
 
@@ -103,162 +119,92 @@ export const useMapFeatures = (map: any, isNaverLoadedParam: boolean) => {
 
       clearAllRoutes();
 
-      if (!itineraryDay || !itineraryDay.places || itineraryDay.places.length < 1) {
-        console.log('[MapFeatures] No itinerary day or places to render route.');
+      if (!itineraryDay || !itineraryDay.routeData || !itineraryDay.routeData.linkIds || itineraryDay.routeData.linkIds.length === 0) {
+        console.warn('[MapFeatures] No itinerary day or linkIds to render route.');
+        // Attempt to draw direct lines if places exist but no linkIds
+        if (itineraryDay && itineraryDay.places && itineraryDay.places.length > 1) {
+            const mappedPlaces = mapPlacesWithGeoNodes(itineraryDay.places);
+            const validPlaces = mappedPlaces.filter(p => 
+                typeof p.x === 'number' && typeof p.y === 'number' && 
+                !isNaN(p.x) && !isNaN(p.y)
+            );
+            if (validPlaces.length > 1) {
+                console.log("[MapFeatures] No linkIds, drawing direct lines between mapped places.");
+                const pathCoordinates = validPlaces.map(p => ({ lat: p.y as number, lng: p.x as number }));
+                const polyline = drawRoutePath(map, pathCoordinates, USER_ROUTE_COLOR, 3, USER_ROUTE_OPACITY, USER_ROUTE_ZINDEX -10); // Slightly different style for direct
+                if (polyline) activePolylines.current.push(polyline);
+                
+                const naverCoords = pathCoordinates.map(c => createNaverLatLng(c.lat, c.lng)).filter(p => p !== null) as any[];
+                if (naverCoords.length > 0) fitBoundsToCoordinates(map, naverCoords);
+            }
+        }
         if (onComplete) onComplete();
         return;
       }
       
-      if (!itineraryDay.routeData || !itineraryDay.interleaved_route || 
-          !Array.isArray(itineraryDay.interleaved_route)) {
-        console.warn('[MapFeatures] Invalid route data for itinerary day:', itineraryDay.day);
-        if (onComplete) onComplete();
-        return;
-      }
-
       try {
-        const { places, interleaved_route } = itineraryDay; 
-        const mappedPlaces = mapPlacesWithGeoNodes(places); 
+        const { linkIds } = itineraryDay.routeData;
+        console.log(`[MapFeatures] 경로 렌더링: ${linkIds.length}개의 링크 ID 처리 시작. Using geoJsonLinks count: ${geoJsonState.geoJsonLinks.length}`);
 
-        if (interleaved_route.length === 0 && mappedPlaces.length > 1) {
-          console.log("[MapFeatures] No interleaved_route, drawing direct lines between mapped places.");
-          
-          // Filter out places with invalid coordinates
-          const validPlaces = mappedPlaces.filter(p => 
-            typeof p.x === 'number' && typeof p.y === 'number' && 
-            !isNaN(p.x) && !isNaN(p.y)
+        const allRouteCoordinatesForBounds: { lat: number; lng: number }[][] = [];
+        let missingLinkCount = 0;
+
+        linkIds.forEach(linkId => {
+          const linkFeature = geoJsonState.geoJsonLinks.find(
+            (feature: any) => String(feature.properties.LINK_ID) === String(linkId)
           );
-          
-          if (validPlaces.length > 1) {
-            const pathCoordinates = validPlaces.map(p => ({ 
-              lat: p.y as number, 
-              lng: p.x as number 
-            }));
-            
-            const polyline = drawRoutePath(map, pathCoordinates, DEFAULT_ROUTE_COLOR, 3);
-            if (polyline) activePolylines.current.push(polyline);
-            
-            const naverCoords = pathCoordinates.map(c => createNaverLatLng(c.lat, c.lng)).filter(p => p !== null) as any[];
-            if (naverCoords.length > 0) {
-              try {
-                fitBoundsToCoordinates(map, naverCoords);
-              } catch (error) {
-                console.error("[MapFeatures] Error fitting bounds:", error);
+
+          if (linkFeature && linkFeature.geometry && linkFeature.geometry.type === 'LineString' && Array.isArray(linkFeature.geometry.coordinates)) {
+            const coords = linkFeature.geometry.coordinates; // [[lng, lat], [lng, lat], ...]
+            const pathCoordsForPolyline = coords.map((coordPair: number[]) => {
+              if (Array.isArray(coordPair) && coordPair.length >= 2 && typeof coordPair[0] === 'number' && typeof coordPair[1] === 'number') {
+                return { lat: coordPair[1], lng: coordPair[0] };
               }
+              return null;
+            }).filter(c => c !== null) as { lat: number; lng: number }[];
+
+            if (pathCoordsForPolyline.length >= 2) {
+              const polyline = drawRoutePath(map, pathCoordsForPolyline, USER_ROUTE_COLOR, USER_ROUTE_WEIGHT, USER_ROUTE_OPACITY, USER_ROUTE_ZINDEX);
+              if (polyline) {
+                activePolylines.current.push(polyline);
+                allRouteCoordinatesForBounds.push(pathCoordsForPolyline);
+              }
+            } else {
+                 console.warn(`[MapFeatures] LINK_ID ${linkId} has insufficient valid coordinates after processing.`);
             }
           } else {
-            console.warn("[MapFeatures] Not enough valid places for direct line routing");
-          }
-          
-          if (onComplete) onComplete();
-          return;
-        }
-        
-        if (interleaved_route.length === 0) {
-           console.log('[MapFeatures] No route to draw for day', itineraryDay.day);
-           if (onComplete) onComplete();
-           return;
-        }
-
-        const nodeCoordsMap = new Map<string, { lat: number; lng: number }>();
-        
-        // Extract coordinates from geoJsonNodes
-        if (geoJsonState.geoJsonNodes && geoJsonState.geoJsonNodes.length > 0) {
-          geoJsonState.geoJsonNodes.forEach(node => {
-            if (node && node.geometry && node.geometry.type === 'Point' && node.properties?.NODE_ID) {
-              const coordinates = node.geometry.coordinates;
-              if (Array.isArray(coordinates) && coordinates.length >= 2) {
-                const [lng, lat] = coordinates;
-                if (typeof lng === 'number' && typeof lat === 'number') {
-                  nodeCoordsMap.set(String(node.properties.NODE_ID), {
-                    lng: lng,
-                    lat: lat,
-                  });
-                }
-              }
-            }
-          });
-        }
-        
-        // Add coordinates from places
-        mappedPlaces.forEach(place => { 
-          const placeIdStr = String(place.geoNodeId || place.id);
-          if (!nodeCoordsMap.has(placeIdStr) && 
-              typeof place.x === 'number' && typeof place.y === 'number' && 
-              !isNaN(place.x) && !isNaN(place.y)) {
-             nodeCoordsMap.set(placeIdStr, { lat: place.y as number, lng: place.x as number });
-          }
-        });
-
-        // Process interleaved_route to create path segments
-        let currentPathSegment: { lat: number; lng: number }[] = [];
-        const allRouteCoordinatesForBounds: any[] = [];
-        let missingNodeCount = 0;
-
-        interleaved_route.forEach((id, index) => {
-          const nodeIdStr = String(id);
-          const coords = nodeCoordsMap.get(nodeIdStr);
-
-          if (coords) {
-            currentPathSegment.push(coords);
-            const naverCoord = createNaverLatLng(coords.lat, coords.lng);
-            if (naverCoord) allRouteCoordinatesForBounds.push(naverCoord);
-
-            const nextIdStr = interleaved_route[index + 1] ? String(interleaved_route[index + 1]) : null;
-            const isNextItemAPlaceNode = nextIdStr ? nodeCoordsMap.has(nextIdStr) : false;
-            
-            if (currentPathSegment.length >= 2 && (!isNextItemAPlaceNode || index === interleaved_route.length - 1)) {
-              const polyline = drawRoutePath(map, currentPathSegment, DEFAULT_ROUTE_COLOR);
-              if (polyline) activePolylines.current.push(polyline);
-              currentPathSegment = isNextItemAPlaceNode && coords ? [coords] : []; 
-            } else if (currentPathSegment.length === 1 && !isNextItemAPlaceNode && index === interleaved_route.length - 1) {
-              currentPathSegment = [];
-            }
-          } else {
-            if (currentPathSegment.length >= 2) {
-              const polyline = drawRoutePath(map, currentPathSegment, DEFAULT_ROUTE_COLOR);
-              if (polyline) activePolylines.current.push(polyline);
-            }
-            currentPathSegment = []; 
-            missingNodeCount++;
-            console.warn(`[MapFeatures] Node ID ${nodeIdStr} from interleaved_route not found in geoJsonNodes or mappedPlaces.`);
+            console.warn(`[MapFeatures] LINK_ID ${linkId}에 해당하는 데이터를 geoJsonLinks에서 찾지 못했거나 형식이 올바르지 않습니다. Feature:`, linkFeature);
+            missingLinkCount++;
           }
         });
         
-        if (currentPathSegment.length >= 2) { 
-          const polyline = drawRoutePath(map, currentPathSegment, DEFAULT_ROUTE_COLOR);
-          if (polyline) activePolylines.current.push(polyline);
-        }
-        
-        console.log(`[MapFeatures] Rendered ${activePolylines.current.length} route segments. Missing nodes: ${missingNodeCount}`);
-        
-        if (allRouteCoordinatesForBounds.length > 1) {
-          try {
-            fitBoundsToCoordinates(map, allRouteCoordinatesForBounds.filter(c => c !== null));
-          } catch (error) {
-            console.error("[MapFeatures] Error fitting bounds to route:", error);
+        console.log(`[MapFeatures] 경로 좌표 추출 및 폴리라인 생성 결과: ${activePolylines.current.length}개 폴리라인 (누락된 LINK_ID: ${missingLinkCount}개)`);
+
+        if (allRouteCoordinatesForBounds.length > 0) {
+          const flatCoordsForBounds = allRouteCoordinatesForBounds.flat();
+           if (flatCoordsForBounds.length > 0) {
+            const naverCoords = flatCoordsForBounds.map(c => createNaverLatLng(c.lat, c.lng)).filter(p => p !== null) as any[];
+            if (naverCoords.length > 0) fitBoundsToCoordinates(map, naverCoords);
           }
-        } else if (mappedPlaces.length > 0) { 
-          const fallbackCoords = mappedPlaces
-            .filter(p => typeof p.y === 'number' && typeof p.x === 'number' && !isNaN(p.y) && !isNaN(p.x))
-            .map(p => createNaverLatLng(p.y as number, p.x as number))
-            .filter(c => c !== null) as any[];
-            
-          if (fallbackCoords.length > 0) {
-            try {
-              fitBoundsToCoordinates(map, fallbackCoords);
-            } catch (error) {
-              console.error("[MapFeatures] Error fitting bounds to places:", error);
+        } else if (itineraryDay.places && itineraryDay.places.length > 0) {
+            // Fallback to fitting bounds to places if no links were drawn but places exist
+            const mappedPlaces = mapPlacesWithGeoNodes(itineraryDay.places);
+            const validPlacesCoords = mappedPlaces
+                .filter(p => typeof p.y === 'number' && typeof p.x === 'number' && !isNaN(p.y) && !isNaN(p.x))
+                .map(p => ({ lat: p.y as number, lng: p.x as number }));
+            if (validPlacesCoords.length > 0) {
+                const naverCoords = validPlacesCoords.map(c => createNaverLatLng(c.lat, c.lng)).filter(p => p !== null) as any[];
+                 if (naverCoords.length > 0) fitBoundsToCoordinates(map, naverCoords);
             }
-          }
         }
+
       } catch (error) {
-        console.error("[MapFeatures] Error rendering itinerary route:", error);
+        console.error("[MapFeatures] Error rendering itinerary route from links:", error);
       }
 
       if (onComplete) onComplete();
     },
-    [map, isNaverLoadedParam, geoJsonState.geoJsonNodes, drawRoutePath, mapPlacesWithGeoNodes]
+    [map, isNaverLoadedParam, geoJsonState.geoJsonNodes, geoJsonState.geoJsonLinks, drawRoutePath, mapPlacesWithGeoNodes, clearAllRoutes] // Added geoJsonLinks
   );
 
   const showRouteForPlaceIndex = useCallback(
