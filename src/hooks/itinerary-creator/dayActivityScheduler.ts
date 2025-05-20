@@ -1,8 +1,9 @@
 
 import { Place, ItineraryPlaceWithTime } from '@/types/core';
 import { PlaceWithUsedFlag, findNearestPlace } from '../../utils/schedule';
-import { format, addMinutes, Duration } from 'date-fns';
+import { format, addMinutes } from 'date-fns';
 
+// Types
 interface ScheduleDayActivitiesParams {
   dayNumber: number;
   startTime: Date;
@@ -23,6 +24,7 @@ interface ScheduledActivityResult {
   lastActivityPlace: PlaceWithUsedFlag | null;
 }
 
+// Helper functions
 const createItineraryPlace = (
   place: PlaceWithUsedFlag,
   arriveTime: Date,
@@ -47,6 +49,78 @@ const createItineraryPlace = (
   geoNodeId: place.id, // Assuming geoNodeId is same as id
 });
 
+const calculateTravelTime = (
+  fromPlace: PlaceWithUsedFlag | null,
+  toPlace: PlaceWithUsedFlag,
+  calculateDistance: (lat1: number, lng1: number, lat2: number, lng2: number) => number,
+  estimateTravelTime: (distance: number) => number,
+): number => {
+  if (!fromPlace || !fromPlace.y || !fromPlace.x || !toPlace.y || !toPlace.x) {
+    return 0;
+  }
+  
+  const distance = calculateDistance(fromPlace.y, fromPlace.x, toPlace.y, toPlace.x);
+  return estimateTravelTime(distance);
+};
+
+const addPlaceToSchedule = (
+  currentPlace: PlaceWithUsedFlag | null,
+  placeToAdd: PlaceWithUsedFlag,
+  currentTime: Date,
+  dayNumber: number,
+  scheduledActivities: ItineraryPlaceWithTime[],
+  rawActivities: Place[],
+  calculateDistance: (lat1: number, lng1: number, lat2: number, lng2: number) => number,
+  estimateTravelTime: (distance: number) => number,
+  getTimeBlock: (day: number, hour: number) => string,
+): {
+  updatedCurrentTime: Date;
+  updatedCurrentPlace: PlaceWithUsedFlag;
+} => {
+  // Mark place as used
+  placeToAdd.usedInItinerary = true;
+  
+  // Calculate travel time
+  const travelTime = calculateTravelTime(
+    currentPlace,
+    placeToAdd,
+    calculateDistance,
+    estimateTravelTime
+  );
+  
+  // Update previous activity with travel time info
+  if (scheduledActivities.length > 0 && currentPlace) {
+    const lastScheduledActivity = scheduledActivities[scheduledActivities.length - 1];
+    if (lastScheduledActivity) {
+      lastScheduledActivity.travelTimeToNext = `${travelTime}분`;
+    }
+  }
+  
+  // Add travel time to current time if we're coming from somewhere
+  let updatedTime = currentTime;
+  if (currentPlace) {
+    updatedTime = addMinutes(updatedTime, travelTime);
+  }
+  
+  // Create and add place to schedule
+  const placeWithTime = createItineraryPlace(placeToAdd, updatedTime, dayNumber, getTimeBlock);
+  scheduledActivities.push(placeWithTime);
+  rawActivities.push(placeToAdd);
+  
+  return {
+    updatedCurrentTime: updatedTime,
+    updatedCurrentPlace: placeToAdd
+  };
+};
+
+// Duration constants (in minutes)
+const DURATION = {
+  ATTRACTION: 60,   // 1 hour at attraction
+  RESTAURANT: 90,   // 1.5 hours at restaurant
+  CAFE: 60          // 1 hour at cafe
+};
+
+// Main function
 export const scheduleDayActivities = ({
   dayNumber,
   startTime,
@@ -71,93 +145,116 @@ export const scheduleDayActivities = ({
     return Infinity;
   };
 
-  // Add Attractions
+  // Schedule attractions
   let attractionsAdded = 0;
   for (let i = 0; i < quotas.attractionsPerDay && availableAttractions.some(a => !a.usedInItinerary); i++) {
     let attractionToAdd: PlaceWithUsedFlag | null = null;
+    
+    // Find the next attraction to add
     if (!currentPlace && availableAttractions.some(a => !a.usedInItinerary)) {
-        attractionToAdd = availableAttractions.find(a => !a.usedInItinerary)!;
+      attractionToAdd = availableAttractions.find(a => !a.usedInItinerary)!;
     } else if (currentPlace) {
-        attractionToAdd = findNearestPlace(currentPlace, availableAttractions.filter(a => !a.usedInItinerary), distanceBetweenPlacesAdapter);
+      attractionToAdd = findNearestPlace(
+        currentPlace, 
+        availableAttractions.filter(a => !a.usedInItinerary), 
+        distanceBetweenPlacesAdapter
+      );
     }
 
     if (attractionToAdd) {
-      attractionToAdd.usedInItinerary = true;
-      const distance = (currentPlace?.y && currentPlace?.x && attractionToAdd.y && attractionToAdd.x)
-        ? calculateDistance(currentPlace.y, currentPlace.x, attractionToAdd.y, attractionToAdd.x) : 0;
-      const travelTime = estimateTravelTime(distance);
-
-      if (scheduledActivities.length > 0 && currentPlace) {
-         // If this is not the first activity (i.e. startPlace was an accommodation)
-         // or if there was a previous activity scheduled in this function.
-        const lastScheduledActivity = scheduledActivities[scheduledActivities.length -1];
-        if(lastScheduledActivity) lastScheduledActivity.travelTimeToNext = `${travelTime}분`;
-      } else if (currentPlace && scheduledActivities.length === 0 && startPlace === currentPlace) {
-        // This handles the case where startPlace (e.g. accommodation) is the first "activity"
-        // and we are now adding the *actual* first activity.
-        // We need to find a way to add travelTimeToNext to the accommodation,
-        // This will be handled by the calling function `assignPlacesToDays`
-      }
-
-
-      if (currentPlace) { // Only add travel time if there's a place to travel from
-          currentTime = addMinutes(currentTime, travelTime);
-      }
+      const result = addPlaceToSchedule(
+        currentPlace,
+        attractionToAdd,
+        currentTime,
+        dayNumber,
+        scheduledActivities,
+        rawActivities,
+        calculateDistance,
+        estimateTravelTime,
+        getTimeBlock
+      );
       
-      const placeWithTime = createItineraryPlace(attractionToAdd, currentTime, dayNumber, getTimeBlock);
-      scheduledActivities.push(placeWithTime);
-      rawActivities.push(attractionToAdd);
-      currentPlace = attractionToAdd;
-      currentTime = addMinutes(currentTime, 60); // 1 hour at attraction
+      currentTime = result.updatedCurrentTime;
+      currentPlace = result.updatedCurrentPlace;
+      
+      // Add stay duration
+      currentTime = addMinutes(currentTime, DURATION.ATTRACTION);
       attractionsAdded++;
     }
   }
 
-  // Add Restaurants
+  // Schedule restaurants
   let restaurantsAdded = 0;
   for (let i = 0; i < quotas.restaurantsPerDay && availableRestaurants.some(r => !r.usedInItinerary); i++) {
     if (!currentPlace) continue;
-    const nearestRestaurant = findNearestPlace(currentPlace, availableRestaurants.filter(r => !r.usedInItinerary), distanceBetweenPlacesAdapter);
+    
+    const nearestRestaurant = findNearestPlace(
+      currentPlace, 
+      availableRestaurants.filter(r => !r.usedInItinerary), 
+      distanceBetweenPlacesAdapter
+    );
+    
     if (nearestRestaurant) {
-      nearestRestaurant.usedInItinerary = true;
-      const distance = (currentPlace.y && currentPlace.x && nearestRestaurant.y && nearestRestaurant.x)
-        ? calculateDistance(currentPlace.y, currentPlace.x, nearestRestaurant.y, nearestRestaurant.x) : 0;
-      const travelTime = estimateTravelTime(distance);
-      if (scheduledActivities.length > 0) scheduledActivities[scheduledActivities.length - 1].travelTimeToNext = `${travelTime}분`;
+      const result = addPlaceToSchedule(
+        currentPlace,
+        nearestRestaurant,
+        currentTime,
+        dayNumber,
+        scheduledActivities,
+        rawActivities,
+        calculateDistance,
+        estimateTravelTime,
+        getTimeBlock
+      );
       
-      currentTime = addMinutes(currentTime, travelTime);
-      const placeWithTime = createItineraryPlace(nearestRestaurant, currentTime, dayNumber, getTimeBlock);
-      scheduledActivities.push(placeWithTime);
-      rawActivities.push(nearestRestaurant);
-      currentPlace = nearestRestaurant;
-      currentTime = addMinutes(currentTime, 90); // 1.5 hours at restaurant
+      currentTime = result.updatedCurrentTime;
+      currentPlace = result.updatedCurrentPlace;
+      
+      // Add stay duration
+      currentTime = addMinutes(currentTime, DURATION.RESTAURANT);
       restaurantsAdded++;
     }
   }
 
-  // Add Cafes
+  // Schedule cafes
   let cafesAdded = 0;
   for (let i = 0; i < quotas.cafesPerDay && availableCafes.some(c => !c.usedInItinerary); i++) {
     if (!currentPlace) continue;
-    const nearestCafe = findNearestPlace(currentPlace, availableCafes.filter(c => !c.usedInItinerary), distanceBetweenPlacesAdapter);
+    
+    const nearestCafe = findNearestPlace(
+      currentPlace, 
+      availableCafes.filter(c => !c.usedInItinerary), 
+      distanceBetweenPlacesAdapter
+    );
+    
     if (nearestCafe) {
-      nearestCafe.usedInItinerary = true;
-      const distance = (currentPlace.y && currentPlace.x && nearestCafe.y && nearestCafe.x)
-        ? calculateDistance(currentPlace.y, currentPlace.x, nearestCafe.y, nearestCafe.x) : 0;
-      const travelTime = estimateTravelTime(distance);
-      if (scheduledActivities.length > 0) scheduledActivities[scheduledActivities.length - 1].travelTimeToNext = `${travelTime}분`;
-
-      currentTime = addMinutes(currentTime, travelTime);
-      const placeWithTime = createItineraryPlace(nearestCafe, currentTime, dayNumber, getTimeBlock);
-      scheduledActivities.push(placeWithTime);
-      rawActivities.push(nearestCafe);
-      currentPlace = nearestCafe;
-      currentTime = addMinutes(currentTime, 60); // 1 hour at cafe
+      const result = addPlaceToSchedule(
+        currentPlace,
+        nearestCafe,
+        currentTime,
+        dayNumber,
+        scheduledActivities,
+        rawActivities,
+        calculateDistance,
+        estimateTravelTime,
+        getTimeBlock
+      );
+      
+      currentTime = result.updatedCurrentTime;
+      currentPlace = result.updatedCurrentPlace;
+      
+      // Add stay duration
+      currentTime = addMinutes(currentTime, DURATION.CAFE);
       cafesAdded++;
     }
   }
   
   console.log(`  ${dayNumber}일차 활동: 관광지 ${attractionsAdded}개, 식당 ${restaurantsAdded}개, 카페 ${cafesAdded}개`);
 
-  return { scheduledActivities, rawActivities, finalTime: currentTime, lastActivityPlace: currentPlace };
+  return { 
+    scheduledActivities, 
+    rawActivities, 
+    finalTime: currentTime, 
+    lastActivityPlace: currentPlace 
+  };
 };
