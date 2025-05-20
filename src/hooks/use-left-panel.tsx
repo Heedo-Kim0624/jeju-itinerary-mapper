@@ -1,5 +1,5 @@
 
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react'; // useCallback 추가
 import { useSelectedPlaces } from './use-selected-places';
 import { useTripDetails } from './use-trip-details';
 import { useCategoryResults } from './use-category-results';
@@ -12,7 +12,8 @@ import { useLeftPanelState } from './left-panel/use-left-panel-state';
 import { useItineraryCreation } from './left-panel/use-itinerary-creation';
 import { useCategoryResultHandlers } from './left-panel/use-category-result-handlers';
 import { useEventListeners } from './left-panel/use-event-listeners';
-import { SchedulePayload } from '@/types/core'; // 추가: SchedulePayload 타입 임포트
+import { SchedulePayload } from '@/types/core';
+import { toast } from 'sonner'; // toast 임포트 추가
 
 /**
  * 왼쪽 패널 기능 통합 훅
@@ -23,7 +24,7 @@ export const useLeftPanel = () => {
   const leftPanelState = useLeftPanelState();
   const regionSelection = useRegionSelection();
   const categorySelection = useCategorySelection();
-  const tripDetails = useTripDetails();
+  const tripDetailsHookResult = useTripDetails(); // 변수명 변경하여 명확히 구분
   const { directInputValues, onDirectInputChange } = useInputState();
   
   // Set up event listeners
@@ -35,7 +36,7 @@ export const useLeftPanel = () => {
   // Place management
   const placesManagement = useSelectedPlaces();
 
-  // Itinerary management - 여기에 함수 시그니처 적용
+  // Itinerary management
   const itineraryManagement = useItinerary();
 
   // UI visibility
@@ -64,29 +65,43 @@ export const useLeftPanel = () => {
   // Category result handlers
   const categoryResultHandlers = useCategoryResultHandlers(
     regionSelection.selectedRegions,
-    tripDetails,
+    tripDetailsHookResult, // 수정된 변수명 사용
     placesManagement.handleAutoCompletePlaces,
     leftPanelState.setShowCategoryResult
   );
 
   // 함수 시그니처 불일치 해결을 위한 어댑터 함수
-  const generateItineraryAdapter = async (payload: SchedulePayload) => {
-    // itineraryManagement.generateItinerary를 호출하여 결과를 반환
-    try {
-      return await itineraryManagement.generateItinerary(payload);
-    } catch (error) {
-      console.error("일정 생성 중 오류:", error);
+  const generateItineraryAdapter = useCallback(async (payload: SchedulePayload) => {
+    if (!tripDetailsHookResult.dates.startDate || !tripDetailsHookResult.dates.endDate) {
+      console.error("[Adapter] Trip start or end date is missing in tripDetails.dates.");
+      toast.error("여행 시작일 또는 종료일이 설정되지 않았습니다.");
       return null;
     }
-  };
+    // payload.start_datetime과 payload.end_datetime은 SchedulePayload 타입에 의해 string으로 보장됨
+
+    try {
+      // itineraryManagement.generateItinerary가 5개의 인자를 받도록 호출 수정
+      return await itineraryManagement.generateItinerary(
+        placesManagement.selectedPlaces,    // 1. 사용자 선택 장소 (Place[])
+        placesManagement.candidatePlaces,   // 2. 자동 완성 후보 장소 (Place[])
+        payload.start_datetime,             // 3. 시작 날짜시간 문자열 (string)
+        payload.end_datetime,               // 4. 종료 날짜시간 문자열 (string)
+        tripDetailsHookResult.dates         // 5. 여행 날짜/시간 상세 객체 (TripDetails 인터페이스 타입)
+      );
+    } catch (error) {
+      console.error("일정 생성 어댑터에서 오류:", error);
+      // useItineraryCreation 쪽에서 이미 오류 토스트를 처리하므로 여기서는 중복 방지
+      return null;
+    }
+  }, [itineraryManagement, placesManagement, tripDetailsHookResult]); // 의존성 배열 수정
 
   // Itinerary creation logic
   const itineraryCreation = useItineraryCreation({
-    tripDetails,
-    userDirectlySelectedPlaces: placesManagement.selectedPlaces, // Pass non-candidate places
-    autoCompleteCandidatePlaces: placesManagement.candidatePlaces, // Pass candidate places
+    tripDetails: tripDetailsHookResult, // 수정된 변수명 사용
+    userDirectlySelectedPlaces: placesManagement.selectedPlaces,
+    autoCompleteCandidatePlaces: placesManagement.candidatePlaces,
     prepareSchedulePayload: placesManagement.prepareSchedulePayload,
-    generateItinerary: generateItineraryAdapter, // 어댑터 함수 사용
+    generateItinerary: generateItineraryAdapter,
     setShowItinerary: itineraryManagement.setShowItinerary,
     setCurrentPanel: leftPanelState.setCurrentPanel,
     setIsGenerating: leftPanelState.setIsGenerating,
@@ -139,7 +154,7 @@ export const useLeftPanel = () => {
     categorySelection,
     keywordsAndInputs,
     placesManagement,
-    tripDetails,
+    tripDetails: tripDetailsHookResult, // 수정된 변수명 사용
     uiVisibility,
     itineraryManagement: {
       itinerary: itineraryManagement.itinerary,

@@ -1,16 +1,12 @@
-
 import { useCallback } from 'react';
 import { toast } from 'sonner';
-import { TripDetails } from '@/hooks/use-trip-details';
-import { Place, ItineraryDay, SchedulePayload } from '@/types/core'; // Ensure correct types are imported
+import { useTripDetails } from '@/hooks/use-trip-details';
+import { Place, ItineraryDay, SchedulePayload } from '@/types/core';
 
 interface UseItineraryCreationProps {
-  tripDetails: TripDetails;
-  // selectedPlaces from useSelectedPlaces hook (non-candidate)
-  userDirectlySelectedPlaces: Place[]; 
-  // candidatePlaces from useSelectedPlaces hook
+  tripDetails: ReturnType<typeof useTripDetails>;
+  userDirectlySelectedPlaces: Place[];
   autoCompleteCandidatePlaces: Place[];
-  // The prepareSchedulePayload from useSelectedPlaces (now with updated signature)
   prepareSchedulePayload: (
     startDatetimeISO: string | null,
     endDatetimeISO: string | null
@@ -38,7 +34,8 @@ export const useItineraryCreation = ({
     setIsGenerating(true);
     setItineraryReceived(false); // Reset before new generation
 
-    if (!tripDetails.dates || !tripDetails.startDatetime || !tripDetails.endDatetime) {
+    // tripDetails.dates 객체 내부의 startDate와 endDate, 그리고 tripDetails의 startDatetime, endDatetime을 직접 확인
+    if (!tripDetails.dates.startDate || !tripDetails.dates.endDate || !tripDetails.startDatetime || !tripDetails.endDatetime) {
       toast.error("여행 날짜와 시간을 먼저 선택해주세요.");
       setIsGenerating(false);
       return false;
@@ -64,8 +61,8 @@ export const useItineraryCreation = ({
     
     // Call the updated prepareSchedulePayload (it uses selectedPlaces and candidatePlaces from its own closure)
     const payload = prepareSchedulePayload(
-      tripDetails.startDatetime,
-      tripDetails.endDatetime
+      tripDetails.startDatetime, // tripDetails에서 직접 startDatetime (local string) 사용
+      tripDetails.endDatetime    // tripDetails에서 직접 endDatetime (local string) 사용
     );
 
     if (!payload) {
@@ -82,29 +79,22 @@ export const useItineraryCreation = ({
       if (itineraryResult && itineraryResult.length > 0) {
         setShowItinerary(true);
         setCurrentPanel('itinerary');
-        setItineraryReceived(true); // Mark as received
-        // No need to set isGenerating to false here, it should be handled by event listeners or parent component
+        setItineraryReceived(true); 
         console.log("[ItineraryCreation] 일정 생성 성공 및 표시됨");
         return true;
       } else {
         toast.error("일정 생성에 실패했거나, 생성된 일정이 없습니다. 조건을 변경하여 다시 시도해 주세요.");
-        // setItineraryReceived(false); // Explicitly false if no itinerary or error
-        setIsGenerating(false); // Explicitly set isGenerating to false on failure here
+        setIsGenerating(false); 
         return false;
       }
     } catch (error) {
       console.error("[ItineraryCreation] 일정 생성 중 오류:", error);
       toast.error(`일정 생성 중 오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
-      // setItineraryReceived(false);
-      setIsGenerating(false); // Explicitly set isGenerating to false on catch
+      setIsGenerating(false); 
       return false;
     }
-    // The isGenerating state might be managed by listeners for 'itineraryGenerated' or 'generationFailed' events
-    // For now, let's ensure it's reset in error/empty cases directly.
-    // If successful, the 'itineraryGenerated' event should eventually lead to isGenerating being false.
   }, [
     tripDetails,
-    // userDirectlySelectedPlaces and autoCompleteCandidatePlaces are used for allPlacesForValidation
     userDirectlySelectedPlaces, 
     autoCompleteCandidatePlaces,
     prepareSchedulePayload,
