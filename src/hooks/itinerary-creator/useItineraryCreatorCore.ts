@@ -1,16 +1,15 @@
 
-import { Place } from '@/types/supabase';
-import { ItineraryPlaceWithTime } from '@/types/core';
+import { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/core'; // ItineraryDay 임포트 변경
 import { estimateTravelTime, getTimeBlock } from './timeUtils';
 import { assignPlacesToDays } from './placeAssignmentUtils';
 import { calculateDistance } from '../../utils/distance';
 
-// Main interface for itinerary day structure
-export interface ItineraryDay {
-  day: number;
-  places: ItineraryPlaceWithTime[];
-  totalDistance: number;
-}
+// Main interface for itinerary day structure - 이 파일 내의 ItineraryDay 정의 삭제
+// export interface ItineraryDay {
+//   day: number;
+//   places: ItineraryPlaceWithTime[];
+//   totalDistance: number;
+// }
 
 export const useItineraryCreator = () => {
   const createItinerary = (
@@ -19,17 +18,18 @@ export const useItineraryCreator = () => {
     endDate: Date,
     startTime: string,
     endTime: string
-  ): ItineraryDay[] => {
-    // 정확한 일수 계산
+  ): ItineraryDay[] => { // 반환 타입 ItineraryDay[] (core에서 임포트)
+    // 여행 일수 계산: startDate와 endDate를 모두 포함하는 일수
+    // 예: startDate=5/20, endDate=5/21 -> 2일
     const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-    const numDays = Math.max(1, daysDiff);
+    const numDays = Math.max(1, daysDiff); // 최소 1일 보장
     
-    console.log(`일정 생성: ${numDays}일간의 여행 (${places.length}개 장소)`);
+    console.log(`일정 생성 시작: ${numDays}일간의 여행 (${places.length}개 장소)`);
     
     // 시작 시간 파싱
     const [startHour, startMinute] = startTime.split(':').map(Number);
 
-    const itinerary = assignPlacesToDays({
+    const itinerary: ItineraryDay[] = assignPlacesToDays({ // 타입 명시
       places,
       numDays,
       startDate,
@@ -47,3 +47,4 @@ export const useItineraryCreator = () => {
 
   return { createItinerary };
 };
+

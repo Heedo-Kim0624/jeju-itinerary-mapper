@@ -1,22 +1,21 @@
-
 import { useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 import { SelectedPlace } from '@/types/supabase';
-import { NewServerScheduleResponse, isNewServerScheduleResponse, ItineraryDay as CoreItineraryDay } from '@/types/core';
+import { NewServerScheduleResponse, isNewServerScheduleResponse, ItineraryDay } from '@/types/core';
 import { useScheduleGenerator as useScheduleGeneratorHook } from '@/hooks/use-schedule-generator';
 import { useMapContext } from '@/components/rightpanel/MapContext';
 import { useSchedulePayload } from './useSchedulePayload';
 import { useScheduleGenerationCore } from './useScheduleGenerationCore';
 import { useFallbackItineraryGenerator } from './useFallbackItineraryGenerator';
 import { useServerResponseHandler } from './useServerResponseHandler';
-import { MapContextGeoNode } from './useScheduleParser'; // MapContextGeoNode 임포트
+import { MapContextGeoNode } from './useScheduleParser';
 
 interface UseScheduleGenerationRunnerProps {
   selectedPlaces: SelectedPlace[];
   dates: { startDate: Date; endDate: Date; startTime: string; endTime: string; } | null;
   startDatetime: string | null;
   endDatetime: string | null;
-  setItinerary: (itinerary: CoreItineraryDay[]) => void;
+  setItinerary: (itinerary: ItineraryDay[]) => void;
   setSelectedDay: (day: number | null) => void;
   setIsLoadingState: (loading: boolean) => void;
 }
@@ -41,34 +40,28 @@ export const useScheduleGenerationRunner = ({
   
   const { generateFallbackItinerary } = useFallbackItineraryGenerator();
   
-  // 일정 생성 코어 로직
   const { processServerResponse } = useScheduleGenerationCore({
     selectedPlaces,
     startDate: dates?.startDate || new Date(),
-    geoJsonNodes: geoJsonNodes as MapContextGeoNode[], // 타입 단언 변경: as any -> as MapContextGeoNode[]
+    geoJsonNodes: geoJsonNodes as MapContextGeoNode[],
     setItinerary,
     setSelectedDay,
     setServerRoutes,
     setIsLoadingState
   });
   
-  // 서버 응답 핸들러
   const handleServerResponse = useCallback((response: NewServerScheduleResponse) => {
     processServerResponse(response);
-    
-    // 처리가 완료되면 500ms 후에 로딩 상태 해제
     setTimeout(() => {
       setIsLoadingState(false);
     }, 500);
   }, [processServerResponse, setIsLoadingState]);
   
-  // 서버 응답 이벤트 리스너
   useServerResponseHandler({
     onServerResponse: handleServerResponse,
     enabled: true
   });
 
-  // 일정 생성 프로세스 실행
   const runScheduleGenerationProcess = useCallback(async () => {
     console.log("[useScheduleGenerationRunner] runScheduleGenerationProcess 시작");
     setIsLoadingState(true);
@@ -83,11 +76,9 @@ export const useScheduleGenerationRunner = ({
         return;
       }
 
-      // 서버에 일정 생성 요청
       const serverResponse = await generateScheduleViaHook(payload);
       console.log('[useScheduleGenerationRunner] 서버 원본 응답:', serverResponse);
       
-      // 서버 응답이 없거나 유효하지 않은 경우 대체 일정 생성
       if (!serverResponse || 
           !isNewServerScheduleResponse(serverResponse) || 
           !serverResponse.route_summary || 
@@ -108,7 +99,6 @@ export const useScheduleGenerationRunner = ({
             setItinerary(fallbackItinerary);
             setSelectedDay(fallbackItinerary[0].day);
             
-            // 일정 생성 이벤트 발생
             const event = new CustomEvent('itineraryCreated', { 
               detail: { 
                 itinerary: fallbackItinerary,
@@ -118,7 +108,6 @@ export const useScheduleGenerationRunner = ({
             });
             window.dispatchEvent(event);
             
-            // UI 강제 갱신
             setTimeout(() => {
               window.dispatchEvent(new Event('forceRerender'));
             }, 100);
@@ -127,18 +116,13 @@ export const useScheduleGenerationRunner = ({
           toast.error("일정 생성에 필요한 정보가 부족합니다.");
         }
         
-        // 로딩 상태 해제
         setIsLoadingState(false);
       }
-      // 유효한 서버 응답의 경우 이벤트 리스너(useServerResponseHandler)에서 처리됨
     } catch (error) {
       console.error("[useScheduleGenerationRunner] 일정 생성 중 오류:", error);
       toast.error("일정 생성 중 오류가 발생했습니다.");
-      
-      // 로딩 상태 해제
       setIsLoadingState(false);
       
-      // 에러 이벤트 발생
       const errorEvent = new CustomEvent('itineraryCreated', { 
         detail: { 
           itinerary: [],
