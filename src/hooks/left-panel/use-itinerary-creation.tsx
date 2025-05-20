@@ -2,7 +2,7 @@
 import { useCallback } from 'react';
 import { toast } from 'sonner';
 import { TripDetails } from '@/hooks/use-trip-details';
-import { Place, ItineraryDay, SchedulePayload } from '@/types'; // Ensure correct types are imported
+import { Place, ItineraryDay, SchedulePayload } from '@/types/core'; // Ensure correct types are imported
 
 interface UseItineraryCreationProps {
   tripDetails: TripDetails;

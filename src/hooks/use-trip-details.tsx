@@ -1,7 +1,8 @@
 
 import { useState, useMemo } from 'react';
 
-interface TripDetails {
+// TripDetails 인터페이스를 명시적으로 내보냅니다
+export interface TripDetails {
   startDate: Date | null;
   endDate: Date | null;
   startTime: string;

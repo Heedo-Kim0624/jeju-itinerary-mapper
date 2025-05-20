@@ -12,6 +12,7 @@ import { useLeftPanelState } from './left-panel/use-left-panel-state';
 import { useItineraryCreation } from './left-panel/use-itinerary-creation';
 import { useCategoryResultHandlers } from './left-panel/use-category-result-handlers';
 import { useEventListeners } from './left-panel/use-event-listeners';
+import { SchedulePayload } from '@/types/core'; // 추가: SchedulePayload 타입 임포트
 
 /**
  * 왼쪽 패널 기능 통합 훅
@@ -34,7 +35,7 @@ export const useLeftPanel = () => {
   // Place management
   const placesManagement = useSelectedPlaces();
 
-  // Itinerary management
+  // Itinerary management - 여기에 함수 시그니처 적용
   const itineraryManagement = useItinerary();
 
   // UI visibility
@@ -68,13 +69,24 @@ export const useLeftPanel = () => {
     leftPanelState.setShowCategoryResult
   );
 
+  // 함수 시그니처 불일치 해결을 위한 어댑터 함수
+  const generateItineraryAdapter = async (payload: SchedulePayload) => {
+    // itineraryManagement.generateItinerary를 호출하여 결과를 반환
+    try {
+      return await itineraryManagement.generateItinerary(payload);
+    } catch (error) {
+      console.error("일정 생성 중 오류:", error);
+      return null;
+    }
+  };
+
   // Itinerary creation logic
   const itineraryCreation = useItineraryCreation({
     tripDetails,
     userDirectlySelectedPlaces: placesManagement.selectedPlaces, // Pass non-candidate places
     autoCompleteCandidatePlaces: placesManagement.candidatePlaces, // Pass candidate places
     prepareSchedulePayload: placesManagement.prepareSchedulePayload,
-    generateItinerary: itineraryManagement.generateItinerary,
+    generateItinerary: generateItineraryAdapter, // 어댑터 함수 사용
     setShowItinerary: itineraryManagement.setShowItinerary,
     setCurrentPanel: leftPanelState.setCurrentPanel,
     setIsGenerating: leftPanelState.setIsGenerating,
