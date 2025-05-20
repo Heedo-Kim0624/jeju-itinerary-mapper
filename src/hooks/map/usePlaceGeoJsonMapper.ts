@@ -1,10 +1,11 @@
 
 import { useCallback } from 'react';
 import type { Place } from '@/types/supabase';
-import type { GeoNodeFeature } from '@/components/rightpanel/geojson/GeoJsonTypes'; // Assuming GeoNodeFeature is the correct type for geoJsonNodes elements
+// Import GeoJsonFeature and GeoJsonNodeProperties
+import type { GeoJsonFeature, GeoJsonNodeProperties } from '@/components/rightpanel/geojson/GeoJsonTypes';
 
 interface UsePlaceGeoJsonMapperProps {
-  geoJsonNodes: GeoNodeFeature[];
+  geoJsonNodes: GeoJsonFeature[]; // Changed from GeoNodeFeature[]
 }
 
 export const usePlaceGeoJsonMapper = ({ geoJsonNodes }: UsePlaceGeoJsonMapperProps) => {
@@ -20,7 +21,8 @@ export const usePlaceGeoJsonMapper = ({ geoJsonNodes }: UsePlaceGeoJsonMapperPro
 
     return places.map(place => {
       if (place.geoNodeId) {
-        const node = geoJsonNodes.find(n => String(n.properties.NODE_ID) === String(place.geoNodeId));
+        // Use type assertion for properties
+        const node = geoJsonNodes.find(n => String((n.properties as GeoJsonNodeProperties).NODE_ID) === String(place.geoNodeId));
         if (node && node.geometry.type === 'Point') {
           const [lng, lat] = (node.geometry.coordinates as [number, number]);
           return { ...place, x: lng, y: lat };
