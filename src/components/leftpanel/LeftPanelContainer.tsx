@@ -79,7 +79,7 @@ const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
     return (
       <ContainedScheduleViewer
         itinerary={itinerary}
-        selectedDay={selectedItineraryDay}
+        selectedItineraryDay={selectedItineraryDay}
         onSelectDay={onSelectDay}
         onClose={handleCloseItinerary}
         startDate={dates?.startDate || new Date()}
