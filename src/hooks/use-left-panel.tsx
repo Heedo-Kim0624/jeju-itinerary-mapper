@@ -80,20 +80,21 @@ export const useLeftPanel = () => {
     // payload.start_datetime과 payload.end_datetime은 SchedulePayload 타입에 의해 string으로 보장됨
 
     try {
-      // itineraryManagement.generateItinerary가 5개의 인자를 받도록 호출 수정
+      // itineraryManagement.generateItinerary 함수 호출 수정
+      // 올바른 순서와 타입으로 인자 전달
       return await itineraryManagement.generateItinerary(
-        placesManagement.selectedPlaces,    // 1. 사용자 선택 장소 (Place[])
-        placesManagement.candidatePlaces,   // 2. 자동 완성 후보 장소 (Place[])
-        payload.start_datetime,             // 3. 시작 날짜시간 문자열 (string)
-        payload.end_datetime,               // 4. 종료 날짜시간 문자열 (string)
-        tripDetailsHookResult.dates         // 5. 여행 날짜/시간 상세 객체 (TripDetails 인터페이스 타입)
+        payload,  // 1. SchedulePayload 타입 인자 (기존에 placesManagement.selectedPlaces를 여기에 잘못 전달함)
+        tripDetailsHookResult.dates.startDate, // 2. 시작 날짜 (Date 타입)
+        tripDetailsHookResult.dates.endDate,   // 3. 종료 날짜 (Date 타입)
+        tripDetailsHookResult.startDatetime,   // 4. 시작 날짜시간 문자열 (string | null)
+        tripDetailsHookResult.endDatetime      // 5. 종료 날짜시간 문자열 (string | null)
       );
     } catch (error) {
       console.error("일정 생성 어댑터에서 오류:", error);
       // useItineraryCreation 쪽에서 이미 오류 토스트를 처리하므로 여기서는 중복 방지
       return null;
     }
-  }, [itineraryManagement, placesManagement, tripDetailsHookResult]); // 의존성 배열 수정
+  }, [itineraryManagement, tripDetailsHookResult]); // 의존성 배열 수정 - placesManagement 제거
 
   // Itinerary creation logic
   const itineraryCreation = useItineraryCreation({
