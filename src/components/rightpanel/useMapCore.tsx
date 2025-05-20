@@ -1,3 +1,4 @@
+
 import { useMapInitialization } from '@/hooks/map/useMapInitialization';
 import { useMapNavigation } from '@/hooks/map/useMapNavigation';
 // import { useMapMarkers } from '@/hooks/map/useMapMarkers'; // Deprecated

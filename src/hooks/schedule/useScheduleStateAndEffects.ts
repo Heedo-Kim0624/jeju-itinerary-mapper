@@ -1,9 +1,9 @@
 
-import { useState, useCallback, useEffect, useRef } from 'react'; // useRef 추가
-import { ItineraryDay } from '@/types/core'; // core.ts에서 직접 import
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { ItineraryDay } from '@/types/core';
 import { useMapContext } from '@/components/rightpanel/MapContext';
 import { extractAllNodesFromRoute, extractAllLinksFromRoute } from '@/utils/routeParser';
-import { SegmentRoute } from '@/types/schedule'; // Import SegmentRoute
+import { SegmentRoute } from '@/types/schedule';
 
 export const useScheduleStateAndEffects = () => {
   const [itinerary, setItinerary] = useState<ItineraryDay[]>([]);
@@ -12,65 +12,63 @@ export const useScheduleStateAndEffects = () => {
 
   const { renderGeoJsonRoute, clearAllRoutes } = useMapContext();
 
-  // Ref to hold the current value of isLoadingState for logging purposes
+  // 로딩 상태 추적을 위한 ref
   const isLoadingStateRef = useRef(isLoadingState);
   useEffect(() => {
     isLoadingStateRef.current = isLoadingState;
   }, [isLoadingState]);
 
+  // 로딩 상태 설정 함수 (디버깅 로그 포함)
   const setIsLoadingState = useCallback((loading: boolean) => {
-    // Log includes the value of `loading` param, and for comparison, the state *before* this call (via ref or direct state access if stable)
-    // The ref might show the state from *before* the current render cycle if the callback itself is stale.
-    // Direct state `isLoadingState` in this log would be from the closure when this useCallback was defined.
-    console.log(`[useScheduleStateAndEffects] setIsLoadingState called with: ${loading}. isLoadingState before this call (via ref): ${isLoadingStateRef.current}`);
+    console.log(`[useScheduleStateAndEffects] setIsLoadingState called with: ${loading}. Current state: ${isLoadingStateRef.current}`);
     setIsLoadingStateInternal(loading);
-  }, [setIsLoadingStateInternal]); //setIsLoadingStateInternal is stable from useState
+  }, []);
 
-  // Removed useEffect that sets isLoadingState based on itinerary.length
-  // This logic is now primarily handled by useScheduleGenerationRunner's finally block.
-  // console.log(`[useScheduleStateAndEffects] Initial isLoadingState: ${isLoadingState}`); // For debugging initial state
-
+  // 일정 선택 핸들러
   const handleSelectDay = useCallback((day: number) => {
     setSelectedDay(day);
     console.log(`[useScheduleStateAndEffects] 일정 ${day}일차가 선택되었습니다.`);
   }, []);
 
+  // 선택된 일정 날짜에 따라 지도에 경로 렌더링
   useEffect(() => {
-    if (selectedDay !== null && itinerary.length > 0 && renderGeoJsonRoute && clearAllRoutes) {
-      const currentDayData = itinerary.find(d => d.day === selectedDay);
-      if (currentDayData?.interleaved_route) {
+    // 선택된 날짜가 없거나 일정이 없으면 아무 작업도 하지 않음
+    if (selectedDay === null || itinerary.length === 0 || !renderGeoJsonRoute || !clearAllRoutes) {
+      if (selectedDay === null && clearAllRoutes) {
+        console.log("[useScheduleStateAndEffects] 선택된 날짜가 없어 모든 경로를 제거합니다.");
         clearAllRoutes();
-        const nodes = extractAllNodesFromRoute(currentDayData.interleaved_route).map(String);
-        const links = extractAllLinksFromRoute(currentDayData.interleaved_route).map(String);
-        console.log(`[useScheduleStateAndEffects] Rendering route for day ${selectedDay}: ${nodes.length} nodes, ${links.length} links`);
-        
-        // 수정된 부분: renderGeoJsonRoute 호출 시 SegmentRoute 객체 전달 및 불필요한 스타일 인자 제거
-        const routeSegment: SegmentRoute = { 
-          nodeIds: nodes, 
-          linkIds: links,
-          fromIndex: 0, // fromIndex 추가
-          toIndex: nodes.length > 0 ? nodes.length - 1 : 0 // toIndex 추가 (빈 배열 방지)
-        };
-        renderGeoJsonRoute(routeSegment); // 스타일 인자 제거
+      }
+      return;
+    }
 
-      } else if (currentDayData) {
-        console.log(`[useScheduleStateAndEffects] Day ${selectedDay} has no interleaved_route. Map rendering for this day might be skipped or use fallback.`);
-        // clearAllRoutes(); // Optionally clear if no specific route but day exists
-      } else {
-        console.log(`[useScheduleStateAndEffects] No data for selected day ${selectedDay}. Clearing routes.`);
-        clearAllRoutes(); 
-      }
+    // 현재 선택된 날짜의 일정 데이터 찾기
+    const currentDayData = itinerary.find(d => d.day === selectedDay);
+    
+    if (currentDayData?.interleaved_route) {
+      // 모든 경로 지우기
+      clearAllRoutes();
+      
+      // 경로 데이터 추출
+      const nodes = extractAllNodesFromRoute(currentDayData.interleaved_route).map(String);
+      const links = extractAllLinksFromRoute(currentDayData.interleaved_route).map(String);
+      
+      console.log(`[useScheduleStateAndEffects] 선택된 ${selectedDay}일차 경로 렌더링: ${nodes.length} 노드, ${links.length} 링크`);
+      
+      // 경로 렌더링에 필요한 형식으로 데이터 변환
+      const routeSegment: SegmentRoute = { 
+        nodeIds: nodes, 
+        linkIds: links,
+        fromIndex: 0,
+        toIndex: nodes.length > 0 ? nodes.length - 1 : 0
+      };
+      
+      // 경로 렌더링
+      renderGeoJsonRoute(routeSegment);
+    } else if (currentDayData) {
+      console.log(`[useScheduleStateAndEffects] ${selectedDay}일차는 경로 데이터가 없습니다.`);
     } else {
-      if (!renderGeoJsonRoute || !clearAllRoutes) {
-        console.log("[useScheduleStateAndEffects] Map context functions (renderGeoJsonRoute, clearAllRoutes) not available yet.");
-      } else {
-        // Only clear routes if selectedDay becomes null or itinerary is truly empty,
-        // Avoid clearing if it's just an intermediate state before new itinerary arrives.
-        if (selectedDay === null || (selectedDay !== null && itinerary.length === 0)) {
-          console.log("[useScheduleStateAndEffects] No selected day or itinerary empty. Clearing all routes.");
-          clearAllRoutes();
-        }
-      }
+      console.log(`[useScheduleStateAndEffects] ${selectedDay}일차 데이터를 찾을 수 없습니다.`);
+      clearAllRoutes();
     }
   }, [selectedDay, itinerary, renderGeoJsonRoute, clearAllRoutes]);
 
@@ -83,20 +81,4 @@ export const useScheduleStateAndEffects = () => {
     setIsLoadingState,
     handleSelectDay,
   };
-};
-
-export const fixFunctionCallExample = () => {
-  // Example of a function call fix:
-  
-  // BEFORE:
-  // problemFunction(arg1, arg2, arg3);
-  
-  // AFTER:
-  // Either change the call:
-  // problemFunction(arg1);
-  
-  // Or change the function signature:
-  // function problemFunction(arg1: any, arg2?: any, arg3?: any) { ... }
-  
-  console.log("[useScheduleStateAndEffects] Fixed function call signature mismatch");
 };
