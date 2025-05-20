@@ -7,8 +7,7 @@ import { useMapContext } from '@/components/rightpanel/MapContext';
 import { useSchedulePayload } from './useSchedulePayload';
 import { useScheduleGenerationCore } from './useScheduleGenerationCore';
 import { useFallbackItineraryGenerator } from './useFallbackItineraryGenerator';
-import { useServerResponseHandler } from './useServerResponseHandler';
-import { MapContextGeoNode } from './useScheduleParser';
+import { MapContextGeoNode } from './parser-utils/coordinateTypes'; // Updated import path
 
 interface UseScheduleGenerationRunnerProps {
   selectedPlaces: SelectedPlace[];
