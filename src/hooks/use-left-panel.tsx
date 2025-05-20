@@ -1,4 +1,3 @@
-
 import { useEffect, useCallback } from 'react'; // useCallback 추가
 import { useSelectedPlaces } from './use-selected-places';
 import { useTripDetails } from './use-trip-details';
@@ -12,7 +11,7 @@ import { useLeftPanelState } from './left-panel/use-left-panel-state';
 import { useItineraryCreation } from './left-panel/use-itinerary-creation';
 import { useCategoryResultHandlers } from './left-panel/use-category-result-handlers';
 import { useEventListeners } from './left-panel/use-event-listeners';
-import { SchedulePayload } from '@/types/core';
+import { SchedulePayload, Place } from '@/types/core'; // Place 임포트 추가
 import { toast } from 'sonner'; // toast 임포트 추가
 
 /**
@@ -72,29 +71,47 @@ export const useLeftPanel = () => {
 
   // 함수 시그니처 불일치 해결을 위한 어댑터 함수
   const generateItineraryAdapter = useCallback(async (payload: SchedulePayload) => {
+    // payload는 UseItineraryCreationProps에 의해 전달되지만,
+    // 클라이언트 사이드 생성기를 직접 호출할 때는 내부의 selected_places 등은 직접 사용하지 않고,
+    // placesManagement와 tripDetailsHookResult에서 전체 Place 객체와 Date 객체를 가져와 사용합니다.
+
     if (!tripDetailsHookResult.dates.startDate || !tripDetailsHookResult.dates.endDate) {
       console.error("[Adapter] Trip start or end date is missing in tripDetails.dates.");
       toast.error("여행 시작일 또는 종료일이 설정되지 않았습니다.");
       return null;
     }
-    // payload.start_datetime과 payload.end_datetime은 SchedulePayload 타입에 의해 string으로 보장됨
+    // tripDetailsHookResult.startTime 와 tripDetailsHookResult.endTime 은 초기값을 가지므로 null 체크 불필요
+
+    const placesForClientGenerator: Place[] = [
+      ...(placesManagement.selectedPlaces as Place[]), // SelectedPlace[]를 Place[]로 캐스팅
+      ...(placesManagement.candidatePlaces as Place[]), // Place[]는 그대로 사용
+    ];
+
+    if (placesForClientGenerator.length === 0) {
+        toast.info("일정을 생성할 장소가 선택되지 않았습니다. (Adapter)");
+        return null;
+    }
 
     try {
-      // itineraryManagement.generateItinerary 함수 호출 수정
-      // 올바른 순서와 타입으로 인자 전달
+      // itineraryManagement.generateItinerary 함수는 다음 인자들을 기대합니다:
+      // 1. placesToUse: Place[]
+      // 2. startDate: Date
+      // 3. endDate: Date
+      // 4. startTime: string (HH:MM format)
+      // 5. endTime: string (HH:MM format)
       return await itineraryManagement.generateItinerary(
-        payload,  // 1. SchedulePayload 타입 인자 (기존에 placesManagement.selectedPlaces를 여기에 잘못 전달함)
-        tripDetailsHookResult.dates.startDate, // 2. 시작 날짜 (Date 타입)
-        tripDetailsHookResult.dates.endDate,   // 3. 종료 날짜 (Date 타입)
-        tripDetailsHookResult.startDatetime,   // 4. 시작 날짜시간 문자열 (string | null)
-        tripDetailsHookResult.endDatetime      // 5. 종료 날짜시간 문자열 (string | null)
+        placesForClientGenerator,
+        tripDetailsHookResult.dates.startDate,
+        tripDetailsHookResult.dates.endDate,
+        tripDetailsHookResult.startTime,
+        tripDetailsHookResult.endTime
       );
     } catch (error) {
       console.error("일정 생성 어댑터에서 오류:", error);
-      // useItineraryCreation 쪽에서 이미 오류 토스트를 처리하므로 여기서는 중복 방지
+      toast.error(`어댑터에서 일정 생성 중 오류: ${error instanceof Error ? error.message : String(error)}`);
       return null;
     }
-  }, [itineraryManagement, tripDetailsHookResult]); // 의존성 배열 수정 - placesManagement 제거
+  }, [itineraryManagement, placesManagement, tripDetailsHookResult]); // 의존성 배열에 placesManagement 추가
 
   // Itinerary creation logic
   const itineraryCreation = useItineraryCreation({
