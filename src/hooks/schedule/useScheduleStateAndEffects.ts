@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react'; // useRef 추�
 import { ItineraryDay } from '@/types/core'; // core.ts에서 직접 import
 import { useMapContext } from '@/components/rightpanel/MapContext';
 import { extractAllNodesFromRoute, extractAllLinksFromRoute } from '@/utils/routeParser';
+import { SegmentRoute } from '@/types/schedule'; // Import SegmentRoute
 
 export const useScheduleStateAndEffects = () => {
   const [itinerary, setItinerary] = useState<ItineraryDay[]>([]);
@@ -41,7 +42,12 @@ export const useScheduleStateAndEffects = () => {
         const nodes = extractAllNodesFromRoute(currentDayData.interleaved_route).map(String);
         const links = extractAllLinksFromRoute(currentDayData.interleaved_route).map(String);
         console.log(`[useScheduleStateAndEffects] Rendering route for day ${selectedDay}: ${nodes.length} nodes, ${links.length} links`);
-        renderGeoJsonRoute(nodes, links, { strokeColor: '#3366FF', strokeWeight: 5, strokeOpacity: 0.8 });
+        
+        // 수정된 부분: renderGeoJsonRoute 호출 시 SegmentRoute 객체 전달
+        const routeSegment: SegmentRoute = { nodeIds: nodes, linkIds: links };
+        renderGeoJsonRoute(routeSegment);
+        // 이전 호출: renderGeoJsonRoute(nodes, links, { strokeColor: '#3366FF', strokeWeight: 5, strokeOpacity: 0.8 });
+
       } else if (currentDayData) {
         console.log(`[useScheduleStateAndEffects] Day ${selectedDay} has no interleaved_route. Map rendering for this day might be skipped or use fallback.`);
         // clearAllRoutes(); // Optionally clear if no specific route but day exists

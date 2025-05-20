@@ -32,15 +32,7 @@ const useMapCore = () => {
     panTo 
   } = useMapNavigation(map);
 
-  const {
-    showGeoJson,
-    isGeoJsonLoaded,
-    geoJsonNodes,
-    geoJsonLinks,
-    toggleGeoJsonVisibility,
-    handleGeoJsonLoaded,
-    checkGeoJsonMapping,
-  } = useGeoJsonState();
+  const geoJsonHookState = useGeoJsonState(); // Renamed to avoid conflict with direct geoJsonState usage
 
   const {
     serverRoutesData,
@@ -58,27 +50,27 @@ const useMapCore = () => {
     }
   };
   
-  const renderItineraryRoute = (
+  const renderItineraryRouteWrapper = ( // Renamed to avoid conflict with features.renderItineraryRoute
     itineraryDay: ItineraryDay | null,
-    allServerRoutesInput?: Record<number, ServerRouteResponse>,
-    onCompleteInput?: () => void
+    allServerRoutesInput?: Record<number, ServerRouteResponse>, // Added parameter based on user guide
+    onCompleteInput?: () => void // Added parameter based on user guide
   ) => {
     features.renderItineraryRoute(
         itineraryDay,
-        allServerRoutesInput ?? serverRoutesData,
-        onCompleteInput
+        allServerRoutesInput ?? serverRoutesData, // Pass all required args
+        onCompleteInput // Pass all required args
     );
   };
 
-  const showRouteForPlaceIndex = (
+  const showRouteForPlaceIndexWrapper = ( // Renamed
     placeIndex: number, 
     itineraryDay: ItineraryDay,
-    onComplete?: () => void
+    onComplete?: () => void // Added parameter based on user guide
   ) => {
     features.showRouteForPlaceIndex(
         placeIndex, 
         itineraryDay, 
-        onComplete
+        onComplete // Pass all required args
     );
   };
   
@@ -86,14 +78,11 @@ const useMapCore = () => {
     features.calculateRoutes(placesToRoute);
   };
   
-  // highlightSegment의 타입이 (segment: SegmentRoute | null) => void 이므로,
-  // useMapCore에서 그대로 전달하면 됩니다.
-  // MapContextType에서 이 타입을 맞춰줘야 합니다.
   const highlightSegmentWrapper = (segment: SegmentRoute | null) => {
     features.highlightSegment(segment);
   };
 
-  // Fix for renderGeoJsonRoute to make it return void
+  // Fix for renderGeoJsonRoute to make it return void (already done)
   const renderGeoJsonRouteWrapper = (route: SegmentRoute) => {
     features.renderGeoJsonRoute(route);
   };
@@ -108,19 +97,19 @@ const useMapCore = () => {
     calculateRoutes: calculateRoutesWrapper,
     clearMarkersAndUiElements,
     panTo,
-    showGeoJson,
-    toggleGeoJsonVisibility,
-    isGeoJsonLoaded,
-    geoJsonNodes,
-    geoJsonLinks,
-    handleGeoJsonLoaded,
-    checkGeoJsonMapping,
+    showGeoJson: geoJsonHookState.showGeoJson,
+    toggleGeoJsonVisibility: geoJsonHookState.toggleGeoJsonVisibility,
+    isGeoJsonLoaded: geoJsonHookState.isGeoJsonLoaded,
+    geoJsonNodes: geoJsonHookState.geoJsonNodes,
+    geoJsonLinks: geoJsonHookState.geoJsonLinks,
+    handleGeoJsonLoaded: geoJsonHookState.handleGeoJsonLoaded,
+    checkGeoJsonMapping: geoJsonHookState.checkGeoJsonMapping,
     mapPlacesWithGeoNodes: features.mapPlacesWithGeoNodes,
-    renderItineraryRoute, 
+    renderItineraryRoute: renderItineraryRouteWrapper, 
     clearAllRoutes: features.clearAllRoutes,
     highlightSegment: highlightSegmentWrapper, 
     clearPreviousHighlightedPath: features.clearPreviousHighlightedPath,
-    showRouteForPlaceIndex, 
+    showRouteForPlaceIndex: showRouteForPlaceIndexWrapper, 
     renderGeoJsonRoute: renderGeoJsonRouteWrapper,
     serverRoutesData,
     setServerRoutes
