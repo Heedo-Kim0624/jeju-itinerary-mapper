@@ -1,8 +1,8 @@
 
 import { toast } from 'sonner';
 import { SelectedPlace } from '@/types/supabase';
-import { NewServerScheduleResponse, ServerRouteResponse, isNewServerScheduleResponse } from '@/types/core';
-import { useScheduleParser } from './useScheduleParser';
+import { NewServerScheduleResponse, ServerRouteResponse, ItineraryDay as CoreItineraryDay } from '@/types/core'; // ItineraryDay as CoreItineraryDay 추가
+import { useScheduleParser, updateItineraryWithCoordinates } from './useScheduleParser'; // updateItineraryWithCoordinates 직접 임포트
 
 const DEBUG_MODE = true;
 
@@ -15,8 +15,8 @@ function debugLog(message: string, data?: any) {
 interface ScheduleGenerationCoreProps {
   selectedPlaces: SelectedPlace[];
   startDate: Date;
-  geoJsonNodes: Record<string, any>;
-  setItinerary: (itinerary: any[]) => void;
+  geoJsonNodes: Record<string, any>; // 타입 유지
+  setItinerary: (itinerary: CoreItineraryDay[]) => void; // CoreItineraryDay[] 사용
   setSelectedDay: (day: number | null) => void;
   setServerRoutes: (routes: Record<number, ServerRouteResponse>) => void;
   setIsLoadingState: (loading: boolean) => void;
@@ -35,7 +35,7 @@ export const useScheduleGenerationCore = ({
   setServerRoutes,
   setIsLoadingState,
 }: ScheduleGenerationCoreProps) => {
-  const { parseServerResponse, updateItineraryWithCoordinates } = useScheduleParser({
+  const { parseServerResponse } = useScheduleParser({ // updateItineraryWithCoordinates 제거
     currentSelectedPlaces: selectedPlaces
   });
 
@@ -55,7 +55,7 @@ export const useScheduleGenerationCore = ({
         return false;
       }
       
-      // GeoJSON에서 좌표 정보 추가
+      // GeoJSON에서 좌표 정보 추가 (직접 임포트한 함수 사용)
       const itineraryWithCoords = updateItineraryWithCoordinates(parsedItinerary, geoJsonNodes);
       console.log("[useScheduleGenerationCore] 좌표가 추가된 일정:", itineraryWithCoords);
       
@@ -101,7 +101,7 @@ export const useScheduleGenerationCore = ({
 
   // 이벤트 트리거 함수들
   const triggerItineraryCreatedEvent = (
-    itinerary: any[], 
+    itinerary: CoreItineraryDay[], // CoreItineraryDay[] 사용
     selectedDay: number | null, 
     error = false
   ) => {
@@ -121,7 +121,7 @@ export const useScheduleGenerationCore = ({
     }, 100);
   };
 
-  const triggerItineraryWithCoordinatesEvent = (itinerary: any[]) => {
+  const triggerItineraryWithCoordinatesEvent = (itinerary: CoreItineraryDay[]) => { // CoreItineraryDay[] 사용
     const coordEvent = new CustomEvent('itineraryWithCoordinatesReady', { 
       detail: { itinerary } 
     });
@@ -134,3 +134,4 @@ export const useScheduleGenerationCore = ({
     triggerItineraryCreatedEvent
   };
 };
+
