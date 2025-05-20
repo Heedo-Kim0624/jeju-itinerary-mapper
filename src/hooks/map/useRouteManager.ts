@@ -1,6 +1,7 @@
+
 import { useCallback, useRef } from 'react';
 import type { Place, ItineraryDay } from '@/types/supabase';
-import type { GeoJsonFeature, GeoJsonNodeProperties, GeoJsonLinkProperties } from '@/components/rightpanel/geojson/GeoJsonTypes';
+import type { GeoNodeFeature, GeoLinkFeature } from '@/components/rightpanel/geojson/GeoJsonTypes';
 import type { ServerRouteResponse, SegmentRoute } from '@/types/schedule';
 import {
   createNaverPolyline,
@@ -17,8 +18,8 @@ const USER_ROUTE_ZINDEX = 100;
 interface UseRouteManagerProps {
   map: any;
   isNaverLoadedParam: boolean;
-  geoJsonLinks: GeoJsonFeature[];
-  geoJsonNodes: GeoJsonFeature[];
+  geoJsonLinks: GeoLinkFeature[];
+  geoJsonNodes: GeoNodeFeature[];
   mapPlacesWithGeoNodesFn: (places: Place[]) => Place[];
 }
 
@@ -89,7 +90,7 @@ export const useRouteManager = ({
   const renderItineraryRoute = useCallback(
     (
       itineraryDay: ItineraryDay | null,
-      _allServerRoutesInput?: Record<number, ServerRouteResponse>,
+      _allServerRoutesInput?: Record<number, ServerRouteResponse>, // Kept for signature, but not used in original logic after GeoJSON
       onComplete?: () => void
     ) => {
       if (!map || !isNaverLoadedParam) {
@@ -130,9 +131,8 @@ export const useRouteManager = ({
         let missingLinkCount = 0;
 
         linkIds.forEach(linkId => {
-          // Use type assertion for properties
           const linkFeature = geoJsonLinks.find(
-            (feature: GeoJsonFeature) => String((feature.properties as GeoJsonLinkProperties).LINK_ID) === String(linkId)
+            (feature: GeoLinkFeature) => String(feature.properties.LINK_ID) === String(linkId)
           );
 
           if (linkFeature && linkFeature.geometry && linkFeature.geometry.type === 'LineString' && Array.isArray(linkFeature.geometry.coordinates)) {
@@ -193,10 +193,9 @@ export const useRouteManager = ({
 
     clearAllDrawnRoutes();
 
-    // Use type assertion for properties
     const routeNodes = route.nodeIds.map(nodeId => {
-      return geoJsonNodes.find(node => String((node.properties as GeoJsonNodeProperties).NODE_ID) === String(nodeId));
-    }).filter(Boolean); // filter(Boolean) is a good way to remove null/undefined
+      return geoJsonNodes.find(node => String(node.properties.NODE_ID) === String(nodeId));
+    }).filter(Boolean);
 
     if (routeNodes.length < 2) {
       console.warn('[RouteManager] Not enough valid nodes to render GeoJSON route');
@@ -204,8 +203,7 @@ export const useRouteManager = ({
     }
 
     const coordinates = routeNodes.map(node => {
-      // node here is GeoJsonFeature, so node.geometry is fine
-      if (node && node.geometry.type === 'Point') { 
+      if (node && node.geometry.type === 'Point') {
         const [lng, lat] = (node.geometry.coordinates as [number, number]);
         return { lat, lng };
       }
@@ -238,18 +236,16 @@ export const useRouteManager = ({
       return;
     }
 
-    // Use type assertion for properties
     const segmentNodes = segment.nodeIds.map(nodeId => {
-      return geoJsonNodes.find(node => String((node.properties as GeoJsonNodeProperties).NODE_ID) === String(nodeId));
-    }).filter(Boolean); // filter(Boolean) is a good way to remove null/undefined
+      return geoJsonNodes.find(node => String(node.properties.NODE_ID) === String(nodeId));
+    }).filter(Boolean);
 
     if (segmentNodes.length < 2) {
       console.warn('[RouteManager] Not enough valid nodes to highlight segment');
       return;
     }
-    
+
     const coordinates = segmentNodes.map(node => {
-      // node here is GeoJsonFeature
       if (node && node.geometry.type === 'Point') {
         const [lng, lat] = (node.geometry.coordinates as [number, number]);
         return { lat, lng };
@@ -296,6 +292,7 @@ export const useRouteManager = ({
     }
     // No return value, polylines managed internally
   }, [map, isNaverLoadedParam, drawRoutePathInternal]);
+
 
   return {
     renderItineraryRoute,
