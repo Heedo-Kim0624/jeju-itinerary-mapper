@@ -1,20 +1,13 @@
-import { toast } from 'sonner';
-import type { ItineraryDay, ItineraryPlaceWithTime, SelectedPlace as CoreSelectedPlace } from '@/types/core'; // Added CoreSelectedPlace
-// Removed RouteData as it's not directly used in parsing logic, but ItineraryDay includes it.
-// If parseServerResponse needs to construct complex RouteData, it might need more types.
 
-// Assuming getDayOfWeekString and getDateStringMMDD might be needed if server response lacks this.
-// For now, the parser seems to construct these based on dayIndex and current date if not directly from server.
-// The provided parseServerResponse doesn't use these directly for dayOfWeek/date but rather dayKey and dayIndex.
-// Let's keep the import for getDateStringMMDD as it is used.
+import { toast } from 'sonner';
+import type { ItineraryDay, ItineraryPlaceWithTime, SelectedPlace as CoreSelectedPlace } from '@/types/core';
 import { getDateStringMMDD } from './itineraryUtils';
 
 
 export const useItineraryParser = () => {
-  // 서버 응답을 ItineraryDay[] 형태로 파싱하는 함수
   const parseServerResponse = (
     serverResponse: any,
-    currentSelectedPlaces: CoreSelectedPlace[] // Changed from any to CoreSelectedPlace[] for clarity
+    currentSelectedPlaces: CoreSelectedPlace[]
   ): ItineraryDay[] => {
     try {
       console.log("[useItineraryParser] parseServerResponse 시작:", {
@@ -33,12 +26,11 @@ export const useItineraryParser = () => {
         return [];
       }
 
-      // Use currentSelectedPlaces passed as argument
       const allPlaces = [...(currentSelectedPlaces || [])];
 
-      const placeNameToIdMap: Record<string, string> = {}; // Store ID as string
+      const placeNameToIdMap: Record<string, string> = {};
       allPlaces.forEach(place => {
-        if (place.name && place.id) { // Ensure place.id exists
+        if (place.name && place.id) {
           placeNameToIdMap[place.name] = String(place.id);
         }
       });
@@ -47,18 +39,18 @@ export const useItineraryParser = () => {
 
       serverResponse.schedule.forEach((item: any) => {
         const placeName = item.place_name || '';
-        // Attempt to get ID from map, otherwise use item.id (server's NODE_ID) as fallback for placeId if name mapping fails
-        const mappedPlaceIdByName = placeNameToIdMap[placeName];
+        // mappedPlaceByName -> mappedPlaceIdByName 수정
+        const mappedPlaceIdByNameResult = placeNameToIdMap[placeName]; 
         // The server 'item.id' is the NODE_ID. 'place.id' is the database primary key for the place.
         // We need to associate the schedule item (which has a NODE_ID) back to our database place.
-        const placeIdForCoords = mappedPlaceByName || String(item.id); // Prioritize mapped ID, fallback to server node_id
+        const placeIdForCoords = mappedPlaceIdByNameResult || String(item.id); // Prioritize mapped ID, fallback to server node_id
 
         if (!placeIdForCoords) {
           console.warn(`[useItineraryParser] 장소 이름 '${placeName}'에 대한 ID를 찾지 못했고, item.id도 없습니다.`);
           return;
         }
         
-        const serverNodeId = String(item.id); // This is the actual NODE_ID from the server schedule
+        const serverNodeId = String(item.id);
 
         if (item.x !== undefined && item.y !== undefined && !isNaN(Number(item.x)) && !isNaN(Number(item.y))) {
           placeCoordinates[placeIdForCoords] = {
@@ -90,14 +82,14 @@ export const useItineraryParser = () => {
       const dayGroups: Record<string, any[]> = {};
       serverResponse.schedule.forEach((item: any) => {
         const placeName = item.place_name || '';
-        // ID mapping similar to above
-        const mappedPlaceIdByName = placeNameToIdMap[placeName];
-        const scheduleItemPlaceId = mappedPlaceByName || String(item.id); // This links the schedule item to a known place ID or server node_id
-        const serverNodeId = String(item.id); // This is the actual NODE_ID
+        // mappedPlaceByName -> mappedPlaceIdByName 수정
+        const mappedPlaceIdByNameResult = placeNameToIdMap[placeName]; 
+        const scheduleItemPlaceId = mappedPlaceIdByNameResult || String(item.id); 
+        const serverNodeId = String(item.id);
 
         console.log("[useItineraryParser] 일정 항목 처리:", {
           place_name: placeName,
-          place_id_for_grouping: scheduleItemPlaceId, // The ID we'll use for matching
+          place_id_for_grouping: scheduleItemPlaceId,
           time_block: item.time_block,
           place_type: item.place_type,
           server_node_id: serverNodeId
@@ -105,16 +97,14 @@ export const useItineraryParser = () => {
 
         const dayMatch = item.time_block?.match(/^([A-Za-z]+)_/);
         if (dayMatch && dayMatch[1]) {
-          const dayKey = dayMatch[1]; // 'Mon', 'Tue' etc.
+          const dayKey = dayMatch[1];
           if (!dayGroups[dayKey]) {
             dayGroups[dayKey] = [];
           }
           const enrichedItem = {
             ...item,
-            // Key 'place_id_internal' to store our database place ID if mapped, or server node_id as fallback.
-            // This is what dayPlaces.map will use to look up coordinates and other details.
             place_id_internal: scheduleItemPlaceId, 
-            server_node_id: serverNodeId, // Keep server_node_id explicitly for geoNodeId
+            server_node_id: serverNodeId,
           };
           dayGroups[dayKey].push(enrichedItem);
         } else {
@@ -126,7 +116,7 @@ export const useItineraryParser = () => {
       let dayIndex = 1;
 
       for (const routeInfo of serverResponse.route_summary) {
-        const dayKey = routeInfo.day; // 'Mon', 'Tue' etc.
+        const dayKey = routeInfo.day; 
         const dayPlacesRaw = dayGroups[dayKey] || [];
 
         console.log("[useItineraryParser] 경로 정보 처리:", {
@@ -141,18 +131,17 @@ export const useItineraryParser = () => {
           const timeMatch = placeRaw.time_block?.match(/_([^_]+)$/);
           const timeBlock = timeMatch ? timeMatch[1] : 'N/A';
           
-          // placeRaw.place_id_internal should hold our mapped DB place ID or fallback server node ID
           const internalPlaceId = placeRaw.place_id_internal; 
-          const serverNodeId = placeRaw.server_node_id; // This is the definitive geoNodeId
+          const serverNodeId = placeRaw.server_node_id;
 
           const coords = placeCoordinates[internalPlaceId] || {
             x: 126.5311884,
             y: 33.4996213,
-            nodeId: serverNodeId, // Ensure nodeId is set even for defaults
+            nodeId: serverNodeId,
           };
           
           return {
-            id: internalPlaceId, // Use our internal ID for the place object
+            id: internalPlaceId,
             name: placeRaw.place_name || '이름 없는 장소',
             category: placeRaw.place_type || '기타',
             timeBlock: timeBlock,
@@ -169,7 +158,7 @@ export const useItineraryParser = () => {
             rating: parseFloat(placeRaw.rating || '0'),
             road_address: placeRaw.road_address || '',
             homepage: placeRaw.homepage || '',
-            geoNodeId: serverNodeId, // Use the server_node_id from the schedule item for GeoJSON mapping
+            geoNodeId: serverNodeId, 
           } as ItineraryPlaceWithTime;
         });
 
@@ -185,8 +174,7 @@ export const useItineraryParser = () => {
           }
         });
         
-        // TODO: Get actual start date of the trip, not new Date()
-        const tripStartDate = new Date(); // Placeholder, replace with actual trip start date
+        const tripStartDate = new Date(); 
         const currentDate = new Date(tripStartDate);
         currentDate.setDate(tripStartDate.getDate() + dayIndex - 1);
 
@@ -226,3 +214,4 @@ export const useItineraryParser = () => {
 
   return { parseServerResponse };
 };
+

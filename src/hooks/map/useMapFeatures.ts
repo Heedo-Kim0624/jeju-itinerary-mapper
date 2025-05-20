@@ -20,7 +20,7 @@ const USER_ROUTE_ZINDEX = 100;
 export const useMapFeatures = (map: any, isNaverLoadedParam: boolean) => {
   const activePolylines = useRef<any[]>([]);
   const highlightedPathRef = useRef<any>(null);
-  const geoJsonState = useGeoJsonState(); // Contains geoJsonNodes and geoJsonLinks
+  const geoJsonState = useGeoJsonState();
 
   const drawRoutePath = useCallback((
     currentMap: any,
@@ -32,7 +32,6 @@ export const useMapFeatures = (map: any, isNaverLoadedParam: boolean) => {
   ) => {
     if (!currentMap || !isNaverLoadedParam || pathCoordinates.length < 2) return null;
 
-    // Filter out invalid coordinates
     const validCoords = pathCoordinates.filter(coord => 
       coord && typeof coord.lat === 'number' && typeof coord.lng === 'number' &&
       !isNaN(coord.lat) && !isNaN(coord.lng)
@@ -79,11 +78,10 @@ export const useMapFeatures = (map: any, isNaverLoadedParam: boolean) => {
   const mapPlacesWithGeoNodes = useCallback((places: Place[]): Place[] => {
     if (!geoJsonState.geoJsonNodes || geoJsonState.geoJsonNodes.length === 0) {
       console.warn("[MapFeatures] GeoJSON nodes not available for mapping places.");
-      // Ensure x, y are numbers, defaulting to 0 if undefined/null, or keeping existing if valid
-      return places.map(p => ({ 
-        ...p, 
-        x: (typeof p.x === 'number' && !isNaN(p.x)) ? p.x : 0, 
-        y: (typeof p.y === 'number' && !isNaN(p.y)) ? p.y : 0 
+      return places.map(place => ({ 
+        ...place, 
+        x: (typeof place.x === 'number' && !isNaN(place.x)) ? place.x : 0, 
+        y: (typeof place.y === 'number' && !isNaN(place.y)) ? place.y : 0 
       }));
     }
 
@@ -100,7 +98,7 @@ export const useMapFeatures = (map: any, isNaverLoadedParam: boolean) => {
       return { 
         ...place, 
         x: (typeof place.x === 'number' && !isNaN(place.x)) ? place.x : 0, 
-        y: (typeof place.y === 'number' && !isNaN(p.y)) ? p.y : 0 
+        y: (typeof place.y === 'number' && !isNaN(place.y)) ? place.y : 0 
       };
     });
   }, [geoJsonState.geoJsonNodes]);
@@ -121,7 +119,6 @@ export const useMapFeatures = (map: any, isNaverLoadedParam: boolean) => {
 
       if (!itineraryDay || !itineraryDay.routeData || !itineraryDay.routeData.linkIds || itineraryDay.routeData.linkIds.length === 0) {
         console.warn('[MapFeatures] No itinerary day or linkIds to render route.');
-        // Attempt to draw direct lines if places exist but no linkIds
         if (itineraryDay && itineraryDay.places && itineraryDay.places.length > 1) {
             const mappedPlaces = mapPlacesWithGeoNodes(itineraryDay.places);
             const validPlaces = mappedPlaces.filter(p => 
@@ -131,7 +128,7 @@ export const useMapFeatures = (map: any, isNaverLoadedParam: boolean) => {
             if (validPlaces.length > 1) {
                 console.log("[MapFeatures] No linkIds, drawing direct lines between mapped places.");
                 const pathCoordinates = validPlaces.map(p => ({ lat: p.y as number, lng: p.x as number }));
-                const polyline = drawRoutePath(map, pathCoordinates, USER_ROUTE_COLOR, 3, USER_ROUTE_OPACITY, USER_ROUTE_ZINDEX -10); // Slightly different style for direct
+                const polyline = drawRoutePath(map, pathCoordinates, USER_ROUTE_COLOR, 3, USER_ROUTE_OPACITY, USER_ROUTE_ZINDEX -10); 
                 if (polyline) activePolylines.current.push(polyline);
                 
                 const naverCoords = pathCoordinates.map(c => createNaverLatLng(c.lat, c.lng)).filter(p => p !== null) as any[];
@@ -155,7 +152,7 @@ export const useMapFeatures = (map: any, isNaverLoadedParam: boolean) => {
           );
 
           if (linkFeature && linkFeature.geometry && linkFeature.geometry.type === 'LineString' && Array.isArray(linkFeature.geometry.coordinates)) {
-            const coords = linkFeature.geometry.coordinates; // [[lng, lat], [lng, lat], ...]
+            const coords = linkFeature.geometry.coordinates; 
             const pathCoordsForPolyline = coords.map((coordPair: number[]) => {
               if (Array.isArray(coordPair) && coordPair.length >= 2 && typeof coordPair[0] === 'number' && typeof coordPair[1] === 'number') {
                 return { lat: coordPair[1], lng: coordPair[0] };
@@ -187,7 +184,6 @@ export const useMapFeatures = (map: any, isNaverLoadedParam: boolean) => {
             if (naverCoords.length > 0) fitBoundsToCoordinates(map, naverCoords);
           }
         } else if (itineraryDay.places && itineraryDay.places.length > 0) {
-            // Fallback to fitting bounds to places if no links were drawn but places exist
             const mappedPlaces = mapPlacesWithGeoNodes(itineraryDay.places);
             const validPlacesCoords = mappedPlaces
                 .filter(p => typeof p.y === 'number' && typeof p.x === 'number' && !isNaN(p.y) && !isNaN(p.x))
@@ -204,7 +200,7 @@ export const useMapFeatures = (map: any, isNaverLoadedParam: boolean) => {
 
       if (onComplete) onComplete();
     },
-    [map, isNaverLoadedParam, geoJsonState.geoJsonNodes, geoJsonState.geoJsonLinks, drawRoutePath, mapPlacesWithGeoNodes, clearAllRoutes] // Added geoJsonLinks
+    [map, isNaverLoadedParam, geoJsonState.geoJsonNodes, geoJsonState.geoJsonLinks, drawRoutePath, mapPlacesWithGeoNodes, clearAllRoutes]
   );
 
   const showRouteForPlaceIndex = useCallback(
@@ -249,7 +245,7 @@ export const useMapFeatures = (map: any, isNaverLoadedParam: boolean) => {
 
     const coordinates = routeNodes.map(node => {
       if (node && node.geometry.type === 'Point') {
-        const [lng, lat] = (node.geometry.coordinates as [number, number]); // Type assertion
+        const [lng, lat] = (node.geometry.coordinates as [number, number]);
         return { lat, lng };
       }
       return null;
@@ -292,7 +288,7 @@ export const useMapFeatures = (map: any, isNaverLoadedParam: boolean) => {
 
     const coordinates = segmentNodes.map(node => {
       if (node && node.geometry.type === 'Point') {
-        const [lng, lat] = (node.geometry.coordinates as [number, number]); // Type assertion
+        const [lng, lat] = (node.geometry.coordinates as [number, number]);
         return { lat, lng };
       }
       return null;
@@ -322,7 +318,6 @@ export const useMapFeatures = (map: any, isNaverLoadedParam: boolean) => {
     }
   }, []);
 
-  // Update addMarkers function signature to match MapContext
   const addMarkers = useCallback((
     placesToAdd: Place[], 
     options: {
@@ -344,7 +339,6 @@ export const useMapFeatures = (map: any, isNaverLoadedParam: boolean) => {
       itineraryOrder = false 
     } = options;
     
-    // Filter out places with invalid coordinates
     const validPlaces = placesToAdd.filter(place => 
       place && typeof place.x === 'number' && typeof place.y === 'number' && 
       !isNaN(place.x) && !isNaN(place.y)
@@ -456,7 +450,7 @@ export const useMapFeatures = (map: any, isNaverLoadedParam: boolean) => {
     return createdMarkers;
   }, [map, isNaverLoadedParam]);
 
-  const calculateRoutes = useCallback((placesToRoute: Place[]) => { // This returns any[]
+  const calculateRoutes = useCallback((placesToRoute: Place[]) => { 
     if (!map || !isNaverLoadedParam || placesToRoute.length < 2) return [];
 
     const polylines: any[] = [];
@@ -478,7 +472,7 @@ export const useMapFeatures = (map: any, isNaverLoadedParam: boolean) => {
   return {
     addMarkers,
     clearMarkersAndUiElements: clearAllRoutes, 
-    calculateRoutes, // This is (placesToRoute: Place[]) => any[]
+    calculateRoutes,
     renderItineraryRoute,
     clearAllRoutes,
     highlightSegment,

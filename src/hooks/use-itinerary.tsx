@@ -1,11 +1,15 @@
-
 import { toast } from 'sonner';
-import type { ItineraryDay, Place } from '@/types'; // Ensure Place is imported if generateItinerary needs it explicitly
+import type { ItineraryDay, Place, SelectedPlace as CoreSelectedPlace } from '@/types'; // CoreSelectedPlace 추가
 
 import { useItineraryState } from './itinerary/useItineraryState';
-import { useItineraryParser } from './itinerary/useItineraryParser';
+import { useItineraryParser } from './itinerary/useItineraryParser'; // 경로 수정
 import { useItineraryGenerator } from './itinerary/useItineraryGenerator';
 import { useItineraryEvents } from './itinerary/useItineraryEvents';
+// useScheduleStore import 추가 (가이드에는 없었지만, parseServerResponse에서 사용될 수 있음)
+// 만약 useScheduleStore가 이 파일에서 직접 사용되지 않는다면, 이 import는 필요 없습니다.
+// useItineraryParser 내부에서 currentSelectedPlaces를 인자로 받으므로,
+// 이 파일에서는 useScheduleStore를 직접 참조할 필요가 없을 수 있습니다.
+// import { useScheduleStore } from '@/store/useScheduleStore';
 
 export const useItinerary = () => {
   const {
@@ -20,7 +24,8 @@ export const useItinerary = () => {
     handleSelectItineraryDay,
   } = useItineraryState();
 
-  const { parseServerResponse } = useItineraryParser();
+  // useItineraryParser hook 사용법 수정
+  const itineraryParser = useItineraryParser(); 
 
   const { generateItinerary, createDebugItinerary } = useItineraryGenerator({
     setItinerary,
@@ -29,27 +34,29 @@ export const useItinerary = () => {
     setIsItineraryCreated,
   });
 
+  // useItineraryEvents에 parseServerResponse 함수 전달 시, 올바른 함수를 전달하도록 수정
   useItineraryEvents({
     setItinerary,
     setSelectedItineraryDay,
     setShowItinerary,
     setIsItineraryCreated,
-    parseServerResponse,
+    parseServerResponse: itineraryParser.parseServerResponse, // 수정된 부분
   });
-
-  // This function is kept for compatibility if it was intended to be called directly
-  // with an already parsed ItineraryDay[] array.
-  // It now primarily dispatches the 'itineraryCreated' event, and the listener handles state.
-  const handleServerItineraryResponse = (serverItinerary: ItineraryDay[]): ItineraryDay[] => {
-    console.log("서버 일정 응답 처리 시작 (useItinerary - refactored):", {
-      일수: serverItinerary?.length || 0,
-      첫날장소수: serverItinerary?.[0]?.places?.length || 0,
+  
+  const handleServerItineraryResponse = (
+    serverItineraryData: any, // 서버 응답은 any 타입으로 유지하고, 파서에서 처리
+    currentSelectedPlaces: CoreSelectedPlace[] // currentSelectedPlaces 인자 추가
+  ): ItineraryDay[] => {
+    console.log("서버 일정 응답 처리 시작 (useItinerary):", {
+      일수: serverItineraryData?.schedule?.length || 0, // serverItineraryData가 실제 서버 응답 객체라고 가정
     });
 
-    if (!serverItinerary || serverItinerary.length === 0) {
-      console.warn("[useItinerary] handleServerItineraryResponse: 빈 일정이 전달되었습니다.");
+    // itineraryParser.parseServerResponse를 사용하여 파싱
+    const parsedItinerary = itineraryParser.parseServerResponse(serverItineraryData, currentSelectedPlaces);
+
+    if (!parsedItinerary || parsedItinerary.length === 0) {
+      console.warn("[useItinerary] handleServerItineraryResponse: 파싱된 일정이 없습니다.");
       toast.info("생성된 일정이 없습니다. 다른 조건으로 시도해보세요.");
-      // Dispatch event with empty itinerary so listeners can react (e.g., clear UI)
       const event = new CustomEvent('itineraryCreated', {
         detail: { itinerary: [], selectedDay: null }
       });
@@ -58,30 +65,24 @@ export const useItinerary = () => {
     }
 
     try {
-      // Determine selected day based on the first day of the received itinerary
       let dayToSelectInitial: number | null = null;
-      if (serverItinerary.length > 0) {
-        dayToSelectInitial = serverItinerary[0].day || 1; // Default to 1 if day prop is missing/falsy
+      if (parsedItinerary.length > 0) {
+        dayToSelectInitial = parsedItinerary[0].day || 1;
       }
 
       const event = new CustomEvent('itineraryCreated', {
         detail: { 
-          itinerary: serverItinerary,
+          itinerary: parsedItinerary,
           selectedDay: dayToSelectInitial 
         }
       });
-      console.log("[useItinerary] handleServerItineraryResponse: itineraryCreated 이벤트 발생 (from handleServerItineraryResponse)");
+      console.log("[useItinerary] handleServerItineraryResponse: itineraryCreated 이벤트 발생");
       window.dispatchEvent(event);
       
-      // Note: Downstream events like 'forceRerender' and 'itineraryWithCoordinatesReady'
-      // are now dispatched by the 'itineraryCreated' event listener in useItineraryEvents.
-      // This centralizes the handling of a "completed" itinerary.
-
-      return serverItinerary;
+      return parsedItinerary;
     } catch (error) {
       console.error("[useItinerary] handleServerItineraryResponse 처리 중 오류:", error);
       toast.error("일정 처리 중 오류가 발생했습니다.");
-      // Dispatch event with empty itinerary on error
       const errorEvent = new CustomEvent('itineraryCreated', {
         detail: { itinerary: [], selectedDay: null }
       });
@@ -95,13 +96,13 @@ export const useItinerary = () => {
     selectedItineraryDay,
     showItinerary,
     isItineraryCreated,
-    setItinerary, // Exporting setters for external control if needed
+    setItinerary,
     setSelectedItineraryDay,
     setShowItinerary,
     setIsItineraryCreated,
     handleSelectItineraryDay,
-    generateItinerary, // From useItineraryGenerator
+    generateItinerary,
     handleServerItineraryResponse,
-    createDebugItinerary, // From useItineraryGenerator
+    createDebugItinerary,
   };
 };
