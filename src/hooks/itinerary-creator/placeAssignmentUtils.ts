@@ -1,9 +1,10 @@
 
-import { Place, ItineraryPlaceWithTime } from '@/types/core';
+import { Place, ItineraryPlaceWithTime, ItineraryDay } from '@/types/core'; // ItineraryDay 임포트 경로 수정
 import { format, addMinutes } from 'date-fns';
 import { PlaceWithUsedFlag } from '../../utils/schedule';
 import { calculateTotalDistance } from '../../utils/distance';
-import { ItineraryDay } from './useItineraryCreatorCore';
+// ItineraryDay 임포트를 위에서 이미 했으므로 아래 라인 제거
+// import { ItineraryDay } from './useItineraryCreatorCore'; 
 import { categorizePlaces, calculateDailyQuotas } from './placeCategorizer';
 import { scheduleDayActivities } from './dayActivityScheduler';
 
@@ -94,7 +95,7 @@ export const assignPlacesToDays = ({
       dayNumber: day,
       startTime: currentTimeForActivities,
       startPlace: currentPlaceForDayStart,
-      availableAttractions: attractions, // These arrays will be mutated by scheduleDayActivities
+      availableAttractions: attractions,
       availableRestaurants: restaurants,
       availableCafes: cafes,
       quotas,
@@ -126,12 +127,24 @@ export const assignPlacesToDays = ({
     const scheduledPlacesCount = dayPlacesWithTime.length - (currentPlaceForDayStart ? 1 : 0);
     console.log(`${day}일차 일정: 총 ${dayPlacesWithTime.length}개 장소 (숙소 포함), 활동 ${scheduledPlacesCount}개, 총 거리 ${totalDistanceForDay.toFixed(2)}km`);
 
+    // ItineraryDay 타입에 맞게 dayOfWeek와 date 추가
+    const dayOfWeekMap = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const dayOfWeek = dayOfWeekMap[currentDayDate.getDay()];
+    const dateStr = `${(currentDayDate.getMonth() + 1).toString().padStart(2, '0')}/${currentDayDate.getDate().toString().padStart(2, '0')}`;
+
+
     itinerary.push({
       day,
       places: dayPlacesWithTime,
       totalDistance: totalDistanceForDay,
+      // ItineraryDay 타입에 필요한 나머지 필드 추가 (기본값 또는 계산된 값)
+      routeData: { nodeIds: [], linkIds: [], segmentRoutes: [] }, // 기본값
+      interleaved_route: [], // 기본값
+      dayOfWeek: dayOfWeek, 
+      date: dateStr, 
     });
   }
 
   return itinerary;
 };
+

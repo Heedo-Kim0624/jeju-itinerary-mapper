@@ -1,9 +1,12 @@
 import { useState } from 'react';
-import { Place, SchedulePayload, ItineraryPlaceWithTime, CategoryName } from '@/types/supabase';
-import { useItineraryCreator, ItineraryDay } from '../use-itinerary-creator';
+import { Place, SchedulePayload, ItineraryPlaceWithTime, CategoryName, ItineraryDay } from '@/types/core'; // ItineraryDay 임포트 경로 수정 및 타입 사용
+// use-itinerary-creator에서 ItineraryDay는 더 이상 export하지 않음
+// import { useItineraryCreator, ItineraryDay as CreatorItineraryDay } from '../use-itinerary-creator';
+import { useItineraryCreator } from '../use-itinerary-creator';
 import { useScheduleGenerator } from '../use-schedule-generator';
 import { toast } from 'sonner';
 import { NewServerScheduleResponse, isNewServerScheduleResponse, ServerScheduleItem } from '@/types/schedule';
+import { getDateStringMMDD, getDayOfWeekString } from '@/hooks/itinerary/itineraryUtils'; // 날짜 유틸리티 함수 임포트
 
 export const useItineraryActions = () => {
   const [itinerary, setItinerary] = useState<ItineraryDay[] | null>(null);
@@ -38,7 +41,7 @@ export const useItineraryActions = () => {
         종료시간: endTime
       });
       
-      const generatedItinerary = createItinerary(
+      const generatedItineraryFromCreator = createItinerary( // 변수명 변경하여 타입 혼동 방지
         placesToUse,
         startDate,
         endDate,
@@ -46,22 +49,37 @@ export const useItineraryActions = () => {
         endTime
       );
       
-      if (generatedItinerary.length === 0) {
+      if (generatedItineraryFromCreator.length === 0) {
         toast.error("일정을 생성할 수 없습니다. 더 많은 장소를 선택해주세요.");
         return null;
       }
+
+      // CreatorItineraryDay[] (실제로는 Core ItineraryDay와 거의 유사)를 ItineraryDay[]로 변환 (dayOfWeek, date 추가)
+      const finalGeneratedItinerary: ItineraryDay[] = generatedItineraryFromCreator.map((dayData, index) => {
+        const currentDayDt = new Date(startDate);
+        currentDayDt.setDate(startDate.getDate() + index);
+        return {
+          ...dayData,
+          dayOfWeek: getDayOfWeekString(currentDayDt),
+          date: getDateStringMMDD(currentDayDt),
+          // routeData와 interleaved_route는 useItineraryCreatorCore에서 이미 기본값으로 채워져 있을 수 있음
+          // 만약 없다면 여기서 기본값을 제공해야 함
+          routeData: dayData.routeData || { nodeIds: [], linkIds: [], segmentRoutes: [] },
+          interleaved_route: dayData.interleaved_route || [],
+        };
+      });
       
-      setItinerary(generatedItinerary);
+      setItinerary(finalGeneratedItinerary);
       setSelectedItineraryDay(1); // 항상 첫 번째 일차를 기본으로 선택
       setShowItinerary(true);
       
       console.log("일정 생성 완료:", {
-        일수: generatedItinerary.length,
-        총장소수: generatedItinerary.reduce((sum, day) => sum + day.places.length, 0),
-        첫날장소: generatedItinerary[0]?.places.map(p => p.name).join(', ')
+        일수: finalGeneratedItinerary.length,
+        총장소수: finalGeneratedItinerary.reduce((sum, day) => sum + day.places.length, 0),
+        첫날장소: finalGeneratedItinerary[0]?.places.map(p => p.name).join(', ')
       });
       
-      return generatedItinerary;
+      return finalGeneratedItinerary;
     } catch (error) {
       console.error("일정 생성 오류:", error);
       toast.error("일정 생성 중 오류가 발생했습니다.");
@@ -74,9 +92,8 @@ export const useItineraryActions = () => {
     try {
       toast.loading("서버에 일정 생성 요청 중...");
       
-      const serverResponse = await generateSchedule(payload); // This now returns NewServerScheduleResponse | null
+      const serverResponse = await generateSchedule(payload);
       
-      // 타입 가드를 사용하여 안전하게 필드 접근
       if (!serverResponse || !isNewServerScheduleResponse(serverResponse) || 
           !serverResponse.schedule || serverResponse.schedule.length === 0 || 
           !serverResponse.route_summary || serverResponse.route_summary.length === 0) {
@@ -86,57 +103,63 @@ export const useItineraryActions = () => {
       }
       
       const dayOfWeekMap: { [key: string]: number } = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
-      const tripStartDayOfWeek = tripStartDate.getDay();
+      // const tripStartDayOfWeek = tripStartDate.getDay(); // 이 변수는 직접 사용되지 않고, 날짜 계산에 tripStartDate가 사용됨
 
-      // serverResponse is NewServerScheduleResponse
-      const formattedItinerary: ItineraryDay[] = serverResponse.route_summary.map(summary => {
-        const routeDayOfWeekString = summary.day.substring(0, 3); // "Mon", "Tue", etc.
-        const routeDayOfWeek = dayOfWeekMap[routeDayOfWeekString];
+      const formattedItinerary: ItineraryDay[] = serverResponse.route_summary.map((summary, index) => {
+        // 날짜 계산 로직 (useScheduleParser.ts와 유사하게)
+        const routeDayAbbrev = summary.day.substring(0, 3);
+        const routeDayOfWeekIndex = dayOfWeekMap[routeDayAbbrev];
+        const tripStartDayOfWeekIndex = tripStartDate.getDay();
+        let dayNumberOffset = routeDayOfWeekIndex - tripStartDayOfWeekIndex;
+        if (dayNumberOffset < 0) dayNumberOffset += 7;
         
-        let tripDayNumber = routeDayOfWeek - tripStartDayOfWeek + 1;
-        if (tripDayNumber <= 0) tripDayNumber += 7;
-        
-        // serverResponse.schedule is ServerScheduleItem[]
-        // 해당 날짜의 장소만 필터링 (선택적: 서버가 이미 날짜별로 구분된 스케줄을 제공하지 않는다면)
-        // 여기서는 일단 모든 스케줄 아이템을 해당 날짜와 연관된 것으로 간주하거나,
-        // 또는 route_summary의 interleaved_route에 있는 장소 ID와 매칭되는 schedule item을 찾아야 함.
-        // 현재 ServerScheduleItem에는 ID가 옵셔널이라, place_name 기반으로 찾거나, ID가 있다면 ID 기반.
-        // 단순화를 위해, 서버에서 온 schedule을 모두 포함시키고, 클라이언트에서 필요시 필터링한다고 가정.
-        // 또는, 서버가 route_summary의 순서와 schedule의 순서를 일치시켜준다고 가정.
-        // 여기서는 summary.interleaved_route의 장소 노드 ID를 사용하여 schedule에서 매칭되는 장소를 찾아봅니다.
+        const currentTripDate = new Date(tripStartDate);
+        // summary.day가 "Mon (Day 1)" 형식일 수 있으므로, 순수 요일만 사용하고 실제 날짜는 tripStartDate와 index 기반으로 계산
+        // 또는 서버 응답의 dayIndex나 유사한 값을 사용해야 정확한 날짜 매핑 가능
+        // 여기서는 route_summary의 순서(index)를 기반으로 날짜를 계산합니다.
+        currentTripDate.setDate(tripStartDate.getDate() + dayNumberOffset + Math.floor(index / 7) * 7); // 주차 고려
+        // 더 정확한 날짜 계산을 위해서는 서버 응답에 `day_offset_from_trip_start` 같은 필드가 있으면 좋음
+        // 임시로, route_summary의 순서(index)를 여행 시작일로부터의 offset으로 사용한다고 가정.
+        const actualDayDate = new Date(tripStartDate);
+        actualDayDate.setDate(tripStartDate.getDate() + index);
+
+
         const placeNodeIdsInRoute = summary.interleaved_route
-            .filter((id, index) => index % 2 === 0) // 노드는 짝수 인덱스
+            .filter((id, idx) => idx % 2 === 0)
             .map(id => String(id));
 
         const dayPlaces = serverResponse.schedule
             .filter(item => {
-                // item.id가 숫자나 문자열일 수 있고, placeNodeIdsInRoute는 문자열 배열
                 const itemIdStr = item.id !== undefined ? String(item.id) : null;
-                return itemIdStr && placeNodeIdsInRoute.includes(itemIdStr);
+                // schedule item의 time_block (e.g., "Mon_09")과 summary.day (e.g., "Mon (Day 1)")의 요일 부분이 일치하는지 확인
+                const scheduleItemDayAbbrev = item.time_block.substring(0, 3);
+                return itemIdStr && placeNodeIdsInRoute.includes(itemIdStr) && scheduleItemDayAbbrev === routeDayAbbrev;
             })
-            .map((item: ServerScheduleItem) => ({ // item is ServerScheduleItem
+            .map((item: ServerScheduleItem) => ({
                 id: item.id?.toString() || item.place_name,
                 name: item.place_name,
                 category: item.place_type as CategoryName, 
                 timeBlock: item.time_block,
-                // Default values for properties not present in ServerScheduleItem, to satisfy ItineraryPlaceWithTime
                 x:0, y:0, address:'', phone:'', description:'', rating:0, image_url:'', road_address:'', homepage:'',
                 isSelected: false, isCandidate: false, 
-            } as ItineraryPlaceWithTime)); // Cast to ItineraryPlaceWithTime
+            } as ItineraryPlaceWithTime));
 
-        // 만약 dayPlaces가 비어있다면, 모든 장소를 해당일에 할당하는 이전 로직을 임시로 사용할 수 있지만,
-        // 장기적으로는 서버 응답이나 매칭 로직을 개선해야 함.
-        // For now, if no places specifically match node IDs in route for this day, it will be empty. This might be desired.
+        // tripDayNumber는 1부터 시작하도록 index + 1
+        const tripDayNumber = index + 1;
 
         return {
           day: tripDayNumber,
-          places: dayPlaces, // These are ItineraryPlaceWithTime[]
+          places: dayPlaces,
           totalDistance: summary.total_distance_m / 1000,
           interleaved_route: summary.interleaved_route,
           routeData: { 
-            nodeIds: placeNodeIdsInRoute, // Use already filtered node IDs
+            nodeIds: placeNodeIdsInRoute,
             linkIds: summary.interleaved_route.filter((_, idx) => idx % 2 !== 0).map(String),
-          }
+            // segmentRoutes는 서버에서 직접 제공되지 않으므로 기본값 설정
+            segmentRoutes: [], 
+          },
+          dayOfWeek: getDayOfWeekString(actualDayDate), // 계산된 날짜 사용
+          date: getDateStringMMDD(actualDayDate),      // 계산된 날짜 사용
         };
       });
       
@@ -186,24 +209,16 @@ export const useItineraryActions = () => {
       날짜: dates
     });
     
-    // 서버 API를 통한 일정 생성
     if (payload && dates?.startDate) {
       console.log("서버 API를 통한 일정 생성 시도 (useItineraryActions)");
-      // return handleServerItineraryCreation(payload, dates.startDate); // This returns Promise
-      // To keep it simple for now, let's make it async or handle promise if needed by caller
-      // For now, just calling it. The caller (useItinerary) doesn't seem to await this.
-      // This needs careful review of how useItinerary and useLeftPanel use this.
-      // For now, let's assume the primary generation path is via ScheduleGenerator -> useScheduleManagement.
-      // This path might be for a different button/flow.
        handleServerItineraryCreation(payload, dates.startDate).then(result => {
          if (result) {
-           setShowItinerary(true); // Ensure UI updates if server call is successful
+           setShowItinerary(true);
          }
        });
-       return null; // Or return a promise if the caller expects it
+       return null; 
     }
     
-    // 로컬 알고리즘을 통한 일정 생성 (기존 방식, 폴백)
     console.log("로컬 알고리즘을 통한 일정 생성 (폴백)");
     const result = generateItinerary(
       selectedPlaces,
@@ -215,7 +230,7 @@ export const useItineraryActions = () => {
     
     if (result) {
       toast.success("일정이 성공적으로 생성되었습니다!");
-      setShowItinerary(true); // 명시적으로 일정 패널을 표시하도록 설정
+      setShowItinerary(true);
     }
     
     return result;
