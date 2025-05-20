@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Place, ItineraryDay } from '@/types'; // @/types에서 가져오도록 변경
 import PlaceCart from './PlaceCart';
-import ScheduleViewer from './ScheduleViewer';
+import ContainedScheduleViewer from './ContainedScheduleViewer'; // Added
 
 interface LeftPanelContainerProps {
   showItinerary: boolean;
@@ -75,17 +75,15 @@ const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
   }, [showItinerary, itinerary, selectedItineraryDay, localIsGenerating]);
 
   if (showItinerary && itinerary && itinerary.length > 0) {
-    console.log("LeftPanelContainer: Rendering ScheduleViewer directly");
+    console.log("LeftPanelContainer: Rendering ContainedScheduleViewer");
     return (
-      <div className="fixed top-0 left-0 w-[300px] h-full bg-white border-r border-gray-200 z-40 shadow-md">
-        <ScheduleViewer
-          schedule={itinerary}
-          selectedDay={selectedItineraryDay}
-          onDaySelect={onSelectDay}
-          onClose={handleCloseItinerary}
-          startDate={dates?.startDate || new Date()}
-        />
-      </div>
+      <ContainedScheduleViewer
+        itinerary={itinerary}
+        selectedDay={selectedItineraryDay}
+        onSelectDay={onSelectDay}
+        onClose={handleCloseItinerary}
+        startDate={dates?.startDate || new Date()}
+      />
     );
   }
 
