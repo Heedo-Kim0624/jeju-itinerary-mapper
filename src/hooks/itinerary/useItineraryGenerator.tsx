@@ -1,7 +1,6 @@
-
 import { toast } from 'sonner';
 import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types';
-import { useItineraryCreator, ItineraryDay as CreatorItineraryDay } from '../use-itinerary-creator';
+import { useItineraryCreator } from '../use-itinerary-creator';
 import { getDayOfWeekString, getDateStringMMDD } from './itineraryUtils';
 
 interface UseItineraryGeneratorProps {
