@@ -1,4 +1,3 @@
-
 import { useMapInitialization } from '@/hooks/map/useMapInitialization';
 import { useMapNavigation } from '@/hooks/map/useMapNavigation';
 // import { useMapMarkers } from '@/hooks/map/useMapMarkers'; // Deprecated
@@ -50,23 +49,25 @@ const useMapCore = () => {
     setServerRoutes: setServerRoutesBase
   } = useServerRoutes();
 
-  // setServerRoutes 함수 수정 - 3개 인자 전달
+  // setServerRoutes 함수 수정 - 함수형 업데이트 처리
   const setServerRoutes = (
     dayRoutes: Record<number, ServerRouteResponse> | 
                ((prevRoutes: Record<number, ServerRouteResponse>) => Record<number, ServerRouteResponse>)
   ) => {
     if (typeof dayRoutes === 'function') {
-        // 3개 인자 모두 전달
+        // 함수를 먼저 실행하여 결과 객체를 얻음
+        const newRoutes = dayRoutes(serverRoutesData); 
+        // 객체를 전달
         setServerRoutesBase(
-          prev => dayRoutes(prev),
-          showGeoJson, // geoJsonHookState.showGeoJson 대신 직접 가져온 showGeoJson 사용
+          newRoutes,
+          showGeoJson, 
           setShowGeoJson
         );
     } else {
-        // 3개 인자 모두 전달
+        // 객체를 직접 전달
         setServerRoutesBase(
           dayRoutes,
-          showGeoJson, // geoJsonHookState.showGeoJson 대신 직접 가져온 showGeoJson 사용
+          showGeoJson, 
           setShowGeoJson
         );
     }
@@ -141,4 +142,3 @@ const useMapCore = () => {
 };
 
 export default useMapCore;
-
