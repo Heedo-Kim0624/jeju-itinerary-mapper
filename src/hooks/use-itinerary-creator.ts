@@ -2,4 +2,5 @@
 /**
  * Re-export from the new modular structure
  */
-export { useItineraryCreator, ItineraryDay } from './itinerary-creator/useItineraryCreatorCore';
+export { useItineraryCreator } from './itinerary-creator/useItineraryCreatorCore';
+export type { ItineraryDay } from './itinerary-creator/useItineraryCreatorCore'; // 'export type' 사용

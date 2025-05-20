@@ -1,10 +1,10 @@
 import { toast } from 'sonner';
-import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types';
-import { useItineraryCreator } from '../use-itinerary-creator';
+import type { Place, ItineraryDay as CoreItineraryDayType, ItineraryPlaceWithTime } from '@/types'; // ItineraryDay를 CoreItineraryDayType로 가져옴
+import { useItineraryCreator, ItineraryDay as CreatorItineraryDayType } from '../use-itinerary-creator'; // ItineraryDay를 CreatorItineraryDayType로 가져옴
 import { getDayOfWeekString, getDateStringMMDD } from './itineraryUtils';
 
 interface UseItineraryGeneratorProps {
-  setItinerary: (itinerary: ItineraryDay[] | null) => void;
+  setItinerary: (itinerary: CoreItineraryDayType[] | null) => void; // CoreItineraryDayType 사용
   setSelectedItineraryDay: (day: number | null) => void;
   setShowItinerary: (show: boolean) => void;
   setIsItineraryCreated: (created: boolean) => void;
@@ -24,14 +24,15 @@ export const useItineraryGenerator = ({
     endDate: Date,
     startTime: string,
     endTime: string
-  ): ItineraryDay[] => { 
+  ): CoreItineraryDayType[] => { // CoreItineraryDayType 사용
     try {
       if (placesToUse.length === 0) {
         toast.error("선택된 장소가 없습니다.");
         return [];
       }
 
-      const creatorItineraryResult: CreatorItineraryDay[] = clientSideCreateItinerary(
+      // clientSideCreateItinerary는 CreatorItineraryDayType[]를 반환합니다.
+      const creatorItineraryResult: CreatorItineraryDayType[] = clientSideCreateItinerary(
         placesToUse,
         startDate,
         endDate,
@@ -44,15 +45,25 @@ export const useItineraryGenerator = ({
         return [];
       }
 
-      const mappedItinerary: ItineraryDay[] = creatorItineraryResult.map((creatorDay, index) => {
+      // CreatorItineraryDayType[]를 CoreItineraryDayType[]로 매핑합니다.
+      const mappedItinerary: CoreItineraryDayType[] = creatorItineraryResult.map((creatorDay, index) => {
         const currentDayDate = new Date(startDate);
         currentDayDate.setDate(startDate.getDate() + index);
         
         const mappedPlaces: ItineraryPlaceWithTime[] = creatorDay.places.map(p_creator => ({
             ...p_creator,
+            // ItineraryPlaceWithTime에 필요한 모든 속성을 여기서 보장해야 합니다.
+            // Place에서 상속받는 속성 외에 추가적으로 필요한 속성이 있다면 기본값을 설정합니다.
             x: p_creator.x ?? 0, 
-            y: p_creator.y ?? 0, 
-        } as ItineraryPlaceWithTime));
+            y: p_creator.y ?? 0,
+            // 예시: arriveTime, departTime 등 ItineraryPlaceWithTime에만 있는 속성
+            arriveTime: p_creator.arriveTime || "", // 기본값 또는 p_creator에서 가져옴
+            departTime: p_creator.departTime || "", // 기본값 또는 p_creator에서 가져옴
+            stayDuration: p_creator.stayDuration || 0, // 기본값 또는 p_creator에서 가져옴
+            travelTimeToNext: p_creator.travelTimeToNext || "", // 기본값 또는 p_creator에서 가져옴
+            timeBlock: p_creator.timeBlock || "", // 기본값 또는 p_creator에서 가져옴
+            geoNodeId: p_creator.geoNodeId || p_creator.id, // 기본값 또는 p_creator에서 가져옴
+        } as ItineraryPlaceWithTime)); // 타입 단언 사용
 
         return {
           day: creatorDay.day,
@@ -60,6 +71,7 @@ export const useItineraryGenerator = ({
           totalDistance: creatorDay.totalDistance,
           dayOfWeek: getDayOfWeekString(currentDayDate),
           date: getDateStringMMDD(currentDayDate),
+          // CoreItineraryDayType에 필요한 나머지 필수 필드 추가
           routeData: { nodeIds: [], linkIds: [], segmentRoutes: [] }, 
           interleaved_route: [], 
         };
@@ -82,8 +94,8 @@ export const useItineraryGenerator = ({
     }
   };
   
-  const createDebugItinerary = (startDateInput: Date | null): ItineraryDay[] => { 
-    const result: ItineraryDay[] = []; 
+  const createDebugItinerary = (startDateInput: Date | null): CoreItineraryDayType[] => { 
+    const result: CoreItineraryDayType[] = []; 
     const startDateToUse = startDateInput || new Date(); 
     
     for (let i = 0; i < 3; i++) {
