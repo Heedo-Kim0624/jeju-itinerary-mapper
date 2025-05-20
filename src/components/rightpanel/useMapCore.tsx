@@ -1,3 +1,4 @@
+
 import { useMapInitialization } from '@/hooks/map/useMapInitialization';
 import { useMapNavigation } from '@/hooks/map/useMapNavigation';
 // import { useMapMarkers } from '@/hooks/map/useMapMarkers'; // Deprecated
@@ -7,6 +8,7 @@ import { useServerRoutes } from '@/hooks/map/useServerRoutes';
 import { useMapFeatures } from '@/hooks/map/useMapFeatures';
 import { Place, ItineraryDay } from '@/types/supabase';
 import { ServerRouteResponse, SegmentRoute } from '@/types/schedule'; // SegmentRoute 추가
+import { useCallback } from 'react'; // useState, useEffect 제거, useCallback만 사용
 
 /**
  * 지도 핵심 기능 통합 훅
@@ -31,21 +33,42 @@ const useMapCore = () => {
     panTo 
   } = useMapNavigation(map);
 
-  const geoJsonHookState = useGeoJsonState(); // Renamed to avoid conflict with direct geoJsonState usage
+  // GeoJsonState에서 필요한 값들 가져오기
+  const geoJsonHookState = useGeoJsonState();
+  const { showGeoJson, toggleGeoJsonVisibility } = geoJsonHookState; // setShowGeoJson 직접 가져오지 않음
+  
+  // setShowGeoJson 함수 생성 (useCallback 사용)
+  const setShowGeoJson = useCallback((show: boolean) => {
+    // showGeoJson 상태와 전달된 show 값이 다를 때만 toggleGeoJsonVisibility 호출
+    if (geoJsonHookState.showGeoJson !== show) { // geoJsonHookState.showGeoJson 사용
+      toggleGeoJsonVisibility();
+    }
+  }, [geoJsonHookState.showGeoJson, toggleGeoJsonVisibility]); // geoJsonHookState.showGeoJson 의존성 추가
 
   const {
     serverRoutesData,
     setServerRoutes: setServerRoutesBase
   } = useServerRoutes();
 
+  // setServerRoutes 함수 수정 - 3개 인자 전달
   const setServerRoutes = (
     dayRoutes: Record<number, ServerRouteResponse> | 
                ((prevRoutes: Record<number, ServerRouteResponse>) => Record<number, ServerRouteResponse>)
   ) => {
     if (typeof dayRoutes === 'function') {
-        setServerRoutesBase(prev => dayRoutes(prev));
+        // 3개 인자 모두 전달
+        setServerRoutesBase(
+          prev => dayRoutes(prev),
+          showGeoJson, // geoJsonHookState.showGeoJson 대신 직접 가져온 showGeoJson 사용
+          setShowGeoJson
+        );
     } else {
-        setServerRoutesBase(dayRoutes);
+        // 3개 인자 모두 전달
+        setServerRoutesBase(
+          dayRoutes,
+          showGeoJson, // geoJsonHookState.showGeoJson 대신 직접 가져온 showGeoJson 사용
+          setShowGeoJson
+        );
     }
   };
   
@@ -98,8 +121,8 @@ const useMapCore = () => {
     calculateRoutes: calculateRoutesWrapper,
     clearMarkersAndUiElements,
     panTo,
-    showGeoJson: geoJsonHookState.showGeoJson,
-    toggleGeoJsonVisibility: geoJsonHookState.toggleGeoJsonVisibility,
+    showGeoJson: geoJsonHookState.showGeoJson, // Correctly expose showGeoJson from the hook state
+    toggleGeoJsonVisibility: geoJsonHookState.toggleGeoJsonVisibility, // Correctly expose toggle
     isGeoJsonLoaded: geoJsonHookState.isGeoJsonLoaded,
     geoJsonNodes: geoJsonHookState.geoJsonNodes,
     geoJsonLinks: geoJsonHookState.geoJsonLinks,
@@ -118,3 +141,4 @@ const useMapCore = () => {
 };
 
 export default useMapCore;
+
