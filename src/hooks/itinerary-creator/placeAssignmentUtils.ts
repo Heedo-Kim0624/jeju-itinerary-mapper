@@ -1,7 +1,9 @@
+
 import { Place, ItineraryPlaceWithTime } from '@/types/core';
 import { format, addMinutes } from 'date-fns';
 import { findNearestPlace, PlaceWithUsedFlag } from '../../utils/schedule';
 import { calculateTotalDistance } from '../../utils/distance';
+import { ItineraryDay } from './useItineraryCreatorCore'; // ItineraryDay 타입을 가져옵니다.
 
 // Interface for assignment parameters
 interface AssignPlacesToDaysParams {
@@ -50,7 +52,7 @@ export const assignPlacesToDays = ({
   
   console.log(`장소 분배: 관광지=${attractionsPerDay}개/일, 식당=${restaurantsPerDay}개/일, 카페=${cafesPerDay}개/일`);
   
-  const itinerary: ItineraryDay[] = [];
+  const itinerary: ItineraryDay[] = []; // ItineraryDay 타입 사용
   
   // Helper function for distance calculation compatible with findNearestPlace
   const distanceBetweenPlaces = (p1: Place, p2: Place): number => {
