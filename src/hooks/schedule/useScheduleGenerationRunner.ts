@@ -9,6 +9,7 @@ import { useSchedulePayload } from './useSchedulePayload';
 import { useScheduleGenerationCore } from './useScheduleGenerationCore';
 import { useFallbackItineraryGenerator } from './useFallbackItineraryGenerator';
 import { useServerResponseHandler } from './useServerResponseHandler';
+import { MapContextGeoNode } from './useScheduleParser'; // MapContextGeoNode 임포트
 
 interface UseScheduleGenerationRunnerProps {
   selectedPlaces: SelectedPlace[];
@@ -44,7 +45,7 @@ export const useScheduleGenerationRunner = ({
   const { processServerResponse } = useScheduleGenerationCore({
     selectedPlaces,
     startDate: dates?.startDate || new Date(),
-    geoJsonNodes: geoJsonNodes as any,
+    geoJsonNodes: geoJsonNodes as MapContextGeoNode[], // 타입 단언 변경: as any -> as MapContextGeoNode[]
     setItinerary,
     setSelectedDay,
     setServerRoutes,

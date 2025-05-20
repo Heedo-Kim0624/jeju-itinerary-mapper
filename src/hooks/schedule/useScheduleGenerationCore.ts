@@ -2,7 +2,8 @@
 import { toast } from 'sonner';
 import { SelectedPlace } from '@/types/supabase';
 import { NewServerScheduleResponse, ServerRouteResponse, ItineraryDay as CoreItineraryDay } from '@/types/core'; // ItineraryDay as CoreItineraryDay 추가
-import { useScheduleParser, updateItineraryWithCoordinates } from './useScheduleParser'; // updateItineraryWithCoordinates 직접 임포트
+// updateItineraryWithCoordinates 직접 임포트 and MapContextGeoNode 추가
+import { useScheduleParser, updateItineraryWithCoordinates, MapContextGeoNode } from './useScheduleParser'; 
 
 const DEBUG_MODE = true;
 
@@ -15,7 +16,7 @@ function debugLog(message: string, data?: any) {
 interface ScheduleGenerationCoreProps {
   selectedPlaces: SelectedPlace[];
   startDate: Date;
-  geoJsonNodes: Record<string, any>; // 타입 유지
+  geoJsonNodes: MapContextGeoNode[]; // 타입 변경: Record<string, any> -> MapContextGeoNode[]
   setItinerary: (itinerary: CoreItineraryDay[]) => void; // CoreItineraryDay[] 사용
   setSelectedDay: (day: number | null) => void;
   setServerRoutes: (routes: Record<number, ServerRouteResponse>) => void;
@@ -134,4 +135,3 @@ export const useScheduleGenerationCore = ({
     triggerItineraryCreatedEvent
   };
 };
-
