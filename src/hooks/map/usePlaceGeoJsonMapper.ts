@@ -1,10 +1,11 @@
 
 import { useCallback } from 'react';
 import type { Place } from '@/types/supabase';
-import type { GeoNodeFeature } from '@/components/rightpanel/geojson/GeoJsonTypes'; // Assuming GeoNodeFeature is the correct type for geoJsonNodes elements
+// GeoNodeFeature 대신 GeoJsonFeature, GeoJsonNodeProperties, GeoCoordinates를 가져옵니다.
+import type { GeoJsonFeature, GeoJsonNodeProperties, GeoCoordinates } from '@/components/rightpanel/geojson/GeoJsonTypes';
 
 interface UsePlaceGeoJsonMapperProps {
-  geoJsonNodes: GeoNodeFeature[];
+  geoJsonNodes: GeoJsonFeature[]; // GeoNodeFeature[] 대신 GeoJsonFeature[] 사용
 }
 
 export const usePlaceGeoJsonMapper = ({ geoJsonNodes }: UsePlaceGeoJsonMapperProps) => {
@@ -20,12 +21,21 @@ export const usePlaceGeoJsonMapper = ({ geoJsonNodes }: UsePlaceGeoJsonMapperPro
 
     return places.map(place => {
       if (place.geoNodeId) {
-        const node = geoJsonNodes.find(n => String(n.properties.NODE_ID) === String(place.geoNodeId));
+        const node = geoJsonNodes.find(n => {
+          // n.properties를 GeoJsonNodeProperties로 타입 변환하여 NODE_ID에 접근합니다.
+          const props = n.properties as GeoJsonNodeProperties;
+          return String(props.NODE_ID) === String(place.geoNodeId);
+        });
         if (node && node.geometry.type === 'Point') {
-          const [lng, lat] = (node.geometry.coordinates as [number, number]);
-          return { ...place, x: lng, y: lat };
+          // node.geometry.coordinates를 GeoCoordinates로 타입 변환하고, 객체 속성으로 접근합니다.
+          const geoCoords = node.geometry.coordinates as GeoCoordinates;
+          if (geoCoords && typeof geoCoords[0] === 'number' && typeof geoCoords[1] === 'number') {
+            return { ...place, x: geoCoords[0], y: geoCoords[1] }; // lng: geoCoords[0], lat: geoCoords[1]
+          } else {
+            console.warn(`[PlaceGeoJsonMapper] Invalid coordinates for geoNodeId ${place.geoNodeId} in place ${place.name}. Keeping original/default coords.`);
+          }
         } else {
-          console.warn(`[PlaceGeoJsonMapper] geoNodeId ${place.geoNodeId} for place ${place.name} not found in geoJsonNodes. Keeping original/default coords.`);
+          console.warn(`[PlaceGeoJsonMapper] geoNodeId ${place.geoNodeId} for place ${place.name} not found or not a Point in geoJsonNodes. Keeping original/default coords.`);
         }
       }
       return {

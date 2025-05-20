@@ -1,7 +1,6 @@
-
 import { useCallback, useRef } from 'react';
 import type { Place, ItineraryDay } from '@/types/supabase';
-import type { GeoNodeFeature, GeoLinkFeature } from '@/components/rightpanel/geojson/GeoJsonTypes';
+import type { GeoJsonFeature, GeoJsonLinkProperties, GeoJsonNodeProperties, GeoCoordinates } from '@/components/rightpanel/geojson/GeoJsonTypes';
 import type { ServerRouteResponse, SegmentRoute } from '@/types/schedule';
 import {
   createNaverPolyline,
@@ -18,8 +17,8 @@ const USER_ROUTE_ZINDEX = 100;
 interface UseRouteManagerProps {
   map: any;
   isNaverLoadedParam: boolean;
-  geoJsonLinks: GeoLinkFeature[];
-  geoJsonNodes: GeoNodeFeature[];
+  geoJsonLinks: GeoJsonFeature[];
+  geoJsonNodes: GeoJsonFeature[];
   mapPlacesWithGeoNodesFn: (places: Place[]) => Place[];
 }
 
@@ -90,7 +89,7 @@ export const useRouteManager = ({
   const renderItineraryRoute = useCallback(
     (
       itineraryDay: ItineraryDay | null,
-      _allServerRoutesInput?: Record<number, ServerRouteResponse>, // Kept for signature, but not used in original logic after GeoJSON
+      _allServerRoutesInput?: Record<number, ServerRouteResponse>,
       onComplete?: () => void
     ) => {
       if (!map || !isNaverLoadedParam) {
@@ -132,15 +131,22 @@ export const useRouteManager = ({
 
         linkIds.forEach(linkId => {
           const linkFeature = geoJsonLinks.find(
-            (feature: GeoLinkFeature) => String(feature.properties.LINK_ID) === String(linkId)
+            (feature: GeoJsonFeature) => { // feature 타입을 GeoJsonFeature로 명시
+              // feature.properties를 GeoJsonLinkProperties로 타입 변환하여 LINK_ID에 접근합니다.
+              const props = feature.properties as GeoJsonLinkProperties;
+              return String(props.LINK_ID) === String(linkId);
+            }
           );
 
           if (linkFeature && linkFeature.geometry && linkFeature.geometry.type === 'LineString' && Array.isArray(linkFeature.geometry.coordinates)) {
-            const coords = linkFeature.geometry.coordinates;
-            const pathCoordsForPolyline = coords.map((coordPair: number[]) => {
-              if (Array.isArray(coordPair) && coordPair.length >= 2 && typeof coordPair[0] === 'number' && typeof coordPair[1] === 'number') {
-                return { lat: coordPair[1], lng: coordPair[0] };
+            const coords = linkFeature.geometry.coordinates as GeoCoordinates[]; // coords는 GeoCoordinates의 배열입니다.
+            
+            // coordPair 타입을 GeoCoordinates로 수정하고, 객체 속성으로 접근합니다.
+            const pathCoordsForPolyline = coords.map((coordPair: GeoCoordinates) => {
+              if (coordPair && typeof coordPair[0] === 'number' && typeof coordPair[1] === 'number') {
+                return { lat: coordPair[1], lng: coordPair[0] }; // lat: coordPair[1], lng: coordPair[0]
               }
+              console.warn('[RouteManager] Invalid coordinate pair encountered in linkFeature geometry:', coordPair);
               return null;
             }).filter(c => c !== null) as { lat: number; lng: number }[];
 
@@ -194,8 +200,12 @@ export const useRouteManager = ({
     clearAllDrawnRoutes();
 
     const routeNodes = route.nodeIds.map(nodeId => {
-      return geoJsonNodes.find(node => String(node.properties.NODE_ID) === String(nodeId));
-    }).filter(Boolean);
+      return geoJsonNodes.find(node => { // node 타입을 GeoJsonFeature로 가정
+        // node.properties를 GeoJsonNodeProperties로 타입 변환하여 NODE_ID에 접근합니다.
+        const props = node.properties as GeoJsonNodeProperties;
+        return String(props.NODE_ID) === String(nodeId);
+      });
+    }).filter(Boolean) as GeoJsonFeature[]; // filter(Boolean) 후 GeoJsonFeature[]로 타입 명시
 
     if (routeNodes.length < 2) {
       console.warn('[RouteManager] Not enough valid nodes to render GeoJSON route');
@@ -204,8 +214,11 @@ export const useRouteManager = ({
 
     const coordinates = routeNodes.map(node => {
       if (node && node.geometry.type === 'Point') {
-        const [lng, lat] = (node.geometry.coordinates as [number, number]);
-        return { lat, lng };
+        // node.geometry.coordinates를 GeoCoordinates로 타입 변환하고, 객체 속성으로 접근합니다.
+        const geoCoords = node.geometry.coordinates as GeoCoordinates;
+        if (geoCoords && typeof geoCoords[0] === 'number' && typeof geoCoords[1] === 'number') {
+          return { lat: geoCoords[1], lng: geoCoords[0] };
+        }
       }
       return null;
     }).filter(Boolean) as { lat: number; lng: number }[];
@@ -237,8 +250,12 @@ export const useRouteManager = ({
     }
 
     const segmentNodes = segment.nodeIds.map(nodeId => {
-      return geoJsonNodes.find(node => String(node.properties.NODE_ID) === String(nodeId));
-    }).filter(Boolean);
+      return geoJsonNodes.find(node => { // node 타입을 GeoJsonFeature로 가정
+        // node.properties를 GeoJsonNodeProperties로 타입 변환하여 NODE_ID에 접근합니다.
+        const props = node.properties as GeoJsonNodeProperties;
+        return String(props.NODE_ID) === String(nodeId);
+      });
+    }).filter(Boolean) as GeoJsonFeature[]; // filter(Boolean) 후 GeoJsonFeature[]로 타입 명시
 
     if (segmentNodes.length < 2) {
       console.warn('[RouteManager] Not enough valid nodes to highlight segment');
@@ -247,8 +264,11 @@ export const useRouteManager = ({
 
     const coordinates = segmentNodes.map(node => {
       if (node && node.geometry.type === 'Point') {
-        const [lng, lat] = (node.geometry.coordinates as [number, number]);
-        return { lat, lng };
+         // node.geometry.coordinates를 GeoCoordinates로 타입 변환하고, 객체 속성으로 접근합니다.
+        const geoCoords = node.geometry.coordinates as GeoCoordinates;
+        if (geoCoords && typeof geoCoords[0] === 'number' && typeof geoCoords[1] === 'number') {
+          return { lat: geoCoords[1], lng: geoCoords[0] };
+        }
       }
       return null;
     }).filter(Boolean) as { lat: number; lng: number }[];
