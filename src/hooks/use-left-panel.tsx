@@ -1,219 +1,124 @@
-import { useState, useEffect, useCallback } from 'react';
+
+import { useEffect } from 'react';
 import { useSelectedPlaces } from './use-selected-places';
 import { useTripDetails } from './use-trip-details';
 import { useCategoryResults } from './use-category-results';
-import { useItinerary } from './use-itinerary'; // ItineraryDay는 여기서 직접 가져오지 않습니다.
-import type { Place, SelectedPlace, ItineraryDay } from '@/types'; // ItineraryDay를 @/types에서 가져옵니다.
+import { useItinerary } from './use-itinerary';
 import { useRegionSelection } from './use-region-selection';
 import { useCategorySelection } from './use-category-selection';
 import { useCategoryHandlers } from './left-panel/use-category-handlers';
-import { useItineraryHandlers } from './left-panel/use-itinerary-handlers';
 import { useInputState } from './left-panel/use-input-state';
-import type { CategoryName } from '@/types'; // CategoryName도 @/types (core.ts) 에서 가져옵니다.
-import { toast } from 'sonner';
+import { useLeftPanelState } from './left-panel/use-left-panel-state';
+import { useItineraryCreation } from './left-panel/use-itinerary-creation';
+import { useCategoryResultHandlers } from './left-panel/use-category-result-handlers';
+import { useEventListeners } from './left-panel/use-event-listeners';
 
 /**
  * 왼쪽 패널 기능 통합 훅
+ * Main hook that composes all left panel functionality
  */
 export const useLeftPanel = () => {
-  // 지역 및 카테고리 선택 기능
+  // Core state management
+  const leftPanelState = useLeftPanelState();
   const regionSelection = useRegionSelection();
   const categorySelection = useCategorySelection();
   const tripDetails = useTripDetails();
-  
-  // 상태 관리
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [currentPanel, setCurrentPanel] = useState<'region' | 'date' | 'category' | 'itinerary'>('region');
-  const [showCategoryResult, setShowCategoryResult] = useState<CategoryName | null>(null);
-  
-  // 입력값 관리
   const { directInputValues, onDirectInputChange } = useInputState();
+  
+  // Set up event listeners
+  useEventListeners(
+    leftPanelState.setIsGenerating,
+    leftPanelState.setItineraryReceived
+  );
 
-  // 키워드 및 입력 관련 기능
+  // Place management
+  const placesManagement = useSelectedPlaces();
+
+  // Itinerary management
+  const itineraryManagement = useItinerary();
+
+  // UI visibility
+  const uiVisibility = {
+    showItinerary: itineraryManagement.showItinerary,
+    setShowItinerary: itineraryManagement.setShowItinerary,
+    showCategoryResult: leftPanelState.showCategoryResult,
+    setShowCategoryResult: leftPanelState.setShowCategoryResult
+  };
+
+  // Category handlers
+  const categoryHandlers = useCategoryHandlers();
+  
+  // Keyword and input management
   const keywordsAndInputs = {
     directInputValues,
     onDirectInputChange,
     handleConfirmCategory: (category: string, finalKeywords: string[], clearSelection: boolean = false) => {
-      categorySelection.handleConfirmCategory(category as CategoryName, finalKeywords, clearSelection);
+      categorySelection.handleConfirmCategory(category as any, finalKeywords, clearSelection);
       if (clearSelection) {
-        setShowCategoryResult(category as CategoryName);
+        leftPanelState.setShowCategoryResult(category as any);
       }
     }
   };
 
-  // 장소 관리 기능
-  const {
-    selectedPlaces,
-    candidatePlaces,
-    selectedPlacesByCategory,
-    handleSelectPlace,
-    handleRemovePlace,
-    handleViewOnMap,
-    allCategoriesSelected,
-    prepareSchedulePayload, // This function is used in handleCreateItinerary
-    isAccommodationLimitReached,
-    handleAutoCompletePlaces,
-    isPlaceSelected
-  } = useSelectedPlaces();
+  // Category result handlers
+  const categoryResultHandlers = useCategoryResultHandlers(
+    regionSelection.selectedRegions,
+    tripDetails,
+    placesManagement.handleAutoCompletePlaces,
+    leftPanelState.setShowCategoryResult
+  );
 
-  const placesManagement = {
-    selectedPlaces,
-    candidatePlaces,
-    selectedPlacesByCategory,
-    handleSelectPlace,
-    handleRemovePlace,
-    handleViewOnMap,
-    allCategoriesSelected,
-    isAccommodationLimitReached,
-    prepareSchedulePayload,
-    handleAutoCompletePlaces,
-    isPlaceSelected
-  };
+  // Itinerary creation logic
+  const itineraryCreation = useItineraryCreation(
+    tripDetails,
+    placesManagement.selectedPlaces,
+    placesManagement.prepareSchedulePayload,
+    itineraryManagement.generateItinerary,
+    itineraryManagement.setShowItinerary,
+    leftPanelState.setCurrentPanel,
+    leftPanelState.setIsGenerating,
+    leftPanelState.setItineraryReceived
+  );
 
-  // 일정 관리 기능 (from useItinerary)
-  const { 
-    itinerary, // 이 itinerary는 useItinerary()가 반환하는 상태이며, 해당 훅 내부에서 @/types의 ItineraryDay[] | null 로 관리됩니다.
-    selectedItineraryDay,
-    showItinerary,
-    isItineraryCreated,
-    setItinerary, 
-    setSelectedItineraryDay,
-    setShowItinerary,
-    setIsItineraryCreated,
-    handleSelectItineraryDay,
-    generateItinerary // 클라이언트 사이드 대체 생성기
-  } = useItinerary();
-
-  const itineraryManagement = {
-    itinerary,
-    selectedItineraryDay,
-    setItinerary, 
-    setSelectedItineraryDay,
-    handleSelectItineraryDay,
-    generateItinerary,
-    isItineraryCreated,
-    setIsItineraryCreated
-  };
-
-  // UI 가시성 관리
-  const uiVisibility = {
-    showItinerary,
-    setShowItinerary,
-    showCategoryResult,
-    setShowCategoryResult
-  };
-
-  // 카테고리 결과 관리
+  // Category results from API
   const { 
     isLoading: isCategoryLoading,
     error: categoryError,
     recommendedPlaces,
     normalPlaces,
     refetch
-  } = useCategoryResults(showCategoryResult, 
-    showCategoryResult ? categorySelection.selectedKeywordsByCategory[showCategoryResult] || [] : [], 
-    regionSelection.selectedRegions);
+  } = useCategoryResults(
+    leftPanelState.showCategoryResult, 
+    leftPanelState.showCategoryResult 
+      ? categorySelection.selectedKeywordsByCategory[leftPanelState.showCategoryResult] || [] 
+      : [], 
+    regionSelection.selectedRegions
+  );
 
   const categoryResults = {
     recommendedPlaces: recommendedPlaces || [],
     normalPlaces: normalPlaces || []
   };
 
-  // 카테고리 핸들러
-  const categoryHandlers = useCategoryHandlers();
-  const handleCategorySelect = (category: string) => categoryHandlers.handleCategorySelect(category, refetch);
-  const handleCloseCategoryResult = () => categoryHandlers.handleCloseCategoryResult(
-    (value: CategoryName | null) => setShowCategoryResult(value)
-  );
-  const handleConfirmCategoryFromButton = () => categoryHandlers.handleConfirmCategory(selectedCategory);
-
-  // 일정 핸들러
-  const itineraryHandlers = useItineraryHandlers(); 
-  
-  // This is the function called by the "경로 생성하기" button
-  const handleInitiateItineraryCreation = useCallback(async () => {
-    console.log('[useLeftPanel] handleInitiateItineraryCreation 호출됨');
-    
-    // Ensure tripDetails and selectedPlaces are valid before calling
-    if (!tripDetails.dates || !tripDetails.startDatetime || !tripDetails.endDatetime) {
-      toast.error("여행 날짜와 시간을 먼저 설정해주세요.");
-      return false;
-    }
-    if (placesManagement.selectedPlaces.length === 0) {
-      toast.error("선택된 장소가 없습니다. 장소를 선택해주세요.");
-      return false;
-    }
-
-    // Call the server-side itinerary creation logic from useItineraryHandlers
-    // This function now primarily calls the server. Client fallback is inside it.
-    const success = await itineraryHandlers.handleCreateItinerary(
-      tripDetails, // TripDetailsForItinerary
-      placesManagement.selectedPlaces as Place[], // Ensure Place[] type
-      placesManagement.prepareSchedulePayload, // (places, startISO, endISO) => SchedulePayload | null
-      itineraryManagement.generateItinerary,  // Client-side fallback: (places, startDate, endDate, startTime, endTime) => ItineraryDay[] | null
-      uiVisibility.setShowItinerary,          // (show: boolean) => void
-      (panel: 'region' | 'date' | 'category' | 'itinerary') => setCurrentPanel(panel) // (panel: string) => void
-    );
-    
-    // If server call was successful (or client fallback worked),
-    // the 'itineraryCreated' event should be dispatched by the respective logic paths.
-    // useItinerary hook listens to this event and updates its state.
-    // The UI should react to changes in useItinerary's state (itinerary, showItinerary, etc.)
-
-    if (success) {
-      console.log('[useLeftPanel] Itinerary creation process initiated (server or client). Waiting for itineraryCreated event.');
-      // No direct setShowItinerary(true) here; let the event handler in useItinerary do it.
-    } else {
-      console.log('[useLeftPanel] Itinerary creation process failed to initiate or complete.');
-      // Ensure loading states are properly reset if failure happens early.
-    }
-    
-    return success;
-  }, [
-      tripDetails, 
-      placesManagement, 
-      itineraryManagement.generateItinerary, // Pass client generator as fallback
-      itineraryHandlers, 
-      uiVisibility.setShowItinerary, 
-      setCurrentPanel
-  ]);
-  
-  const handleCloseItineraryPanel = () => { // Renamed to avoid confusion
-    itineraryHandlers.handleCloseItinerary(
-      uiVisibility.setShowItinerary, 
-      (panel: 'region' | 'date' | 'category' | 'itinerary') => setCurrentPanel(panel)
-    );
-    itineraryManagement.setItinerary(null); // Clear itinerary data
-    itineraryManagement.setIsItineraryCreated(false); // Reset created flag
-  };
-
+  // Handle panel navigation and view changes based on itinerary state
   useEffect(() => {
-    // This effect responds to changes triggered by 'itineraryCreated' event inside useItinerary
     if (itineraryManagement.isItineraryCreated && itineraryManagement.itinerary && itineraryManagement.itinerary.length > 0) {
       if (!uiVisibility.showItinerary) {
          console.log("useLeftPanel: Itinerary created, ensuring panel is visible.");
          uiVisibility.setShowItinerary(true);
       }
-      if (currentPanel !== 'itinerary') {
-        setCurrentPanel('itinerary');
+      if (leftPanelState.currentPanel !== 'itinerary') {
+        leftPanelState.setCurrentPanel('itinerary');
       }
     }
-  }, [itineraryManagement.isItineraryCreated, itineraryManagement.itinerary, uiVisibility.showItinerary, currentPanel]);
+  }, [
+    itineraryManagement.isItineraryCreated, 
+    itineraryManagement.itinerary, 
+    uiVisibility.showItinerary, 
+    leftPanelState.currentPanel
+  ]);
 
-  const [, setForceUpdate] = useState(0);
-  useEffect(() => {
-    const forceRerenderListener = () => {
-      console.log("[useLeftPanel] 'forceRerender' event caught, updating dummy state.");
-      setForceUpdate(prev => prev + 1);
-    };
-    window.addEventListener('forceRerender', forceRerenderListener);
-    return () => {
-      window.removeEventListener('forceRerender', forceRerenderListener);
-    };
-  }, []);
-
-  // `showCategoryResultScreen` 상태가 사용되지 않는 것으로 보여 주석 처리했으므로, 반환 객체에서도 제거합니다.
-  // 만약 필요하다면 복원해야 합니다.
+  // Combine and return all necessary functionality
   return {
     regionSelection,
     categorySelection,
@@ -221,22 +126,22 @@ export const useLeftPanel = () => {
     placesManagement,
     tripDetails,
     uiVisibility,
-    itineraryManagement: { // Pass through from useItinerary
-        itinerary: itineraryManagement.itinerary, // ItineraryDay[] | null 타입 (@/types 기준)
-        selectedItineraryDay: itineraryManagement.selectedItineraryDay,
-        handleSelectItineraryDay: itineraryManagement.handleSelectItineraryDay,
+    itineraryManagement: {
+      itinerary: itineraryManagement.itinerary,
+      selectedItineraryDay: itineraryManagement.selectedItineraryDay,
+      handleSelectItineraryDay: itineraryManagement.handleSelectItineraryDay,
     },
-    handleCreateItinerary: handleInitiateItineraryCreation, // This is the main action button call
-    selectedCategory,
-    // showCategoryResultScreen, 
-    currentPanel,
+    handleCreateItinerary: itineraryCreation.handleInitiateItineraryCreation,
+    handleCloseItinerary: itineraryCreation.handleCloseItineraryPanel,
+    selectedCategory: leftPanelState.selectedCategory,
+    currentPanel: leftPanelState.currentPanel,
     isCategoryLoading,
     categoryError,
     categoryResults,
-    handleCategorySelect,
-    handleCloseCategoryResult,
-    handleConfirmCategory: handleConfirmCategoryFromButton, 
-    handleCloseItinerary: handleCloseItineraryPanel, // Use renamed
-    isGeneratingItinerary: itineraryHandlers.isGenerating, // Pass through loading state
+    handleCategorySelect: (category: string) => 
+      categoryHandlers.handleCategorySelect(category, refetch),
+    handleCloseCategoryResult: categoryResultHandlers.handleResultClose,
+    handleConfirmCategory: categoryHandlers.handleConfirmCategory,
+    isGeneratingItinerary: leftPanelState.isGenerating,
   };
 };
