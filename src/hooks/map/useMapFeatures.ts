@@ -1,484 +1,55 @@
-import { useCallback, useRef, useEffect, useState } from 'react';
-import { Place, ItineraryDay } from '@/types/supabase';
-import type { GeoNode } from '@/components/rightpanel/geojson/GeoJsonTypes';
-import { ServerRouteResponse, SegmentRoute } from '@/types/schedule';
-import {
-  createNaverPolyline,
-  createNaverLatLng,
-  fitBoundsToCoordinates
-} from '@/utils/map/mapDrawing';
+
 import { useGeoJsonState } from '@/hooks/map/useGeoJsonState';
-import { getCategoryColor, mapCategoryNameToKey } from '@/utils/categoryColors';
-
-const DEFAULT_ROUTE_COLOR = '#007bff'; // Default color, will be overridden by user's request
-const USER_ROUTE_COLOR = '#2563EB'; // User requested blue
-const USER_ROUTE_WEIGHT = 5;
-const USER_ROUTE_OPACITY = 0.7;
-const USER_ROUTE_ZINDEX = 100;
-
+import { usePlaceGeoJsonMapper } from './usePlaceGeoJsonMapper';
+import { useMapInteractionManager } from './useMapInteractionManager';
+import { useRouteManager } from './useRouteManager';
+import type { Place } from '@/types/supabase'; // Ensure Place is imported if used in return types or parameters not covered by sub-hooks
 
 export const useMapFeatures = (map: any, isNaverLoadedParam: boolean) => {
-  const activePolylines = useRef<any[]>([]);
-  const highlightedPathRef = useRef<any>(null);
   const geoJsonState = useGeoJsonState();
 
-  const drawRoutePath = useCallback((
-    currentMap: any,
-    pathCoordinates: { lat: number; lng: number }[],
-    color: string,
-    weight: number = 5,
-    opacity: number = 0.7,
-    zIndex: number = 1
-  ) => {
-    if (!currentMap || !isNaverLoadedParam || pathCoordinates.length < 2) return null;
+  const { mapPlacesWithGeoNodes } = usePlaceGeoJsonMapper({
+    geoJsonNodes: geoJsonState.geoJsonNodes,
+  });
 
-    const validCoords = pathCoordinates.filter(coord => 
-      coord && typeof coord.lat === 'number' && typeof coord.lng === 'number' &&
-      !isNaN(coord.lat) && !isNaN(coord.lng)
-    );
+  const { addMarkers, showRouteForPlaceIndex } = useMapInteractionManager({
+    map,
+    isNaverLoadedParam,
+  });
 
-    if (validCoords.length < 2) {
-      console.warn('[MapFeatures] drawRoutePath: Not enough valid coordinates for path.');
-      return null;
-    }
+  const {
+    renderItineraryRoute,
+    renderGeoJsonRoute,
+    highlightSegment,
+    clearPreviousHighlightedPath,
+    clearAllDrawnRoutes, // This is the new comprehensive clear function for routes
+    calculateAndDrawDirectRoutes,
+  } = useRouteManager({
+    map,
+    isNaverLoadedParam,
+    geoJsonLinks: geoJsonState.geoJsonLinks,
+    geoJsonNodes: geoJsonState.geoJsonNodes,
+    mapPlacesWithGeoNodesFn: mapPlacesWithGeoNodes,
+  });
 
-    const naverPath = validCoords.map(coord => createNaverLatLng(coord.lat, coord.lng));
-    if (naverPath.some(p => p === null)) {
-      console.warn('[MapFeatures] drawRoutePath: Some LatLng conversions failed.');
-      return null;
-    }
-
-    try {
-      const polyline = createNaverPolyline(currentMap, naverPath, {
-        strokeColor: color,
-        strokeWeight: weight,
-        strokeOpacity: opacity,
-        zIndex: zIndex,
-      });
-      return polyline;
-    } catch (error) {
-      console.error('[MapFeatures] Error creating polyline:', error);
-      return null;
-    }
-  }, [isNaverLoadedParam]);
-
-  const clearAllRoutes = useCallback(() => {
-    console.log('[MapFeatures] Clearing all routes and UI elements.');
-    activePolylines.current.forEach(p => {
-      if (p && typeof p.setMap === 'function') p.setMap(null);
-    });
-    activePolylines.current = [];
-
-    if (highlightedPathRef.current && typeof highlightedPathRef.current.setMap === 'function') {
-      highlightedPathRef.current.setMap(null);
-    }
-    highlightedPathRef.current = null;
-  }, []);
-
-  const mapPlacesWithGeoNodes = useCallback((places: Place[]): Place[] => {
-    if (!geoJsonState.geoJsonNodes || geoJsonState.geoJsonNodes.length === 0) {
-      console.warn("[MapFeatures] GeoJSON nodes not available for mapping places.");
-      return places.map(place => ({ 
-        ...place, 
-        x: (typeof place.x === 'number' && !isNaN(place.x)) ? place.x : 0, 
-        y: (typeof place.y === 'number' && !isNaN(place.y)) ? place.y : 0 
-      }));
-    }
-
-    return places.map(place => {
-      if (place.geoNodeId) {
-        const node = geoJsonState.geoJsonNodes.find(n => String(n.properties.NODE_ID) === String(place.geoNodeId));
-        if (node && node.geometry.type === 'Point') {
-          const [lng, lat] = (node.geometry.coordinates as [number, number]);
-          return { ...place, x: lng, y: lat };
-        } else {
-            console.warn(`[MapFeatures] geoNodeId ${place.geoNodeId} for place ${place.name} not found in geoJsonNodes. Keeping original/default coords.`);
-        }
-      }
-      return { 
-        ...place, 
-        x: (typeof place.x === 'number' && !isNaN(place.x)) ? place.x : 0, 
-        y: (typeof place.y === 'number' && !isNaN(place.y)) ? place.y : 0 
-      };
-    });
-  }, [geoJsonState.geoJsonNodes]);
-
-  const renderItineraryRoute = useCallback(
-    (
-      itineraryDay: ItineraryDay | null,
-      allServerRoutesInput?: Record<number, ServerRouteResponse>, 
-      onComplete?: () => void
-    ) => {
-      if (!map || !isNaverLoadedParam) {
-        console.log('[MapFeatures] Map not ready for rendering itinerary route.');
-        if (onComplete) onComplete();
-        return;
-      }
-
-      clearAllRoutes();
-
-      if (!itineraryDay || !itineraryDay.routeData || !itineraryDay.routeData.linkIds || itineraryDay.routeData.linkIds.length === 0) {
-        console.warn('[MapFeatures] No itinerary day or linkIds to render route.');
-        if (itineraryDay && itineraryDay.places && itineraryDay.places.length > 1) {
-            const mappedPlaces = mapPlacesWithGeoNodes(itineraryDay.places);
-            const validPlaces = mappedPlaces.filter(p => 
-                typeof p.x === 'number' && typeof p.y === 'number' && 
-                !isNaN(p.x) && !isNaN(p.y)
-            );
-            if (validPlaces.length > 1) {
-                console.log("[MapFeatures] No linkIds, drawing direct lines between mapped places.");
-                const pathCoordinates = validPlaces.map(p => ({ lat: p.y as number, lng: p.x as number }));
-                const polyline = drawRoutePath(map, pathCoordinates, USER_ROUTE_COLOR, 3, USER_ROUTE_OPACITY, USER_ROUTE_ZINDEX -10); 
-                if (polyline) activePolylines.current.push(polyline);
-                
-                const naverCoords = pathCoordinates.map(c => createNaverLatLng(c.lat, c.lng)).filter(p => p !== null) as any[];
-                if (naverCoords.length > 0) fitBoundsToCoordinates(map, naverCoords);
-            }
-        }
-        if (onComplete) onComplete();
-        return;
-      }
-      
-      try {
-        const { linkIds } = itineraryDay.routeData;
-        console.log(`[MapFeatures] 경로 렌더링: ${linkIds.length}개의 링크 ID 처리 시작. Using geoJsonLinks count: ${geoJsonState.geoJsonLinks.length}`);
-
-        const allRouteCoordinatesForBounds: { lat: number; lng: number }[][] = [];
-        let missingLinkCount = 0;
-
-        linkIds.forEach(linkId => {
-          const linkFeature = geoJsonState.geoJsonLinks.find(
-            (feature: any) => String(feature.properties.LINK_ID) === String(linkId)
-          );
-
-          if (linkFeature && linkFeature.geometry && linkFeature.geometry.type === 'LineString' && Array.isArray(linkFeature.geometry.coordinates)) {
-            const coords = linkFeature.geometry.coordinates; 
-            const pathCoordsForPolyline = coords.map((coordPair: number[]) => {
-              if (Array.isArray(coordPair) && coordPair.length >= 2 && typeof coordPair[0] === 'number' && typeof coordPair[1] === 'number') {
-                return { lat: coordPair[1], lng: coordPair[0] };
-              }
-              return null;
-            }).filter(c => c !== null) as { lat: number; lng: number }[];
-
-            if (pathCoordsForPolyline.length >= 2) {
-              const polyline = drawRoutePath(map, pathCoordsForPolyline, USER_ROUTE_COLOR, USER_ROUTE_WEIGHT, USER_ROUTE_OPACITY, USER_ROUTE_ZINDEX);
-              if (polyline) {
-                activePolylines.current.push(polyline);
-                allRouteCoordinatesForBounds.push(pathCoordsForPolyline);
-              }
-            } else {
-                 console.warn(`[MapFeatures] LINK_ID ${linkId} has insufficient valid coordinates after processing.`);
-            }
-          } else {
-            console.warn(`[MapFeatures] LINK_ID ${linkId}에 해당하는 데이터를 geoJsonLinks에서 찾지 못했거나 형식이 올바르지 않습니다. Feature:`, linkFeature);
-            missingLinkCount++;
-          }
-        });
-        
-        console.log(`[MapFeatures] 경로 좌표 추출 및 폴리라인 생성 결과: ${activePolylines.current.length}개 폴리라인 (누락된 LINK_ID: ${missingLinkCount}개)`);
-
-        if (allRouteCoordinatesForBounds.length > 0) {
-          const flatCoordsForBounds = allRouteCoordinatesForBounds.flat();
-           if (flatCoordsForBounds.length > 0) {
-            const naverCoords = flatCoordsForBounds.map(c => createNaverLatLng(c.lat, c.lng)).filter(p => p !== null) as any[];
-            if (naverCoords.length > 0) fitBoundsToCoordinates(map, naverCoords);
-          }
-        } else if (itineraryDay.places && itineraryDay.places.length > 0) {
-            const mappedPlaces = mapPlacesWithGeoNodes(itineraryDay.places);
-            const validPlacesCoords = mappedPlaces
-                .filter(p => typeof p.y === 'number' && typeof p.x === 'number' && !isNaN(p.y) && !isNaN(p.x))
-                .map(p => ({ lat: p.y as number, lng: p.x as number }));
-            if (validPlacesCoords.length > 0) {
-                const naverCoords = validPlacesCoords.map(c => createNaverLatLng(c.lat, c.lng)).filter(p => p !== null) as any[];
-                 if (naverCoords.length > 0) fitBoundsToCoordinates(map, naverCoords);
-            }
-        }
-
-      } catch (error) {
-        console.error("[MapFeatures] Error rendering itinerary route from links:", error);
-      }
-
-      if (onComplete) onComplete();
-    },
-    [map, isNaverLoadedParam, geoJsonState.geoJsonNodes, geoJsonState.geoJsonLinks, drawRoutePath, mapPlacesWithGeoNodes, clearAllRoutes]
-  );
-
-  const showRouteForPlaceIndex = useCallback(
-    (placeIndex: number, itineraryDay: ItineraryDay, onComplete?: () => void) => {
-      if (!map || !isNaverLoadedParam || !itineraryDay || !itineraryDay.places) {
-        if (onComplete) onComplete();
-        return;
-      }
-      
-      const place = itineraryDay.places[placeIndex];
-      if (place && typeof place.y === 'number' && typeof place.x === 'number') { 
-          const position = createNaverLatLng(place.y, place.x);
-          if (position) {
-              map.panTo(position);
-              if (map.getZoom() < 14) map.setZoom(14);
-          }
-      } else {
-        console.warn(`[MapFeatures] showRouteForPlaceIndex: Place ${placeIndex} has invalid coordinates.`);
-      }
-
-      if (onComplete) onComplete();
-    },
-    [map, isNaverLoadedParam] 
-  );
-  
-  const renderGeoJsonRoute = useCallback((route: SegmentRoute) => {
-    if (!map || !isNaverLoadedParam || !route || !route.nodeIds || !route.linkIds) {
-      console.warn('[MapFeatures] Cannot render GeoJSON route: invalid input or map not ready');
-      return;
-    }
-
-    clearAllRoutes();
-
-    const routeNodes = route.nodeIds.map(nodeId => {
-      return geoJsonState.geoJsonNodes.find(node => String(node.properties.NODE_ID) === String(nodeId));
-    }).filter(Boolean);
-
-    if (routeNodes.length < 2) {
-      console.warn('[MapFeatures] Not enough valid nodes to render GeoJSON route');
-      return;
-    }
-
-    const coordinates = routeNodes.map(node => {
-      if (node && node.geometry.type === 'Point') {
-        const [lng, lat] = (node.geometry.coordinates as [number, number]);
-        return { lat, lng };
-      }
-      return null;
-    }).filter(Boolean) as { lat: number; lng: number }[];
-
-    if (coordinates.length < 2) {
-      console.warn('[MapFeatures] Not enough valid coordinates to render GeoJSON route');
-      return;
-    }
-
-    const polyline = drawRoutePath(map, coordinates, DEFAULT_ROUTE_COLOR);
-    if (polyline) {
-      activePolylines.current.push(polyline);
-    }
-
-    const naverCoords = coordinates.map(c => createNaverLatLng(c.lat, c.lng)).filter(c => c !== null) as any[];
-    if (naverCoords.length > 0) {
-      fitBoundsToCoordinates(map, naverCoords);
-    }
-  }, [map, isNaverLoadedParam, geoJsonState.geoJsonNodes, drawRoutePath, clearAllRoutes]);
-
-  const highlightSegment = useCallback((segment: SegmentRoute | null) => {
-    if (highlightedPathRef.current) {
-      highlightedPathRef.current.setMap(null);
-      highlightedPathRef.current = null;
-    }
-
-    if (!map || !isNaverLoadedParam || !segment || !segment.nodeIds || segment.nodeIds.length < 2) {
-      return;
-    }
-
-    const segmentNodes = segment.nodeIds.map(nodeId => {
-      return geoJsonState.geoJsonNodes.find(node => String(node.properties.NODE_ID) === String(nodeId));
-    }).filter(Boolean);
-
-    if (segmentNodes.length < 2) {
-      console.warn('[MapFeatures] Not enough valid nodes to highlight segment');
-      return;
-    }
-
-    const coordinates = segmentNodes.map(node => {
-      if (node && node.geometry.type === 'Point') {
-        const [lng, lat] = (node.geometry.coordinates as [number, number]);
-        return { lat, lng };
-      }
-      return null;
-    }).filter(Boolean) as { lat: number; lng: number }[];
-
-    if (coordinates.length < 2) {
-      console.warn('[MapFeatures] Not enough valid coordinates to highlight segment');
-      return;
-    }
-
-    const highlightColor = '#ffc107'; 
-    const polyline = drawRoutePath(map, coordinates, highlightColor, 6, 0.8, 200);
-    if (polyline) {
-      highlightedPathRef.current = polyline;
-    }
-
-    const naverCoords = coordinates.map(c => createNaverLatLng(c.lat, c.lng)).filter(c => c !== null) as any[];
-    if (naverCoords.length > 0) {
-      fitBoundsToCoordinates(map, naverCoords);
-    }
-  }, [map, isNaverLoadedParam, geoJsonState.geoJsonNodes, drawRoutePath]);
-  
-  const clearPreviousHighlightedPath = useCallback(() => {
-    if (highlightedPathRef.current) {
-      highlightedPathRef.current.setMap(null);
-      highlightedPathRef.current = null;
-    }
-  }, []);
-
-  const addMarkers = useCallback((
-    placesToAdd: Place[], 
-    options: {
-      highlightPlaceId?: string;
-      isItinerary?: boolean;
-      useRecommendedStyle?: boolean; 
-      useColorByCategory?: boolean;
-      onMarkerClick?: (place: Place, index: number) => void;
-      itineraryOrder?: boolean; 
-    } = {}
-  ): any[] => {
-    if (!map || !isNaverLoadedParam || !placesToAdd || placesToAdd.length === 0) return [];
-
-    const { 
-      highlightPlaceId, 
-      isItinerary = false,
-      useColorByCategory = false, 
-      onMarkerClick,
-      itineraryOrder = false 
-    } = options;
-    
-    const validPlaces = placesToAdd.filter(place => 
-      place && typeof place.x === 'number' && typeof place.y === 'number' && 
-      !isNaN(place.x) && !isNaN(place.y)
-    );
-    
-    if (validPlaces.length === 0) {
-      console.warn('[MapFeatures - addMarkers] No valid coordinates in places array');
-      return [];
-    }
-
-    const createdMarkers: any[] = [];
-
-    validPlaces.forEach((place, index) => {
-      const position = createNaverLatLng(place.y, place.x);
-      if (!position) { 
-        console.warn(`[MapFeatures - addMarkers] Failed to create LatLng for '${place.name}'. Skipping marker.`);
-        return;
-      }
-
-      const isHighlighted = place.id === highlightPlaceId;
-      
-      const categoryKey = mapCategoryNameToKey(place.category); 
-      const resolvedCategoryColor = getCategoryColor(categoryKey); 
-      const markerBaseColor = useColorByCategory ? resolvedCategoryColor : (isHighlighted ? '#FF3B30' : '#4CD964');
-
-      let markerIcon;
-      if (isItinerary && itineraryOrder) {
-        markerIcon = {
-          content: `
-            <div style="
-              width: 28px; height: 28px; border-radius: 50%; 
-              background-color: ${markerBaseColor};
-              color: white; font-weight: bold; display: flex;
-              align-items: center; justify-content: center;
-              box-shadow: 0 1px 3px rgba(0,0,0,0.3); border: 1.5px solid white;
-              font-size: 13px;
-            ">${index + 1}</div>
-          `,
-          anchor: new window.naver.maps.Point(14, 14)
-        };
-      } else if (isHighlighted) {
-         markerIcon = { 
-          content: `
-            <div style="
-              width: 30px; height: 30px; border-radius: 50%; 
-              background-color: #FF3B30; 
-              color: white; display: flex;
-              align-items: center; justify-content: center;
-              box-shadow: 0 2px 6px rgba(0,0,0,0.5); border: 2px solid white;
-              font-size: 16px; 
-            ">⭐</div>
-          `, 
-          anchor: new window.naver.maps.Point(15, 15)
-        };
-      }
-       else { 
-        markerIcon = {
-          content: `
-            <div style="
-              width: 12px; height: 12px; border-radius: 50%;
-              background-color: ${markerBaseColor};
-              border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-            "></div>
-          `,
-          anchor: new window.naver.maps.Point(6, 6)
-        };
-      }
-
-      try {
-        const marker = new window.naver.maps.Marker({
-          position: position,
-          map: map,
-          title: place.name,
-          icon: markerIcon,
-          zIndex: isHighlighted ? 200 : (isItinerary && itineraryOrder ? 100 - index : 50)
-        });
-
-        const contentString = `
-          <div style="padding: 8px; max-width: 180px; font-size: 12px;">
-            <h3 style="font-weight: bold; margin-bottom: 4px; font-size: 13px;">${place.name}</h3>
-            ${place.category ? `<p style="color: ${resolvedCategoryColor}; margin: 2px 0; font-size: 11px;">${place.category}</p>` : ''}
-            ${isItinerary && itineraryOrder ? `<strong style="color: ${markerBaseColor}; font-size: 13px;">Visit order: ${index + 1}</strong>` : ''}
-          </div>
-        `;
-
-        const infoWindow = new window.naver.maps.InfoWindow({
-          content: contentString,
-          maxWidth: 200,
-          backgroundColor: "white",
-          borderColor: "#ccc",
-          borderWidth: 1,
-          anchorSize: new window.naver.maps.Size(8, 8),
-          pixelOffset: new window.naver.maps.Point(0, -15) 
-        });
-
-        window.naver.maps.Event.addListener(marker, 'click', () => {
-          infoWindow.open(map, marker); 
-          if (onMarkerClick) {
-            onMarkerClick(place, index);
-          }
-        });
-
-        createdMarkers.push(marker);
-      } catch (error) {
-        console.error(`[MapFeatures - addMarkers] Error creating marker for ${place.name}:`, error);
-      }
-    });
-    
-    return createdMarkers;
-  }, [map, isNaverLoadedParam]);
-
-  const calculateRoutes = useCallback((placesToRoute: Place[]) => { 
-    if (!map || !isNaverLoadedParam || placesToRoute.length < 2) return [];
-
-    const polylines: any[] = [];
-    const pathCoordinates = placesToRoute
-        .filter(p => typeof p.x === 'number' && typeof p.y === 'number') 
-        .map(place => ({ lat: place.y as number, lng: place.x as number }));
-
-    if (pathCoordinates.length < 2) return [];
-
-    const polyline = drawRoutePath(map, pathCoordinates, '#22c55e', 4); 
-    if (polyline) {
-      polylines.push(polyline);
-      activePolylines.current.push(polyline); 
-    }
-    
-    return polylines; 
-  }, [map, isNaverLoadedParam, drawRoutePath]);
+  // The original clearMarkersAndUiElements was an alias for clearAllRoutes.
+  // We'll use clearAllDrawnRoutes from useRouteManager for this.
+  // If marker clearing is needed separately, addMarkers would need to return
+  // a clear function or manage markers internally for clearing.
+  // For now, aligning with the original behavior where clearMarkersAndUiElements cleared routes.
+  const clearMarkersAndUiElements = clearAllDrawnRoutes;
+  const clearAllRoutes = clearAllDrawnRoutes; // Alias for consistency if used elsewhere
 
   return {
     addMarkers,
-    clearMarkersAndUiElements: clearAllRoutes, 
-    calculateRoutes,
+    clearMarkersAndUiElements,
+    calculateRoutes: calculateAndDrawDirectRoutes, // Map to the new function name
     renderItineraryRoute,
-    clearAllRoutes,
+    clearAllRoutes, // Expose the comprehensive clear function
     highlightSegment,
     clearPreviousHighlightedPath,
     showRouteForPlaceIndex,
     renderGeoJsonRoute,
-    mapPlacesWithGeoNodes
+    mapPlacesWithGeoNodes,
   };
 };
