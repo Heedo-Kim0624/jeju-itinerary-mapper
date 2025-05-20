@@ -1,3 +1,4 @@
+
 import { useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 import { SelectedPlace } from '@/types/supabase';
@@ -8,6 +9,7 @@ import { useSchedulePayload } from './useSchedulePayload';
 import { useScheduleGenerationCore } from './useScheduleGenerationCore';
 import { useFallbackItineraryGenerator } from './useFallbackItineraryGenerator';
 import { MapContextGeoNode } from './parser-utils/coordinateTypes'; // Updated import path
+import { useServerResponseHandler } from './useServerResponseHandler'; // Added this import
 
 interface UseScheduleGenerationRunnerProps {
   selectedPlaces: SelectedPlace[];
@@ -58,7 +60,7 @@ export const useScheduleGenerationRunner = ({
   
   useServerResponseHandler({
     onServerResponse: handleServerResponse,
-    enabled: true
+    enabled: true // Assuming we always want this enabled when the runner is used. Adjust if needed.
   });
 
   const runScheduleGenerationProcess = useCallback(async () => {
@@ -117,6 +119,11 @@ export const useScheduleGenerationRunner = ({
         
         setIsLoadingState(false);
       }
+      // The 'else' block where serverResponse is valid is handled by the useServerResponseHandler
+      // through the 'rawServerResponseReceived' event, which then calls processServerResponse.
+      // So, no explicit call to processServerResponse(serverResponse) is needed here.
+      // The `setIsLoadingState(false)` will be called in `handleServerResponse` or in the catch/finally block.
+
     } catch (error) {
       console.error("[useScheduleGenerationRunner] 일정 생성 중 오류:", error);
       toast.error("일정 생성 중 오류가 발생했습니다.");
@@ -131,15 +138,23 @@ export const useScheduleGenerationRunner = ({
       });
       window.dispatchEvent(errorEvent);
     }
+    // setIsLoadingState(false) should be handled more carefully.
+    // If serverResponse is valid, handleServerResponse (via event) will set it.
+    // If serverResponse is invalid (fallback case), it's set above.
+    // If there's an error, it's set in the catch block.
+    // Consider if there's any path where setIsLoadingState(false) is missed.
+    // For now, the existing logic where handleServerResponse sets loading to false seems okay.
   }, [
     preparePayload,
     generateScheduleViaHook,
+    // processServerResponse, // Removed because it's handled by the event listener
     selectedPlaces,
     dates,
     generateFallbackItinerary,
     setItinerary,
     setSelectedDay,
     setIsLoadingState,
+    // handleServerResponse, // This is stable as it's wrapped in useCallback
   ]);
 
   return { 
