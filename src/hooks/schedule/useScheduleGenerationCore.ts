@@ -1,7 +1,9 @@
 import { toast } from 'sonner';
 import { SelectedPlace } from '@/types/supabase';
-import { NewServerScheduleResponse, ServerRouteResponse, ItineraryDay } from '@/types/core'; // ItineraryDay를 @/types/core에서 직접 임포트하고 CoreItineraryDay 별칭 제거
-import { useScheduleParser, updateItineraryWithCoordinates, MapContextGeoNode } from './useScheduleParser'; 
+import { NewServerScheduleResponse, ServerRouteResponse, ItineraryDay } from '@/types/core';
+import { useScheduleParser } from './useScheduleParser'; 
+import { updateItineraryWithCoordinates } from './parser-utils/coordinateUtils';
+import { MapContextGeoNode } from './parser-utils/coordinateTypes';
 
 const DEBUG_MODE = true;
 
@@ -85,7 +87,7 @@ export const useScheduleGenerationCore = ({
 
   // 이벤트 트리거 함수들
   const triggerItineraryCreatedEvent = (
-    itinerary: ItineraryDay[], // ItineraryDay[] 사용
+    itinerary: ItineraryDay[], 
     selectedDay: number | null, 
     error = false
   ) => {
@@ -105,7 +107,7 @@ export const useScheduleGenerationCore = ({
     }, 100);
   };
 
-  const triggerItineraryWithCoordinatesEvent = (itinerary: ItineraryDay[]) => { // ItineraryDay[] 사용
+  const triggerItineraryWithCoordinatesEvent = (itinerary: ItineraryDay[]) => { 
     const coordEvent = new CustomEvent('itineraryWithCoordinatesReady', { 
       detail: { itinerary } 
     });
