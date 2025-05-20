@@ -1,4 +1,3 @@
-
 import { useMapInitialization } from '@/hooks/map/useMapInitialization';
 import { useMapNavigation } from '@/hooks/map/useMapNavigation';
 // import { useMapMarkers } from '@/hooks/map/useMapMarkers'; // Deprecated
@@ -50,27 +49,29 @@ const useMapCore = () => {
     }
   };
   
-  const renderItineraryRouteWrapper = ( // Renamed to avoid conflict with features.renderItineraryRoute
+  const renderItineraryRouteWrapper = ( 
     itineraryDay: ItineraryDay | null,
-    allServerRoutesInput?: Record<number, ServerRouteResponse>, // Added parameter based on user guide
-    onCompleteInput?: () => void // Added parameter based on user guide
+    allServerRoutesInput?: Record<number, ServerRouteResponse>, 
+    onCompleteInput?: () => void 
   ) => {
+    // 수정: features.renderItineraryRoute 호출 시 모든 인자 전달
     features.renderItineraryRoute(
         itineraryDay,
-        allServerRoutesInput ?? serverRoutesData, // Pass all required args
-        onCompleteInput // Pass all required args
+        allServerRoutesInput ?? serverRoutesData, 
+        onCompleteInput 
     );
   };
 
-  const showRouteForPlaceIndexWrapper = ( // Renamed
+  const showRouteForPlaceIndexWrapper = ( 
     placeIndex: number, 
     itineraryDay: ItineraryDay,
-    onComplete?: () => void // Added parameter based on user guide
+    onComplete?: () => void 
   ) => {
+    // 수정: features.showRouteForPlaceIndex 호출 시 모든 인자 전달
     features.showRouteForPlaceIndex(
         placeIndex, 
         itineraryDay, 
-        onComplete // Pass all required args
+        onComplete 
     );
   };
   
