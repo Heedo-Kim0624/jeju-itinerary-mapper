@@ -1,4 +1,3 @@
-
 import { useCallback } from 'react';
 import { SelectedPlace, ItineraryDay, ItineraryPlaceWithTime, CategoryName } from '@/types/supabase';
 import { NewServerScheduleResponse, ServerScheduleItem, ServerRouteSummaryItem } from '@/types/schedule';
@@ -9,7 +8,7 @@ interface UseScheduleParserProps {
 }
 
 // Helper interface for GeoJSON nodes expected from MapContext
-interface MapContextGeoNode {
+export interface MapContextGeoNode {
   id: string; // This should be the NODE_ID
   coordinates: [number, number]; // [longitude, latitude]
 }
