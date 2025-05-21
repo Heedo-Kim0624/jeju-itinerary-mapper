@@ -1,3 +1,4 @@
+
 /**
  * Types related to itinerary structure and places with time
  */
@@ -17,26 +18,34 @@ export interface ItineraryPlaceWithTime {
   stayDuration?: number;        // Duration of stay in minutes
   travelTimeToNext?: string;    // Estimated travel time to the next place, e.g., "15분"
 
-  // Geographic and Detailed Information (potentially from SelectedPlace)
-  x?: number;                   // Longitude
-  y?: number;                   // Latitude
-  address?: string;             // Full address
-  road_address?: string;        // Road address
-  phone?: string;               // Phone number
-  description?: string;         // Place description
-  rating?: number;              // Place rating
-  image_url?: string;           // URL for an image of the place
-  homepage?: string;            // URL for the place's homepage
+  // Geographic and Detailed Information (aligned with Place to ensure assignability)
+  x: number;                   // Longitude (required)
+  y: number;                   // Latitude (required)
+  address: string;             // Full address (required)
+  road_address: string;        // Road address (required)
+  phone: string;               // Phone number (required)
+  description: string;         // Place description (required)
+  rating: number;              // Place rating (required)
+  image_url: string;           // URL for an image of the place (required)
+  homepage: string;            // URL for the place's homepage (required)
 
   // For GeoJSON based routing if applicable
   geoNodeId?: string | number;  // ID of the corresponding node in GeoJSON data
 
   isFallback?: boolean;         // True if detailed information could not be found and default/server values are used
-  // Potentially other fields:
-  // isSelected?: boolean;
-  // isCandidate?: boolean;
+  
+  // Properties for compatibility with Place selection logic
+  isSelected?: boolean;
+  isCandidate?: boolean;
+  // Potentially other fields from Place if needed for itinerary specific logic:
   // reviewCount?: number;
-  // etc.
+  // operationTimeData?: { [key: string]: number };
+  // weight?: number;
+  // raw?: any;
+  // categoryDetail?: string;
+  // naverLink?: string;
+  // instaLink?: string;
+  // operatingHours?: string;
 }
 
 // Day itinerary interface
@@ -55,3 +64,4 @@ export interface ServerResponseParsingResult {
   itineraryDays: ItineraryDay[];
   error?: string;
 }
+

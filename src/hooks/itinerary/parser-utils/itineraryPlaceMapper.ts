@@ -1,4 +1,3 @@
-
 import { ServerScheduleItem, SelectedPlace as CoreSelectedPlace, ItineraryPlaceWithTime } from '@/types/core';
 
 /**
@@ -62,23 +61,29 @@ export const mapToItineraryPlace = (
   return {
     id: itineraryPlaceId,
     name: item.place_name,
-    category: item.place_type,
+    category: selectedPlaceDetails?.category || item.place_type || 'unknown', // Ensure category is always a string
     timeBlock: formattedArriveTime, // Or item.time_block if preferred
     arriveTime: formattedArriveTime,
     departTime: formattedDepartTime,
     stayDuration: stayDurationInMinutes,
     travelTimeToNext: '', // To be filled later if needed
-    x: selectedPlaceDetails?.x || 126.5312, // Default Jeju coordinates
-    y: selectedPlaceDetails?.y || 33.4996,  // Default Jeju coordinates
-    address: selectedPlaceDetails?.address || '정보 없음',
-    road_address: selectedPlaceDetails?.road_address || '',
-    phone: selectedPlaceDetails?.phone || '',
-    description: selectedPlaceDetails?.description || '',
-    rating: selectedPlaceDetails?.rating || 0,
-    image_url: selectedPlaceDetails?.image_url || '',
-    homepage: selectedPlaceDetails?.homepage || '',
-    geoNodeId: selectedPlaceDetails?.geoNodeId || itineraryPlaceId, // Use selectedPlaceDetails.geoNodeId if available
+    
+    // Ensure all required fields from Place have defaults
+    x: selectedPlaceDetails?.x ?? 126.5312, // Default Jeju coordinates
+    y: selectedPlaceDetails?.y ?? 33.4996,  // Default Jeju coordinates
+    address: selectedPlaceDetails?.address ?? '정보 없음',
+    road_address: selectedPlaceDetails?.road_address ?? '정보 없음', // Provide default for road_address
+    phone: selectedPlaceDetails?.phone ?? '정보 없음', // Provide default for phone
+    description: selectedPlaceDetails?.description ?? '', // Default to empty string
+    rating: selectedPlaceDetails?.rating ?? 0, // Default to 0
+    image_url: selectedPlaceDetails?.image_url ?? '', // Default to empty string
+    homepage: selectedPlaceDetails?.homepage ?? '', // Default to empty string
+    
+    geoNodeId: selectedPlaceDetails?.geoNodeId || itineraryPlaceId,
     isFallback: isFallback,
+    
+    // Optional fields also from SelectedPlace if available
+    isSelected: selectedPlaceDetails?.isSelected, 
+    isCandidate: selectedPlaceDetails?.isCandidate,
   };
 };
-
