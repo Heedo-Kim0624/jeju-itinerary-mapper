@@ -1,7 +1,7 @@
 
 import { useCallback } from 'react';
 import { toast } from 'sonner';
-import { CategoryName } from '@/utils/categoryUtils';
+import { CategoryName, CATEGORY_MAPPING_KO_TO_EN } from '@/utils/categoryUtils'; // CATEGORY_MAPPING_KO_TO_EN 추가
 
 interface LeftPanelCallbacksProps {
   handleConfirmCategory: (category: string, finalKeywords: string[], clearSelection: boolean) => void;
@@ -31,20 +31,33 @@ export const useLeftPanelCallbacks = ({
     handleCloseItinerary();
   }, [handleCloseItinerary]);
 
-  // Handler for category panel back button
+  // General handler for category panel back button (kept for other potential uses)
   const handlePanelBackByCategory = useCallback((category: string) => {
     console.log(`${category} 카테고리 패널 뒤로가기`);
     handlePanelBack(category);
   }, [handlePanelBack]);
 
-  // Handler for category keyword selection confirmation
+  // General handler for category keyword selection confirmation (kept for other potential uses)
   const handleConfirmCategoryKeywordSelection = useCallback((category: CategoryName, finalKeywords: string[]) => {
     console.log(`[LeftPanel] 카테고리 '${category}' 키워드 확인: ${finalKeywords.join(', ')}`);
-    // The true flag in handleConfirmCategory ensures setShowCategoryResult is called
     handleConfirmCategory(category, finalKeywords, true);
-    return true; // For compatibility if used in an event handler expecting a boolean
+    return true; 
   }, [handleConfirmCategory]);
   
+  const onConfirmCategoryCallbacks = {
+    accomodation: (finalKeywords: string[]) => handleConfirmCategory('숙소', finalKeywords, true),
+    landmark: (finalKeywords: string[]) => handleConfirmCategory('관광지', finalKeywords, true),
+    restaurant: (finalKeywords: string[]) => handleConfirmCategory('음식점', finalKeywords, true),
+    cafe: (finalKeywords: string[]) => handleConfirmCategory('카페', finalKeywords, true),
+  };
+
+  const handlePanelBackCallbacks = {
+    accomodation: () => handlePanelBack('숙소'),
+    landmark: () => handlePanelBack('관광지'),
+    restaurant: () => handlePanelBack('음식점'),
+    cafe: () => handlePanelBack('카페'),
+  };
+
   // Handler for initiating itinerary creation with loading state
   const handleCreateItineraryWithLoading = useCallback(() => {
     console.log("[LeftPanel] 일정 생성 시작 (Hook call)");
@@ -61,7 +74,7 @@ export const useLeftPanelCallbacks = ({
       console.warn("[LeftPanel] handleCreateItinerary 함수가 제공되지 않았습니다.");
     }
 
-    return true; // For compatibility or to signal successful initiation
+    return true; 
   }, [handleCreateItinerary]);
 
   // Handler for region panel confirmation
@@ -76,9 +89,11 @@ export const useLeftPanelCallbacks = ({
 
   return {
     handleClosePanelWithBackButton,
-    handlePanelBackByCategory,
-    handleConfirmCategoryKeywordSelection,
+    handlePanelBackByCategory, // Still available if needed elsewhere directly
+    handleConfirmCategoryKeywordSelection, // Still available if needed elsewhere directly
     handleCreateItineraryWithLoading,
-    handleRegionConfirm
+    handleRegionConfirm,
+    onConfirmCategoryCallbacks, // Added for LeftPanelProps
+    handlePanelBackCallbacks,   // Added for LeftPanelProps
   };
 };

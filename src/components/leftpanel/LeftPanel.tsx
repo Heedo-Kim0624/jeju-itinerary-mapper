@@ -8,8 +8,9 @@ import DevDebugInfo from './DevDebugInfo';
 import { useLeftPanelCallbacks } from '@/hooks/left-panel/use-left-panel-callbacks';
 import { useLeftPanelProps } from '@/hooks/left-panel/use-left-panel-props';
 import { useScheduleGenerationRunner } from '@/hooks/schedule/useScheduleGenerationRunner';
+import { useCreateItineraryHandler } from '@/hooks/left-panel/useCreateItineraryHandler'; // 새로 추가된 훅
 import { toast } from 'sonner';
-import type { SchedulePayload, Place, SelectedPlace as CoreSelectedPlace, ItineraryDay } from '@/types'; // ItineraryDay 추가
+import type { ItineraryDay } from '@/types'; // Place, CoreSelectedPlace, SchedulePayload 는 useCreateItineraryHandler 로 이동
 import { summarizeItineraryData } from '@/utils/debugUtils';
 
 const LeftPanel: React.FC = () => {
@@ -20,30 +21,36 @@ const LeftPanel: React.FC = () => {
     placesManagement,
     tripDetails,
     uiVisibility,
-    itineraryManagement, // This now includes isItineraryCreated, showItinerary, etc.
-    handleCloseItinerary, // This is from itineraryCreation.handleCloseItineraryPanel
+    itineraryManagement,
+    handleCloseItinerary, 
     categoryResultHandlers,
     currentPanel,
-    isGeneratingItinerary: isGeneratingFromHook, // Renamed for clarity
+    isGeneratingItinerary: isGeneratingFromCoreHook,
   } = useLeftPanel();
 
   const { runScheduleGeneration, isGenerating: isRunnerGenerating } = useScheduleGenerationRunner();
-  const [isCreatingItineraryUiLock, setIsCreatingItineraryUiLock] = useState(false); // UI specific loading lock
 
-  // Combined loading state
-  const isActuallyGenerating = isGeneratingFromHook || isRunnerGenerating || isCreatingItineraryUiLock;
+  const { 
+    createItinerary, 
+    isCreatingItinerary: isCreatingFromCustomHook 
+  } = useCreateItineraryHandler({
+    placesManagement,
+    tripDetails,
+    runScheduleGeneration,
+  });
+  
+  const isActuallyGenerating = isGeneratingFromCoreHook || isRunnerGenerating || isCreatingFromCustomHook;
 
-  // Extract callback functions
   const callbacks = useLeftPanelCallbacks({
     handleConfirmCategory: keywordsAndInputs.handleConfirmCategory,
-    handlePanelBack: categorySelection.handlePanelBack, // This is the simple one for the hook
-    handleCloseItinerary, // Passed through
+    handlePanelBack: categorySelection.handlePanelBack,
+    handleCloseItinerary,
     setRegionSlidePanelOpen: regionSelection.setRegionSlidePanelOpen,
     selectedRegions: regionSelection.selectedRegions,
-    setRegionConfirmed: regionSelection.setRegionConfirmed
+    setRegionConfirmed: regionSelection.setRegionConfirmed,
+    // handleCreateItinerary: undefined, //  If LeftPanelCallbacks expects it and we don't provide this specific version from here
   });
 
-  // Organize props for child components
   const {
     itineraryDisplayProps,
     mainPanelProps,
@@ -53,50 +60,51 @@ const LeftPanel: React.FC = () => {
     currentPanel,
     isGeneratingItinerary: isActuallyGenerating,
     itineraryReceived: !!itineraryManagement.itinerary && itineraryManagement.itinerary.length > 0,
-    itineraryManagement: itineraryManagement, // Pass the whole object from useLeftPanel
+    itineraryManagement: itineraryManagement,
     tripDetails,
     placesManagement,
     categorySelection,
     keywordsAndInputs,
     categoryResultHandlers,
-    handleCloseItinerary, // This is the top-level one from useLeftPanel
+    handleCloseItinerary,
     regionSelection,
-    // Pass the structured callbacks for MainPanelContent
     onConfirmCategoryCallbacks: callbacks.onConfirmCategoryCallbacks,
     handlePanelBackCallbacks: callbacks.handlePanelBackCallbacks,
   });
 
+  // ... useEffect for logging (내용은 동일하므로 생략)
   useEffect(() => {
     console.log("LeftPanel - 일정 관련 상태 변화 감지 (Hook states):", {
-      showItineraryFromHook: uiVisibility.showItinerary, // or itineraryManagement.showItinerary
+      showItineraryFromHook: uiVisibility.showItinerary, 
       selectedItineraryDayFromHook: itineraryManagement.selectedItineraryDay,
       itineraryFromHookSummary: summarizeItineraryData(itineraryManagement.itinerary),
-      isCreatingItineraryPanelState: isCreatingItineraryUiLock,
+      isCreatingItineraryPanelState: isCreatingFromCustomHook, // Updated to use state from new hook
       isRunnerGeneratingState: isRunnerGenerating,
-      isGeneratingFromCoreHook: isGeneratingFromHook,
+      isGeneratingFromCoreHook: isGeneratingFromCoreHook,
       isItineraryCreatedFromHook: itineraryManagement.isItineraryCreated,
     });
   }, [
     uiVisibility.showItinerary, 
     itineraryManagement.selectedItineraryDay,
     itineraryManagement.itinerary,
-    isCreatingItineraryUiLock,
+    isCreatingFromCustomHook, // Updated dependency
     isRunnerGenerating,
-    isGeneratingFromHook,
+    isGeneratingFromCoreHook,
     itineraryManagement.isItineraryCreated,
   ]);
   
   const shouldShowItineraryView = 
-    itineraryManagement.showItinerary && // Use showItinerary from itineraryManagement
+    itineraryManagement.showItinerary && 
     itineraryManagement.isItineraryCreated && 
     itineraryManagement.itinerary && 
     itineraryManagement.itinerary.length > 0;
 
+  // ... useEffect for logging (내용은 동일하므로 생략)
   useEffect(() => {
     console.log("LeftPanel - ItineraryView 표시 결정 로직 (Hook states):", {
       showItineraryFromItineraryMgmt: itineraryManagement.showItinerary,
       isItineraryCreatedFromItineraryMgmt: itineraryManagement.isItineraryCreated,
-      isCreatingItineraryPanelState: isCreatingItineraryUiLock,
+      isCreatingItineraryPanelState: isCreatingFromCustomHook, // Updated
       isRunnerGeneratingState: isRunnerGenerating,
       itineraryExists: !!itineraryManagement.itinerary,
       itineraryLength: itineraryManagement.itinerary?.length || 0,
@@ -110,105 +118,29 @@ const LeftPanel: React.FC = () => {
       itineraryManagement.showItinerary, 
       itineraryManagement.isItineraryCreated, 
       itineraryManagement.itinerary, 
-      isCreatingItineraryUiLock, 
+      isCreatingFromCustomHook, // Updated
       isRunnerGenerating,
       shouldShowItineraryView
     ]);
 
-  const handleCreateItineraryNew = useCallback(async () => {
+  const handleTriggerCreateItinerary = useCallback(async () => {
     if (isActuallyGenerating) {
       toast.info("일정 생성 중입니다. 잠시만 기다려주세요.");
       return;
     }
-
-    if (placesManagement.selectedPlaces.length === 0) {
-      toast.error("선택된 장소가 없습니다. 장소를 선택해주세요.");
-      return;
+    // `createItinerary` from `useCreateItineraryHandler` already has checks for places and dates.
+    // It will show toasts if conditions are not met.
+    const result = await createItinerary();
+    if (result) {
+      // Successfully created, useLeftPanel and useItinerary hooks should update state,
+      // causing UI to react.
+      console.log("[LeftPanel] Itinerary creation process finished via custom hook.");
+    } else {
+      // Creation failed or was aborted (e.g., no places selected), toasts handled in hook.
+      console.log("[LeftPanel] Itinerary creation process did not produce a result or was aborted.");
     }
+  }, [isActuallyGenerating, createItinerary]);
 
-    if (!tripDetails.dates?.startDate || !tripDetails.dates?.endDate || !tripDetails.startDatetime || !tripDetails.endDatetime) {
-        toast.error("여행 날짜와 시간을 먼저 설정해주세요.");
-        return;
-    }
-    
-    setIsCreatingItineraryUiLock(true);
-    try {
-      const selectedCorePlaces: CoreSelectedPlace[] = placesManagement.selectedPlaces.map(p => ({
-        id: String(p.id),
-        name: p.name,
-        category: p.category,
-        x: p.x,
-        y: p.y,
-        address: p.address,
-        road_address: p.road_address,
-        phone: p.phone,
-        description: p.description,
-        rating: p.rating,
-        image_url: p.image_url,
-        homepage: p.homepage,
-        geoNodeId: p.geoNodeId,
-        isSelected: p.isSelected !== undefined ? p.isSelected : true, // Ensure isSelected exists
-        isCandidate: p.isCandidate !== undefined ? p.isCandidate : false, // Ensure isCandidate exists
-      }));
-
-      const selectedPlaceIds = new Set(selectedCorePlaces.map(p => p.id));
-      const candidateSchedulePlaces = placesManagement.candidatePlaces
-        .filter(p => !selectedPlaceIds.has(String(p.id)))
-        .map(p => ({ 
-          id: String(p.id),
-          name: p.name 
-        }));
-
-      const payload: SchedulePayload = {
-        selected_places: selectedCorePlaces.map(p => ({ id: String(p.id), name: p.name })),
-        candidate_places: candidateSchedulePlaces,
-        start_datetime: tripDetails.startDatetime,
-        end_datetime: tripDetails.endDatetime,
-      };
-      
-      console.log("[LeftPanel] 일정 생성 시작, 페이로드:", {
-        선택된장소수: payload.selected_places.length,
-        후보장소수: payload.candidate_places.length,
-        시작일시: payload.start_datetime,
-        종료일시: payload.end_datetime,
-        여행시작일_파서전달용: tripDetails.dates.startDate.toISOString()
-      });
-      
-      // selectedCorePlaces를 전달합니다. 이 타입은 CoreSelectedPlace[] (즉, SelectedPlace[])입니다.
-      // runScheduleGeneration의 두 번째 인자는 CoreSelectedPlace[] 타입의 selectedPlaces를 기대합니다.
-      // 세 번째 인자는 Date 타입의 tripStartDate를 기대합니다.
-      const result: ItineraryDay[] | null = await runScheduleGeneration(
-        payload, 
-        selectedCorePlaces, 
-        tripDetails.dates.startDate
-      );
-      
-      if (result) {
-        console.log("[LeftPanel] handleCreateItineraryNew 완료. 결과 요약:", summarizeItineraryData(result));
-        // itineraryManagement.handleServerItineraryResponse는 runScheduleGeneration 내부에서 호출되어
-        // useItinerary 훅의 상태를 업데이트하고, 그 결과가 itineraryManagement.itinerary 등으로 반영됩니다.
-        // 여기서 직접 UI 상태를 조작하기보다는, 훅의 상태 변화를 통해 UI가 반응하도록 하는 것이 좋습니다.
-      } else {
-        console.warn("[LeftPanel] handleCreateItineraryNew: runScheduleGeneration returned null or empty.");
-        // 오류 토스트는 runScheduleGeneration 또는 그 내부에서 처리될 것으로 예상됩니다.
-      }
-
-    } catch (error) {
-      console.error("[LeftPanel] 일정 생성 중 오류:", error);
-      toast.error(`일정 생성 중 오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없음'}`);
-    } finally {
-      setIsCreatingItineraryUiLock(false);
-    }
-  }, [
-    isActuallyGenerating, 
-    placesManagement.selectedPlaces, 
-    placesManagement.candidatePlaces,
-    tripDetails.dates, 
-    tripDetails.startDatetime, 
-    tripDetails.endDatetime,
-    runScheduleGeneration,
-    // itineraryManagement.handleServerItineraryResponse // This is implicitly handled by runScheduleGeneration -> useItinerary
-  ]);
 
   const enhancedItineraryDisplayProps = itineraryDisplayProps
     ? {
@@ -221,12 +153,9 @@ const LeftPanel: React.FC = () => {
     ? {
         leftPanelContainerProps: {
           ...mainPanelProps.leftPanelContainerProps,
-          // onCreateItinerary는 LeftPanelContainerPassedProps에 정의되어 있어야 합니다.
-          // useLeftPanelProps에서 leftPanelContainerProps 생성 시 onCreateItinerary를 직접 할당하지 않으므로,
-          // LeftPanel.tsx에서 enhancedMainPanelProps를 만들 때 추가합니다.
-          onCreateItinerary: handleCreateItineraryNew 
+          onCreateItinerary: handleTriggerCreateItinerary // Updated to use the new handler
         },
-        leftPanelContentProps: mainPanelProps.leftPanelContentProps // This should now be correctly typed
+        leftPanelContentProps: mainPanelProps.leftPanelContentProps
       }
     : null;
 
