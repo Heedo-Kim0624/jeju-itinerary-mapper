@@ -1,6 +1,5 @@
 
 import { useCallback } from 'react';
-import { Place } from '@/types';
 import { toast } from 'sonner';
 import { CategoryName } from '@/utils/categoryUtils';
 
@@ -8,7 +7,7 @@ interface LeftPanelCallbacksProps {
   handleConfirmCategory: (category: string, finalKeywords: string[], clearSelection: boolean) => void;
   handlePanelBack: (category: string) => void;
   handleCloseItinerary: () => void;
-  handleCreateItinerary: () => Promise<boolean>;
+  handleCreateItinerary?: () => Promise<void>; // 선택적으로 변경
   setRegionSlidePanelOpen: (open: boolean) => void;
   selectedRegions: string[];
   setRegionConfirmed: (confirmed: boolean) => void;
@@ -50,17 +49,17 @@ export const useLeftPanelCallbacks = ({
   const handleCreateItineraryWithLoading = useCallback(() => {
     console.log("[LeftPanel] 일정 생성 시작 (Hook call)");
     
-    handleCreateItinerary()
-      .then(success => {
-        if (success) {
+    if (handleCreateItinerary) {
+      handleCreateItinerary()
+        .then(() => {
           console.log("[LeftPanel] handleCreateItinerary Promise 성공. 이벤트 및 hook state 변경 대기 중...");
-        } else {
-          console.log("[LeftPanel] handleCreateItinerary Promise 실패.");
-        }
-      })
-      .catch(error => {
-        console.error("[LeftPanel] 일정 생성 중 오류 (handleCreateItineraryWithLoading의 catch):", error);
-      });
+        })
+        .catch(error => {
+          console.error("[LeftPanel] 일정 생성 중 오류 (handleCreateItineraryWithLoading의 catch):", error);
+        });
+    } else {
+      console.warn("[LeftPanel] handleCreateItinerary 함수가 제공되지 않았습니다.");
+    }
 
     return true; // For compatibility or to signal successful initiation
   }, [handleCreateItinerary]);

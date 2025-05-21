@@ -1,124 +1,135 @@
 
-import { toast } from 'sonner';
-import type { ItineraryDay, ItineraryPlaceWithTime, SelectedPlace as CoreSelectedPlace, NewServerScheduleResponse } from '@/types/core';
-import { getDateStringMMDD, getDayOfWeekString } from './itineraryUtils'; // itineraryUtils에서 날짜/요일 포맷 함수 가져오기
-import { addDays } from 'date-fns';
-
+import { useCallback } from 'react';
+import { NewServerScheduleResponse } from '@/types/schedule';
+import { ItineraryDay, ItineraryPlaceWithTime } from '@/types/core';
+import { SelectedPlace as CoreSelectedPlace } from '@/types/core';
 
 export const useItineraryParser = () => {
-  const parseServerResponse = (
+  const parseServerResponse = useCallback((
     serverResponse: NewServerScheduleResponse,
-    currentSelectedPlaces: CoreSelectedPlace[] = [],
-    tripStartDate: Date | null // 여행 시작 날짜 추가
+    selectedPlaces: CoreSelectedPlace[] = [],
+    tripStartDate: Date | null = null
   ): ItineraryDay[] => {
     console.log('[useItineraryParser] 서버 응답 파싱 시작:', {
-      schedule_items: serverResponse?.schedule?.length || 0,
-      route_summary_items: serverResponse?.route_summary?.length || 0,
-      currentSelectedPlacesCount: currentSelectedPlaces.length,
-      tripStartDate: tripStartDate?.toISOString()
+      schedule_items: serverResponse.schedule?.length || 0,
+      route_summary_items: serverResponse.route_summary?.length || 0
     });
 
-    if (!serverResponse || !serverResponse.schedule || !serverResponse.route_summary) {
-      console.error('[useItineraryParser] 서버 응답에 필수 데이터(schedule 또는 route_summary)가 없습니다:', serverResponse);
-      toast.error("서버 응답 형식이 올바르지 않습니다.");
+    if (!serverResponse.schedule || !serverResponse.route_summary) {
+      console.error('[useItineraryParser] 서버 응답에 필수 데이터가 없습니다:', serverResponse);
       return [];
     }
 
+    // 장소 ID별 선택된 장소 정보 매핑 (좌표 정보 등 활용을 위해)
     const mappedPlaceIdByName = new Map<string, CoreSelectedPlace>();
-    currentSelectedPlaces.forEach(place => {
-      if (place.name) { // place.name이 있는 경우에만 매핑
-        mappedPlaceIdByName.set(place.name, place);
-      }
+    selectedPlaces.forEach(place => {
+      mappedPlaceIdByName.set(place.name, place);
     });
 
+    // 요일별 일정 그룹화
     const scheduleByDay = new Map<string, any[]>();
     serverResponse.schedule.forEach(item => {
-      if (item.time_block && typeof item.time_block === 'string') {
-        const day = item.time_block.split('_')[0]; // 'Tue_0900' -> 'Tue'
-        if (!scheduleByDay.has(day)) {
-          scheduleByDay.set(day, []);
-        }
-        scheduleByDay.get(day)?.push(item);
-      } else {
-        console.warn('[useItineraryParser] 유효하지 않은 time_block:', item);
+      const day = item.time_block.split('_')[0]; // 'Tue_0900' -> 'Tue'
+      if (!scheduleByDay.has(day)) {
+        scheduleByDay.set(day, []);
       }
+      scheduleByDay.get(day)?.push(item);
     });
 
     console.log('[useItineraryParser] 요일별 일정 그룹화 결과:', 
       Object.fromEntries([...scheduleByDay.entries()].map(([day, items]) => [day, items.length]))
     );
 
+    // 요일별 경로 정보 매핑
     const routeByDay = new Map<string, any>();
     serverResponse.route_summary.forEach(route => {
       routeByDay.set(route.day, route);
     });
 
-    const dayOrderLookup: { [key: string]: number } = { 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6, 'Sun': 7 };
-    const days = [...scheduleByDay.keys()].sort((a, b) => {
-      return (dayOrderLookup[a] || 8) - (dayOrderLookup[b] || 8); // 정의되지 않은 요일은 뒤로
-    });
-    
+    // 요일 -> 일차 매핑 (Tue -> 1, Wed -> 2, ...)
     const dayMapping: Record<string, number> = {};
+    const days = [...scheduleByDay.keys()].sort((a, b) => {
+      const dayOrder = { 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6, 'Sun': 7 };
+      return (dayOrder[a as keyof typeof dayOrder] || 0) - (dayOrder[b as keyof typeof dayOrder] || 0);
+    });
     days.forEach((day, index) => {
       dayMapping[day] = index + 1;
     });
 
     console.log('[useItineraryParser] 요일 -> 일차 매핑:', dayMapping);
 
-    const result: ItineraryDay[] = days.map(dayOfWeekKey => {
-      const dayItems = scheduleByDay.get(dayOfWeekKey) || [];
-      const routeInfo = routeByDay.get(dayOfWeekKey);
-      const dayNumber = dayMapping[dayOfWeekKey];
+    // 날짜 포맷 유틸리티 함수
+    const formatDate = (baseDate: Date | null, dayOffset: number): string => {
+      if (!baseDate) {
+        // 기준 날짜가 없으면 현재 날짜에서 시작
+        const today = new Date();
+        const targetDate = new Date(today);
+        targetDate.setDate(today.getDate() + dayOffset);
+        return `${(targetDate.getMonth() + 1).toString().padStart(2, '0')}/${targetDate.getDate().toString().padStart(2, '0')}`;
+      }
+      
+      const targetDate = new Date(baseDate);
+      targetDate.setDate(baseDate.getDate() + dayOffset);
+      return `${(targetDate.getMonth() + 1).toString().padStart(2, '0')}/${targetDate.getDate().toString().padStart(2, '0')}`;
+    };
 
-      const actualDate = tripStartDate ? addDays(tripStartDate, dayNumber -1) : new Date();
-      const dateStr = getDateStringMMDD(actualDate);
-      const dayOfWeekStr = getDayOfWeekString(actualDate);
+    // ItineraryDay[] 생성
+    const result: ItineraryDay[] = days.map(dayOfWeek => {
+      const dayItems = scheduleByDay.get(dayOfWeek) || [];
+      const routeInfo = routeByDay.get(dayOfWeek);
+      const dayNumber = dayMapping[dayOfWeek];
 
-
+      // 해당 일자의 장소 목록 생성
       const places: ItineraryPlaceWithTime[] = dayItems.map(item => {
-        const timeBlock = item.time_block.split('_')[1] || "0000"; 
+        const timeBlock = item.time_block.split('_')[1]; // 'Tue_0900' -> '0900'
         const hour = timeBlock.substring(0, 2);
         const minute = timeBlock.substring(2, 4);
         const formattedTime = `${hour}:${minute}`;
+
+        // 장소 이름으로 선택된 장소 정보 찾기 (좌표 등)
+        const selectedPlace = mappedPlaceIdByName.get(item.place_name);
         
-        const selectedPlace = item.place_name ? mappedPlaceIdByName.get(item.place_name) : undefined;
-        
-        if (!selectedPlace && item.place_name) {
-          console.warn(`[useItineraryParser] "${item.place_name}" 장소의 상세 정보를 currentSelectedPlaces에서 찾을 수 없습니다. 서버 ID (${item.id})와 기본값을 사용합니다.`);
+        if (!selectedPlace) {
+          console.warn(`[useItineraryParser] "${item.place_name}" 장소의 상세 정보를 찾을 수 없습니다.`);
         }
 
+        // ItineraryPlaceWithTime 객체 생성
         const place: ItineraryPlaceWithTime = {
-          id: String(item.id), // 서버에서 온 id (NODE_ID일 가능성 높음)
-          name: item.place_name || '이름 없는 장소',
-          category: item.place_type || '기타',
+          id: String(item.id || ''), // NODE_ID를 문자열로 변환
+          name: item.place_name,
+          category: item.place_type,
           timeBlock: formattedTime,
-          arriveTime: formattedTime, // 도착시간 우선 이걸로.
-          departTime: '', // 추후 계산 필요
-          stayDuration: item.stay_time_minutes || 60, // 서버에서 제공하면 사용, 아니면 기본값
-          travelTimeToNext: item.travel_time_to_next_min ? `${item.travel_time_to_next_min}분` : '', // 서버 제공 값
-
-          x: selectedPlace?.x ?? item.x ?? 0, // selectedPlace 우선, 없으면 item.x, 그것도 없으면 0
-          y: selectedPlace?.y ?? item.y ?? 0, // selectedPlace 우선, 없으면 item.y, 그것도 없으면 0
-          address: selectedPlace?.address || item.address || '',
-          road_address: selectedPlace?.road_address || item.road_address || '',
-          phone: selectedPlace?.phone || item.phone || '',
-          description: selectedPlace?.description || item.description || '',
-          rating: selectedPlace?.rating ?? (item.rating ? parseFloat(item.rating) : 0),
-          image_url: selectedPlace?.image_url || item.image_url || '',
-          homepage: selectedPlace?.homepage || item.homepage || '',
-          geoNodeId: String(item.id), // 서버에서 온 ID를 geoNodeId로 사용
+          arriveTime: formattedTime,
+          departTime: '', // 필요시 계산
+          stayDuration: 60, // 기본값
+          travelTimeToNext: '', // 필요시 계산
+          // 선택된 장소에서 추가 정보 가져오기
+          x: selectedPlace?.x || 0,
+          y: selectedPlace?.y || 0,
+          address: selectedPlace?.address || '',
+          road_address: selectedPlace?.road_address || '',
+          phone: selectedPlace?.phone || '',
+          description: selectedPlace?.description || '',
+          rating: selectedPlace?.rating || 0,
+          image_url: selectedPlace?.image_url || '',
+          homepage: selectedPlace?.homepage || '',
+          geoNodeId: String(item.id || ''), // NODE_ID를 geoNodeId로 사용
         };
+
         return place;
       });
 
+      // 경로 데이터 추출
       const nodeIds: string[] = [];
       const linkIds: string[] = [];
       const interleaved_route: (string | number)[] = [];
 
-      if (routeInfo && routeInfo.interleaved_route && Array.isArray(routeInfo.interleaved_route)) {
-        routeInfo.interleaved_route.forEach((id: string | number, index: number) => {
+      if (routeInfo && routeInfo.interleaved_route) {
+        routeInfo.interleaved_route.forEach((id: number | string, index: number) => {
           const idStr = String(id);
           interleaved_route.push(idStr);
+          
+          // 짝수 인덱스는 NODE_ID, 홀수 인덱스는 LINK_ID
           if (index % 2 === 0) {
             nodeIds.push(idStr);
           } else {
@@ -127,21 +138,25 @@ export const useItineraryParser = () => {
         });
       }
 
-      const totalDistance = routeInfo?.total_distance_m ? parseFloat(String(routeInfo.total_distance_m)) / 1000 : 0;
+      // 총 이동 거리 계산 (미터 -> 킬로미터)
+      const totalDistance = routeInfo ? routeInfo.total_distance_m / 1000 : 0;
 
-      return {
+      // ItineraryDay 객체 생성
+      const itineraryDay: ItineraryDay = {
         day: dayNumber,
-        dayOfWeek: dayOfWeekStr, // 실제 요일 문자열
-        date: dateStr,          // MM/DD 형식 날짜 문자열
+        dayOfWeek: dayOfWeek,
+        date: formatDate(tripStartDate, dayNumber - 1), // 시작 날짜 기준으로 날짜 설정
         places: places,
         totalDistance: totalDistance,
         routeData: {
           nodeIds: nodeIds,
           linkIds: linkIds,
-          segmentRoutes: [] 
+          segmentRoutes: [] // 필요시 계산
         },
         interleaved_route: interleaved_route
       };
+
+      return itineraryDay;
     });
 
     console.log('[useItineraryParser] 파싱 완료된 일정:', {
@@ -149,14 +164,9 @@ export const useItineraryParser = () => {
       각일자별장소수: result.map(day => day.places.length),
       총장소수: result.reduce((sum, day) => sum + day.places.length, 0)
     });
-    if (result.some(day => day.places.length === 0) && result.length > 0) {
-        console.warn("[useItineraryParser] 일부 일자에 장소가 없습니다. 서버 응답 또는 매핑 로직을 확인하세요.", result.filter(day => day.places.length === 0).map(d => d.day));
-    }
-
 
     return result;
-  };
+  }, []);
 
   return { parseServerResponse };
 };
-

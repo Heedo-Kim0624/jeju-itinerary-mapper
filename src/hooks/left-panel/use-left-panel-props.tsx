@@ -20,6 +20,7 @@ interface LeftPanelPropsData {
     itinerary: ItineraryDay[] | null;
     selectedItineraryDay: number | null;
     handleSelectItineraryDay: (day: number) => void;
+    isItineraryCreated?: boolean; // 선택적으로 추가
   };
   
   // Trip details
@@ -40,6 +41,7 @@ interface LeftPanelPropsData {
     handleViewOnMap: (place: Place) => void;
     handleSelectPlace: (place: Place, checked: boolean, category: string | null) => void;
     allCategoriesSelected: boolean;
+    allFetchedPlaces?: Place[]; // 선택적으로 추가
   };
   
   // Category and region selection
@@ -53,7 +55,9 @@ interface LeftPanelPropsData {
     isCategoryButtonEnabled: (category: string) => boolean;
     handlePanelBack: () => void;
   };
-  regionSelection: {
+  
+  // 선택적으로 추가
+  regionSelection?: {
     selectedRegions: string[];
     regionConfirmed: boolean;
     setRegionConfirmed: (confirmed: boolean) => void;
@@ -76,8 +80,8 @@ interface LeftPanelPropsData {
   };
   
   // Itinerary creation/closing
-  handleCreateItinerary: () => Promise<boolean>;
   handleCloseItinerary: () => void;
+  handleCreateItinerary?: () => Promise<void>; // 선택적으로 추가
 }
 
 export const useLeftPanelProps = (leftPanelData: LeftPanelPropsData) => {

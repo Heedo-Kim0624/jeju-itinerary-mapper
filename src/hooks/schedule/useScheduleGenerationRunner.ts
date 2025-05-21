@@ -8,8 +8,6 @@ import { useItineraryParser } from '@/hooks/itinerary/useItineraryParser'; // us
 import { useItinerary } from '@/hooks/use-itinerary'; // use-itinerary 사용
 import { summarizeServerResponse, summarizeItineraryData } from '@/utils/debugUtils';
 
-// useScheduleGenerationRunnerProps 인터페이스 제거 (직접 사용 안 함)
-
 export const useScheduleGenerationRunner = () => {
   const { generateSchedule, isGenerating: isLoadingScheduleGenerator } = useScheduleGenerator(); // 이름 변경
   const { parseServerResponse } = useItineraryParser();
@@ -18,7 +16,7 @@ export const useScheduleGenerationRunner = () => {
   const runScheduleGeneration = useCallback(async (
     payload: SchedulePayload,
     selectedPlaces: CoreSelectedPlace[], // CoreSelectedPlace 사용
-    tripStartDate: Date | null // 여행 시작 날짜 추가
+    tripStartDate: Date | null = null // 여행 시작 날짜 추가
   ): Promise<ItineraryDay[] | null> => { // 반환 타입 명시
     console.log('[useScheduleGenerationRunner] 생성기 호출 직전, Payload:', payload, '여행 시작일:', tripStartDate?.toISOString());
     
@@ -69,4 +67,3 @@ export const useScheduleGenerationRunner = () => {
 
   return { runScheduleGeneration, isGenerating: isLoadingScheduleGenerator }; // isGenerating 상태 반환
 };
-

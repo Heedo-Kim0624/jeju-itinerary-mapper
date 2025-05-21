@@ -1,4 +1,3 @@
-
 import { toast } from 'sonner';
 import type { ItineraryDay, Place, SelectedPlace as CoreSelectedPlace, NewServerScheduleResponse } from '@/types'; // CoreSelectedPlace 추가, NewServerScheduleResponse 추가
 
@@ -39,8 +38,8 @@ export const useItinerary = () => {
     setSelectedItineraryDay,
     setShowItinerary,
     setIsItineraryCreated,
-    parseServerResponse: (serverResponse: NewServerScheduleResponse, selectedPlaces: CoreSelectedPlace[], tripStartDate: Date | null) => { // 타입 변경
-      return itineraryParserHook.parseServerResponse(serverResponse, selectedPlaces, tripStartDate);
+    parseServerResponse: (serverResponse: any, selectedPlaces?: CoreSelectedPlace[], tripStartDate?: Date | null) => { // 함수 시그니처 변경
+      return itineraryParserHook.parseServerResponse(serverResponse, selectedPlaces || [], tripStartDate || null);
     },
   });
   
@@ -154,4 +153,3 @@ export const useItinerary = () => {
     createDebugItinerary,
   };
 };
-

@@ -2,7 +2,7 @@
 import React from 'react';
 import LeftPanelContainer from './LeftPanelContainer';
 import LeftPanelContent from './LeftPanelContent';
-import type { Place, ItineraryDay, CategoryName } from '@/types'; // Assuming types are in @/types
+import type { Place, ItineraryDay, CategoryName } from '@/types'; 
 
 // Props for LeftPanelContainer
 interface LeftPanelContainerPassedProps {
@@ -18,7 +18,7 @@ interface LeftPanelContainerPassedProps {
     startTime: string;
     endTime: string;
   } | null;
-  onCreateItinerary: () => boolean;
+  onCreateItinerary: () => void; // boolean 대신 void로 변경
   itinerary: ItineraryDay[] | null;
   selectedItineraryDay: number | null;
   onSelectDay: (day: number) => void;

@@ -1,10 +1,9 @@
-
 import { useScheduleGenerator as useScheduleGeneratorHook } from '@/hooks/use-schedule-generator';
 import { useScheduleStateAndEffects } from './schedule/useScheduleStateAndEffects';
 import { useScheduleGenerationRunner } from './schedule/useScheduleGenerationRunner';
 import { SelectedPlace } from '@/types/supabase';
-import { useEffect, useCallback } from 'react'; // useCallback is no longer used directly here for handleRawServerResponse
-import { ItineraryDay } from '@/types/core';
+import { useEffect, useCallback } from 'react'; 
+import { ItineraryDay, SchedulePayload } from '@/types/core';
 import { toast } from 'sonner';
 
 interface UseScheduleManagementProps {
@@ -30,33 +29,50 @@ export const useScheduleManagement = ({
     handleSelectDay,
   } = useScheduleStateAndEffects();
 
-  const { isGenerating: isGeneratingFromGenerator } = useScheduleGeneratorHook();
+  const { isGenerating: isGeneratingFromGenerator, runScheduleGeneration } = useScheduleGenerationRunner();
 
-  const { runScheduleGenerationProcess } = useScheduleGenerationRunner({
-    selectedPlaces,
-    dates,
-    startDatetime,
-    endDatetime,
-    setItinerary: (newItinerary: ItineraryDay[]) => {
-      console.log("[useScheduleManagement] Setting itinerary from runner:", 
-        { length: newItinerary.length, firstDay: newItinerary[0]?.day });
-      setItinerary(newItinerary);
+  const runScheduleGenerationProcess = useCallback(async () => {
+    if (!dates?.startDate || !dates?.endDate || !startDatetime || !endDatetime) {
+      toast.error("여행 날짜와 시간 정보가 올바르지 않습니다.");
+      return;
+    }
+
+    if (selectedPlaces.length === 0) {
+      toast.error("선택된 장소가 없습니다.");
+      return;
+    }
+
+    setIsLoadingState(true);
+    console.log("[useScheduleManagement] 일정 생성 시작:", {
+      장소수: selectedPlaces.length,
+      시작일: dates.startDate,
+      종료일: dates.endDate
+    });
+
+    try {
+      const payload: SchedulePayload = {
+        selected_places: selectedPlaces.map(p => ({ id: p.id, name: p.name })),
+        candidate_places: [], // 필요한 경우 후보 장소 추가
+        start_datetime: startDatetime,
+        end_datetime: endDatetime,
+      };
+
+      const result = await runScheduleGeneration(payload, selectedPlaces, dates.startDate);
       
-      // setSelectedDay는 이제 useScheduleGenerationCore 또는 useFallbackItineraryGenerator에서 처리될 수 있으므로,
-      // 여기서의 중복 호출을 검토하거나, runner가 최종적으로 itinerary와 selectedDay를 결정하도록 합니다.
-      // 현재 로직은 runner가 itinerary를 설정하면, 이 콜백에서 selectedDay를 설정합니다.
-      // 만약 runner가 이미 selectedDay를 설정한다면, 이 부분이 중복될 수 있습니다.
-      // 지금은 기존 로직을 유지하되, 추후 최적화 포인트로 남겨둡니다.
-      if (newItinerary.length > 0 && !selectedDay) {
-        setSelectedDay(newItinerary[0].day);
-      } else if (newItinerary.length === 0) {
-        // 일정이 비어있다면 selectedDay도 null로 설정
-        setSelectedDay(null);
+      if (!result || result.length === 0) {
+        toast.error("일정 생성에 실패했습니다. 다시 시도해주세요.");
+        setIsLoadingState(false);
+        return;
       }
-    },
-    setSelectedDay, // setSelectedDay를 runner에 직접 전달하여 runner가 관리하도록 할 수도 있습니다.
-    setIsLoadingState,
-  });
+      
+      console.log("[useScheduleManagement] 일정 생성 성공:", result.length, "일 일정");
+    } catch (error) {
+      console.error("[useScheduleManagement] 일정 생성 중 오류:", error);
+      toast.error("일정 생성 중 오류가 발생했습니다.");
+    } finally {
+      setIsLoadingState(false);
+    }
+  }, [selectedPlaces, dates, startDatetime, endDatetime, setIsLoadingState, runScheduleGeneration]);
 
   const combinedIsLoading = isGeneratingFromGenerator || isLoadingStateFromEffects;
 

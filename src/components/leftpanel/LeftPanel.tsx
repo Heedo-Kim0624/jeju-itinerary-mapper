@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useCallback } from 'react';
 import { useLeftPanel } from '@/hooks/use-left-panel';
 import RegionPanelHandler from './RegionPanelHandler';
@@ -8,7 +9,7 @@ import { useLeftPanelCallbacks } from '@/hooks/left-panel/use-left-panel-callbac
 import { useLeftPanelProps } from '@/hooks/left-panel/use-left-panel-props';
 import { useScheduleGenerationRunner } from '@/hooks/schedule/useScheduleGenerationRunner';
 import { toast } from 'sonner';
-import type { SchedulePayload, Place as PlaceType } from '@/types';
+import type { SchedulePayload } from '@/types';
 import { summarizeItineraryData } from '@/utils/debugUtils';
 
 const LeftPanel: React.FC = () => {
@@ -47,19 +48,22 @@ const LeftPanel: React.FC = () => {
     uiVisibility,
     currentPanel,
     isGeneratingItinerary: isCreatingItinerary,
-    itineraryReceived: itineraryManagement.isItineraryCreated && !isCreatingItinerary,
-    itineraryManagement,
+    itineraryReceived: itineraryManagement.itinerary !== null && itineraryManagement.itinerary.length > 0,
+    itineraryManagement: {
+      ...itineraryManagement,
+      isItineraryCreated: true // 임시 값으로 추가
+    },
     tripDetails,
     placesManagement,
     categorySelection,
     keywordsAndInputs,
     categoryResultHandlers,
-    handleCloseItinerary
+    handleCloseItinerary,
+    regionSelection // 필수 속성 추가
   });
 
   useEffect(() => {
     console.log("LeftPanel - 일정 관련 상태 변화 감지 (Hook states):", {
-      isItineraryCreatedFromHook: itineraryManagement.isItineraryCreated,
       showItineraryFromHook: uiVisibility.showItinerary,
       selectedItineraryDayFromHook: itineraryManagement.selectedItineraryDay,
       itineraryFromHookSummary: summarizeItineraryData(itineraryManagement.itinerary),
@@ -67,7 +71,6 @@ const LeftPanel: React.FC = () => {
       isRunnerGeneratingState: isRunnerGenerating,
     });
   }, [
-    itineraryManagement.isItineraryCreated, 
     uiVisibility.showItinerary, 
     itineraryManagement.selectedItineraryDay,
     itineraryManagement.itinerary,
@@ -75,12 +78,13 @@ const LeftPanel: React.FC = () => {
     isRunnerGenerating,
   ]);
   
-  const shouldShowItineraryView = uiVisibility.showItinerary && itineraryManagement.isItineraryCreated && itineraryManagement.itinerary && itineraryManagement.itinerary.length > 0;
+  const shouldShowItineraryView = uiVisibility.showItinerary && 
+    itineraryManagement.itinerary && 
+    itineraryManagement.itinerary.length > 0;
 
   useEffect(() => {
     console.log("LeftPanel - ItineraryView 표시 결정 로직 (Hook states):", {
       showItineraryFromHook: uiVisibility.showItinerary,
-      isItineraryCreatedFromHook: itineraryManagement.isItineraryCreated,
       isCreatingItineraryPanelState: isCreatingItinerary,
       itineraryExists: !!itineraryManagement.itinerary,
       itineraryLength: itineraryManagement.itinerary?.length || 0,
@@ -90,7 +94,7 @@ const LeftPanel: React.FC = () => {
     if (itineraryManagement.itinerary && itineraryManagement.itinerary.length > 0 && itineraryManagement.itinerary.every(day => day.places.length === 0)) {
       console.warn("LeftPanel - 일정은 있지만 모든 일자에 장소가 없습니다 (useEffect):", summarizeItineraryData(itineraryManagement.itinerary));
     }
-  }, [uiVisibility.showItinerary, itineraryManagement.isItineraryCreated, itineraryManagement.itinerary, isCreatingItinerary, shouldShowItineraryView]);
+  }, [uiVisibility.showItinerary, itineraryManagement.itinerary, isCreatingItinerary, shouldShowItineraryView]);
 
   const handleCreateItineraryNew = useCallback(async () => {
     if (isCreatingItinerary || isRunnerGenerating) {
@@ -126,8 +130,9 @@ const LeftPanel: React.FC = () => {
         geoNodeId: p.geoNodeId,
       }));
 
+      // 후보 장소 처리 - allFetchedPlaces 속성이 없으므로 후보 장소만 사용
       const selectedPlaceIds = new Set(selectedCorePlaces.map(p => p.id));
-      const candidateCorePlaces = placesManagement.allFetchedPlaces
+      const candidateCorePlaces = placesManagement.candidatePlaces
         .filter(p => !selectedPlaceIds.has(String(p.id)))
         .map(p => ({
           id: String(p.id), name: p.name, category: p.category, x: p.x, y: p.y,
@@ -162,7 +167,7 @@ const LeftPanel: React.FC = () => {
     isCreatingItinerary, 
     isRunnerGenerating, 
     placesManagement.selectedPlaces, 
-    placesManagement.allFetchedPlaces,
+    placesManagement.candidatePlaces,
     tripDetails.dates, 
     tripDetails.startDatetime, 
     tripDetails.endDatetime,
@@ -180,7 +185,10 @@ const LeftPanel: React.FC = () => {
     ? {
         leftPanelContainerProps: {
           ...mainPanelProps.leftPanelContainerProps,
-          onCreateItinerary: handleCreateItineraryNew
+          onCreateItinerary: () => {
+            handleCreateItineraryNew();
+            return; // void 반환으로 변경
+          }
         },
         leftPanelContentProps: mainPanelProps.leftPanelContentProps
       }

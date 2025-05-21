@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Place, ItineraryDay } from '@/types'; // @/types에서 가져오도록 변경
 import PlaceCart from './PlaceCart';
@@ -17,7 +18,7 @@ interface LeftPanelContainerProps {
     startTime: string;
     endTime: string;
   } | null;
-  onCreateItinerary: () => boolean;
+  onCreateItinerary: () => void; // boolean 대신 void로 변경
   itinerary: ItineraryDay[] | null;
   selectedItineraryDay: number | null;
   onSelectDay: (day: number) => void;
