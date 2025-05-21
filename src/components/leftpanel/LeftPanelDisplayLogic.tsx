@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { ScheduleLoadingIndicator } from './ScheduleLoadingIndicator';
 import ItineraryDisplayWrapper from './ItineraryDisplayWrapper';
@@ -35,7 +34,7 @@ interface MainPanelWrapperPassedProps {
       startTime: string;
       endTime: string;
     } | null;
-    onCreateItinerary: () => boolean;
+    onCreateItinerary: () => void; // 반환 타입을 boolean에서 void로 변경
     itinerary: ItineraryDay[] | null;
     selectedItineraryDay: number | null;
     onSelectDay: (day: number) => void;
@@ -64,13 +63,13 @@ interface MainPanelWrapperPassedProps {
       restaurant: (value: string) => void;
       cafe: (value: string) => void;
     };
-    onConfirmCategoryCallbacks: {
+    onConfirmCategoryCallbacks: { // 이전에 onConfirmCategory 였던 것
       accomodation: (finalKeywords: string[]) => void;
       landmark: (finalKeywords: string[]) => void;
       restaurant: (finalKeywords: string[]) => void;
       cafe: (finalKeywords: string[]) => void;
     };
-    handlePanelBackCallbacks: {
+    handlePanelBackCallbacks: { // 이전에 handlePanelBack 이었던 것
       accomodation: () => void;
       landmark: () => void;
       restaurant: () => void;
