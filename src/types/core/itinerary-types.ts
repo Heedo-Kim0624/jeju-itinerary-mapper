@@ -30,8 +30,8 @@ export interface ItineraryPlaceWithTime {
   homepage: string;            // URL for the place's homepage (required)
 
   // For GeoJSON based routing if applicable
-  geoNodeId?: string | number;  // ID of the corresponding node in GeoJSON data
-
+  geoNodeId?: string;  // ID of the corresponding node in GeoJSON data - CHANGED to string | undefined
+  
   isFallback?: boolean;         // True if detailed information could not be found and default/server values are used
   
   // Properties for compatibility with Place selection logic
