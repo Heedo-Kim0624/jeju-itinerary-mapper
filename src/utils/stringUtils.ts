@@ -13,15 +13,26 @@ export const normalizePlaceName = (name: string): string => {
 
 /**
  * 두 문자열의 유사도를 계산하는 함수 (0~1 사이 값, 1이 완전 일치)
- * 레벤슈타인 거리를 사용합니다. 정규화된 이름을 기준으로 비교합니다.
+ * 레벤슈타인 거리를 사용하며, 한 문자열이 다른 문자열을 포함하는 경우 높은 점수를 부여합니다.
+ * 정규화된 이름을 기준으로 비교합니다.
  */
 export const calculateStringSimilarity = (str1: string, str2: string): number => {
-  // 개선된 정규화 함수 사용
   const normalizedStr1 = normalizePlaceName(str1);
   const normalizedStr2 = normalizePlaceName(str2);
 
   if (normalizedStr1 === normalizedStr2) return 1; // 완전 일치
   if (normalizedStr1.length === 0 || normalizedStr2.length === 0) return 0;
+
+  // 포함 관계 확인 (길이가 3 이상인 경우에만 적용하여 너무 짧은 문자열 포함 방지)
+  // 예를 들어 "호텔"이 "제주호텔"에 포함되는 경우
+  if (normalizedStr1.length >= 3 && normalizedStr2.length >= 3) {
+    if (normalizedStr1.includes(normalizedStr2) || normalizedStr2.includes(normalizedStr1)) {
+      // 포함 관계일 경우 높은 유사도 점수 (0.9) 반환
+      // 더 긴 문자열을 기준으로, 포함되는 짧은 문자열의 길이 비율로 유사도를 계산할 수도 있으나,
+      // 여기서는 사용자의 제안대로 고정된 높은 값을 사용합니다.
+      return 0.9; 
+    }
+  }
 
   const matrix: number[][] = [];
 
@@ -46,9 +57,8 @@ export const calculateStringSimilarity = (str1: string, str2: string): number =>
 
   const distance = matrix[normalizedStr1.length][normalizedStr2.length];
   const maxLength = Math.max(normalizedStr1.length, normalizedStr2.length);
-  if (maxLength === 0) return 1; // 두 문자열 모두 비어있는 경우
+  if (maxLength === 0) return 1; // 두 문자열 모두 비어있는 경우 (이론상 위에서 처리됨)
 
-  // 유사도 = 1 - (편집거리 / 최대길이)
   return 1 - distance / maxLength;
 };
 
