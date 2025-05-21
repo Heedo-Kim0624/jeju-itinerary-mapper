@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useCallback } from 'react';
 import { useLeftPanel } from '@/hooks/use-left-panel';
 import RegionPanelHandler from './RegionPanelHandler';
@@ -8,7 +9,7 @@ import { useLeftPanelCallbacks } from '@/hooks/left-panel/use-left-panel-callbac
 import { useLeftPanelProps } from '@/hooks/left-panel/use-left-panel-props';
 import { useScheduleGenerationRunner } from '@/hooks/schedule/useScheduleGenerationRunner';
 import { toast } from 'sonner';
-import type { SchedulePayload, Place, SelectedPlace as CoreSelectedPlace } from '@/types';
+import type { SchedulePayload, Place, SelectedPlace as CoreSelectedPlace, ItineraryDay } from '@/types'; // ItineraryDay 추가
 import { summarizeItineraryData } from '@/utils/debugUtils';
 
 const LeftPanel: React.FC = () => {
@@ -19,20 +20,24 @@ const LeftPanel: React.FC = () => {
     placesManagement,
     tripDetails,
     uiVisibility,
-    itineraryManagement,
-    handleCloseItinerary,
+    itineraryManagement, // This now includes isItineraryCreated, showItinerary, etc.
+    handleCloseItinerary, // This is from itineraryCreation.handleCloseItineraryPanel
     categoryResultHandlers,
     currentPanel,
+    isGeneratingItinerary: isGeneratingFromHook, // Renamed for clarity
   } = useLeftPanel();
 
   const { runScheduleGeneration, isGenerating: isRunnerGenerating } = useScheduleGenerationRunner();
-  const [isCreatingItinerary, setIsCreatingItinerary] = useState(false);
+  const [isCreatingItineraryUiLock, setIsCreatingItineraryUiLock] = useState(false); // UI specific loading lock
+
+  // Combined loading state
+  const isActuallyGenerating = isGeneratingFromHook || isRunnerGenerating || isCreatingItineraryUiLock;
 
   // Extract callback functions
   const callbacks = useLeftPanelCallbacks({
     handleConfirmCategory: keywordsAndInputs.handleConfirmCategory,
-    handlePanelBack: categorySelection.handlePanelBack,
-    handleCloseItinerary,
+    handlePanelBack: categorySelection.handlePanelBack, // This is the simple one for the hook
+    handleCloseItinerary, // Passed through
     setRegionSlidePanelOpen: regionSelection.setRegionSlidePanelOpen,
     selectedRegions: regionSelection.selectedRegions,
     setRegionConfirmed: regionSelection.setRegionConfirmed
@@ -46,49 +51,53 @@ const LeftPanel: React.FC = () => {
   } = useLeftPanelProps({
     uiVisibility,
     currentPanel,
-    isGeneratingItinerary: isCreatingItinerary || isRunnerGenerating, // Combine loading states
-    itineraryReceived: itineraryManagement.itinerary !== null && itineraryManagement.itinerary.length > 0,
-    itineraryManagement: {
-      ...itineraryManagement,
-      isItineraryCreated: itineraryManagement.isItineraryCreated // 실제 isItineraryCreated 사용
-    },
+    isGeneratingItinerary: isActuallyGenerating,
+    itineraryReceived: !!itineraryManagement.itinerary && itineraryManagement.itinerary.length > 0,
+    itineraryManagement: itineraryManagement, // Pass the whole object from useLeftPanel
     tripDetails,
     placesManagement,
     categorySelection,
     keywordsAndInputs,
     categoryResultHandlers,
-    handleCloseItinerary,
-    regionSelection
+    handleCloseItinerary, // This is the top-level one from useLeftPanel
+    regionSelection,
+    // Pass the structured callbacks for MainPanelContent
+    onConfirmCategoryCallbacks: callbacks.onConfirmCategoryCallbacks,
+    handlePanelBackCallbacks: callbacks.handlePanelBackCallbacks,
   });
 
   useEffect(() => {
     console.log("LeftPanel - 일정 관련 상태 변화 감지 (Hook states):", {
-      showItineraryFromHook: uiVisibility.showItinerary,
+      showItineraryFromHook: uiVisibility.showItinerary, // or itineraryManagement.showItinerary
       selectedItineraryDayFromHook: itineraryManagement.selectedItineraryDay,
       itineraryFromHookSummary: summarizeItineraryData(itineraryManagement.itinerary),
-      isCreatingItineraryPanelState: isCreatingItinerary,
+      isCreatingItineraryPanelState: isCreatingItineraryUiLock,
       isRunnerGeneratingState: isRunnerGenerating,
-      isItineraryCreatedFromHook: itineraryManagement.isItineraryCreated, // 추가된 로그
+      isGeneratingFromCoreHook: isGeneratingFromHook,
+      isItineraryCreatedFromHook: itineraryManagement.isItineraryCreated,
     });
   }, [
     uiVisibility.showItinerary, 
     itineraryManagement.selectedItineraryDay,
     itineraryManagement.itinerary,
-    isCreatingItinerary,
+    isCreatingItineraryUiLock,
     isRunnerGenerating,
-    itineraryManagement.isItineraryCreated, // 의존성 배열에 추가
+    isGeneratingFromHook,
+    itineraryManagement.isItineraryCreated,
   ]);
   
-  const shouldShowItineraryView = uiVisibility.showItinerary && 
-    itineraryManagement.isItineraryCreated && // isItineraryCreated 조건 추가
+  const shouldShowItineraryView = 
+    itineraryManagement.showItinerary && // Use showItinerary from itineraryManagement
+    itineraryManagement.isItineraryCreated && 
     itineraryManagement.itinerary && 
     itineraryManagement.itinerary.length > 0;
 
   useEffect(() => {
     console.log("LeftPanel - ItineraryView 표시 결정 로직 (Hook states):", {
-      showItineraryFromHook: uiVisibility.showItinerary,
-      isItineraryCreatedFromHook: itineraryManagement.isItineraryCreated, // 추가된 로그
-      isCreatingItineraryPanelState: isCreatingItinerary,
+      showItineraryFromItineraryMgmt: itineraryManagement.showItinerary,
+      isItineraryCreatedFromItineraryMgmt: itineraryManagement.isItineraryCreated,
+      isCreatingItineraryPanelState: isCreatingItineraryUiLock,
+      isRunnerGeneratingState: isRunnerGenerating,
       itineraryExists: !!itineraryManagement.itinerary,
       itineraryLength: itineraryManagement.itinerary?.length || 0,
       최종결과_shouldShowItineraryView: shouldShowItineraryView
@@ -97,10 +106,17 @@ const LeftPanel: React.FC = () => {
     if (itineraryManagement.itinerary && itineraryManagement.itinerary.length > 0 && itineraryManagement.itinerary.every(day => day.places.length === 0)) {
       console.warn("LeftPanel - 일정은 있지만 모든 일자에 장소가 없습니다 (useEffect):", summarizeItineraryData(itineraryManagement.itinerary));
     }
-  }, [uiVisibility.showItinerary, itineraryManagement.isItineraryCreated, itineraryManagement.itinerary, isCreatingItinerary, shouldShowItineraryView]);
+  }, [
+      itineraryManagement.showItinerary, 
+      itineraryManagement.isItineraryCreated, 
+      itineraryManagement.itinerary, 
+      isCreatingItineraryUiLock, 
+      isRunnerGenerating,
+      shouldShowItineraryView
+    ]);
 
   const handleCreateItineraryNew = useCallback(async () => {
-    if (isCreatingItinerary || isRunnerGenerating) {
+    if (isActuallyGenerating) {
       toast.info("일정 생성 중입니다. 잠시만 기다려주세요.");
       return;
     }
@@ -115,11 +131,8 @@ const LeftPanel: React.FC = () => {
         return;
     }
     
-    setIsCreatingItinerary(true);
+    setIsCreatingItineraryUiLock(true);
     try {
-      // placesManagement.selectedPlaces는 이미 SelectedPlace[] 타입입니다.
-      // CoreSelectedPlace는 SelectedPlace의 별칭이므로, isSelected와 isCandidate를 포함해야 합니다.
-      // map 함수에서 이 속성들을 명시적으로 복사합니다.
       const selectedCorePlaces: CoreSelectedPlace[] = placesManagement.selectedPlaces.map(p => ({
         id: String(p.id),
         name: p.name,
@@ -134,21 +147,15 @@ const LeftPanel: React.FC = () => {
         image_url: p.image_url,
         homepage: p.homepage,
         geoNodeId: p.geoNodeId,
-        isSelected: p.isSelected, // isSelected 속성 복사
-        isCandidate: p.isCandidate, // isCandidate 속성 복사
-        // SelectedPlace에만 있고 Place에는 없는 다른 속성이 있다면 여기에 추가
-        // 예: operationTimeData, isRecommended, weight, raw, categoryDetail, reviewCount, naverLink, instaLink, operatingHours 등
-        // 해당 속성들이 p에 존재하고 CoreSelectedPlace 타입에 필요하다면 복사합니다.
-        // 현재 CoreSelectedPlace (SelectedPlace)는 isSelected, isCandidate 외에는 Place와 동일하므로 이 두 가지만 필수입니다.
+        isSelected: p.isSelected !== undefined ? p.isSelected : true, // Ensure isSelected exists
+        isCandidate: p.isCandidate !== undefined ? p.isCandidate : false, // Ensure isCandidate exists
       }));
 
       const selectedPlaceIds = new Set(selectedCorePlaces.map(p => p.id));
-      // candidatePlaces는 Place[] 타입이므로 CoreSelectedPlace로 변환 시 isSelected, isCandidate를 추가해야 합니다.
-      // API 페이로드에는 isSelected/isCandidate가 필요 없을 수 있으므로 SchedulePlace 타입으로 변환합니다.
       const candidateSchedulePlaces = placesManagement.candidatePlaces
         .filter(p => !selectedPlaceIds.has(String(p.id)))
         .map(p => ({ 
-          id: String(p.id), // API는 string ID를 기대할 수 있음
+          id: String(p.id),
           name: p.name 
         }));
 
@@ -168,31 +175,39 @@ const LeftPanel: React.FC = () => {
       });
       
       // selectedCorePlaces를 전달합니다. 이 타입은 CoreSelectedPlace[] (즉, SelectedPlace[])입니다.
-      const result = await runScheduleGeneration(payload, selectedCorePlaces, tripDetails.dates.startDate);
+      // runScheduleGeneration의 두 번째 인자는 CoreSelectedPlace[] 타입의 selectedPlaces를 기대합니다.
+      // 세 번째 인자는 Date 타입의 tripStartDate를 기대합니다.
+      const result: ItineraryDay[] | null = await runScheduleGeneration(
+        payload, 
+        selectedCorePlaces, 
+        tripDetails.dates.startDate
+      );
       
-      console.log("[LeftPanel] handleCreateItineraryNew 완료. 결과 요약:", summarizeItineraryData(result));
-      
-      // itineraryManagement.handleServerItineraryResponse는 runScheduleGeneration 내부에서 호출되므로 여기서 직접 호출할 필요가 없을 수 있습니다.
-      // 만약 runScheduleGeneration이 최종 일정을 반환하고, 여기서 UI 업데이트를 트리거해야 한다면,
-      // itineraryManagement.handleServerItineraryResponse(result); 와 같이 호출합니다.
-      // 현재 구조에서는 runScheduleGeneration 내부에서 useItinerary().handleServerItineraryResponse를 호출합니다.
+      if (result) {
+        console.log("[LeftPanel] handleCreateItineraryNew 완료. 결과 요약:", summarizeItineraryData(result));
+        // itineraryManagement.handleServerItineraryResponse는 runScheduleGeneration 내부에서 호출되어
+        // useItinerary 훅의 상태를 업데이트하고, 그 결과가 itineraryManagement.itinerary 등으로 반영됩니다.
+        // 여기서 직접 UI 상태를 조작하기보다는, 훅의 상태 변화를 통해 UI가 반응하도록 하는 것이 좋습니다.
+      } else {
+        console.warn("[LeftPanel] handleCreateItineraryNew: runScheduleGeneration returned null or empty.");
+        // 오류 토스트는 runScheduleGeneration 또는 그 내부에서 처리될 것으로 예상됩니다.
+      }
 
     } catch (error) {
       console.error("[LeftPanel] 일정 생성 중 오류:", error);
       toast.error(`일정 생성 중 오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없음'}`);
     } finally {
-      setIsCreatingItinerary(false);
+      setIsCreatingItineraryUiLock(false);
     }
   }, [
-    isCreatingItinerary, 
-    isRunnerGenerating, 
+    isActuallyGenerating, 
     placesManagement.selectedPlaces, 
     placesManagement.candidatePlaces,
     tripDetails.dates, 
     tripDetails.startDatetime, 
     tripDetails.endDatetime,
     runScheduleGeneration,
-    // itineraryManagement // 의존성 배열에서 제거 또는 필요한 특정 함수만 추가
+    // itineraryManagement.handleServerItineraryResponse // This is implicitly handled by runScheduleGeneration -> useItinerary
   ]);
 
   const enhancedItineraryDisplayProps = itineraryDisplayProps
@@ -206,19 +221,20 @@ const LeftPanel: React.FC = () => {
     ? {
         leftPanelContainerProps: {
           ...mainPanelProps.leftPanelContainerProps,
-          onCreateItinerary: () => { // 이 함수는 void를 반환해야 합니다.
-            handleCreateItineraryNew();
-            // void 반환이므로 return 문 불필요
-          }
+          // onCreateItinerary는 LeftPanelContainerPassedProps에 정의되어 있어야 합니다.
+          // useLeftPanelProps에서 leftPanelContainerProps 생성 시 onCreateItinerary를 직접 할당하지 않으므로,
+          // LeftPanel.tsx에서 enhancedMainPanelProps를 만들 때 추가합니다.
+          onCreateItinerary: handleCreateItineraryNew 
         },
-        leftPanelContentProps: mainPanelProps.leftPanelContentProps
+        leftPanelContentProps: mainPanelProps.leftPanelContentProps // This should now be correctly typed
       }
     : null;
+
 
   return (
     <div className="relative h-full">
       <LeftPanelDisplayLogic
-        isGenerating={isCreatingItinerary || isRunnerGenerating} // 통합된 로딩 상태 사용
+        isGenerating={isActuallyGenerating}
         shouldShowItineraryView={shouldShowItineraryView}
         itineraryDisplayProps={enhancedItineraryDisplayProps}
         mainPanelProps={enhancedMainPanelProps}

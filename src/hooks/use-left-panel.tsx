@@ -1,3 +1,4 @@
+
 import { useEffect, useCallback } from 'react'; // useCallback 추가
 import { useSelectedPlaces } from './use-selected-places';
 import { useTripDetails } from './use-trip-details';
@@ -11,7 +12,7 @@ import { useLeftPanelState } from './left-panel/use-left-panel-state';
 import { useItineraryCreation } from './left-panel/use-itinerary-creation';
 import { useCategoryResultHandlers } from './left-panel/use-category-result-handlers';
 import { useEventListeners } from './left-panel/use-event-listeners';
-import { SchedulePayload, Place } from '@/types/core'; // Place 임포트 추가
+import { SchedulePayload, Place, ItineraryDay } from '@/types/core'; // Place, ItineraryDay 임포트 추가
 import { toast } from 'sonner'; // toast 임포트 추가
 
 /**
@@ -23,7 +24,7 @@ export const useLeftPanel = () => {
   const leftPanelState = useLeftPanelState();
   const regionSelection = useRegionSelection();
   const categorySelection = useCategorySelection();
-  const tripDetailsHookResult = useTripDetails(); // 변수명 변경하여 명확히 구분
+  const tripDetailsHookResult = useTripDetails();
   const { directInputValues, onDirectInputChange } = useInputState();
   
   // Set up event listeners
@@ -36,12 +37,12 @@ export const useLeftPanel = () => {
   const placesManagement = useSelectedPlaces();
 
   // Itinerary management
-  const itineraryManagement = useItinerary();
+  const itineraryManagementHook = useItinerary(); // Renamed for clarity
 
   // UI visibility
   const uiVisibility = {
-    showItinerary: itineraryManagement.showItinerary,
-    setShowItinerary: itineraryManagement.setShowItinerary,
+    showItinerary: itineraryManagementHook.showItinerary,
+    setShowItinerary: itineraryManagementHook.setShowItinerary,
     showCategoryResult: leftPanelState.showCategoryResult,
     setShowCategoryResult: leftPanelState.setShowCategoryResult
   };
@@ -64,27 +65,22 @@ export const useLeftPanel = () => {
   // Category result handlers
   const categoryResultHandlers = useCategoryResultHandlers(
     regionSelection.selectedRegions,
-    tripDetailsHookResult, // 수정된 변수명 사용
+    tripDetailsHookResult,
     placesManagement.handleAutoCompletePlaces,
     leftPanelState.setShowCategoryResult
   );
 
-  // 함수 시그니처 불일치 해결을 위한 어댑터 함수
-  const generateItineraryAdapter = useCallback(async (payload: SchedulePayload) => {
-    // payload는 UseItineraryCreationProps에 의해 전달되지만,
-    // 클라이언트 사이드 생성기를 직접 호출할 때는 내부의 selected_places 등은 직접 사용하지 않고,
-    // placesManagement와 tripDetailsHookResult에서 전체 Place 객체와 Date 객체를 가져와 사용합니다.
-
+  // Adapter function for generateItinerary
+  const generateItineraryAdapter = useCallback(async (payload: SchedulePayload): Promise<ItineraryDay[] | null> => {
     if (!tripDetailsHookResult.dates.startDate || !tripDetailsHookResult.dates.endDate) {
       console.error("[Adapter] Trip start or end date is missing in tripDetails.dates.");
       toast.error("여행 시작일 또는 종료일이 설정되지 않았습니다.");
       return null;
     }
-    // tripDetailsHookResult.startTime 와 tripDetailsHookResult.endTime 은 초기값을 가지므로 null 체크 불필요
 
     const placesForClientGenerator: Place[] = [
-      ...(placesManagement.selectedPlaces as Place[]), // SelectedPlace[]를 Place[]로 캐스팅
-      ...(placesManagement.candidatePlaces as Place[]), // Place[]는 그대로 사용
+      ...(placesManagement.selectedPlaces as Place[]),
+      ...(placesManagement.candidatePlaces as Place[]),
     ];
 
     if (placesForClientGenerator.length === 0) {
@@ -93,13 +89,7 @@ export const useLeftPanel = () => {
     }
 
     try {
-      // itineraryManagement.generateItinerary 함수는 다음 인자들을 기대합니다:
-      // 1. placesToUse: Place[]
-      // 2. startDate: Date
-      // 3. endDate: Date
-      // 4. startTime: string (HH:MM format)
-      // 5. endTime: string (HH:MM format)
-      return await itineraryManagement.generateItinerary(
+      return await itineraryManagementHook.generateItinerary(
         placesForClientGenerator,
         tripDetailsHookResult.dates.startDate,
         tripDetailsHookResult.dates.endDate,
@@ -111,16 +101,16 @@ export const useLeftPanel = () => {
       toast.error(`어댑터에서 일정 생성 중 오류: ${error instanceof Error ? error.message : String(error)}`);
       return null;
     }
-  }, [itineraryManagement, placesManagement, tripDetailsHookResult]); // 의존성 배열에 placesManagement 추가
+  }, [itineraryManagementHook, placesManagement, tripDetailsHookResult]);
 
   // Itinerary creation logic
   const itineraryCreation = useItineraryCreation({
-    tripDetails: tripDetailsHookResult, // 수정된 변수명 사용
+    tripDetails: tripDetailsHookResult,
     userDirectlySelectedPlaces: placesManagement.selectedPlaces,
     autoCompleteCandidatePlaces: placesManagement.candidatePlaces,
     prepareSchedulePayload: placesManagement.prepareSchedulePayload,
     generateItinerary: generateItineraryAdapter,
-    setShowItinerary: itineraryManagement.setShowItinerary,
+    setShowItinerary: itineraryManagementHook.setShowItinerary,
     setCurrentPanel: leftPanelState.setCurrentPanel,
     setIsGenerating: leftPanelState.setIsGenerating,
     setItineraryReceived: leftPanelState.setItineraryReceived,
@@ -148,7 +138,7 @@ export const useLeftPanel = () => {
 
   // Handle panel navigation and view changes based on itinerary state
   useEffect(() => {
-    if (itineraryManagement.isItineraryCreated && itineraryManagement.itinerary && itineraryManagement.itinerary.length > 0) {
+    if (itineraryManagementHook.isItineraryCreated && itineraryManagementHook.itinerary && itineraryManagementHook.itinerary.length > 0) {
       if (!uiVisibility.showItinerary) {
          console.log("useLeftPanel: Itinerary created, ensuring panel is visible.");
          uiVisibility.setShowItinerary(true);
@@ -158,8 +148,8 @@ export const useLeftPanel = () => {
       }
     }
   }, [
-    itineraryManagement.isItineraryCreated, 
-    itineraryManagement.itinerary, 
+    itineraryManagementHook.isItineraryCreated, 
+    itineraryManagementHook.itinerary, 
     uiVisibility.showItinerary, 
     leftPanelState.currentPanel,
     leftPanelState.setCurrentPanel,
@@ -172,12 +162,16 @@ export const useLeftPanel = () => {
     categorySelection,
     keywordsAndInputs,
     placesManagement,
-    tripDetails: tripDetailsHookResult, // 수정된 변수명 사용
+    tripDetails: tripDetailsHookResult,
     uiVisibility,
-    itineraryManagement: {
-      itinerary: itineraryManagement.itinerary,
-      selectedItineraryDay: itineraryManagement.selectedItineraryDay,
-      handleSelectItineraryDay: itineraryManagement.handleSelectItineraryDay,
+    itineraryManagement: { // Ensure this object has all needed properties
+      itinerary: itineraryManagementHook.itinerary,
+      selectedItineraryDay: itineraryManagementHook.selectedItineraryDay,
+      handleSelectItineraryDay: itineraryManagementHook.handleSelectItineraryDay,
+      isItineraryCreated: itineraryManagementHook.isItineraryCreated,
+      handleServerItineraryResponse: itineraryManagementHook.handleServerItineraryResponse,
+      showItinerary: itineraryManagementHook.showItinerary,
+      setShowItinerary: itineraryManagementHook.setShowItinerary,
     },
     handleCreateItinerary: itineraryCreation.handleInitiateItineraryCreation,
     handleCloseItinerary: itineraryCreation.handleCloseItineraryPanel,
@@ -193,3 +187,4 @@ export const useLeftPanel = () => {
     itineraryReceived: leftPanelState.itineraryReceived,
   };
 };
+

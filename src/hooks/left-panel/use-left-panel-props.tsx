@@ -20,7 +20,8 @@ interface LeftPanelPropsData {
     itinerary: ItineraryDay[] | null;
     selectedItineraryDay: number | null;
     handleSelectItineraryDay: (day: number) => void;
-    isItineraryCreated?: boolean; // 선택적으로 추가
+    isItineraryCreated?: boolean;
+    // Potentially add handleServerItineraryResponse, showItinerary, setShowItinerary if needed by props consuming this
   };
   
   // Trip details
@@ -41,7 +42,7 @@ interface LeftPanelPropsData {
     handleViewOnMap: (place: Place) => void;
     handleSelectPlace: (place: Place, checked: boolean, category: string | null) => void;
     allCategoriesSelected: boolean;
-    allFetchedPlaces?: Place[]; // 선택적으로 추가
+    allFetchedPlaces?: Place[];
   };
   
   // Category and region selection
@@ -53,10 +54,9 @@ interface LeftPanelPropsData {
     selectedKeywordsByCategory: Record<string, string[]>;
     toggleKeyword: (category: string, keyword: string) => void;
     isCategoryButtonEnabled: (category: string) => boolean;
-    handlePanelBack: () => void;
+    handlePanelBack: () => void; // Simple version for some uses
   };
   
-  // 선택적으로 추가
   regionSelection?: {
     selectedRegions: string[];
     regionConfirmed: boolean;
@@ -70,7 +70,7 @@ interface LeftPanelPropsData {
   keywordsAndInputs: {
     directInputValues: Record<string, string>;
     onDirectInputChange: (category: string, value: string) => void;
-    handleConfirmCategory: (category: string, finalKeywords: string[], clearSelection: boolean) => void;
+    handleConfirmCategory: (category: string, finalKeywords: string[], clearSelection: boolean) => void; // Simple version for some uses
   };
   
   // Category result handling
@@ -81,20 +81,47 @@ interface LeftPanelPropsData {
   
   // Itinerary creation/closing
   handleCloseItinerary: () => void;
-  handleCreateItinerary?: () => Promise<void>; // 선택적으로 추가
+  handleCreateItinerary?: () => Promise<void>;
+
+  // Structured Callbacks required for LeftPanelContent via MainPanelWrapper
+  onConfirmCategoryCallbacks: {
+    accomodation: (finalKeywords: string[]) => void;
+    landmark: (finalKeywords: string[]) => void;
+    restaurant: (finalKeywords: string[]) => void;
+    cafe: (finalKeywords: string[]) => void;
+  };
+  handlePanelBackCallbacks: {
+    accomodation: () => void;
+    landmark: () => void;
+    restaurant: () => void;
+    cafe: () => void;
+  };
 }
 
 export const useLeftPanelProps = (leftPanelData: LeftPanelPropsData) => {
+  const { 
+    uiVisibility, 
+    itineraryManagement, 
+    tripDetails, 
+    handleCloseItinerary,
+    placesManagement,
+    isGeneratingItinerary,
+    categorySelection,
+    regionSelection,
+    keywordsAndInputs,
+    onConfirmCategoryCallbacks, // Destructure for use
+    handlePanelBackCallbacks   // Destructure for use
+  } = leftPanelData;
+
   // Derive itinerary display props
   const itineraryDisplayProps = useMemo(() => {
-    const { uiVisibility, itineraryManagement, tripDetails, handleCloseItinerary } = leftPanelData;
-    
-    return uiVisibility.showItinerary ? {
-      itinerary: itineraryManagement.itinerary || [],
+    return uiVisibility.showItinerary && itineraryManagement.itinerary ? { // Ensure itinerary is not null
+      itinerary: itineraryManagement.itinerary,
       startDate: tripDetails.dates?.startDate || new Date(),
       onSelectDay: itineraryManagement.handleSelectItineraryDay,
       selectedDay: itineraryManagement.selectedItineraryDay,
       onCloseItinerary: handleCloseItinerary,
+      // handleClosePanelWithBackButton will be added in LeftPanel.tsx
       debug: {
         itineraryLength: itineraryManagement.itinerary?.length || 0,
         selectedDay: itineraryManagement.selectedItineraryDay,
@@ -102,23 +129,14 @@ export const useLeftPanelProps = (leftPanelData: LeftPanelPropsData) => {
       },
     } : null;
   }, [
-    leftPanelData.uiVisibility,
-    leftPanelData.itineraryManagement.itinerary,
-    leftPanelData.itineraryManagement.selectedItineraryDay,
-    leftPanelData.tripDetails.dates?.startDate,
-    leftPanelData.handleCloseItinerary
+    uiVisibility, // uiVisibility.showItinerary
+    itineraryManagement, // itineraryManagement.itinerary, itineraryManagement.selectedItineraryDay, itineraryManagement.handleSelectItineraryDay
+    tripDetails.dates?.startDate,
+    handleCloseItinerary
   ]);
 
   // Derive main panel container props
   const leftPanelContainerProps = useMemo(() => {
-    const { 
-      uiVisibility, 
-      placesManagement, 
-      tripDetails, 
-      itineraryManagement, 
-      isGeneratingItinerary 
-    } = leftPanelData;
-    
     return !isGeneratingItinerary && !uiVisibility.showItinerary ? {
       showItinerary: uiVisibility.showItinerary,
       onSetShowItinerary: uiVisibility.setShowItinerary,
@@ -132,30 +150,27 @@ export const useLeftPanelProps = (leftPanelData: LeftPanelPropsData) => {
         startTime: tripDetails.dates?.startTime || "09:00",
         endTime: tripDetails.dates?.endTime || "21:00",
       },
+      // onCreateItinerary will be added in LeftPanel.tsx
       itinerary: itineraryManagement.itinerary,
       selectedItineraryDay: itineraryManagement.selectedItineraryDay,
       onSelectDay: itineraryManagement.handleSelectItineraryDay,
       isGenerating: isGeneratingItinerary,
     } : null;
   }, [
-    leftPanelData.uiVisibility,
-    leftPanelData.placesManagement,
-    leftPanelData.tripDetails,
-    leftPanelData.itineraryManagement, 
-    leftPanelData.isGeneratingItinerary
+    uiVisibility, // uiVisibility.showItinerary, uiVisibility.setShowItinerary
+    placesManagement, // placesManagement.selectedPlaces, placesManagement.handleRemovePlace, placesManagement.handleViewOnMap, placesManagement.allCategoriesSelected
+    tripDetails.dates, // tripDetails.dates (for startDate, endDate, startTime, endTime)
+    itineraryManagement, // itineraryManagement.itinerary, itineraryManagement.selectedItineraryDay, itineraryManagement.handleSelectItineraryDay
+    isGeneratingItinerary
   ]);
 
   // Derive main panel content props
   const leftPanelContentProps = useMemo(() => {
-    const { 
-      categorySelection, 
-      tripDetails, 
-      regionSelection, 
-      keywordsAndInputs,
-      isGeneratingItinerary 
-    } = leftPanelData;
+    if (isGeneratingItinerary || uiVisibility.showItinerary || !regionSelection) {
+      return null;
+    }
     
-    return !isGeneratingItinerary && !leftPanelData.uiVisibility.showItinerary ? {
+    return {
       onDateSelect: tripDetails.setDates,
       onOpenRegionPanel: () => regionSelection.setRegionSlidePanelOpen(true),
       hasSelectedDates: !!tripDetails.dates?.startDate && !!tripDetails.dates?.endDate,
@@ -180,14 +195,19 @@ export const useLeftPanelProps = (leftPanelData: LeftPanelPropsData) => {
       },
       isCategoryButtonEnabled: categorySelection.isCategoryButtonEnabled,
       isGenerating: isGeneratingItinerary,
-    } : null;
+      // Add the required callback objects
+      onConfirmCategoryCallbacks: onConfirmCategoryCallbacks,
+      handlePanelBackCallbacks: handlePanelBackCallbacks,
+    };
   }, [
-    leftPanelData.categorySelection,
-    leftPanelData.tripDetails,
-    leftPanelData.regionSelection,
-    leftPanelData.keywordsAndInputs,
-    leftPanelData.isGeneratingItinerary,
-    leftPanelData.uiVisibility.showItinerary
+    categorySelection, // All its properties
+    tripDetails, // tripDetails.setDates, tripDetails.dates
+    regionSelection, // regionSelection.setRegionSlidePanelOpen, regionSelection.regionConfirmed
+    keywordsAndInputs, // keywordsAndInputs.directInputValues, keywordsAndInputs.onDirectInputChange
+    isGeneratingItinerary,
+    uiVisibility.showItinerary, // uiVisibility.showItinerary
+    onConfirmCategoryCallbacks, // New dependency
+    handlePanelBackCallbacks    // New dependency
   ]);
 
   // Combine container and content props
@@ -201,20 +221,20 @@ export const useLeftPanelProps = (leftPanelData: LeftPanelPropsData) => {
   // Debug info props
   const devDebugInfoProps = useMemo(() => {
     const { 
-      uiVisibility, 
-      itineraryManagement, 
-      isGeneratingItinerary, 
+      uiVisibility: LPUiVisibility, // Renamed to avoid conflict
+      itineraryManagement: LPItineraryManagement, 
+      isGeneratingItinerary: LPIsGeneratingItinerary, 
       itineraryReceived,
-      tripDetails 
+      tripDetails: LPTripDetails 
     } = leftPanelData;
     
     return {
-      showItineraryHook: uiVisibility.showItinerary,
-      itineraryHook: itineraryManagement.itinerary,
-      selectedDayHook: itineraryManagement.selectedItineraryDay,
-      isGeneratingPanel: isGeneratingItinerary,
+      showItineraryHook: LPUiVisibility.showItinerary,
+      itineraryHook: LPItineraryManagement.itinerary,
+      selectedDayHook: LPItineraryManagement.selectedItineraryDay,
+      isGeneratingPanel: LPIsGeneratingItinerary,
       itineraryReceivedPanel: itineraryReceived,
-      tripStartDate: tripDetails.dates?.startDate,
+      tripStartDate: LPTripDetails.dates?.startDate,
     };
   }, [
     leftPanelData.uiVisibility,
