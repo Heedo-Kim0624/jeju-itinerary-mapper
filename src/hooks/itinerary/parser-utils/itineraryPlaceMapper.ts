@@ -33,11 +33,12 @@ export const mapToItineraryPlace = (
 ): ItineraryPlaceWithTime => {
   const item = group.item;
   const itineraryPlaceId = generateItineraryPlaceId(item, dayIndex, placeItemIndex);
+  const isFallback = !selectedPlaceDetails;
 
-  if (!selectedPlaceDetails) {
+  if (isFallback) {
       const serverPlaceIdStr = item.id !== undefined ? String(item.id) : undefined;
       console.warn(
-        `[mapToItineraryPlace] Details for place "${item.place_name}" (Server ID: ${serverPlaceIdStr || 'N/A'}, Itinerary ID: ${itineraryPlaceId}) not found in local lists. Using default values.`
+        `[mapToItineraryPlace] Details for place "${item.place_name}" (Server ID: ${serverPlaceIdStr || 'N/A'}, Itinerary ID: ${itineraryPlaceId}) not found in local lists. Using default values. isFallback: true.`
       );
   }
 
@@ -62,7 +63,7 @@ export const mapToItineraryPlace = (
     id: itineraryPlaceId,
     name: item.place_name,
     category: item.place_type,
-    timeBlock: formattedArriveTime,
+    timeBlock: formattedArriveTime, // Or item.time_block if preferred
     arriveTime: formattedArriveTime,
     departTime: formattedDepartTime,
     stayDuration: stayDurationInMinutes,
@@ -76,6 +77,8 @@ export const mapToItineraryPlace = (
     rating: selectedPlaceDetails?.rating || 0,
     image_url: selectedPlaceDetails?.image_url || '',
     homepage: selectedPlaceDetails?.homepage || '',
-    geoNodeId: itineraryPlaceId,
+    geoNodeId: selectedPlaceDetails?.geoNodeId || itineraryPlaceId, // Use selectedPlaceDetails.geoNodeId if available
+    isFallback: isFallback,
   };
 };
+
