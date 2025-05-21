@@ -1,13 +1,13 @@
 
 import { useCallback } from 'react';
 import { toast } from 'sonner';
-import { CategoryName, CATEGORY_MAPPING_KO_TO_EN } from '@/utils/categoryUtils'; // CATEGORY_MAPPING_KO_TO_EN 추가
+import { CategoryName } from '@/utils/categoryUtils'; // Removed CATEGORY_MAPPING_KO_TO_EN
 
 interface LeftPanelCallbacksProps {
   handleConfirmCategory: (category: string, finalKeywords: string[], clearSelection: boolean) => void;
   handlePanelBack: (category: string) => void;
   handleCloseItinerary: () => void;
-  handleCreateItinerary?: () => Promise<void>; // 선택적으로 변경
+  handleCreateItinerary?: () => Promise<any | null>; // Updated to match useCreateItineraryHandler return
   setRegionSlidePanelOpen: (open: boolean) => void;
   selectedRegions: string[];
   setRegionConfirmed: (confirmed: boolean) => void;
@@ -64,8 +64,8 @@ export const useLeftPanelCallbacks = ({
     
     if (handleCreateItinerary) {
       handleCreateItinerary()
-        .then(() => {
-          console.log("[LeftPanel] handleCreateItinerary Promise 성공. 이벤트 및 hook state 변경 대기 중...");
+        .then((result) => { // Added result parameter to match Promise<any | null>
+          console.log("[LeftPanel] handleCreateItinerary Promise 성공. 이벤트 및 hook state 변경 대기 중...", result);
         })
         .catch(error => {
           console.error("[LeftPanel] 일정 생성 중 오류 (handleCreateItineraryWithLoading의 catch):", error);

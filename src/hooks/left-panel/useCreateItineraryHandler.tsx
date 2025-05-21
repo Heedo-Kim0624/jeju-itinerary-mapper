@@ -3,6 +3,7 @@ import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import type { SchedulePayload, Place, SelectedPlace as CoreSelectedPlace, ItineraryDay } from '@/types';
 import { summarizeItineraryData } from '@/utils/debugUtils'; // For logging consistency
+import type { CategoryName } from '@/utils/categoryUtils'; // Added CategoryName import
 
 interface UseCreateItineraryHandlerProps {
   placesManagement: {
@@ -48,7 +49,7 @@ export const useCreateItineraryHandler = ({
       const selectedCorePlaces: CoreSelectedPlace[] = placesManagement.selectedPlaces.map(p => ({
         id: String(p.id),
         name: p.name,
-        category: p.category,
+        category: p.category as CategoryName, // Cast to CategoryName
         x: p.x,
         y: p.y,
         address: p.address,
