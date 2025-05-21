@@ -1,7 +1,7 @@
 
 import { useMemo } from 'react';
 import type { Place, ItineraryDay } from '@/types';
-import type { LeftPanelPropsData } from '../use-left-panel-props'; // Adjust if type is moved
+import type { LeftPanelPropsData } from '@/types/left-panel'; // 경로 수정
 
 type UseMainPanelContainerPropsArgs = Pick<
   LeftPanelPropsData,

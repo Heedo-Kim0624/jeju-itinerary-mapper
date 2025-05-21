@@ -1,7 +1,7 @@
 
 import { useMemo } from 'react';
 import type { CategoryName } from '@/utils/categoryUtils';
-import type { LeftPanelPropsData } from '../use-left-panel-props'; // Adjust if type is moved
+import type { LeftPanelPropsData } from '@/types/left-panel'; // 경로 수정
 
 type UseLeftPanelContentPropsArgs = Pick<
   LeftPanelPropsData,
