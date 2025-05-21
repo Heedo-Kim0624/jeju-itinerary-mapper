@@ -1,7 +1,12 @@
+
 import { useCallback } from 'react';
-import { NewServerScheduleResponse, ServerScheduleItem } from '@/types/schedule';
+import { NewServerScheduleResponse, ServerScheduleItem } from '@/types/schedule'; // ServerScheduleItem is also in core
 import { ItineraryDay, ItineraryPlaceWithTime, SelectedPlace as CoreSelectedPlace } from '@/types/core';
-import { findMostSimilarString } from '@/utils/stringUtils';
+// findMostSimilarString is used by placeDetailFinder, so not directly needed here anymore.
+// import { findMostSimilarString } from '@/utils/stringUtils'; 
+import { mergeScheduleItems } from './parser-utils/mergeScheduleItems';
+import { findPlaceDetails } from './parser-utils/placeDetailFinder';
+import { mapToItineraryPlace } from './parser-utils/itineraryPlaceMapper';
 
 export const useItineraryParser = () => {
   const formatDate = (baseDate: Date | null, dayOffset: number): string => {
@@ -38,7 +43,7 @@ export const useItineraryParser = () => {
     const mappedPlaceByName = new Map<string, CoreSelectedPlace>();
     
     currentSelectedPlaces.forEach(place => {
-      mappedPlaceById.set(place.id, place);
+      mappedPlaceById.set(String(place.id), place); // Ensure ID is string for map key consistency
       mappedPlaceByName.set(place.name, place);
       const nameWithoutSpaces = place.name.replace(/\s+/g, '');
       if (nameWithoutSpaces !== place.name) {
@@ -71,103 +76,31 @@ export const useItineraryParser = () => {
       return (dayOrder[a as keyof typeof dayOrder] || 0) - (dayOrder[b as keyof typeof dayOrder] || 0);
     });
     days.forEach((day, index) => {
-      dayMapping[day] = index + 1;
+      dayMapping[day] = index + 1; // 1-based day number
     });
 
     console.log('[useItineraryParser] 요일 -> 일차 매핑:', dayMapping);
 
-    const result: ItineraryDay[] = days.map((dayOfWeek, dayIndex) => {
+    const result: ItineraryDay[] = days.map((dayOfWeek, dayIndex) => { // dayIndex is 0-based
       const dayItemsOriginal = scheduleByDay.get(dayOfWeek) || [];
       const routeInfo = routeByDay.get(dayOfWeek);
-      const dayNumber = dayMapping[dayOfWeek];
+      const dayNumber = dayMapping[dayOfWeek]; // 1-based day number for display and date calculation
 
-      // Group consecutive identical places
-      const mergedDayItems: { item: ServerScheduleItem, count: number }[] = [];
-      if (dayItemsOriginal.length > 0) {
-        let currentGroup = { item: dayItemsOriginal[0], count: 1 };
-        for (let i = 1; i < dayItemsOriginal.length; i++) {
-          if (dayItemsOriginal[i].id === currentGroup.item.id && dayItemsOriginal[i].place_name === currentGroup.item.place_name) {
-            currentGroup.count++;
-          } else {
-            mergedDayItems.push(currentGroup);
-            currentGroup = { item: dayItemsOriginal[i], count: 1 };
-          }
-        }
-        mergedDayItems.push(currentGroup); // Add the last group
-      }
+      const mergedDayItems = mergeScheduleItems(dayItemsOriginal);
       
       const places: ItineraryPlaceWithTime[] = mergedDayItems.map((group, placeItemIndex) => {
-        const item = group.item; // Use the first item of the group for basic info
-        const stayDurationInMinutes = group.count * 60; // Assuming each item in schedule is 1 hour
-
-        const timeBlock = item.time_block.split('_')[1];
-        const arriveHour = timeBlock.substring(0, 2);
-        const arriveMinute = timeBlock.substring(2, 4);
-        const formattedArriveTime = `${arriveHour}:${arriveMinute}`;
-
-        let departHourCalc = parseInt(arriveHour, 10);
-        let departMinuteCalc = parseInt(arriveMinute, 10);
-        departMinuteCalc += stayDurationInMinutes;
-        departHourCalc += Math.floor(departMinuteCalc / 60);
-        departMinuteCalc %= 60;
-        departHourCalc %= 24;
-        const formattedDepartTime = `${departHourCalc.toString().padStart(2, '0')}:${departMinuteCalc.toString().padStart(2, '0')}`;
-
-        let selectedPlace: CoreSelectedPlace | undefined = undefined;
-        const serverPlaceIdStr = item.id !== undefined ? String(item.id) : undefined;
-
-        if (serverPlaceIdStr) {
-          selectedPlace = mappedPlaceById.get(serverPlaceIdStr);
-        }
-        if (!selectedPlace) {
-          selectedPlace = mappedPlaceByName.get(item.place_name);
-        }
-        if (!selectedPlace) {
-          const nameWithoutSpaces = item.place_name.replace(/\s+/g, '');
-          selectedPlace = mappedPlaceByName.get(nameWithoutSpaces);
-        }
-        if (!selectedPlace) {
-          const candidateNames = Array.from(mappedPlaceByName.keys());
-          const similarMatch = findMostSimilarString(item.place_name, candidateNames);
-          if (similarMatch.match) {
-            selectedPlace = mappedPlaceByName.get(similarMatch.match);
-            console.log(`[useItineraryParser] "${item.place_name}" (ID: ${serverPlaceIdStr || 'N/A'})을(를) 유사도 ${similarMatch.similarity.toFixed(2)}로 "${similarMatch.match}"와(과) 매칭했습니다.`);
-          }
-        }
+        const selectedPlace = findPlaceDetails(
+          group.item,
+          mappedPlaceById,
+          mappedPlaceByName
+        );
         
-        const placeIdForItinerary: string = serverPlaceIdStr 
-          ? serverPlaceIdStr 
-          : `fallback_${item.place_name.replace(/\s+/g, "_")}_${dayIndex}_${placeItemIndex}`;
-
-        if (item.id === undefined) {
-             console.warn(`[useItineraryParser] 서버 항목 "${item.place_name}"에 ID가 없습니다. 대체 ID "${placeIdForItinerary}"를 사용합니다.`);
-        }
-
-        if (!selectedPlace) {
-          console.warn(`[useItineraryParser] 장소 "${item.place_name}" (서버ID: ${serverPlaceIdStr || 'N/A'}, 최종ID: ${placeIdForItinerary})의 상세 정보를 로컬 선택 목록에서 찾을 수 없습니다. 기본값을 사용합니다.`);
-        }
-
-        const place: ItineraryPlaceWithTime = {
-          id: placeIdForItinerary,
-          name: item.place_name,
-          category: item.place_type,
-          timeBlock: formattedArriveTime, // Use arriveTime for timeBlock
-          arriveTime: formattedArriveTime,
-          departTime: formattedDepartTime, 
-          stayDuration: stayDurationInMinutes,
-          travelTimeToNext: '', // This would typically be calculated based on routeInfo if available for segments
-          x: selectedPlace?.x || 126.5312,
-          y: selectedPlace?.y || 33.4996,
-          address: selectedPlace?.address || '정보 없음',
-          road_address: selectedPlace?.road_address || '',
-          phone: selectedPlace?.phone || '',
-          description: selectedPlace?.description || '',
-          rating: selectedPlace?.rating || 0,
-          image_url: selectedPlace?.image_url || '',
-          homepage: selectedPlace?.homepage || '',
-          geoNodeId: placeIdForItinerary,
-        };
-        return place;
+        return mapToItineraryPlace(
+          group,
+          selectedPlace,
+          dayIndex, // Pass 0-based dayIndex for unique ID generation consistency
+          placeItemIndex
+        );
       });
 
       const nodeIds: string[] = [];
@@ -191,13 +124,13 @@ export const useItineraryParser = () => {
       const itineraryDay: ItineraryDay = {
         day: dayNumber,
         dayOfWeek: dayOfWeek,
-        date: formatDate(tripStartDate, dayNumber - 1),
+        date: formatDate(tripStartDate, dayNumber - 1), // dayNumber is 1-based, offset needs to be adjusted if tripStartDate is day 0
         places: places,
         totalDistance: totalDistance,
         routeData: {
           nodeIds: nodeIds,
           linkIds: linkIds,
-          segmentRoutes: []
+          segmentRoutes: [] 
         },
         interleaved_route: interleaved_route
       };
