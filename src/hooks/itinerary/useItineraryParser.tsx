@@ -1,11 +1,9 @@
-
 import { useCallback } from 'react';
-import { NewServerScheduleResponse, ServerScheduleItem } from '@/types/schedule'; // ServerScheduleItem 추가
+import { NewServerScheduleResponse, ServerScheduleItem } from '@/types/schedule';
 import { ItineraryDay, ItineraryPlaceWithTime, SelectedPlace as CoreSelectedPlace } from '@/types/core';
-import { findMostSimilarString } from '@/utils/stringUtils'; // 새로 추가된 유틸리티
+import { findMostSimilarString } from '@/utils/stringUtils';
 
 export const useItineraryParser = () => {
-  // formatDate 유틸리티 함수 (기존 로직 유지)
   const formatDate = (baseDate: Date | null, dayOffset: number): string => {
     if (!baseDate) {
       const today = new Date();
@@ -22,7 +20,7 @@ export const useItineraryParser = () => {
   const parseServerResponse = useCallback((
     serverResponse: NewServerScheduleResponse,
     currentSelectedPlaces: CoreSelectedPlace[] = [],
-    tripStartDate: Date | null = null // tripStartDate 파라미터 유지
+    tripStartDate: Date | null = null
   ): ItineraryDay[] => {
     console.log('[useItineraryParser] 서버 응답 파싱 시작:', {
       schedule_items: serverResponse.schedule?.length || 0,
@@ -36,14 +34,11 @@ export const useItineraryParser = () => {
       return [];
     }
 
-    // 장소 ID(string) 및 이름 기반 매핑 생성
     const mappedPlaceById = new Map<string, CoreSelectedPlace>();
     const mappedPlaceByName = new Map<string, CoreSelectedPlace>();
     
     currentSelectedPlaces.forEach(place => {
-      // CoreSelectedPlace.id는 이미 string이므로 String() 불필요
       mappedPlaceById.set(place.id, place);
-      
       mappedPlaceByName.set(place.name, place);
       const nameWithoutSpaces = place.name.replace(/\s+/g, '');
       if (nameWithoutSpaces !== place.name) {
@@ -65,10 +60,6 @@ export const useItineraryParser = () => {
       scheduleByDay.get(day)?.push(item);
     });
 
-    console.log('[useItineraryParser] 요일별 일정 그룹화 결과:', 
-      Object.fromEntries([...scheduleByDay.entries()].map(([day, items]) => [day, items.length]))
-    );
-
     const routeByDay = new Map<string, any>();
     serverResponse.route_summary.forEach(route => {
       routeByDay.set(route.day, route);
@@ -86,36 +77,55 @@ export const useItineraryParser = () => {
     console.log('[useItineraryParser] 요일 -> 일차 매핑:', dayMapping);
 
     const result: ItineraryDay[] = days.map((dayOfWeek, dayIndex) => {
-      const dayItems = scheduleByDay.get(dayOfWeek) || [];
+      const dayItemsOriginal = scheduleByDay.get(dayOfWeek) || [];
       const routeInfo = routeByDay.get(dayOfWeek);
       const dayNumber = dayMapping[dayOfWeek];
 
-      const places: ItineraryPlaceWithTime[] = dayItems.map((item, placeItemIndex) => {
+      // Group consecutive identical places
+      const mergedDayItems: { item: ServerScheduleItem, count: number }[] = [];
+      if (dayItemsOriginal.length > 0) {
+        let currentGroup = { item: dayItemsOriginal[0], count: 1 };
+        for (let i = 1; i < dayItemsOriginal.length; i++) {
+          if (dayItemsOriginal[i].id === currentGroup.item.id && dayItemsOriginal[i].place_name === currentGroup.item.place_name) {
+            currentGroup.count++;
+          } else {
+            mergedDayItems.push(currentGroup);
+            currentGroup = { item: dayItemsOriginal[i], count: 1 };
+          }
+        }
+        mergedDayItems.push(currentGroup); // Add the last group
+      }
+      
+      const places: ItineraryPlaceWithTime[] = mergedDayItems.map((group, placeItemIndex) => {
+        const item = group.item; // Use the first item of the group for basic info
+        const stayDurationInMinutes = group.count * 60; // Assuming each item in schedule is 1 hour
+
         const timeBlock = item.time_block.split('_')[1];
-        const hour = timeBlock.substring(0, 2);
-        const minute = timeBlock.substring(2, 4);
-        const formattedTime = `${hour}:${minute}`;
+        const arriveHour = timeBlock.substring(0, 2);
+        const arriveMinute = timeBlock.substring(2, 4);
+        const formattedArriveTime = `${arriveHour}:${arriveMinute}`;
+
+        let departHourCalc = parseInt(arriveHour, 10);
+        let departMinuteCalc = parseInt(arriveMinute, 10);
+        departMinuteCalc += stayDurationInMinutes;
+        departHourCalc += Math.floor(departMinuteCalc / 60);
+        departMinuteCalc %= 60;
+        departHourCalc %= 24;
+        const formattedDepartTime = `${departHourCalc.toString().padStart(2, '0')}:${departMinuteCalc.toString().padStart(2, '0')}`;
 
         let selectedPlace: CoreSelectedPlace | undefined = undefined;
         const serverPlaceIdStr = item.id !== undefined ? String(item.id) : undefined;
 
-        // 1. 서버에서 제공된 ID로 장소 찾기
         if (serverPlaceIdStr) {
           selectedPlace = mappedPlaceById.get(serverPlaceIdStr);
         }
-        
-        // 2. ID로 못 찾았으면, 정확한 이름으로 찾기
         if (!selectedPlace) {
           selectedPlace = mappedPlaceByName.get(item.place_name);
         }
-        
-        // 3. 공백 제거한 이름으로 찾기
         if (!selectedPlace) {
           const nameWithoutSpaces = item.place_name.replace(/\s+/g, '');
           selectedPlace = mappedPlaceByName.get(nameWithoutSpaces);
         }
-
-        // 4. 유사한 이름으로 찾기
         if (!selectedPlace) {
           const candidateNames = Array.from(mappedPlaceByName.keys());
           const similarMatch = findMostSimilarString(item.place_name, candidateNames);
@@ -125,8 +135,6 @@ export const useItineraryParser = () => {
           }
         }
         
-        // ItineraryPlaceWithTime 객체의 ID 생성
-        // 서버 item.id가 있으면 사용, 없으면 place_name과 인덱스 기반으로 생성
         const placeIdForItinerary: string = serverPlaceIdStr 
           ? serverPlaceIdStr 
           : `fallback_${item.place_name.replace(/\s+/g, "_")}_${dayIndex}_${placeItemIndex}`;
@@ -142,14 +150,14 @@ export const useItineraryParser = () => {
         const place: ItineraryPlaceWithTime = {
           id: placeIdForItinerary,
           name: item.place_name,
-          category: item.place_type, // 서버에서 제공하는 place_type 사용
-          timeBlock: formattedTime,
-          arriveTime: formattedTime,
-          departTime: '', 
-          stayDuration: 60,
-          travelTimeToNext: '',
-          x: selectedPlace?.x || 126.5312, // 제주 시청 좌표 근처
-          y: selectedPlace?.y || 33.4996,  // 제주 시청 좌표 근처
+          category: item.place_type,
+          timeBlock: formattedArriveTime, // Use arriveTime for timeBlock
+          arriveTime: formattedArriveTime,
+          departTime: formattedDepartTime, 
+          stayDuration: stayDurationInMinutes,
+          travelTimeToNext: '', // This would typically be calculated based on routeInfo if available for segments
+          x: selectedPlace?.x || 126.5312,
+          y: selectedPlace?.y || 33.4996,
           address: selectedPlace?.address || '정보 없음',
           road_address: selectedPlace?.road_address || '',
           phone: selectedPlace?.phone || '',
@@ -157,8 +165,7 @@ export const useItineraryParser = () => {
           rating: selectedPlace?.rating || 0,
           image_url: selectedPlace?.image_url || '',
           homepage: selectedPlace?.homepage || '',
-          geoNodeId: placeIdForItinerary, // 일관성을 위해 itinerary id와 동일하게 설정
-          // CoreSelectedPlace의 isSelected, isCandidate 등은 ItineraryPlaceWithTime에 직접 매핑하지 않음
+          geoNodeId: placeIdForItinerary,
         };
         return place;
       });
@@ -168,7 +175,7 @@ export const useItineraryParser = () => {
       const interleaved_route: (string | number)[] = [];
 
       if (routeInfo && routeInfo.interleaved_route) {
-        routeInfo.interleaved_route.forEach((id: number | string, index: number) => { // 서버 응답 타입이 number | string 일 수 있음
+        routeInfo.interleaved_route.forEach((id: number | string, index: number) => { 
           const idStr = String(id);
           interleaved_route.push(idStr);
           if (index % 2 === 0) {
@@ -184,7 +191,7 @@ export const useItineraryParser = () => {
       const itineraryDay: ItineraryDay = {
         day: dayNumber,
         dayOfWeek: dayOfWeek,
-        date: formatDate(tripStartDate, dayNumber - 1), // tripStartDate와 formatDate 사용 유지
+        date: formatDate(tripStartDate, dayNumber - 1),
         places: places,
         totalDistance: totalDistance,
         routeData: {
@@ -212,9 +219,8 @@ export const useItineraryParser = () => {
     if (placesWithDefaultCoords > 0) {
       console.warn(`[useItineraryParser] ${placesWithDefaultCoords}개의 장소가 기본 좌표를 사용합니다. 상세 정보 매칭 실패 가능성이 있습니다.`);
     }
-
     return result;
-  }, []); // formatDate는 useCallback의 의존성 배열에 포함될 필요 없음 (훅 스코프 내에서 안정적이므로)
+  }, []);
 
   return { parseServerResponse };
 };
