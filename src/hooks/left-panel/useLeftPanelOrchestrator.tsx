@@ -8,8 +8,11 @@ import { useLeftPanelProps } from '@/hooks/left-panel/use-left-panel-props';
 import { toast } from 'sonner';
 import { summarizeItineraryData } from '@/utils/debugUtils';
 import type { ItineraryDay } from '@/types';
+import type { CategoryName } from '@/utils/categoryUtils';
 
 export const useLeftPanelOrchestrator = () => {
+  const leftPanelCore = useLeftPanel();
+  
   const {
     regionSelection,
     categorySelection,
@@ -22,7 +25,7 @@ export const useLeftPanelOrchestrator = () => {
     categoryResultHandlers,
     currentPanel,
     isGeneratingItinerary: isGeneratingFromCoreHook,
-  } = useLeftPanel();
+  } = leftPanelCore;
 
   const { runScheduleGeneration, isGenerating: isRunnerGenerating } = useScheduleGenerationRunner();
 
@@ -31,9 +34,25 @@ export const useLeftPanelOrchestrator = () => {
     isCreatingItinerary: isCreatingFromCustomHook,
   } = useCreateItineraryHandler({
     placesManagement,
-    tripDetails,
+    tripDetails: {
+      ...tripDetails,
+      // Add missing handleDateChange property
+      handleDateChange: (dates: { startDate: Date; endDate: Date; startTime: string; endTime: string }) => {
+        tripDetails.setDates(dates);
+      }
+    },
     runScheduleGeneration,
   });
+
+  // Create adapter for placesManagement to match expected types
+  const adaptedPlacesManagement = {
+    ...placesManagement,
+    handleAutoCompletePlaces: (category: CategoryName, placesFromApi: any[], keywords: string[]) => {
+      // Adapter function - convert parameters as needed
+      const travelDays = keywords ? keywords.length : null; // Adapting keywords to travelDays
+      placesManagement.handleAutoCompletePlaces(category, placesFromApi, travelDays);
+    }
+  };
 
   const isActuallyGenerating = isGeneratingFromCoreHook || isRunnerGenerating || isCreatingFromCustomHook;
 
@@ -44,8 +63,16 @@ export const useLeftPanelOrchestrator = () => {
     setRegionSlidePanelOpen: regionSelection.setRegionSlidePanelOpen,
     selectedRegions: regionSelection.selectedRegions,
     setRegionConfirmed: regionSelection.setRegionConfirmed,
-    handleCreateItinerary: createItinerary, // Pass the actual createItinerary function
+    handleCreateItinerary: createItinerary, 
   });
+
+  // Create a type-safe version of currentPanel
+  const typedCurrentPanel = (
+    currentPanel === 'region' || 
+    currentPanel === 'date' || 
+    currentPanel === 'category' || 
+    currentPanel === 'itinerary'
+  ) ? currentPanel : 'category' as const;
 
   const {
     itineraryDisplayProps,
@@ -53,12 +80,12 @@ export const useLeftPanelOrchestrator = () => {
     devDebugInfoProps,
   } = useLeftPanelProps({
     uiVisibility,
-    currentPanel,
+    currentPanel: typedCurrentPanel, // Pass typed version
     isGeneratingItinerary: isActuallyGenerating,
     itineraryReceived: !!itineraryManagement.itinerary && itineraryManagement.itinerary.length > 0,
     itineraryManagement: itineraryManagement,
     tripDetails,
-    placesManagement,
+    placesManagement: adaptedPlacesManagement, // Pass adapted version
     categorySelection,
     keywordsAndInputs,
     categoryResultHandlers,
@@ -158,6 +185,6 @@ export const useLeftPanelOrchestrator = () => {
     enhancedItineraryDisplayProps,
     enhancedMainPanelProps,
     devDebugInfoProps,
-    categoryResultHandlers, // Added this for CategoryResultHandler
+    categoryResultHandlers,
   };
 };

@@ -5,6 +5,7 @@ import CategoryResultHandler from './CategoryResultHandler';
 import LeftPanelDisplayLogic from './LeftPanelDisplayLogic';
 import DevDebugInfo from './DevDebugInfo';
 import { useLeftPanelOrchestrator } from '@/hooks/left-panel/useLeftPanelOrchestrator';
+import type { CategoryName } from '@/utils/categoryUtils';
 
 const LeftPanel: React.FC = () => {
   const {
@@ -18,7 +19,7 @@ const LeftPanel: React.FC = () => {
     enhancedItineraryDisplayProps,
     enhancedMainPanelProps,
     devDebugInfoProps,
-    categoryResultHandlers, // Destructure from orchestrator
+    categoryResultHandlers, 
   } = useLeftPanelOrchestrator();
 
   return (
@@ -42,10 +43,10 @@ const LeftPanel: React.FC = () => {
         showCategoryResult={uiVisibility.showCategoryResult}
         selectedRegions={regionSelection.selectedRegions}
         selectedKeywordsByCategory={categorySelection.selectedKeywordsByCategory}
-        onClose={categoryResultHandlers.handleResultClose} // Use destructured prop
+        onClose={categoryResultHandlers.handleResultClose}
         onSelectPlace={placesManagement.handleSelectPlace}
         selectedPlaces={placesManagement.selectedPlaces}
-        onConfirmCategory={categoryResultHandlers.handleConfirmCategoryWithAutoComplete} // Use destructured prop
+        onConfirmCategory={categoryResultHandlers.handleConfirmCategoryWithAutoComplete}
       />
       
       <DevDebugInfo {...devDebugInfoProps} />

@@ -2,7 +2,8 @@
 import React from 'react';
 import LeftPanelContainer from './LeftPanelContainer';
 import LeftPanelContent from './LeftPanelContent';
-import type { Place, ItineraryDay, CategoryName } from '@/types'; 
+import type { Place, ItineraryDay } from '@/types'; 
+import type { CategoryName } from '@/utils/categoryUtils';
 
 // Props for LeftPanelContainer
 interface LeftPanelContainerPassedProps {
@@ -18,7 +19,7 @@ interface LeftPanelContainerPassedProps {
     startTime: string;
     endTime: string;
   } | null;
-  onCreateItinerary: () => void; // boolean 대신 void로 변경
+  onCreateItinerary: () => void; 
   itinerary: ItineraryDay[] | null;
   selectedItineraryDay: number | null;
   onSelectDay: (day: number) => void;
@@ -33,7 +34,7 @@ interface LeftPanelContentPassedProps {
   onCategoryClick: (category: string) => void;
   regionConfirmed: boolean;
   categoryStepIndex: number;
-  activeMiddlePanelCategory: string | null;
+  activeMiddlePanelCategory: CategoryName | null; // Fixed type to CategoryName
   confirmedCategories: string[];
   selectedKeywordsByCategory: Record<string, string[]>;
   toggleKeyword: (category: string, keyword: string) => void;
@@ -49,13 +50,13 @@ interface LeftPanelContentPassedProps {
     restaurant: (value: string) => void;
     cafe: (value: string) => void;
   };
-  onConfirmCategoryCallbacks: { // Renamed to avoid conflict and clarify these are callbacks
+  onConfirmCategoryCallbacks: { 
     accomodation: (finalKeywords: string[]) => void;
     landmark: (finalKeywords: string[]) => void;
     restaurant: (finalKeywords: string[]) => void;
     cafe: (finalKeywords: string[]) => void;
   };
-  handlePanelBackCallbacks: { // Renamed for clarity
+  handlePanelBackCallbacks: { 
     accomodation: () => void;
     landmark: () => void;
     restaurant: () => void;
@@ -74,14 +75,23 @@ const MainPanelWrapper: React.FC<MainPanelWrapperProps> = ({
   leftPanelContainerProps,
   leftPanelContentProps,
 }) => {
+  // Fixed the call signatures by creating properly typed handler objects
+  const onDirectInputChangeHandlers = {
+    accomodation: leftPanelContentProps.onDirectInputChange.accomodation,
+    landmark: leftPanelContentProps.onDirectInputChange.landmark,
+    restaurant: leftPanelContentProps.onDirectInputChange.restaurant,
+    cafe: leftPanelContentProps.onDirectInputChange.cafe
+  };
+
   return (
     <LeftPanelContainer
       {...leftPanelContainerProps}
       children={
         <LeftPanelContent
           {...leftPanelContentProps}
-          onConfirmCategory={leftPanelContentProps.onConfirmCategoryCallbacks} // Pass renamed prop
-          handlePanelBack={leftPanelContentProps.handlePanelBackCallbacks} // Pass renamed prop
+          onDirectInputChange={onDirectInputChangeHandlers}
+          onConfirmCategory={leftPanelContentProps.onConfirmCategoryCallbacks}
+          handlePanelBack={leftPanelContentProps.handlePanelBackCallbacks}
         />
       }
     />

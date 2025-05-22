@@ -1,5 +1,5 @@
 
-import { useEffect, useCallback } from 'react'; // useCallback 추가
+import { useEffect, useCallback } from 'react'; 
 import { useSelectedPlaces } from './use-selected-places';
 import { useTripDetails } from './use-trip-details';
 import { useCategoryResults } from './use-category-results';
@@ -12,8 +12,8 @@ import { useLeftPanelState } from './left-panel/use-left-panel-state';
 import { useItineraryCreation } from './left-panel/use-itinerary-creation';
 import { useCategoryResultHandlers } from './left-panel/use-category-result-handlers';
 import { useEventListeners } from './left-panel/use-event-listeners';
-import { SchedulePayload, Place, ItineraryDay } from '@/types/core'; // Place, ItineraryDay 임포트 추가
-import { toast } from 'sonner'; // toast 임포트 추가
+import type { SchedulePayload, Place, ItineraryDay, CategoryName } from '@/types/core';
+import { toast } from 'sonner';
 
 /**
  * 왼쪽 패널 기능 통합 훅
@@ -37,7 +37,7 @@ export const useLeftPanel = () => {
   const placesManagement = useSelectedPlaces();
 
   // Itinerary management
-  const itineraryManagementHook = useItinerary(); // Renamed for clarity
+  const itineraryManagementHook = useItinerary();
 
   // UI visibility
   const uiVisibility = {
@@ -47,6 +47,34 @@ export const useLeftPanel = () => {
     setShowCategoryResult: leftPanelState.setShowCategoryResult
   };
 
+  // Add missing setActiveMiddlePanelCategory to categorySelection
+  const enhancedCategorySelection = {
+    ...categorySelection,
+    // Adding the missing function
+    setActiveMiddlePanelCategory: (category: CategoryName | null) => {
+      // Implement a suitable logic to set the active category
+      if (category === null) {
+        leftPanelState.setPanelState(prevState => ({
+          ...prevState,
+          activeMiddlePanelCategory: null
+        }));
+      } else {
+        leftPanelState.setPanelState(prevState => ({
+          ...prevState,
+          activeMiddlePanelCategory: category
+        }));
+      }
+    },
+    // Make sure handlePanelBack is correctly implemented
+    handlePanelBack: (category: string) => {
+      // Implement panel back logic
+      leftPanelState.setPanelState(prevState => ({
+        ...prevState,
+        activeMiddlePanelCategory: null
+      }));
+    }
+  };
+  
   // Category handlers
   const categoryHandlers = useCategoryHandlers();
   
@@ -102,6 +130,22 @@ export const useLeftPanel = () => {
       return null;
     }
   }, [itineraryManagementHook, placesManagement, tripDetailsHookResult]);
+
+  // Fix the handleServerItineraryResponse implementation
+  const enhancedItineraryManagementHook = {
+    ...itineraryManagementHook,
+    handleServerItineraryResponse: (itinerary: ItineraryDay[]) => {
+      // Implement a proper logic to handle server itinerary response
+      if (itinerary && itinerary.length > 0) {
+        itineraryManagementHook.setItinerary(itinerary);
+        itineraryManagementHook.setIsItineraryCreated(true);
+        return itinerary;
+      } else {
+        console.warn("Empty or invalid itinerary received");
+        return [];
+      }
+    }
+  };
 
   // Itinerary creation logic
   const itineraryCreation = useItineraryCreation({
@@ -159,17 +203,17 @@ export const useLeftPanel = () => {
   // Combine and return all necessary functionality
   return {
     regionSelection,
-    categorySelection,
+    categorySelection: enhancedCategorySelection, // Return the enhanced version
     keywordsAndInputs,
     placesManagement,
     tripDetails: tripDetailsHookResult,
     uiVisibility,
-    itineraryManagement: { // Ensure this object has all needed properties
+    itineraryManagement: { // Enhanced with proper implementation
       itinerary: itineraryManagementHook.itinerary,
       selectedItineraryDay: itineraryManagementHook.selectedItineraryDay,
       handleSelectItineraryDay: itineraryManagementHook.handleSelectItineraryDay,
       isItineraryCreated: itineraryManagementHook.isItineraryCreated,
-      handleServerItineraryResponse: itineraryManagementHook.handleServerItineraryResponse,
+      handleServerItineraryResponse: enhancedItineraryManagementHook.handleServerItineraryResponse,
       showItinerary: itineraryManagementHook.showItinerary,
       setShowItinerary: itineraryManagementHook.setShowItinerary,
     },
@@ -187,4 +231,3 @@ export const useLeftPanel = () => {
     itineraryReceived: leftPanelState.itineraryReceived,
   };
 };
-
