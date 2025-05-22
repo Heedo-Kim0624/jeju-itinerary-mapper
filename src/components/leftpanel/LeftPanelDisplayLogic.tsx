@@ -1,8 +1,10 @@
+
 import React from 'react';
 import { ScheduleLoadingIndicator } from './ScheduleLoadingIndicator';
 import ItineraryDisplayWrapper from './ItineraryDisplayWrapper';
 import MainPanelWrapper from './MainPanelWrapper';
-import type { Place, ItineraryDay, CategoryName } from '@/types'; // Assuming types are in @/types
+import type { Place, ItineraryDay } from '@/types'; // CategoryName 제거
+import type { CategoryName } from '@/utils/categoryUtils'; // CategoryName 명시적 임포트
 
 // Props for ItineraryDisplayWrapper
 interface ItineraryDisplayWrapperPassedProps {
@@ -34,7 +36,7 @@ interface MainPanelWrapperPassedProps {
       startTime: string;
       endTime: string;
     } | null;
-    onCreateItinerary: () => void; // 반환 타입을 boolean에서 void로 변경
+    onCreateItinerary: () => void; 
     itinerary: ItineraryDay[] | null;
     selectedItineraryDay: number | null;
     onSelectDay: (day: number) => void;
@@ -47,7 +49,7 @@ interface MainPanelWrapperPassedProps {
     onCategoryClick: (category: string) => void;
     regionConfirmed: boolean;
     categoryStepIndex: number;
-    activeMiddlePanelCategory: string | null;
+    activeMiddlePanelCategory: CategoryName | null; // 타입을 CategoryName | null로 수정
     confirmedCategories: string[];
     selectedKeywordsByCategory: Record<string, string[]>;
     toggleKeyword: (category: string, keyword: string) => void;
@@ -63,13 +65,13 @@ interface MainPanelWrapperPassedProps {
       restaurant: (value: string) => void;
       cafe: (value: string) => void;
     };
-    onConfirmCategoryCallbacks: { // 이전에 onConfirmCategory 였던 것
+    onConfirmCategoryCallbacks: { 
       accomodation: (finalKeywords: string[]) => void;
       landmark: (finalKeywords: string[]) => void;
       restaurant: (finalKeywords: string[]) => void;
       cafe: (finalKeywords: string[]) => void;
     };
-    handlePanelBackCallbacks: { // 이전에 handlePanelBack 이었던 것
+    handlePanelBackCallbacks: { 
       accomodation: () => void;
       landmark: () => void;
       restaurant: () => void;
@@ -84,8 +86,8 @@ interface MainPanelWrapperPassedProps {
 interface LeftPanelDisplayLogicProps {
   isGenerating: boolean;
   shouldShowItineraryView: boolean;
-  itineraryDisplayProps: ItineraryDisplayWrapperPassedProps | null; // Nullable if not showing itinerary
-  mainPanelProps: MainPanelWrapperPassedProps | null; // Nullable if showing itinerary or loading
+  itineraryDisplayProps: ItineraryDisplayWrapperPassedProps | null; 
+  mainPanelProps: MainPanelWrapperPassedProps | null; 
 }
 
 const LeftPanelDisplayLogic: React.FC<LeftPanelDisplayLogicProps> = ({
@@ -113,7 +115,7 @@ const LeftPanelDisplayLogic: React.FC<LeftPanelDisplayLogicProps> = ({
     return <MainPanelWrapper {...mainPanelProps} />;
   }
 
-  return null; // Should not happen if logic is correct
+  return null; 
 };
 
 export default LeftPanelDisplayLogic;

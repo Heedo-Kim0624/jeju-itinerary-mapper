@@ -1,4 +1,3 @@
-
 import { useEffect, useCallback } from 'react';
 import { useLeftPanel } from '@/hooks/use-left-panel';
 import { useScheduleGenerationRunner } from '@/hooks/schedule/useScheduleGenerationRunner';
@@ -15,7 +14,7 @@ export const useLeftPanelOrchestrator = () => {
   
   const {
     regionSelection,
-    categorySelection,
+    categorySelection, // 이 categorySelection의 handlePanelBack 시그니처가 문제의 원인 중 하나
     keywordsAndInputs,
     placesManagement,
     tripDetails,
@@ -34,12 +33,10 @@ export const useLeftPanelOrchestrator = () => {
     isCreatingItinerary: isCreatingFromCustomHook,
   } = useCreateItineraryHandler({
     placesManagement,
-    tripDetails: {
-      ...tripDetails,
-      // Add missing handleDateChange property
-      handleDateChange: (dates: { startDate: Date; endDate: Date; startTime: string; endTime: string }) => {
-        tripDetails.setDates(dates);
-      }
+    tripDetails: { // 여기서 handleDateChange 제거
+      dates: tripDetails.dates,
+      startTime: tripDetails.startTime,
+      endTime: tripDetails.endTime,
     },
     runScheduleGeneration,
   });
@@ -58,7 +55,7 @@ export const useLeftPanelOrchestrator = () => {
 
   const callbacks = useLeftPanelCallbacks({
     handleConfirmCategory: keywordsAndInputs.handleConfirmCategory,
-    handlePanelBack: categorySelection.handlePanelBack,
+    handlePanelBack: categorySelection.handlePanelBack, // 여기 전달되는 handlePanelBack 시그니처가 () => void 여야 함
     handleCloseItinerary,
     setRegionSlidePanelOpen: regionSelection.setRegionSlidePanelOpen,
     selectedRegions: regionSelection.selectedRegions,
@@ -86,7 +83,7 @@ export const useLeftPanelOrchestrator = () => {
     itineraryManagement: itineraryManagement,
     tripDetails,
     placesManagement: adaptedPlacesManagement, // Pass adapted version
-    categorySelection,
+    categorySelection, // 이 categorySelection의 handlePanelBack 시그니처가 () => void 여야 함
     keywordsAndInputs,
     categoryResultHandlers,
     handleCloseItinerary,

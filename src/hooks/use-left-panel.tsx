@@ -1,4 +1,3 @@
-
 import { useEffect, useCallback } from 'react'; 
 import { useSelectedPlaces } from './use-selected-places';
 import { useTripDetails } from './use-trip-details';
@@ -23,7 +22,7 @@ export const useLeftPanel = () => {
   // Core state management
   const leftPanelState = useLeftPanelState();
   const regionSelection = useRegionSelection();
-  const categorySelection = useCategorySelection();
+  const categorySelectionHookResult = useCategorySelection(); // Renamed to avoid conflict
   const tripDetailsHookResult = useTripDetails();
   const { directInputValues, onDirectInputChange } = useInputState();
   
@@ -48,30 +47,16 @@ export const useLeftPanel = () => {
   };
 
   // Add missing setActiveMiddlePanelCategory to categorySelection
-  const enhancedCategorySelection = {
-    ...categorySelection,
-    // Adding the missing function
+  const categorySelection = { // Renamed from enhancedCategorySelection
+    ...categorySelectionHookResult,
     setActiveMiddlePanelCategory: (category: CategoryName | null) => {
-      // Implement a suitable logic to set the active category
-      if (category === null) {
-        leftPanelState.setPanelState(prevState => ({
-          ...prevState,
-          activeMiddlePanelCategory: null
-        }));
-      } else {
-        leftPanelState.setPanelState(prevState => ({
-          ...prevState,
-          activeMiddlePanelCategory: category
-        }));
-      }
+      // Use individual setter from useLeftPanelState
+      leftPanelState.setActiveMiddlePanelCategory(category);
     },
-    // Make sure handlePanelBack is correctly implemented
-    handlePanelBack: (category: string) => {
-      // Implement panel back logic
-      leftPanelState.setPanelState(prevState => ({
-        ...prevState,
-        activeMiddlePanelCategory: null
-      }));
+    // Make sure handlePanelBack is correctly implemented with () => void signature
+    handlePanelBack: () => { // Removed 'category: string' parameter
+      // Use individual setter from useLeftPanelState
+      leftPanelState.setActiveMiddlePanelCategory(null);
     }
   };
   
@@ -83,7 +68,7 @@ export const useLeftPanel = () => {
     directInputValues,
     onDirectInputChange,
     handleConfirmCategory: (category: string, finalKeywords: string[], clearSelection: boolean = false) => {
-      categorySelection.handleConfirmCategory(category as any, finalKeywords, clearSelection);
+      categorySelectionHookResult.handleConfirmCategory(category as any, finalKeywords, clearSelection); // Use original hook result
       if (clearSelection) {
         leftPanelState.setShowCategoryResult(category as any);
       }
@@ -142,6 +127,8 @@ export const useLeftPanel = () => {
         return itinerary;
       } else {
         console.warn("Empty or invalid itinerary received");
+        itineraryManagementHook.setItinerary([]); // Ensure itinerary is set to empty array
+        itineraryManagementHook.setIsItineraryCreated(false); // Ensure created status is false
         return [];
       }
     }
@@ -170,7 +157,7 @@ export const useLeftPanel = () => {
   } = useCategoryResults(
     leftPanelState.showCategoryResult, 
     leftPanelState.showCategoryResult 
-      ? categorySelection.selectedKeywordsByCategory[leftPanelState.showCategoryResult] || [] 
+      ? categorySelectionHookResult.selectedKeywordsByCategory[leftPanelState.showCategoryResult] || []  // Use original hook result
       : [], 
     regionSelection.selectedRegions
   );
@@ -203,12 +190,12 @@ export const useLeftPanel = () => {
   // Combine and return all necessary functionality
   return {
     regionSelection,
-    categorySelection: enhancedCategorySelection, // Return the enhanced version
+    categorySelection, // Return the enhanced version
     keywordsAndInputs,
     placesManagement,
     tripDetails: tripDetailsHookResult,
     uiVisibility,
-    itineraryManagement: { // Enhanced with proper implementation
+    itineraryManagement: { 
       itinerary: itineraryManagementHook.itinerary,
       selectedItineraryDay: itineraryManagementHook.selectedItineraryDay,
       handleSelectItineraryDay: itineraryManagementHook.handleSelectItineraryDay,
