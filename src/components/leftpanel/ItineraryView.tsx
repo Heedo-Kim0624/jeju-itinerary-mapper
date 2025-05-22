@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { Calendar, Clock, MapPin, Navigation } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -59,11 +60,7 @@ const ItineraryView: React.FC<ItineraryViewProps> = ({
         <Calendar size={48} className="text-muted-foreground mb-4" />
         <p className="text-lg font-medium text-muted-foreground">생성된 일정이 없습니다.</p>
         <p className="text-sm text-muted-foreground mt-1">다른 조건으로 다시 시도해보세요.</p>
-        {onClose && (
-          <Button onClick={onClose} variant="outline" className="mt-6">
-            뒤로가기
-          </Button>
-        )}
+        {/* onClose 버튼을 사용하는 뒤로가기 버튼이 있었으나, ItineraryDisplayWrapper의 뒤로가기 버튼으로 통일하기 위해 삭제 */}
       </div>
     );
   }
@@ -74,11 +71,10 @@ const ItineraryView: React.FC<ItineraryViewProps> = ({
     <div className="w-full h-full flex flex-col bg-card text-card-foreground">
       <div className="flex items-center justify-between p-4 border-b">
         <h2 className="text-xl font-semibold tracking-tight">생성된 여행 일정</h2>
-        {onClose && (
-          <Button variant="ghost" size="sm" onClick={onClose} className="text-primary hover:text-primary/80">
-            ← 뒤로
-          </Button>
-        )}
+        {/* 
+          기존에 여기에 있던 "← 뒤로" 버튼을 제거합니다.
+          ItineraryDisplayWrapper 컴포넌트에 있는 "뒤로" 버튼으로 기능을 일원화합니다.
+        */}
       </div>
       
       <div className="p-4 border-b">
