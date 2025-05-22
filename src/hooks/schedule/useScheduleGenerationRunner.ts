@@ -1,7 +1,7 @@
 
 import { useCallback } from 'react';
 import { toast } from 'sonner';
-import type { SelectedPlace as CoreSelectedPlace } from '@/types/core';
+import type { SelectedPlace } from '@/types/core';
 import type { SchedulePayload, NewServerScheduleResponse, ItineraryDay } from '@/types/schedule';
 import { useScheduleGenerator } from '@/hooks/use-schedule-generator';
 import { useItineraryParser } from '@/hooks/itinerary/useItineraryParser';
@@ -15,7 +15,7 @@ export const useScheduleGenerationRunner = () => {
 
   const runScheduleGeneration = useCallback(async (
     payload: SchedulePayload,
-    selectedPlaces: CoreSelectedPlace[],
+    selectedPlaces: SelectedPlace[],
     tripStartDate: Date | null = null
   ): Promise<ItineraryDay[] | null> => {
     console.log('[useScheduleGenerationRunner] 생성기 호출 직전, Payload:', payload, '여행 시작일:', tripStartDate?.toISOString());

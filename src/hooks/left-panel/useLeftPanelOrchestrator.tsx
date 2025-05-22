@@ -1,3 +1,4 @@
+
 import { useEffect, useCallback } from 'react';
 import { useLeftPanel } from '@/hooks/use-left-panel';
 import { useScheduleGenerationRunner } from '@/hooks/schedule/useScheduleGenerationRunner';
@@ -6,8 +7,20 @@ import { useLeftPanelCallbacks } from '@/hooks/left-panel/use-left-panel-callbac
 import { useLeftPanelProps } from '@/hooks/left-panel/use-left-panel-props';
 import { toast } from 'sonner';
 import { summarizeItineraryData } from '@/utils/debugUtils';
-import type { ItineraryDay, Place, SchedulePayload } from '@/types';
+import type { ItineraryDay, Place, SchedulePayload, SelectedPlace } from '@/types';
 import type { CategoryName } from '@/utils/categoryUtils';
+
+/**
+ * Place 타입을 SelectedPlace 타입으로 변환하는 어댑터 함수
+ */
+const convertToSelectedPlaces = (places: Place[]): SelectedPlace[] => {
+  return places.map(place => ({
+    ...place,
+    category: place.category as CategoryName, // 여기서 타입 캐스팅을 수행합니다
+    isSelected: place.isSelected || false,
+    isCandidate: place.isCandidate || false
+  }));
+};
 
 export const useLeftPanelOrchestrator = () => {
   const leftPanelCore = useLeftPanel();
@@ -32,13 +45,16 @@ export const useLeftPanelOrchestrator = () => {
   // runScheduleGenerationFromRunner를 위한 어댑터 함수
   const adaptedRunScheduleGeneration = useCallback(async (payload: SchedulePayload): Promise<ItineraryDay[] | null> => {
     const allPlacesForRunner = [
-      ...placesManagement.selectedPlaces, // SelectedPlace[]
-      ...placesManagement.candidatePlaces // SelectedPlace[]
+      ...placesManagement.selectedPlaces, // Place[]
+      ...placesManagement.candidatePlaces // Place[]
     ];
-    // CoreSelectedPlace (실제로는 Place 타입) 와 SelectedPlace[] 는 호환 가능 (SelectedPlace extends Place)
+    
+    // Place[] 타입을 SelectedPlace[]로 변환 (타입 캐스팅)
+    const convertedPlaces = convertToSelectedPlaces(allPlacesForRunner);
+    
     return runScheduleGenerationFromRunner(
       payload,
-      allPlacesForRunner as Place[], // 명시적 타입 캐스팅 (CoreSelectedPlace[]는 Place[]로 해석될 수 있음)
+      convertedPlaces, // 변환된 SelectedPlace[] 타입 사용
       tripDetails.dates?.startDate || null
     );
   }, [runScheduleGenerationFromRunner, placesManagement.selectedPlaces, placesManagement.candidatePlaces, tripDetails.dates]);

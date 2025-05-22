@@ -3,11 +3,22 @@ import { useState, useCallback } from 'react';
 import { ItineraryDay, Place, SchedulePayload } from '@/types';
 import { toast } from 'sonner';
 import { summarizeItineraryData } from '@/utils/debugUtils';
+import { CategoryName } from '@/utils/categoryUtils';
+
+// Place를 SelectedPlace로 변환하는 타입 가드 함수 
+function ensureCategoryName(category: string): CategoryName {
+  const validCategories: CategoryName[] = ['숙소', '관광지', '음식점', '카페'];
+  if (validCategories.includes(category as CategoryName)) {
+    return category as CategoryName;
+  }
+  console.warn(`유효하지 않은 카테고리: ${category}, 기본값 '관광지'로 설정합니다.`);
+  return '관광지';
+}
 
 interface CreateItineraryHandlerDeps {
   placesManagement: {
-    selectedPlaces: Place[]; // Place[]는 SelectedPlace[] 할당 가능
-    candidatePlaces: Place[]; // Place[]는 SelectedPlace[] 할당 가능
+    selectedPlaces: Place[]; // Place[]는 SelectedPlace[] 할당 가능하도록 타입 어댑터 적용
+    candidatePlaces: Place[]; // Place[]는 SelectedPlace[] 할당 가능하도록 타입 어댑터 적용
     // prepareSchedulePayload 시그니처를 useSelectedPlaces에서 제공하는 것과 일치시킴
     prepareSchedulePayload: (startDatetimeISO: string | null, endDatetimeISO: string | null) => SchedulePayload | null;
     handleAutoCompletePlaces?: (category: string, placesFromApi: any[], travelDays: number | null) => void;
@@ -43,6 +54,7 @@ export const useCreateItineraryHandler = ({
         return null;
       }
       
+      // 전달받은 Place[] 배열 사용
       const allPlaces = [
         ...placesManagement.selectedPlaces,
         ...placesManagement.candidatePlaces
@@ -80,6 +92,7 @@ export const useCreateItineraryHandler = ({
         endDatetime: endDatetimeISO,
       });
       
+      // payload만 전달하는 간소화된 함수 호출 (내부적으로 필요한 변환 처리)
       const itinerary = await runScheduleGeneration(payload);
       
       if (itinerary) {
