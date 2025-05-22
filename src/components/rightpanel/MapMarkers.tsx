@@ -23,7 +23,7 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
   highlightPlaceId,
 }) => {
   const { map, isMapInitialized, isNaverLoaded } = useMapContext();
-  const markersRef = useRef<window.naver.maps.Marker[]>([]); // 타입 수정
+  const markersRef = useRef<naver.maps.Marker[]>([]); // 타입 수정: window.naver.maps.Marker -> naver.maps.Marker
   const prevSelectedDayRef = useRef<number | null>(null);
   const prevItineraryRef = useRef<ItineraryDay[] | null>(null);
 
@@ -100,8 +100,11 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
             console.log("[MapMarkers] 유효한 좌표를 가진 표시할 장소가 없습니다.");
         } else {
             console.log(`[MapMarkers] 유효한 장소 ${validPlacesToDisplay.length}개에 대해 마커 생성 중`);
-            const newMarkers: window.naver.maps.Marker[] = []; // 타입 수정
+            const newMarkers: naver.maps.Marker[] = []; // 타입 수정
             validPlacesToDisplay.forEach((place, index) => {
+              // Ensure window.naver.maps is available for runtime calls
+              if (!window.naver || !window.naver.maps) return;
+
               const position = createNaverLatLng(place.y!, place.x!); 
               
               const isGloballySelected = selectedPlaces.some(sp => sp.id === place.id);
@@ -112,7 +115,7 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
               if (isDisplayingItineraryDay) {
                 iconOptions = {
                   content: `<div style="width:28px;height:28px;background-color:${(place as ItineraryPlaceWithTime).isFallback ? '#757575' : '#FF5A5F'};border-radius:50%;border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.3);color:white;font-weight:bold;font-size:12px;display:flex;align-items:center;justify-content:center;">${index + 1}</div>`,
-                  anchor: new window.naver.maps.Point(14, 14) // window.naver.maps 사용
+                  anchor: new window.naver.maps.Point(14, 14)
                 };
               } else {
                 const placeForIcon = place as Place; 
@@ -121,8 +124,8 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
               
               const marker = createNaverMarker(map, position, iconOptions, place.name);
               
-              if (onPlaceClick && window.naver && window.naver.maps) { 
-                window.naver.maps.Event.addListener(marker, 'click', () => { // window.naver.maps 사용
+              if (onPlaceClick && window.naver && window.naver.maps && window.naver.maps.Event) { 
+                window.naver.maps.Event.addListener(marker, 'click', () => {
                   console.log(`[MapMarkers] 마커 클릭: ${place.name} (인덱스: ${index})`);
                   onPlaceClick(place, index);
                 });

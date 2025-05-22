@@ -1,7 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { Feature, Point, LineString, Position } from 'geojson'; // Import specific GeoJSON types
-import type { GeoNode, GeoLink, RouteStyle, GeoJsonLayerRef, GeoCoordinates } from './GeoJsonTypes'; // GeoCoordinates 추가
-
+import type { GeoNode, GeoLink, RouteStyle, GeoJsonLayerRef, GeoCoordinates } from './GeoJsonTypes';
 
 // 기본 경로 스타일 정의
 const defaultRouteStyle: RouteStyle = {
@@ -18,7 +16,7 @@ const defaultRouteStyle: RouteStyle = {
 // The GeoJsonLoader component will call onGeoJsonLoaded from context,
 // which in turn would call handleLoadSuccess here.
 
-const useGeoJsonState = (map: window.naver.maps.Map | null) => { // map 타입 수정
+const useGeoJsonState = (map: naver.maps.Map | null) => { // map 타입 수정
   const [isLoading, setIsLoading] = useState(false); // For data fetching state
   const [error, setError] = useState<Error | null>(null);
   const [isLoaded, setIsLoaded] = useState(false); // Indicates if data is processed and ready
@@ -27,8 +25,8 @@ const useGeoJsonState = (map: window.naver.maps.Map | null) => { // map 타입 �
   const [nodes, setNodes] = useState<GeoNode[]>([]);
   const [links, setLinks] = useState<GeoLink[]>([]);
   
-  const activeMarkersRef = useRef<window.naver.maps.Marker[]>([]); // 타입 수정
-  const activePolylinesRef = useRef<window.naver.maps.Polyline[]>([]); // 타입 수정
+  const activeMarkersRef = useRef<naver.maps.Marker[]>([]); // 타입 수정
+  const activePolylinesRef = useRef<naver.maps.Polyline[]>([]); // 타입 수정
   
   const nodeMapRef = useRef<Map<string, GeoNode>>(new Map());
   const linkMapRef = useRef<Map<string, GeoLink>>(new Map());
@@ -81,7 +79,7 @@ const useGeoJsonState = (map: window.naver.maps.Map | null) => { // map 타입 �
     return link;
   }, []);
   
-  const renderRoute = useCallback((nodeIds: string[], linkIds: string[], style: RouteStyle = defaultRouteStyle): (window.naver.maps.Marker | window.naver.maps.Polyline)[] => { // 반환 타입 수정
+  const renderRoute = useCallback((nodeIds: string[], linkIds: string[], style: RouteStyle = defaultRouteStyle): (naver.maps.Marker | naver.maps.Polyline)[] => { // 반환 타입 수정
     if (!map || !isLoaded || !window.naver || !window.naver.maps) {
       console.warn('[useGeoJsonState] renderRoute: 지도 미초기화, GeoJSON 미로드, 또는 Naver API 미준비.');
       return [];
@@ -89,24 +87,26 @@ const useGeoJsonState = (map: window.naver.maps.Map | null) => { // map 타입 �
     
     clearDisplayedFeatures(); 
     
-    const newRenderedFeatures: (window.naver.maps.Marker | window.naver.maps.Polyline)[] = []; // 타입 수정
-    const newPolylines: window.naver.maps.Polyline[] = []; // 타입 수정
-    const newMarkers: window.naver.maps.Marker[] = []; // 타입 수정
+    const newRenderedFeatures: (naver.maps.Marker | naver.maps.Polyline)[] = []; // 타입 수정
+    const newPolylines: naver.maps.Polyline[] = []; // 타입 수정
+    const newMarkers: naver.maps.Marker[] = []; // 타입 수정
 
     linkIds.forEach(linkId => {
-      const link = getLinkById(String(linkId)); // Ensure linkId is string
-      // GeoLink.coordinates is number[][] which is Position[]
+      const link = getLinkById(String(linkId));
       if (!link || !link.coordinates || !Array.isArray(link.coordinates) || link.coordinates.length < 2) {
         console.warn(`[useGeoJsonState] 링크 ID ${linkId}를 찾을 수 없거나 좌표가 유효하지 않습니다. Coordinates:`, link?.coordinates);
         return;
       }
       
+      // Ensure window.naver.maps is available for runtime calls
+      if (!window.naver || !window.naver.maps) return;
+
       try {
-        const path = link.coordinates.map((coord: GeoCoordinates) =>  // coord 타입 GeoCoordinates로 수정
+        const path = link.coordinates.map((coord: GeoCoordinates) => 
           new window.naver.maps.LatLng(coord[1], coord[0]) 
         );
         
-        const polyline = new window.naver.maps.Polyline({ // window.naver.maps 사용
+        const polyline = new window.naver.maps.Polyline({
           map,
           path,
           strokeColor: style.strokeColor || defaultRouteStyle.strokeColor,
@@ -123,25 +123,27 @@ const useGeoJsonState = (map: window.naver.maps.Map | null) => { // map 타입 �
     });
     
     nodeIds.forEach(nodeId => {
-      const node = getNodeById(String(nodeId)); // Ensure nodeId is string
-      // GeoNode.coordinates is number[] which is Position
+      const node = getNodeById(String(nodeId));
       if (!node || !node.coordinates || !Array.isArray(node.coordinates) || node.coordinates.length < 2) {
         console.warn(`[useGeoJsonState] 노드 ID ${nodeId}를 찾을 수 없거나 좌표가 유효하지 않습니다. Coordinates:`, node?.coordinates);
         return;
       }
+
+      // Ensure window.naver.maps is available for runtime calls
+      if (!window.naver || !window.naver.maps) return;
       
       try {
-        const position = new window.naver.maps.LatLng( // window.naver.maps 사용
-          node.coordinates[1], // GeoJSON is [lng, lat], so node.coordinates[1] is lat
-          node.coordinates[0]  // node.coordinates[0] is lng
+        const position = new window.naver.maps.LatLng(
+          node.coordinates[1], 
+          node.coordinates[0]  
         );
         
-        const marker = new window.naver.maps.Marker({ // window.naver.maps 사용
+        const marker = new window.naver.maps.Marker({
           map,
           position,
           icon: {
             content: `<div style="width: 8px; height: 8px; background-color: ${style.fillColor || defaultRouteStyle.fillColor}; border-radius: 50%; border: 1px solid white; box-shadow: 0 0 2px rgba(0,0,0,0.5);"></div>`,
-            anchor: new window.naver.maps.Point(4, 4) // window.naver.maps 사용
+            anchor: new window.naver.maps.Point(4, 4)
           },
           zIndex: (style.zIndex || defaultRouteStyle.zIndex || 100) + 1 
         });
@@ -160,13 +162,13 @@ const useGeoJsonState = (map: window.naver.maps.Map | null) => { // map 타입 �
   }, [map, isLoaded, clearDisplayedFeatures, getLinkById, getNodeById]);
   
   const registerGlobalInterface = useCallback(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && window.naver && window.naver.maps) { // Ensure naver.maps is available
       const layerInterface: GeoJsonLayerRef = {
         renderRoute,
         clearDisplayedFeatures,
         getNodeById,
         getLinkById,
-        isLoaded: () => isLoaded, // Provide a way to check if loaded
+        isLoaded: () => isLoaded,
       };
       (window as any).geoJsonLayer = layerInterface;
       
@@ -177,7 +179,7 @@ const useGeoJsonState = (map: window.naver.maps.Map | null) => { // map 타입 �
         }
       };
     }
-    return () => {}; // No-op for SSR or non-browser env
+    return () => {};
   }, [renderRoute, clearDisplayedFeatures, getNodeById, getLinkById, isLoaded]);
 
   // Effect to register/cleanup global interface
