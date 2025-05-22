@@ -1,4 +1,3 @@
-
 import { useRef, useEffect } from 'react';
 import { useMapContext } from '../MapContext';
 import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/core';
@@ -32,6 +31,7 @@ export const useMapMarkers = ({
   const prevItineraryRef = useRef<ItineraryDay[] | null>(null);
   const prevPlacesRef = useRef<Place[] | null>(null);
 
+  // 마커를 제거하는 함수를 더 명확하게 정의
   const clearAllMarkers = () => {
     if (markersRef.current.length > 0) {
       console.log("[useMapMarkers] Clearing all existing markers:", markersRef.current.length);
@@ -39,6 +39,7 @@ export const useMapMarkers = ({
     }
   };
 
+  // itinerary 또는 selectedDay가 변경될 때 마커를 업데이트하는 로직
   useEffect(() => {
     if (!map || !isMapInitialized || !isNaverLoaded || !window.naver || !window.naver.maps) {
       console.log("[useMapMarkers] Map not ready or Naver API not loaded. Skipping marker update.");
@@ -52,6 +53,7 @@ export const useMapMarkers = ({
     const highlightChanged = highlightPlaceId !== (markersRef.current as any)._prevHighlightPlaceId;
     const selectedPlacesListChanged = JSON.stringify(selectedPlaces) !== JSON.stringify((markersRef.current as any)._prevSelectedPlacesList);
 
+    // 변화가 감지되면 마커를 재생성
     if (itineraryChanged || dayChanged || placesPropChanged || selectedPlaceChanged || highlightChanged || selectedPlacesListChanged) {
       console.log("[useMapMarkers] Change detected, regenerating markers:", {
         itineraryChanged,
@@ -62,8 +64,10 @@ export const useMapMarkers = ({
         placesLength: places?.length,
       });
 
+      // 기존 마커를 모두 제거
       clearAllMarkers();
 
+      // 상태 참조를 업데이트
       prevItineraryRef.current = itinerary;
       prevSelectedDayRef.current = selectedDay;
       prevPlacesRef.current = places;
@@ -71,7 +75,17 @@ export const useMapMarkers = ({
       (markersRef.current as any)._prevHighlightPlaceId = highlightPlaceId;
       (markersRef.current as any)._prevSelectedPlacesList = selectedPlaces;
 
-      renderMarkers();
+      // 경로 생성 모드가 아닌 경우에만 마커를 렌더링
+      // 일정이 있으면 해당 일정의 마커만 표시, 없으면 기본 마커 표시
+      if (itinerary && itinerary.length > 0) {
+        // 일정이 있을 때의 마커 표시 로직
+        renderMarkers();
+      } else if (places.length > 0 && (!itinerary || itinerary.length === 0)) {
+        // 일정이 없을 때의 기본 마커 표시 로직
+        renderMarkers();
+      } else {
+        console.log("[useMapMarkers] No markers to render - either in itinerary mode with no data or no places available");
+      }
     }
   }, [
     map, isMapInitialized, isNaverLoaded,
@@ -79,6 +93,7 @@ export const useMapMarkers = ({
     onPlaceClick, highlightPlaceId
   ]);
 
+  // 마커 렌더링 함수
   const renderMarkers = () => {
     let placesToDisplay: (Place | ItineraryPlaceWithTime)[] = [];
     let isDisplayingItineraryDay = false;

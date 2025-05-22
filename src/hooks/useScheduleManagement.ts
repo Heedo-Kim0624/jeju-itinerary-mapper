@@ -1,13 +1,20 @@
-import { useScheduleStateAndEffects } from './schedule/useScheduleStateAndEffects';
-import { useScheduleGenerationRunner } from './schedule/useScheduleGenerationRunner';
-import type { SelectedPlace, ItineraryDay, SchedulePayload } from '@/types/core'; // Updated SelectedPlace import
-import { useEffect, useCallback } from 'react'; 
-import { toast } from 'sonner';
-import { useSchedulePayloadBuilder } from '@/hooks/places/use-schedule-payload-builder'; // Import payload builder
 
-interface UseScheduleManagementProps {
+import { useState, useCallback, useEffect } from 'react';
+import { toast } from 'sonner';
+import { useServerResponseHandler } from '@/hooks/schedule/useServerResponseHandler';
+import { useScheduleStateAndEffects } from '@/hooks/schedule/useScheduleStateAndEffects';
+import { useScheduleGenerationCore } from '@/hooks/schedule/useScheduleGenerationCore';
+import { useMapContext } from '@/components/rightpanel/MapContext'; // 추가: MapContext import
+import { type ItineraryDay, type SelectedPlace } from '@/types/core';
+
+interface ScheduleManagementProps {
   selectedPlaces: SelectedPlace[];
-  dates: { startDate: Date; endDate: Date; startTime: string; endTime: string; } | null;
+  dates: {
+    startDate: Date | null;
+    endDate: Date | null;
+    startTime: string;
+    endTime: string;
+  } | null;
   startDatetime: string | null;
   endDatetime: string | null;
 }
@@ -16,123 +23,122 @@ export const useScheduleManagement = ({
   selectedPlaces,
   dates,
   startDatetime,
-  endDatetime,
-}: UseScheduleManagementProps) => {
+  endDatetime
+}: ScheduleManagementProps) => {
+  const [isManuallyGenerating, setIsManuallyGenerating] = useState(false);
+  const { clearMarkersAndUiElements } = useMapContext(); // 추가: MapContext에서 clearMarkersAndUiElements 가져오기
+  
   const {
     itinerary,
-    setItinerary, // Keep setItinerary if it's used internally for state updates
+    setItinerary,
     selectedDay,
-    setSelectedDay, // Keep setSelectedDay for internal state updates
-    isLoadingState: isLoadingStateFromEffects,
+    setSelectedDay,
+    isLoadingState,
     setIsLoadingState,
     handleSelectDay,
   } = useScheduleStateAndEffects();
 
-  const { isGenerating: isGeneratingFromGenerator, runScheduleGeneration } = useScheduleGenerationRunner();
-  const { prepareSchedulePayload } = useSchedulePayloadBuilder(); // Get the payload builder function
+  const { processServerResponse } = useScheduleGenerationCore({
+    selectedPlaces,
+    startDate: dates?.startDate || new Date(),
+    geoJsonNodes: [], // 사용하지 않으므로 빈 배열 전달
+    setItinerary,
+    setSelectedDay,
+    setServerRoutes: () => {}, // 더미 함수
+    setIsLoadingState,
+  });
 
-  const runScheduleGenerationProcess = useCallback(async () => {
-    if (!dates?.startDate || !dates?.endDate || !startDatetime || !endDatetime) {
-      toast.error("여행 날짜와 시간 정보가 올바르지 않습니다.");
+  const { isListenerRegistered } = useServerResponseHandler({
+    onServerResponse: processServerResponse,
+    enabled: isManuallyGenerating || isLoadingState
+  });
+
+  const combinedIsLoading = isLoadingState || isManuallyGenerating;
+
+  // 일정 생성 프로세스 실행 함수
+  const runScheduleGenerationProcess = useCallback(() => {
+    console.log("[useScheduleManagement] 일정 생성 프로세스 시작");
+    
+    // 이미 생성 중이면 중복 실행 방지
+    if (combinedIsLoading) {
+      console.log("[useScheduleManagement] 이미 일정 생성 중입니다");
       return;
     }
 
-    if (selectedPlaces.length === 0) {
-      toast.error("선택된 장소가 없습니다.");
-      return;
+    // 일정 생성 전에 마커 초기화
+    if (clearMarkersAndUiElements) {
+      console.log("[useScheduleManagement] 일정 생성 전 지도 마커 초기화");
+      clearMarkersAndUiElements();
+    } else {
+      console.warn("[useScheduleManagement] clearMarkersAndUiElements 함수를 찾을 수 없습니다");
     }
-
+    
+    setIsManuallyGenerating(true);
     setIsLoadingState(true);
-    console.log("[useScheduleManagement] 일정 생성 시작:", {
-      장소수: selectedPlaces.length,
-      시작일: dates.startDate,
-      종료일: dates.endDate
-    });
-
+    
+    // 서버 이벤트가 등록되어 있는지 확인
+    if (!isListenerRegistered) {
+      console.warn("[useScheduleManagement] 서버 응답 이벤트 리스너가 등록되어 있지 않습니다");
+    }
+    
+    // 일정 생성 이벤트 발생 (외부 서버로 요청)
     try {
-      // Use the centralized payload builder
-      // Assuming all `selectedPlaces` are user-selected for now, and no separate candidate places from this hook's context.
-      const payload = prepareSchedulePayload(selectedPlaces, [], startDatetime, endDatetime);
-
-      if (!payload) {
-        toast.error("일정 생성에 필요한 정보를 준비하지 못했습니다.");
-        setIsLoadingState(false);
-        return;
-      }
-
-      const result = await runScheduleGeneration(payload, selectedPlaces, dates.startDate);
+      const event = new CustomEvent("startScheduleGeneration", {
+        detail: {
+          selectedPlaces,
+          startDatetime,
+          endDatetime,
+        },
+      });
       
-      if (!result || result.length === 0) {
-        // The toast for empty/failed generation is handled by useScheduleGenerationRunner or handleServerItineraryResponse
-        // No need to duplicate it here unless specific context is needed.
-        // toast.error("일정 생성에 실패했습니다. 다시 시도해주세요."); 
-        // setItinerary([]); // This should be handled by the runner/response handler setting the itinerary
-      } else {
-        console.log("[useScheduleManagement] 일정 생성 성공:", result.length, "일 일정");
-        // setItinerary(result); // This is also handled by handleServerItineraryResponse flow via runner
-        // if (result.length > 0 && result[0]?.day) {
-        //   setSelectedDay(result[0].day);
-        // }
-      }
+      console.log("[useScheduleManagement] startScheduleGeneration 이벤트 발생:", {
+        selectedPlaces: selectedPlaces.length,
+        startDatetime,
+        endDatetime,
+      });
+      
+      window.dispatchEvent(event);
+      
+      // 10초 후에 자동으로 로딩 상태 해제 (타임아웃 처리)
+      setTimeout(() => {
+        if (combinedIsLoading) {
+          console.log("[useScheduleManagement] 일정 생성 타임아웃 (10초)");
+          setIsManuallyGenerating(false);
+          setIsLoadingState(false);
+          toast.error("일정 생성 시간이 초과되었습니다. 다시 시도해주세요.");
+        }
+      }, 10000);
       
     } catch (error) {
-      console.error("[useScheduleManagement] 일정 생성 중 오류:", error);
-      toast.error("일정 생성 중 오류가 발생했습니다.");
-      // setItinerary([]); // Also handled by runner's error path
-    } finally {
-      setIsLoadingState(false); // Ensure loading state is always reset
+      console.error("[useScheduleManagement] 일정 생성 이벤트 발생 중 오류:", error);
+      setIsManuallyGenerating(false);
+      setIsLoadingState(false);
+      toast.error("일정 생성 요청 중 오류가 발생했습니다.");
     }
-  }, [selectedPlaces, dates, startDatetime, endDatetime, setIsLoadingState, runScheduleGeneration, prepareSchedulePayload /*, setItinerary, setSelectedDay*/]);
-
-  const combinedIsLoading = isGeneratingFromGenerator || isLoadingStateFromEffects;
-
-  // handleRawServerResponse와 관련된 useEffect는 제거되었습니다.
-  // 로딩 상태 해제는 useScheduleGenerationRunner 내부의 handleServerResponse 또는 fallback/error 로직에서 처리됩니다.
-  // 빈 일정에 대한 토스트 메시지도 해당 위치에서 처리하는 것이 더 적절할 수 있습니다.
-
-  useEffect(() => {
-    // 이 useEffect는 상태 로깅 목적으로 유지합니다.
-    console.log(`[useScheduleManagement] State Update:
-      - isGenerating: ${isGeneratingFromGenerator}
-      - isLoadingState: ${isLoadingStateFromEffects}
-      - Combined isLoading: ${combinedIsLoading}
-      - Itinerary length: ${itinerary.length}
-      - Selected Day: ${selectedDay}`);
   }, [
-    isGeneratingFromGenerator, 
-    isLoadingStateFromEffects, 
-    combinedIsLoading, 
-    itinerary, 
-    selectedDay
+    combinedIsLoading,
+    selectedPlaces,
+    startDatetime, 
+    endDatetime, 
+    isListenerRegistered,
+    setIsLoadingState,
+    clearMarkersAndUiElements
   ]);
 
+  // 서버 응답 처리 완료 시 상태 초기화
   useEffect(() => {
-    // 이 useEffect는 로딩 타임아웃 처리용으로 유지합니다.
-    let timeoutId: number | null = null;
-    
-    if (combinedIsLoading) {
-      timeoutId = window.setTimeout(() => {
-        console.log("[useScheduleManagement] 로딩 타임아웃 도달, 로딩 상태 강제 해제");
-        setIsLoadingState(false);
-        // 타임아웃 시 빈 일정을 설정하거나 사용자에게 알림
-        // setItinerary([]); // 필요하다면 빈 일정으로 초기화
-        // setSelectedDay(null);
-        toast.error("일정 생성 시간이 너무 오래 걸립니다. 다시 시도해주세요.");
-      }, 15000); // 15초 타임아웃
+    if (itinerary && itinerary.length > 0 && isManuallyGenerating) {
+      console.log("[useScheduleManagement] 서버 응답 처리 완료, 로딩 상태 해제");
+      setIsManuallyGenerating(false);
+      setIsLoadingState(false);
     }
-    
-    return () => {
-      if (timeoutId !== null) {
-        window.clearTimeout(timeoutId);
-      }
-    };
-  }, [combinedIsLoading, setIsLoadingState]);
+  }, [itinerary, isManuallyGenerating, setIsLoadingState]);
 
   return {
     itinerary,
     selectedDay,
     isLoading: combinedIsLoading,
     handleSelectDay,
-    runScheduleGenerationProcess,
+    runScheduleGenerationProcess
   };
 };

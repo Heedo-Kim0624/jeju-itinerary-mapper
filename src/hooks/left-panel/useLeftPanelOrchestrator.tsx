@@ -1,4 +1,3 @@
-
 import { useEffect, useCallback } from 'react';
 import { useLeftPanel } from '@/hooks/use-left-panel';
 import { useScheduleGenerationRunner } from '@/hooks/schedule/useScheduleGenerationRunner';
@@ -8,6 +7,7 @@ import { useLeftPanelProps } from '@/hooks/left-panel/use-left-panel-props';
 import { useAdaptedScheduleGenerator } from '@/hooks/left-panel/useAdaptedScheduleGenerator';
 import { useItineraryViewDecider } from '@/hooks/left-panel/useItineraryViewDecider';
 import { useEnhancedPanelProps } from '@/hooks/left-panel/useEnhancedPanelProps';
+import { useMapContext } from '@/components/rightpanel/MapContext'; // 추가: MapContext import
 import { toast } from 'sonner';
 // import { summarizeItineraryData } from '@/utils/debugUtils'; // Removed as logs using it are removed
 import type { ItineraryDay, Place, SchedulePayload } from '@/types';
@@ -31,6 +31,7 @@ export const useLeftPanelOrchestrator = () => {
   } = leftPanelCore;
 
   const { runScheduleGeneration: runScheduleGenerationFromRunner, isGenerating: isRunnerGenerating } = useScheduleGenerationRunner();
+  const { clearAllRoutes, clearMarkersAndUiElements } = useMapContext(); // 추가: MapContext 에서 clearMarkersAndUiElements 가져오기
 
   const { adaptedRunScheduleGeneration } = useAdaptedScheduleGenerator({
     runScheduleGenerationFromRunner,
@@ -155,18 +156,34 @@ export const useLeftPanelOrchestrator = () => {
     shouldShowItineraryView,
   ]);
 
+  // 변경된 부분: 경로 생성 버튼을 클릭할 때 실행되는 handleTriggerCreateItinerary 함수 수정
   const handleTriggerCreateItinerary = useCallback(async () => {
     if (isActuallyGenerating) {
       toast.info("일정 생성 중입니다. 잠시만 기다려주세요.");
       return;
     }
+    
+    // 경로 생성 시작 전에 지도의 모든 마커와 UI 요소 제거
+    if (clearMarkersAndUiElements) {
+      console.log("[useLeftPanelOrchestrator] 경로 생성 시작 전 지도 마커와 UI 요소 제거");
+      clearMarkersAndUiElements();
+    } else {
+      console.warn("[useLeftPanelOrchestrator] clearMarkersAndUiElements 함수를 찾을 수 없습니다.");
+    }
+
+    // 기존의 경로도 초기화
+    if (clearAllRoutes) {
+      console.log("[useLeftPanelOrchestrator] 경로 생성 시작 전 이전 경로 제거");
+      clearAllRoutes();
+    }
+    
     const result = await createItinerary();
     // if (result) { // Debug log removed
     //   console.log("[LeftPanelOrchestrator] Itinerary creation process finished via custom hook.");
     // } else {
     //   console.log("[LeftPanelOrchestrator] Itinerary creation process did not produce a result or was aborted.");
     // }
-  }, [isActuallyGenerating, createItinerary]);
+  }, [isActuallyGenerating, createItinerary, clearMarkersAndUiElements, clearAllRoutes]);
 
   const {
     enhancedItineraryDisplayProps,
