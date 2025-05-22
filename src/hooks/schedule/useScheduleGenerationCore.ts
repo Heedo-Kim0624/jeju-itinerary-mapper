@@ -1,7 +1,8 @@
+
 import { toast } from 'sonner';
 import { SelectedPlace } from '@/types/supabase';
 import { NewServerScheduleResponse, ServerRouteResponse, ItineraryDay } from '@/types/core';
-import { useScheduleParser } from './useScheduleParser'; 
+import { parseServerResponse } from './useScheduleParser'; 
 import { updateItineraryWithCoordinates } from './parser-utils/coordinateUtils';
 import { MapContextGeoNode } from './parser-utils/coordinateTypes';
 
@@ -36,10 +37,6 @@ export const useScheduleGenerationCore = ({
   setServerRoutes,
   setIsLoadingState,
 }: ScheduleGenerationCoreProps) => {
-  const { parseServerResponse } = useScheduleParser({ 
-    currentSelectedPlaces: selectedPlaces
-  });
-
   // 서버 응답을 처리하는 함수
   const processServerResponse = (serverResponse: NewServerScheduleResponse) => {
     try {

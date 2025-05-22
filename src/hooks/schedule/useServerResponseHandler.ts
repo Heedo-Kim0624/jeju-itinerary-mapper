@@ -1,6 +1,6 @@
 
 import { useCallback, useEffect, useRef } from 'react';
-import { NewServerScheduleResponse } from '@/types/core';
+import { NewServerScheduleResponse, ItineraryDay } from '@/types/core';
 
 interface ServerResponseHandlerProps {
   onServerResponse: (response: NewServerScheduleResponse) => void;
@@ -53,4 +53,37 @@ export const useServerResponseHandler = ({
   return {
     isListenerRegistered: listenerRegistered.current
   };
+};
+
+/**
+ * 서버 응답을 파싱하여 일정 데이터로 변환하는 함수
+ * 외부 모듈에서 참조할 수 있도록 명시적으로 내보냄
+ */
+export const parseServerResponse = (
+  serverResponse: NewServerScheduleResponse,
+  startDate: Date
+): ItineraryDay[] => {
+  console.log("[parseServerResponse] 서버 응답 파싱 시작:", serverResponse);
+  
+  try {
+    // 여기서는 기본적인 파싱 로직만 포함
+    // 실제 구현은 더 복잡할 수 있으며 필요에 따라 확장 가능
+    if (!serverResponse || !serverResponse.itinerary) {
+      console.error("[parseServerResponse] 서버 응답에 itinerary 데이터가 없습니다");
+      return [];
+    }
+    
+    // 간단한 변환 로직 (예시)
+    // 실제 프로젝트에 맞게 수정 필요
+    return serverResponse.itinerary.map((day, index) => ({
+      day: index + 1,
+      date: new Date(startDate.getTime() + index * 24 * 60 * 60 * 1000),
+      places: day.places || [],
+      routeData: day.routeData || { nodeIds: [], linkIds: [] },
+      interleaved_route: day.interleaved_route || []
+    }));
+  } catch (error) {
+    console.error("[parseServerResponse] 서버 응답 파싱 중 오류:", error);
+    return [];
+  }
 };
