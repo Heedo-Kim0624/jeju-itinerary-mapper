@@ -59,7 +59,7 @@ export const useLeftPanelCallbacks = ({
         });
     } else {
       // console.warn("[LeftPanel] handleCreateItinerary 함수가 제공되지 않았습니다."); // Debug log removed
-      toast.warn("[LeftPanel] handleCreateItinerary 함수가 제공되지 않았습니다."); // Replaced with toast for user visibility if needed
+      toast.warning("[LeftPanel] handleCreateItinerary 함수가 제공되지 않았습니다."); // Changed toast.warn to toast.warning
     }
 
     return true;
@@ -84,3 +84,4 @@ export const useLeftPanelCallbacks = ({
     handlePanelBackCallbacks,
   };
 };
+
