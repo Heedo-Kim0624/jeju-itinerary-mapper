@@ -1,82 +1,61 @@
 
-import type {
+import { 
+  ItineraryDay, 
+  ItineraryPlaceWithTime, 
+  ServerScheduleItem, 
   ServerRouteSummaryItem,
-  ServerScheduleItem,
-  ItineraryDay,
-  ItineraryPlaceWithTime,
-  SelectedPlace,
-  SchedulePayload, // Added for createPlaceWithTimeFromSchedule
+  SelectedPlace
 } from '@/types/core';
-import { getDateStringMMDD, getDayOfWeekString } from '@/utils/date-utils'; // 경로 수정
-import { extractAllNodesFromRoute, extractAllLinksFromRoute } from './coordinateUtils';
-// Corrected import: createPlaceWithTimeFromSchedule is now in itineraryPlaceUtils
-import { createPlaceWithTimeFromSchedule } from './itineraryPlaceUtils'; 
+import { extractAllNodesFromRoute, extractAllLinksFromRoute } from '@/utils/routeParser';
+import { getDateStringMMDD, getDayOfWeekString } from '../../itinerary/itineraryUtils';
+import { createPlaceWithTimeFromSchedule } from './itineraryPlaceUtils';
 
-/**
- * Parses a single route summary item along with its corresponding schedule items
- * to form one ItineraryDay.
- */
-export const parseSingleRouteSummary = (
+// Helper: 서버의 단일 route_summary 아이템을 ItineraryDay 객체로 변환
+export function parseSingleRouteSummary(
   summaryItem: ServerRouteSummaryItem,
-  dayIndex: number, // This is the 0-based index from the route_summary array
+  dayIndex: number, // 0부터 시작하는 인덱스 (일정의 순서)
   allScheduleItems: ServerScheduleItem[],
   tripStartDate: Date,
   currentSelectedPlaces: SelectedPlace[],
-  dayOfWeekMap: { [key: string]: number }, // e.g., { Sun: 0, Mon: 1 ... }
-  lastPayload: SchedulePayload | null // Added lastPayload
-): ItineraryDay => {
-  const dayKey = summaryItem.day; // e.g., "Mon", "Tue", or "Day1"
+  dayOfWeekMap: { [key: string]: number }
+): ItineraryDay {
+  const routeDayAbbrev = summaryItem.day.substring(0, 3); // "Mon", "Tue" 등
+  const routeDayOfWeekIndex = dayOfWeekMap[routeDayAbbrev];
+  const tripStartDayOfWeekIndex = tripStartDate.getDay();
 
-  // Filter schedule items for the current day based on the time_block prefix
-  const dayScheduleItems = allScheduleItems.filter(item =>
-    item.time_block.startsWith(dayKey + '_') || // For "Mon_0900"
-    (dayKey.match(/^Day\d+$/) && item.time_block.startsWith(dayKey)) // For "Day1_0900"
+  let dayNumberOffset = routeDayOfWeekIndex - tripStartDayOfWeekIndex;
+  if (dayNumberOffset < 0) dayNumberOffset += 7; 
+
+  const currentTripDate = new Date(tripStartDate);
+  currentTripDate.setDate(tripStartDate.getDate() + dayNumberOffset + (dayIndex > 0 && routeDayOfWeekIndex < tripStartDayOfWeekIndex ? 7 * Math.floor(dayIndex / Object.keys(dayOfWeekMap).length) : 0) ); // 주차를 고려한 날짜 조정 추가 가능성
+
+  // tripDayNumber는 서버 응답 순서(index)를 기반으로 1부터 시작
+  const tripDayNumber = dayIndex + 1;
+
+  const placesForThisDay: ItineraryPlaceWithTime[] = (summaryItem.places_routed || []).map(
+    (placeName, placeIdx) => createPlaceWithTimeFromSchedule(
+      placeName,
+      placeIdx,
+      routeDayAbbrev, // 현재 요일 약자 전달
+      allScheduleItems,
+      currentSelectedPlaces
+    )
   );
-
-  // Determine the actual day number (1-indexed) and date
-  // This logic assumes summaryItem.day can be like "Mon" or "Day1", "Day2"
-  let currentDayNumber: number;
-  let currentDate: Date;
-  let dayOfWeekStr: string;
-
-  if (dayKey.match(/^Day\d+$/)) { // "Day1", "Day2"
-    currentDayNumber = parseInt(dayKey.replace('Day', ''), 10);
-    currentDate = new Date(tripStartDate);
-    currentDate.setDate(tripStartDate.getDate() + currentDayNumber - 1);
-    dayOfWeekStr = getDayOfWeekString(currentDate);
-  } else { // "Mon", "Tue" - calculate day number based on start date's DOW and summary DOW
-    const startDayOfWeek = tripStartDate.getDay(); // 0 for Sun, 1 for Mon ...
-    const summaryDayOfWeek = dayOfWeekMap[dayKey];
-    let offset = summaryDayOfWeek - startDayOfWeek;
-    if (offset < 0 && dayIndex > 0) { // If summary DOW is earlier in week than start, assume it's next week (if not first day)
-        // This logic might be tricky if trip spans more than one week and DOWs repeat
-        // A more robust way is to rely on dayIndex if route_summary is always sorted.
-        offset += 7; 
-    }
-    currentDayNumber = dayIndex + 1; // Use array index as a more reliable day number
-    currentDate = new Date(tripStartDate);
-    currentDate.setDate(tripStartDate.getDate() + dayIndex); // dayIndex is 0-based
-    dayOfWeekStr = getDayOfWeekString(currentDate); // Or simply dayKey if it's "Mon", "Tue"
-  }
   
-  const places: ItineraryPlaceWithTime[] = dayScheduleItems.map(
-    (item, itemIndex) => createPlaceWithTimeFromSchedule(item, currentDayNumber, itemIndex, currentSelectedPlaces, lastPayload)
-  );
-
-  const routeNodes = summaryItem.interleaved_route ? extractAllNodesFromRoute(summaryItem.interleaved_route) : [];
-  const routeLinks = summaryItem.interleaved_route ? extractAllLinksFromRoute(summaryItem.interleaved_route) : [];
+  const interleaved_route = summaryItem.interleaved_route || [];
 
   return {
-    day: currentDayNumber,
-    places,
-    totalDistance: summaryItem.total_distance_m ? summaryItem.total_distance_m / 1000 : 0,
+    day: tripDayNumber,
+    places: placesForThisDay,
+    totalDistance: summaryItem.total_distance_m / 1000, // m에서 km로 변환
+    interleaved_route: interleaved_route,
     routeData: {
-      nodeIds: routeNodes.map(String), // Ensure string IDs
-      linkIds: routeLinks.map(String), // Ensure string IDs
-      segmentRoutes: summaryItem.segment_routes || [],
+      nodeIds: extractAllNodesFromRoute(interleaved_route).map(String),
+      linkIds: extractAllLinksFromRoute(interleaved_route).map(String),
+      // segmentRoutes는 현재 서버 응답에서 직접 제공되지 않으므로 빈 배열로 초기화
+      segmentRoutes: [], 
     },
-    interleaved_route: summaryItem.interleaved_route ? summaryItem.interleaved_route.map(String) : [], // Ensure string IDs
-    dayOfWeek: dayOfWeekStr,
-    date: getDateStringMMDD(currentDate),
+    dayOfWeek: getDayOfWeekString(currentTripDate), // itineraryUtils 사용
+    date: getDateStringMMDD(currentTripDate),     // itineraryUtils 사용
   };
-};
+}

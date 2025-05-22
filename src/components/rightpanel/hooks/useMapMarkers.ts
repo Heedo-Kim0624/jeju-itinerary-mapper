@@ -14,7 +14,7 @@ interface UseMapMarkersProps {
   selectedDay: number | null;
   selectedPlaces?: Place[]; // These are candidate places usually
   onPlaceClick?: (place: Place | ItineraryPlaceWithTime, index: number) => void;
-  highlightPlaceId?: string | number;
+  highlightPlaceId?: string | number; // CHANGED TYPE
 }
 
 export const useMapMarkers = ({
@@ -85,9 +85,7 @@ export const useMapMarkers = ({
   const renderMarkers = () => {
     let placesToDisplayOnMap: (Place | ItineraryPlaceWithTime)[] = [];
     let isDisplayingItineraryDay = false;
-    const displayedPlaceIdSet = new Set<string | number>();
-    // Declare validPlacesToDisplay here to ensure it's in scope later
-    let validPlacesToDisplay: (Place | ItineraryPlaceWithTime)[] = [];
+    const displayedPlaceIdSet = new Set<string | number>(); // CHANGED TYPE, tracks IDs on map
 
     // If an itinerary is active and a day is selected, prioritize itinerary places for that day
     if (itinerary && itinerary.length > 0 && selectedDay !== null) {
@@ -120,8 +118,7 @@ export const useMapMarkers = ({
     }
     
     if (placesToDisplayOnMap.length > 0) {
-      // Assign to the higher-scoped variable
-      validPlacesToDisplay = placesToDisplayOnMap.filter(p => {
+      const validPlacesToDisplay = placesToDisplayOnMap.filter(p => {
         if (p.x != null && p.y != null && !isNaN(Number(p.x)) && !isNaN(Number(p.y))) return true;
         console.warn(`[useMapMarkers] Place '${p.name}' has invalid coordinates: x=${p.x}, y=${p.y}`);
         return false;
@@ -181,12 +178,7 @@ export const useMapMarkers = ({
         if (validPlacesToDisplay.length > 0) {
             if (!(selectedPlace || highlightPlaceId)) {
                 console.log("[useMapMarkers] Fitting map bounds to displayed markers.");
-                // Ensure type compatibility for fitBoundsToPlaces
-                const placesForBounds = validPlacesToDisplay.map(p => ({
-                    ...p,
-                    id: String(p.id) // Ensure id is string for Place type if strictly needed by fitBounds
-                })) as Place[];
-                fitBoundsToPlaces(map, placesForBounds);
+                fitBoundsToPlaces(map, validPlacesToDisplay as Place[]); // fitBoundsToPlaces expects Place[]
             }
         }
       }
@@ -194,7 +186,6 @@ export const useMapMarkers = ({
       console.log("[useMapMarkers] No places to display after filtering.");
     }
     
-    // Use the correctly scoped validPlacesToDisplay here
     const placeToFocus = selectedPlace || (highlightPlaceId !== undefined ? validPlacesToDisplay.find(p => isSameId(p.id, highlightPlaceId)) : null);
     if (placeToFocus && placeToFocus.y != null && placeToFocus.x != null) {
       console.log(`[useMapMarkers] Panning to focused place: ${placeToFocus.name}`);

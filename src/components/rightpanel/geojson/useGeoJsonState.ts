@@ -4,7 +4,7 @@ import { useGeoJsonRendering } from './useGeoJsonRendering';
 import { useGeoJsonGlobalInterface } from './useGeoJsonGlobalInterface';
 // GeoNode, GeoLink, etc., are now imported by the individual hooks.
 
-export const useGeoJsonState = (map: naver.maps.Map | null) => {
+const useGeoJsonState = (map: naver.maps.Map | null) => {
   const {
     isLoading,
     error,

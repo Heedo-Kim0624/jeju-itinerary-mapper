@@ -3,7 +3,7 @@ import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import type { SchedulePayload, Place, SelectedPlace as CoreSelectedPlace, ItineraryDay } from '@/types';
 import { summarizeItineraryData } from '@/utils/debugUtils'; // For logging consistency
-import type { CategoryName } from '@/types/core'; // Added CategoryName import
+import type { CategoryName } from '@/utils/categoryUtils'; // Added CategoryName import
 
 interface UseCreateItineraryHandlerProps {
   placesManagement: {
@@ -60,8 +60,8 @@ export const useCreateItineraryHandler = ({
         image_url: p.image_url,
         homepage: p.homepage,
         geoNodeId: p.geoNodeId,
-        isSelected: true, // Place.isSelected가 undefined이면 true로 설정
-        isCandidate: false, // Place.isCandidate가 undefined이면 false로 설정
+        isSelected: p.isSelected !== undefined ? p.isSelected : true,
+        isCandidate: p.isCandidate !== undefined ? p.isCandidate : false,
       }));
 
       const selectedPlaceIds = new Set(selectedCorePlaces.map(p => String(p.id))); // Ensure string IDs

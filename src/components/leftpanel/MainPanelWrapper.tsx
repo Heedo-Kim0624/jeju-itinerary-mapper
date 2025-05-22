@@ -2,7 +2,7 @@
 import React from 'react';
 import LeftPanelContainer from './LeftPanelContainer';
 import LeftPanelContent from './LeftPanelContent';
-import type { Place, ItineraryDay, CategoryName } from '@/types/core'; 
+import type { Place, ItineraryDay, CategoryName } from '@/types'; 
 
 // Props for LeftPanelContainer
 interface LeftPanelContainerPassedProps {

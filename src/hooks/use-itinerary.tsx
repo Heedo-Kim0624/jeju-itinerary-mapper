@@ -1,4 +1,3 @@
-
 import { toast } from 'sonner';
 import type { ItineraryDay, Place, SelectedPlace as CoreSelectedPlace, NewServerScheduleResponse } from '@/types'; // CoreSelectedPlace 추가, NewServerScheduleResponse 추가
 
@@ -30,15 +29,17 @@ export const useItinerary = () => {
     setIsItineraryCreated,
   });
 
-  // 비동기 함수를 받을 수 있도록 수정
+  // useItineraryEvents에 전달되는 parseServerResponse는 이제 사용되지 않거나,
+  // useItineraryParserHook.parseServerResponse를 직접 사용하도록 변경되어야 합니다.
+  // 현재 useItineraryEvents는 rawServerResponseReceived 이벤트를 직접 처리하지 않으므로,
+  // 이 부분은 새로운 흐름에 맞춰 조정될 필요가 있습니다. 여기서는 일단 기존 구조를 유지합니다.
   useItineraryEvents({
     setItinerary,
     setSelectedItineraryDay,
     setShowItinerary,
     setIsItineraryCreated,
-    parseServerResponse: async (serverResponse: any, selectedPlaces?: CoreSelectedPlace[], tripStartDate?: Date | null) => {
-      // 비동기 함수로 호출하고 await로 처리
-      return await itineraryParserHook.parseServerResponse(serverResponse, selectedPlaces || [], tripStartDate || null);
+    parseServerResponse: (serverResponse: any, selectedPlaces?: CoreSelectedPlace[], tripStartDate?: Date | null) => { // 함수 시그니처 변경
+      return itineraryParserHook.parseServerResponse(serverResponse, selectedPlaces || [], tripStartDate || null);
     },
   });
   

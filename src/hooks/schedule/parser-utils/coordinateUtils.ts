@@ -1,3 +1,4 @@
+
 import { ItineraryDay } from '@/types/core';
 import { MapContextGeoNode } from './coordinateTypes';
 
@@ -15,44 +16,6 @@ export const findCoordinatesFromMapContextNodes = (
   }
   console.warn(`[findCoordinatesFromMapContextNodes] Coordinates not found for NODE_ID: ${nodeIdStr}`);
   return null;
-};
-
-/**
- * 경로에서 모든 노드 ID를 추출합니다.
- * @param route interleaved_route 배열
- * @returns 노드 ID 배열
- */
-export const extractAllNodesFromRoute = (route: (string | number)[]): (string | number)[] => {
-  const nodes: (string | number)[] = [];
-  
-  // 홀수 인덱스 또는 'N'으로 시작하는 ID를 노드로 간주
-  route.forEach((id, index) => {
-    const idStr = String(id);
-    if (idStr.startsWith('N') || idStr.startsWith('n_') || index % 2 === 0) {
-      nodes.push(id);
-    }
-  });
-  
-  return nodes;
-};
-
-/**
- * 경로에서 모든 링크 ID를 추출합니다.
- * @param route interleaved_route 배열
- * @returns 링크 ID 배열
- */
-export const extractAllLinksFromRoute = (route: (string | number)[]): (string | number)[] => {
-  const links: (string | number)[] = [];
-  
-  // 짝수 인덱스 또는 'L'으로 시작하는 ID를 링크로 간주
-  route.forEach((id, index) => {
-    const idStr = String(id);
-    if (idStr.startsWith('L') || idStr.startsWith('l_') || index % 2 !== 0) {
-      links.push(id);
-    }
-  });
-  
-  return links;
 };
 
 // Function to update itinerary places with coordinates
