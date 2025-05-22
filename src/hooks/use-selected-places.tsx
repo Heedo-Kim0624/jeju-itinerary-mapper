@@ -1,6 +1,6 @@
 
 import { useCallback, useEffect } from 'react';
-import { Place, SelectedPlace } from '@/types/supabase'; // Ensure SelectedPlace is imported if it's used, Place is used for handleViewOnMap
+import { Place, SelectedPlace, CategoryName, SchedulePlace } from '@/types/core'; // Ensure types from core
 import { useTripDetails } from './use-trip-details';
 
 import { usePlaceCoreState } from './places/use-place-core-state';
@@ -12,48 +12,73 @@ import { useSchedulePayloadBuilder } from './places/use-schedule-payload-builder
 export const useSelectedPlaces = () => {
   const { tripDuration } = useTripDetails();
 
+  const coreState = usePlaceCoreState();
   const {
     selectedPlaces,
     setSelectedPlaces,
     candidatePlaces,
     setCandidatePlaces,
-    handleRemovePlace,
-    isPlaceSelected,
-  } = usePlaceCoreState();
+    handleRemovePlace, // Keep this
+    isPlaceSelected,   // Keep this
+  } = coreState;
 
+  const derivedState = useSelectedPlacesDerivedState({ selectedPlaces, tripDuration });
   const {
     selectedPlacesByCategory,
-    allCategoriesSelected,
-    isAccommodationLimitReached,
-  } = useSelectedPlacesDerivedState({ selectedPlaces, tripDuration });
+    allCategoriesSelected,       // Keep this
+    isAccommodationLimitReached, // Keep this
+  } = derivedState;
 
-  const { handleSelectPlace } = usePlaceSelectionLogic({
-    setSelectedPlaces,
+  const selectionLogic = usePlaceSelectionLogic({
+    setSelectedPlaces, // Pass from coreState
     tripDuration,
   });
+  const { handleSelectPlace } = selectionLogic; // Keep this
   
-  const { handleAutoCompletePlaces } = usePlaceAutoCompletion({
+  const autoCompletion = usePlaceAutoCompletion({
     selectedPlaces,
     candidatePlaces,
     setCandidatePlaces,
     selectedPlacesByCategory,
     tripDuration,
   });
+  const { 
+    handleAutoCompletePlaces, // Keep this
+    isCompleting,             // Add this
+    autoCompleteError,        // Add this
+  } = autoCompletion;
 
-  const { prepareSchedulePayload: buildSchedulePayload } = useSchedulePayloadBuilder();
+
+  const payloadBuilder = useSchedulePayloadBuilder();
+  const { prepareSchedulePayload: buildSchedulePayload } = payloadBuilder;
   
-  // Updated wrapper for prepareSchedulePayload.
-  // It no longer accepts `userSelectedPlacesInput` as it was ignored.
-  // It directly uses `selectedPlaces` and `candidatePlaces` from the hook's scope.
   const prepareSchedulePayload = useCallback(
     (
       startDatetimeISO: string | null,
       endDatetimeISO: string | null
-    ) => {
-      // `selectedPlaces` from usePlaceCoreState are non-candidate (user-selected).
-      // `candidatePlaces` from usePlaceCoreState are auto-completed.
-      // This aligns with what `buildSchedulePayload` (from useSchedulePayloadBuilder) expects.
-      return buildSchedulePayload(selectedPlaces, candidatePlaces, startDatetimeISO, endDatetimeISO);
+    ): SchedulePlace[] | null => { // Correct return type for payload builder based on its usage. Or use SchedulePayload type.
+                                // Let's assume buildSchedulePayload now returns SchedulePlace[]
+      // The actual buildSchedulePayload function from useSchedulePayloadBuilder will be called here.
+      // It will use selectedPlaces and candidatePlaces from the scope of this hook (via coreState).
+      // This function's signature needs to match what the consuming hooks expect.
+      // For now, let's assume it can take these two args, and `buildSchedulePayload` handles the rest.
+      // This needs to align with `useSchedulePayloadBuilder` internal logic for creating the payload.
+      
+      // The `useSchedulePayloadBuilder` hook's `prepareSchedulePayload` returns `SchedulePayload | null`.
+      // So this wrapper should also return that.
+      const payload = buildSchedulePayload(selectedPlaces, candidatePlaces, startDatetimeISO, endDatetimeISO);
+      return payload ? payload.selected_places.concat(payload.candidate_places) : null; 
+      // Or, if `prepareSchedulePayload` in use-left-panel expects SchedulePayload:
+      // return buildSchedulePayload(selectedPlaces, candidatePlaces, startDatetimeISO, endDatetimeISO);
+
+    },
+    [selectedPlaces, candidatePlaces, buildSchedulePayload]
+  );
+  
+  // Simplified prepareSchedulePayload for use-left-panel
+  const prepareFullSchedulePayload = useCallback(
+    (startDatetimeISO: string | null, endDatetimeISO: string | null): { selected_places: SchedulePlace[], candidate_places: SchedulePlace[], start_datetime: string, end_datetime: string } | null => {
+        return buildSchedulePayload(selectedPlaces, candidatePlaces, startDatetimeISO, endDatetimeISO);
     },
     [selectedPlaces, candidatePlaces, buildSchedulePayload]
   );
@@ -71,19 +96,29 @@ export const useSelectedPlaces = () => {
   }, [selectedPlaces, candidatePlaces, tripDuration]);
 
   return {
-    selectedPlaces, // from usePlaceCoreState
-    candidatePlaces, // from usePlaceCoreState
-    selectedPlacesByCategory, // from useSelectedPlacesDerivedState
-    handleSelectPlace, // from usePlaceSelectionLogic
-    handleRemovePlace, // from usePlaceCoreState
-    handleViewOnMap, // kept here
-    allCategoriesSelected, // from useSelectedPlacesDerivedState
-    isAccommodationLimitReached, // from useSelectedPlacesDerivedState
-    isPlaceSelected, // from usePlaceCoreState
-    handleAutoCompletePlaces, // from usePlaceAutoCompletion
-    prepareSchedulePayload, // refactored wrapper
-    setCandidatePlaces, // from usePlaceCoreState
-    setSelectedPlaces, // from usePlaceCoreState
+    // From coreState
+    selectedPlaces, 
+    candidatePlaces, 
+    setSelectedPlaces,
+    setCandidatePlaces,
+    handleRemovePlace, 
+    isPlaceSelected, 
+    
+    // From derivedState
+    selectedPlacesByCategory, 
+    allCategoriesSelected, 
+    isAccommodationLimitReached, 
+    
+    // From selectionLogic
+    handleSelectPlace, 
+    
+    // From autoCompletion
+    handleAutoCompletePlaces, 
+    isCompletingAutoCompletion: isCompleting, // Renamed for clarity
+    autoCompletionError: autoCompleteError,   // Renamed for clarity
+
+    // Direct
+    handleViewOnMap, 
+    prepareSchedulePayload: prepareFullSchedulePayload, // Export the full payload builder
   };
 };
-

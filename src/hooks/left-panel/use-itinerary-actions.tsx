@@ -1,202 +1,114 @@
 
-import { useState } from 'react';
-import { Place, SchedulePayload, ItineraryDay } from '@/types/core';
-import { useItineraryCreator } from '../use-itinerary-creator';
-import { useScheduleGenerator } from '../use-schedule-generator';
-import { toast } from 'sonner';
-import { NewServerScheduleResponse, isNewServerScheduleResponse } from '@/types/schedule'; // NewServerScheduleResponse는 schedule에서 가져옴
-import { formatClientItinerary } from './itinerary-logic/formatClientItinerary';
-import { formatServerItinerary } from './itinerary-logic/formatServerItinerary';
-import { getDateStringMMDD, getDayOfWeekString } from '@/hooks/itinerary/itineraryUtils';
+import { useCallback } from 'react';
+import type { ItineraryDay, Place, SelectedPlace, CategoryName, SchedulePayload } from '@/types/core';
+import { useItineraryCreator } from '@/hooks/use-itinerary-creator'; // For fallback creation
+import { UseTripDetailsReturn } from '@/hooks/use-trip-details'; // Import a more specific type if available
+import { UseSelectedPlacesReturn }  from '@/hooks/use-selected-places'; // Import a more specific type if available
 
 
-export const useItineraryActions = () => {
-  const [itinerary, setItinerary] = useState<ItineraryDay[] | null>(null);
-  const [selectedItineraryDay, setSelectedItineraryDay] = useState<number | null>(null);
-  const [showItinerary, setShowItinerary] = useState<boolean>(false);
-  const { createItinerary } = useItineraryCreator();
-  const { generateSchedule, isGenerating } = useScheduleGenerator();
+interface ItineraryState {
+  itinerary: ItineraryDay[];
+  selectedItineraryDay: number;
+  isItineraryCreated: boolean;
+  showItinerary: boolean;
+  lastSentPayload: SchedulePayload | null;
+}
 
-  const handleSelectItineraryDay = (day: number) => {
-    console.log('일정 일자 선택:', day);
+interface ItinerarySetters {
+  setItinerary: React.Dispatch<React.SetStateAction<ItineraryDay[]>>;
+  setSelectedItineraryDay: React.Dispatch<React.SetStateAction<number>>;
+  setIsItineraryCreated: React.Dispatch<React.SetStateAction<boolean>>;
+  setShowItinerary: React.Dispatch<React.SetStateAction<boolean>>;
+  setLastSentPayload: React.Dispatch<React.SetStateAction<SchedulePayload | null>>;
+}
+
+interface UseItineraryActionsProps extends ItineraryState, ItinerarySetters {
+  placesManagement: UseSelectedPlacesReturn; // Use a more specific type
+  tripDetails: UseTripDetailsReturn; // Use a more specific type
+}
+
+
+export const useItineraryActions = (props: UseItineraryActionsProps) => {
+  const { 
+    itinerary, setItinerary, 
+    selectedItineraryDay, setSelectedItineraryDay,
+    isItineraryCreated, setIsItineraryCreated,
+    showItinerary, setShowItinerary,
+    lastSentPayload, setLastSentPayload,
+    placesManagement, tripDetails
+  } = props;
+
+  const { createItineraryFromPlaces } = useItineraryCreator();
+
+  const handleSelectItineraryDay = useCallback((day: number) => {
     setSelectedItineraryDay(day);
-  };
+    setShowItinerary(true);
+  }, [setSelectedItineraryDay, setShowItinerary]);
 
-  // Internal function for client-side generation flow
-  const generateLocalItinerary = (
-    placesToUse: Place[],
-    startDate: Date,
-    endDate: Date,
-    startTime: string,
-    endTime: string
-  ): ItineraryDay[] | null => {
-    try {
-      if (placesToUse.length === 0) {
-        toast.error("선택된 장소가 없습니다.");
-        return null;
-      }
-    
-      console.log('[useItineraryActions] 로컬 일정 생성 시작', {
-        장소수: placesToUse.length,
-        시작일: startDate,
-        종료일: endDate,
-        시작시간: startTime,
-        종료시간: endTime
-      });
-      
-      const generatedItineraryFromCreator = createItinerary(
-        placesToUse,
-        startDate,
-        endDate,
-        startTime,
-        endTime
-      );
-      
-      if (generatedItineraryFromCreator.length === 0) {
-        toast.error("일정을 생성할 수 없습니다. 더 많은 장소를 선택해주세요.");
-        return null;
-      }
-      
-      // 날짜 및 요일 정보 추가
-      const finalGeneratedItinerary = generatedItineraryFromCreator.map((dayData, index) => {
-        const currentDayDt = new Date(startDate);
-        currentDayDt.setDate(startDate.getDate() + index);
-        return {
-          ...dayData,
-          dayOfWeek: getDayOfWeekString(currentDayDt),
-          date: getDateStringMMDD(currentDayDt),
-        };
-      });
-      
-      setItinerary(finalGeneratedItinerary);
-      setSelectedItineraryDay(1); 
-      setShowItinerary(true);
-      
-      console.log("[useItineraryActions] 로컬 일정 생성 완료:", {
-        일수: finalGeneratedItinerary.length,
-        총장소수: finalGeneratedItinerary.reduce((sum, day) => sum + day.places.length, 0),
-        첫날장소: finalGeneratedItinerary[0]?.places.map(p => p.name).join(', ')
-      });
-      
-      return finalGeneratedItinerary;
-    } catch (error) {
-      console.error("[useItineraryActions] 로컬 일정 생성 오류:", error);
-      toast.error("로컬 일정 생성 중 오류가 발생했습니다.");
-      return null;
-    }
-  };
+  const clearItinerary = useCallback(() => {
+    setItinerary([]);
+    setIsItineraryCreated(false);
+    setShowItinerary(false);
+    setSelectedItineraryDay(0); 
+    setLastSentPayload(null);
+    // Optionally clear selected places from placesManagement if desired
+    // placesManagement.setSelectedPlaces([]); 
+    // placesManagement.setCandidatePlaces([]);
+    console.log('[ItineraryActions] Itinerary cleared.');
+  }, [setItinerary, setIsItineraryCreated, setShowItinerary, setSelectedItineraryDay, setLastSentPayload]);
 
-  // Internal function for server-side generation flow
-  const createServerItinerary = async (
-    payload: SchedulePayload,
-    tripStartDate: Date,
-    originalSelectedPlaces: Place[] // 추가된 파라미터
-  ): Promise<ItineraryDay[] | null> => {
-    try {
-      toast.loading("서버에 일정 생성 요청 중...");
-      
-      const serverResponse = await generateSchedule(payload);
-      
-      if (!serverResponse || !isNewServerScheduleResponse(serverResponse)) {
-        toast.error("서버에서 일정을 받아오지 못했거나, 응답 형식이 올바르지 않습니다.");
-        console.warn("[useItineraryActions] Invalid server response type:", serverResponse);
-        return null;
-      }
-      
-      // originalSelectedPlaces를 formatServerItinerary에 전달
-      const formattedItinerary = formatServerItinerary(serverResponse, tripStartDate, originalSelectedPlaces);
-      
-      if (formattedItinerary.length === 0) {
-        toast.error("서버에서 유효한 일정을 구성하지 못했습니다.");
-        return null;
-      }
-      
-      console.log("[useItineraryActions] 서버로부터 일정 수신 및 포맷 완료:", {
-        일수: formattedItinerary.length,
-      });
-      
-      setItinerary(formattedItinerary);
-      if (formattedItinerary.length > 0) {
-        setSelectedItineraryDay(formattedItinerary[0].day as number);
-      }
-      
-      toast.success(`${formattedItinerary.length}일 일정이 생성되었습니다!`);
-      return formattedItinerary;
-    } catch (error) {
-      console.error("[useItineraryActions] 서버 일정 생성 오류:", error);
-      toast.error("서버에서 일정을 생성하는데 실패했습니다.");
-      return null;
-    }
-  };
 
-  // Main handler exposed to components
-  const handleCreateItinerary = async (
-    selectedPlaces: Place[], 
-    dates: {
-      startDate: Date;
-      endDate: Date;
-      startTime: string;
-      endTime: string;
-    } | null,
-    payload?: SchedulePayload
-  ): Promise<ItineraryDay[] | null> => {
-    if (!dates) {
-      console.error('[useItineraryActions] 경로 생성 실패: 날짜 정보가 없습니다.');
-      toast.error("여행 날짜를 설정해주세요!");
-      return null;
+  const generateFallbackAndSet = useCallback(() => {
+    if (!tripDetails.dates?.startDate || !tripDetails.dates?.endDate || !tripDetails.startTime || !tripDetails.endTime) {
+      console.error("Fallback itinerary generation failed: Missing trip details.");
+      setItinerary([]);
+      setIsItineraryCreated(false);
+      return;
     }
-    
-    if (selectedPlaces.length === 0) {
-      console.error('[useItineraryActions] 경로 생성 실패: 선택된 장소가 없습니다.');
-      toast.error("장소를 먼저 선택해주세요!");
-      return null;
-    }
-    
-    console.log("[useItineraryActions] 경로 생성 시작:", {
-      장소수: selectedPlaces.length,
-      날짜: dates,
-      페이로드유무: !!payload
-    });
-    
-    let result: ItineraryDay[] | null = null;
+    // Use selectedPlaces for fallback if candidatePlaces might not be suitable or defined for this flow.
+    const placesForFallback = placesManagement.selectedPlaces.map(p => ({...p, id: String(p.id)} as Place));
 
-    if (payload && dates.startDate) {
-      console.log("[useItineraryActions] 서버 API를 통한 일정 생성 시도");
-      // createServerItinerary 호출 시 selectedPlaces 전달
-      result = await createServerItinerary(payload, dates.startDate, selectedPlaces);
-       if (result) {
-         setShowItinerary(true);
-       }
-       return result;
+    if (placesForFallback.length === 0) {
+        console.warn("Fallback itinerary generation: No selected places available.");
+        setItinerary([]);
+        setIsItineraryCreated(false);
+        return;
     }
     
-    console.log("[useItineraryActions] 로컬 알고리즘을 통한 일정 생성");
-    result = generateLocalItinerary(
-      selectedPlaces,
-      dates.startDate,
-      dates.endDate,
-      dates.startTime,
-      dates.endTime
+    const fallbackItinerary = createItineraryFromPlaces(
+      placesForFallback,
+      tripDetails.dates.startDate,
+      tripDetails.dates.endDate,
+      tripDetails.startTime,
+      tripDetails.endTime
     );
-    
-    // generateLocalItinerary 내부에서 setShowItinerary 및 toast 처리하므로 중복 제거
-    // if (result) {
-    //   toast.success("일정이 성공적으로 생성되었습니다!"); 
-    //   setShowItinerary(true);
-    // }
-    
-    return result;
-  };
+    setItinerary(fallbackItinerary || []); // Ensure it's an array
+    setIsItineraryCreated(true); // Mark as created even if fallback
+    setShowItinerary(true);
+  }, [
+      createItineraryFromPlaces, 
+      placesManagement.selectedPlaces, 
+      tripDetails.dates, 
+      tripDetails.startTime, 
+      tripDetails.endTime, 
+      setItinerary, 
+      setIsItineraryCreated,
+      setShowItinerary
+    ]);
 
   return {
     itinerary,
     selectedItineraryDay,
+    isItineraryCreated,
     showItinerary,
-    setItinerary,
-    setSelectedItineraryDay,
-    setShowItinerary,
+    lastSentPayload,
+    setLastSentPayload, // Expose for schedule runner
+    setItinerary, // Expose for schedule runner
+    setIsItineraryCreated, // Expose for schedule runner
+    setShowItinerary, // Expose for schedule runner and left panel orchestrator
     handleSelectItineraryDay,
-    handleCreateItinerary,
-    isGenerating
+    clearItinerary,
+    generateFallbackAndSet,
+    setSelectedItineraryDay, // Expose for direct setting
   };
 };

@@ -51,7 +51,12 @@ export const useItineraryGeoJsonRenderer = ({
       if (!itineraryDay || !itineraryDay.routeData || !itineraryDay.routeData.linkIds || itineraryDay.routeData.linkIds.length === 0) {
         console.warn('[ItineraryGeoJsonRenderer] No itinerary day or linkIds to render route.');
         if (itineraryDay && itineraryDay.places && itineraryDay.places.length > 1) {
-            const mappedPlaces = mapPlacesWithGeoNodesFn(itineraryDay.places);
+            // Convert ItineraryPlaceWithTime[] to Place[] with string IDs
+            const placesWithStringIds: Place[] = itineraryDay.places.map(p => ({
+              ...p,
+              id: String(p.id),
+            }));
+            const mappedPlaces = mapPlacesWithGeoNodesFn(placesWithStringIds);
             const validPlaces = mappedPlaces.filter(p =>
                 typeof p.x === 'number' && typeof p.y === 'number' &&
                 !isNaN(p.x) && !isNaN(p.y)
@@ -119,7 +124,12 @@ export const useItineraryGeoJsonRenderer = ({
             if (naverCoords.length > 0) fitBoundsToCoordinates(map, naverCoords);
           }
         } else if (itineraryDay.places && itineraryDay.places.length > 0) {
-            const mappedPlaces = mapPlacesWithGeoNodesFn(itineraryDay.places);
+            // Convert ItineraryPlaceWithTime[] to Place[] with string IDs
+            const placesWithStringIds: Place[] = itineraryDay.places.map(p => ({
+              ...p,
+              id: String(p.id),
+            }));
+            const mappedPlaces = mapPlacesWithGeoNodesFn(placesWithStringIds);
             const validPlacesCoords = mappedPlaces
                 .filter(p => typeof p.y === 'number' && typeof p.x === 'number' && !isNaN(p.y) && !isNaN(p.x))
                 .map(p => ({ lat: p.y as number, lng: p.x as number }));
