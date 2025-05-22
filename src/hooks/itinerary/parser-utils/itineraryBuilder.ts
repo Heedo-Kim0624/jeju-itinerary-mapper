@@ -11,9 +11,9 @@ import { organizeRouteByDay } from './routeOrganizer';
  */
 export const buildItineraryDays = (
   serverResponse: NewServerScheduleResponse,
-  currentSelectedPlaces: SelectedPlace[] = [],
+  // currentSelectedPlaces: SelectedPlace[] = [], // Removed if only used for place details
   tripStartDate: Date | null = null,
-  lastPayload: SchedulePayload | null = null,
+  // lastPayload: SchedulePayload | null = null, // Removed if only used for place details
   dayMapping: Record<string, number>
 ): ItineraryDay[] => {
   // Organize schedule and route data using new utilities
@@ -28,8 +28,12 @@ export const buildItineraryDays = (
     const routeInfo = routeByDay.get(dayOfWeekKey); // This can be undefined if no route for the day
     const dayNumber = dayMapping[dayOfWeekKey];
 
+    // Parameters to buildGroupedItineraryPlaces updated
     const groupedPlaces = buildGroupedItineraryPlaces(
-      dayItemsOriginal, lastPayload, currentSelectedPlaces, dayNumber
+      dayItemsOriginal,
+      // lastPayload, // Removed
+      // currentSelectedPlaces, // Removed
+      dayNumber
     );
 
     // Process route data using the routeSummaryProcessor utility
@@ -53,3 +57,4 @@ export const buildItineraryDays = (
 
   return result;
 };
+

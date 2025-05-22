@@ -1,5 +1,6 @@
 
-import { ServerScheduleItem, SchedulePayload, SelectedPlace, ItineraryPlaceWithTime } from '@/types/core';
+import { ServerScheduleItem, SelectedPlace, ItineraryPlaceWithTime } from '@/types/core';
+// SchedulePayload is removed as it's not directly used for getProcessedItemDetails anymore
 import { getProcessedItemDetails } from './scheduleItemProcessor';
 import { groupAndCreateItineraryPlaces } from './placeGroupCreator';
 import { addTravelTimesToPlaces } from './travelTimeProcessor';
@@ -10,15 +11,16 @@ import { addTravelTimesToPlaces } from './travelTimeProcessor';
  */
 export const buildGroupedItineraryPlaces = (
   dayItemsOriginal: ServerScheduleItem[],
-  lastPayload: SchedulePayload | null,
-  currentSelectedPlaces: SelectedPlace[],
+  // lastPayload: SchedulePayload | null, // Removed
+  // currentSelectedPlaces: SelectedPlace[], // Removed
   dayNumber: number
 ): ItineraryPlaceWithTime[] => {
   // Step 1: Process raw server schedule items to get detailed place information
   // The type of `processedDayItems` elements implicitly matches `ProcessedScheduleItemDetails`
-  // defined in `placeGroupCreator.ts` based on the return type of `getProcessedItemDetails`.
+  // defined in `scheduleItemProcessor.ts` based on the return type of `getProcessedItemDetails`.
+  // `getProcessedItemDetails` now uses PlaceContext internally.
   const processedDayItems = dayItemsOriginal.map(serverItem =>
-    getProcessedItemDetails(serverItem, lastPayload, currentSelectedPlaces)
+    getProcessedItemDetails(serverItem) // Parameters updated
   );
 
   // Step 2: Group consecutive places and create initial ItineraryPlaceWithTime objects
@@ -29,3 +31,4 @@ export const buildGroupedItineraryPlaces = (
 
   return placesWithTravelTime;
 };
+

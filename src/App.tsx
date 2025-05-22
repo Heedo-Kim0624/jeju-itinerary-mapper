@@ -9,27 +9,31 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import { MapProvider } from "@/components/rightpanel/MapContext";
+import { PlaceProvider } from "@/contexts/PlaceContext"; // Import PlaceProvider
 
 const queryClient = new QueryClient();
 
 const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <MapProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </MapProvider>
-      </TooltipProvider>
+      <PlaceProvider> {/* Wrap with PlaceProvider */}
+        <TooltipProvider>
+          <MapProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </MapProvider>
+        </TooltipProvider>
+      </PlaceProvider>
     </QueryClientProvider>
   );
 };
 
 export default App;
+
