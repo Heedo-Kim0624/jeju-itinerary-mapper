@@ -1,4 +1,3 @@
-
 /**
  * Types related to itinerary structure and places with time
  */
@@ -30,13 +29,15 @@ export interface ItineraryPlaceWithTime {
   homepage: string;            // URL for the place's homepage (required)
 
   // For GeoJSON based routing if applicable
-  geoNodeId?: string;  // ID of the corresponding node in GeoJSON data - CHANGED to string | undefined
+  geoNodeId?: string;
   
   isFallback?: boolean;         // True if detailed information could not be found and default/server values are used
   
   // Properties for compatibility with Place selection logic
   isSelected?: boolean;
   isCandidate?: boolean;
+  
+  numericDbId?: number | null; // Parsed numeric database ID of the place
   // Potentially other fields from Place if needed for itinerary specific logic:
   // reviewCount?: number;
   // operationTimeData?: { [key: string]: number };
@@ -64,4 +65,3 @@ export interface ServerResponseParsingResult {
   itineraryDays: ItineraryDay[];
   error?: string;
 }
-

@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
-import { NewServerScheduleResponse, ServerScheduleItem, SchedulePayload, SchedulePlace } from '@/types/schedule';
-import { ItineraryDay, ItineraryPlaceWithTime, SelectedPlace as CoreSelectedPlace, Place } from '@/types/core';
+import { NewServerScheduleResponse, ServerScheduleItem, SchedulePayload } from '@/types/schedule';
+import { ItineraryDay, ItineraryPlaceWithTime, SelectedPlace as CoreSelectedPlace } from '@/types/core';
 import { mergeScheduleItems } from './parser-utils/mergeScheduleItems';
 import { parseIntId, isSameId } from '@/utils/id-utils';
 
@@ -34,31 +34,34 @@ const calculateDepartTime = (arriveTime: string, stayDurationMinutes: number): s
 };
 // --- End Helper Function Stubs ---
 
-// Adapted from user's prompt and existing structure
-const processServerScheduleItem = (
+// This function processes a single server item to find matched place details and numeric ID
+const getProcessedItemDetails = (
   serverItem: ServerScheduleItem,
-  itemIndex: number, 
-  dayNumber: number, 
-  totalPlacesInDay: number,
-  lastPayload: SchedulePayload | null, // lastSentPayload
-  currentSelectedPlaces: CoreSelectedPlace[] // List of places with full details
-): ItineraryPlaceWithTime => {
-  
-  console.group(`[PROCESS_SERVER_ITEM] 서버 항목 "${serverItem.place_name || '이름 없음'}" 처리 (${itemIndex}번째, ${dayNumber}일차)`);
-  console.log('서버 항목 원본:', serverItem);
-
+  lastPayload: SchedulePayload | null,
+  currentSelectedPlaces: CoreSelectedPlace[]
+): {
+  item: ServerScheduleItem;
+  details: CoreSelectedPlace | undefined;
+  numericId: number | null;
+  isFallback: boolean;
+  name: string;
+  category: string;
+  x: number;
+  y: number;
+  address: string;
+  road_address: string;
+  phone: string;
+  description: string;
+  rating: number;
+  image_url: string;
+  homepage: string;
+  geoNodeId?: string;
+} => {
   let placeIdToMatch: string | number | null = null;
   let matchSource: string | null = null;
   const serverItemIdInt = parseIntId(serverItem.id);
 
-  if (serverItemIdInt !== null) {
-    console.log(`서버 항목 ID "${serverItem.id}" 정수 변환: ${serverItemIdInt}`);
-  } else {
-    console.log(`서버 항목 ID "${serverItem.id}" 없거나 변환 불가.`);
-  }
-
   if (lastPayload) {
-    // 1. 서버 항목 ID (정수) -> 페이로드 ID (정수) 매칭
     if (serverItemIdInt !== null) {
       const foundInSelected = lastPayload.selected_places?.find(p => isSameId(p.id, serverItemIdInt));
       if (foundInSelected) {
@@ -74,7 +77,6 @@ const processServerScheduleItem = (
       }
     }
 
-    // 2. ID 매칭 실패 시, 서버 항목 이름 -> 페이로드 이름 매칭
     if (!placeIdToMatch && serverItem.place_name) {
       const foundInSelectedByName = lastPayload.selected_places?.find(p => p.name === serverItem.place_name);
       if (foundInSelectedByName) {
@@ -89,63 +91,27 @@ const processServerScheduleItem = (
         }
       }
     }
-    
-    if (placeIdToMatch) {
-      console.log(`장소 "${serverItem.place_name}" 매칭 ID: ${placeIdToMatch} (소스: ${matchSource}, 정수형: ${parseIntId(placeIdToMatch)})`);
-    } else {
-      console.warn(`장소 "${serverItem.place_name}"에 대한 ID를 페이로드에서 찾지 못했습니다.`);
-    }
-  } else {
-    console.warn('Last sent payload is null. Cannot match with payload.');
   }
   
-  const placeNameLower = serverItem.place_name?.toLowerCase() || "";
-  const isAirport = placeNameLower.includes("제주국제공항") || placeNameLower.includes("제주공항");
+  const numericIdFromPayload = parseIntId(placeIdToMatch);
+  let placeDetails = currentSelectedPlaces.find(p => isSameId(p.id, numericIdFromPayload ?? placeIdToMatch ?? serverItemIdInt));
 
-  if (isAirport) {
-    const isFirstOrLastPlace = (itemIndex === 0 || itemIndex === totalPlacesInDay - 1);
-    if (isFirstOrLastPlace) {
-      console.log(`[useItineraryParser] Applying fixed coordinates for Jeju International Airport as first/last place of day ${dayNumber}.`);
-      const airportResult = {
-        id: String(placeIdToMatch || `airport_${itemIndex}_${dayNumber}`),
-        name: "제주국제공항",
-        category: "교통", 
-        x: 126.4891647,
-        y: 33.510418,
-        address: "제주특별자치도 제주시 공항로 2",
-        road_address: "제주특별자치도 제주시 공항로 2",
-        phone: "064-797-2114",
-        description: "제주도의 관문 국제공항",
-        rating: 4.0, 
-        image_url: "", 
-        homepage: "https://www.airport.co.kr/jeju/",
-        timeBlock: serverItem.time_block,
-        arriveTime: extractTimeFromTimeBlock(serverItem.time_block),
-        departTime: calculateDepartTime(extractTimeFromTimeBlock(serverItem.time_block), 60), 
-        stayDuration: 60,
-        travelTimeToNext: "N/A", 
-        isFallback: false, 
-      };
-      console.groupEnd();
-      return airportResult;
-    }
+  if (!placeDetails && serverItemIdInt !== null) { // Fallback to serverItemIdInt if payload match failed
+      placeDetails = currentSelectedPlaces.find(p => isSameId(p.id, serverItemIdInt));
+      if (placeDetails && !placeIdToMatch) { // If found using serverItemIdInt directly
+         placeIdToMatch = serverItem.id; // Ensure placeIdToMatch is set
+         matchSource = 'currentSelectedPlaces (서버 ID 직접 매칭)';
+      }
   }
-
-  let placeDetails: CoreSelectedPlace | undefined = undefined;
-  if (placeIdToMatch) {
-    // currentSelectedPlaces에서 최종 ID로 상세 정보 찾기
-    placeDetails = currentSelectedPlaces.find(p => isSameId(p.id, placeIdToMatch));
-    if(placeDetails){
-       console.log(`ID ${placeIdToMatch} (정수: ${parseIntId(placeIdToMatch)})로 currentSelectedPlaces에서 상세 정보 찾음:`, placeDetails.name);
-    } else {
-       console.warn(`ID ${placeIdToMatch} (정수: ${parseIntId(placeIdToMatch)})로 currentSelectedPlaces에서 상세 정보 찾지 못함.`);
-    }
-  }
-
+  
+  const finalNumericId = parseIntId(placeDetails?.id ?? placeIdToMatch ?? serverItem.id);
 
   if (placeDetails) {
-    const result = {
-      id: String(placeDetails.id), // Ensure ID is string for ItineraryPlaceWithTime
+    return {
+      item: serverItem,
+      details: placeDetails,
+      numericId: finalNumericId,
+      isFallback: false,
       name: placeDetails.name,
       category: placeDetails.category || mapServerTypeToCategory(serverItem.place_type || '기타'),
       x: placeDetails.x,
@@ -157,21 +123,16 @@ const processServerScheduleItem = (
       rating: placeDetails.rating || 0,
       image_url: placeDetails.image_url || '',
       homepage: placeDetails.homepage || '',
-      timeBlock: serverItem.time_block,
-      arriveTime: extractTimeFromTimeBlock(serverItem.time_block),
-      departTime: calculateDepartTime(extractTimeFromTimeBlock(serverItem.time_block), 60),
-      stayDuration: 60, // Default stay duration
-      travelTimeToNext: "15분", // Example, should be from route_summary if available
-      isFallback: false,
-      geoNodeId: placeDetails.geoNodeId, 
+      geoNodeId: placeDetails.geoNodeId,
     };
-    console.groupEnd();
-    return result;
   }
 
-  console.warn(`[useItineraryParser] 장소 "${serverItem.place_name}"에 대한 상세 정보를 찾을 수 없습니다. 기본값을 사용합니다.`);
-  const fallbackResult = {
-    id: String(serverItem.id || `fallback_${(serverItem.place_name || 'unknown').replace(/\s+/g, '_')}_${itemIndex}_${dayNumber}`),
+  // Fallback if no details found
+  return {
+    item: serverItem,
+    details: undefined,
+    numericId: finalNumericId, // Attempt to parse serverItem.id if nothing else found
+    isFallback: true,
     name: serverItem.place_name || '정보 없음',
     category: mapServerTypeToCategory(serverItem.place_type || '기타'),
     x: 126.5, 
@@ -183,15 +144,8 @@ const processServerScheduleItem = (
     rating: 0,
     image_url: '',
     homepage: '',
-    timeBlock: serverItem.time_block,
-    arriveTime: extractTimeFromTimeBlock(serverItem.time_block),
-    departTime: calculateDepartTime(extractTimeFromTimeBlock(serverItem.time_block), 60),
-    stayDuration: 60,
-    travelTimeToNext: "15분", 
-    isFallback: true,
+    geoNodeId: undefined,
   };
-  console.groupEnd();
-  return fallbackResult;
 };
 
 
@@ -213,7 +167,7 @@ export const useItineraryParser = () => {
     serverResponse: NewServerScheduleResponse,
     currentSelectedPlaces: CoreSelectedPlace[] = [],
     tripStartDate: Date | null = null,
-    lastPayload: SchedulePayload | null = null // lastPayload 추가
+    lastPayload: SchedulePayload | null = null
   ): ItineraryDay[] => {
     console.group('[PARSE_SERVER_RESPONSE] 서버 응답 파싱 시작');
     console.log('원본 서버 응답 데이터:', JSON.stringify(serverResponse, null, 2));
@@ -239,6 +193,12 @@ export const useItineraryParser = () => {
       }
       scheduleByDay.get(dayKey)?.push(item);
     });
+    
+    // Sort items within each day by time_block to ensure correct grouping
+    scheduleByDay.forEach((items, dayKey) => {
+      items.sort((a, b) => a.time_block.localeCompare(b.time_block));
+      scheduleByDay.set(dayKey, items);
+    });
 
     const routeByDay = new Map<string, any>();
     serverResponse.route_summary.forEach(route => {
@@ -257,23 +217,93 @@ export const useItineraryParser = () => {
 
     console.log('[useItineraryParser] 요일 -> 일차 매핑:', dayMapping);
 
-    const result: ItineraryDay[] = sortedDayKeys.map((dayOfWeekKey) => {
+    const result: ItineraryDay[] = sortedDayKeys.map((dayOfWeekKey, dayIndex) => {
       const dayItemsOriginal = scheduleByDay.get(dayOfWeekKey) || [];
       const routeInfo = routeByDay.get(dayOfWeekKey); 
       const dayNumber = dayMapping[dayOfWeekKey];
       
-      const places: ItineraryPlaceWithTime[] = dayItemsOriginal.map((item, itemIndex) => {
-        return processServerScheduleItem(
-          item,
-          itemIndex,
-          dayNumber,
-          dayItemsOriginal.length, // totalPlacesInDay for this day
-          lastPayload,             // pass lastPayload
-          currentSelectedPlaces    // pass currentSelectedPlaces
-        );
-      });
+      const processedDayItems = dayItemsOriginal.map(serverItem => 
+        getProcessedItemDetails(serverItem, lastPayload, currentSelectedPlaces)
+      );
 
-      // ... keep existing code (routeData processing)
+      const groupedPlaces: ItineraryPlaceWithTime[] = [];
+      let i = 0;
+      while (i < processedDayItems.length) {
+        const currentProcessedItem = processedDayItems[i];
+        let j = i;
+        // Group consecutive items with the same numericId (if not null) or same name (if numericId is null)
+        while (
+          j < processedDayItems.length &&
+          ( (currentProcessedItem.numericId !== null && processedDayItems[j].numericId === currentProcessedItem.numericId) ||
+            (currentProcessedItem.numericId === null && processedDayItems[j].name === currentProcessedItem.name) )
+        ) {
+          j++;
+        }
+        const group = processedDayItems.slice(i, j);
+        const firstInGroup = group[0];
+        
+        const stayDurationMinutes = group.length * 60; // Assuming each block is 1 hour
+        const arriveTime = extractTimeFromTimeBlock(firstInGroup.item.time_block);
+        const departTime = calculateDepartTime(arriveTime, stayDurationMinutes);
+
+        // Generate unique ID for the ItineraryPlaceWithTime entry
+        const baseIdPart = String(firstInGroup.numericId || firstInGroup.name.replace(/\s+/g, '_'));
+        const uniqueEntryId = `${baseIdPart}_${dayNumber}_${i}`;
+        
+        const placeNameLower = firstInGroup.name?.toLowerCase() || "";
+        const isAirport = placeNameLower.includes("제주국제공항") || placeNameLower.includes("제주공항");
+        const totalPlacesInDayForAirportCheck = dayItemsOriginal.length; // Using original length for airport check context
+
+        if (isAirport && (i === 0 || (i + group.length -1) === totalPlacesInDayForAirportCheck -1) ) {
+            groupedPlaces.push({
+                id: uniqueEntryId, // Airport entry ID
+                name: "제주국제공항",
+                category: "교통",
+                x: 126.4891647,
+                y: 33.510418,
+                address: "제주특별자치도 제주시 공항로 2",
+                road_address: "제주특별자치도 제주시 공항로 2",
+                phone: "064-797-2114",
+                description: "제주도의 관문 국제공항",
+                rating: 4.0,
+                image_url: "",
+                homepage: "https://www.airport.co.kr/jeju/",
+                timeBlock: firstInGroup.item.time_block,
+                arriveTime: arriveTime,
+                departTime: departTime,
+                stayDuration: stayDurationMinutes,
+                travelTimeToNext: "N/A",
+                isFallback: false,
+                numericDbId: firstInGroup.numericId, // Store numeric ID if available
+            });
+        } else {
+          groupedPlaces.push({
+            id: uniqueEntryId, // Unique ID for this specific itinerary entry
+            name: firstInGroup.name,
+            category: firstInGroup.category,
+            x: firstInGroup.x,
+            y: firstInGroup.y,
+            address: firstInGroup.address,
+            road_address: firstInGroup.road_address,
+            phone: firstInGroup.phone,
+            description: firstInGroup.description,
+            rating: firstInGroup.rating,
+            image_url: firstInGroup.image_url,
+            homepage: firstInGroup.homepage,
+            timeBlock: firstInGroup.item.time_block, // Use the time_block of the first item in group
+            arriveTime: arriveTime,
+            departTime: departTime,
+            stayDuration: stayDurationMinutes,
+            travelTimeToNext: "15분", // Placeholder, needs to be derived from route_summary
+            isFallback: firstInGroup.isFallback,
+            geoNodeId: firstInGroup.geoNodeId,
+            numericDbId: firstInGroup.numericId, // Store the parsed numeric DB ID
+          });
+        }
+        i = j;
+      }
+
+      // ... keep existing code (routeData processing, nodeIds, linkIds, interleaved_route, totalDistance)
       const nodeIds: string[] = [];
       const linkIds: string[] = [];
       const interleaved_route: (string | number)[] = [];
@@ -282,15 +312,13 @@ export const useItineraryParser = () => {
         routeInfo.interleaved_route.forEach((id: number | string) => { 
           const idStr = String(id);
           interleaved_route.push(idStr); 
-          // This logic might need refinement based on actual interleaved_route structure
-          if (interleaved_route.length % 2 !== 0 || typeof id === 'string' && id.startsWith('N')) { // Simple heuristic
+          if (interleaved_route.length % 2 !== 0 || typeof id === 'string' && id.startsWith('N')) {
             nodeIds.push(idStr);
           } else {
             linkIds.push(idStr);
           }
         });
       }
-
       const totalDistance = routeInfo?.total_distance_m ? routeInfo.total_distance_m / 1000 : 0;
 
 
@@ -298,7 +326,7 @@ export const useItineraryParser = () => {
         day: dayNumber,
         dayOfWeek: dayOfWeekKey,
         date: formatDate(tripStartDate, dayNumber - 1),
-        places: places,
+        places: groupedPlaces, // Use the new groupedPlaces
         totalDistance: totalDistance,
         routeData: {
           nodeIds: nodeIds,
@@ -320,7 +348,7 @@ export const useItineraryParser = () => {
       총장소수: totalPlaces,
       기본값사용장소수: placesWithDefaultCoords,
     });
-     console.table(result.flatMap(day => day.places.map(p => ({ day: day.day, id: p.id, name: p.name, matched_from_payload: !p.isFallback, x: p.x, y: p.y }))));
+     console.table(result.flatMap(day => day.places.map(p => ({ day: day.day, id: p.id, name: p.name, numericDbId: p.numericDbId, stayDuration: p.stayDuration, matched_from_payload: !p.isFallback, x: p.x, y: p.y }))));
 
 
     if (placesWithDefaultCoords > 0) {

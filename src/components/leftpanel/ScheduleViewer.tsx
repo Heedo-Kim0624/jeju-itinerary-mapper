@@ -82,10 +82,13 @@ const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
                       {categoryToKorean(place.category)} 
                     </div>
                     
-                    {place.timeBlock && (
+                    {(place.arriveTime || place.timeBlock) && (
                       <div className="flex items-center mt-2 text-xs text-gray-600">
                         <Clock className="w-3 h-3 mr-1.5" />
-                        <span>{place.timeBlock}</span>
+                        <span>{place.arriveTime || place.timeBlock}</span>
+                        {place.stayDuration && place.stayDuration > 0 && (
+                          <span className="ml-2">({Math.floor(place.stayDuration / 60)}시간 {place.stayDuration % 60 > 0 ? `${place.stayDuration % 60}분` : ''} 체류)</span>
+                        )}
                       </div>
                     )}
                     
