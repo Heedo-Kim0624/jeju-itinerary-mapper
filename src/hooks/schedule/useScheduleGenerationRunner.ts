@@ -19,10 +19,9 @@ export const useScheduleGenerationRunner = () => {
     tripStartDate: Date | null = null
   ): Promise<ItineraryDay[] | null> => {
     console.log('[useScheduleGenerationRunner] 생성기 호출 직전, Payload:', payload, '여행 시작일:', tripStartDate?.toISOString());
+    console.log('[useScheduleGenerationRunner] Conceptual Backend Interaction: The payload (above) is about to be sent to the server. The server will likely use its internal logic (e.g., optimization algorithms, database lookups) to process selected/candidate places against the provided timeline and constraints, generating raw schedule and route data.');
     
     try {
-      // Fixed argument count by only passing the payload
-      // The function internally already has what it needs
       const serverResponse: NewServerScheduleResponse | null = await generateSchedule(payload);
       
       console.log('[useScheduleGenerationRunner] 서버 응답 데이터 요약:', summarizeServerResponse(serverResponse));
@@ -30,26 +29,23 @@ export const useScheduleGenerationRunner = () => {
       if (!serverResponse) {
         console.error('[useScheduleGenerationRunner] 서버 응답이 null입니다.');
         toast.error('일정 생성에 실패했습니다. (서버 응답 없음)');
-        // Send empty array to handleServerItineraryResponse
         handleServerItineraryResponse([]);
         return null;
       }
       
-      // const lastSentPayload = getLastSentPayload(); // getLastSentPayload might not be needed if not used by parser
-      // console.log('[useScheduleGenerationRunner] 파서에 전달할 lastSentPayload:', lastSentPayload);
+      console.log('[useScheduleGenerationRunner] Conceptual Backend Interaction: Raw data received from server. The frontend will now parse this into an application-specific format.');
       
-      // Pass only serverResponse and tripStartDate to the parser
-      // selectedPlaces and lastSentPayload removed as per parser's new signature for place data handling
       const parsedItinerary = parseServerResponse(serverResponse, tripStartDate); 
       
       console.log('[useScheduleGenerationRunner] 파싱된 일정 데이터 요약:', summarizeItineraryData(parsedItinerary));
       
       if (parsedItinerary.length === 0 || parsedItinerary.every(day => day.places.length === 0)) {
         console.warn('[useScheduleGenerationRunner] 파싱된 일정에 유의미한 장소가 없습니다.');
+        // toast.info("생성된 일정에 장소가 없으나, 서버 응답은 있었습니다."); // This could be too noisy if empty itineraries are common
       }
       
       console.log(`[useScheduleGenerationRunner] 생성기로부터 결과 받음: ${parsedItinerary.length}일치 일정. UI 업데이트 호출.`);
-      // Pass the single required argument
+      console.log('[useScheduleGenerationRunner] Frontend Data Handling: The raw server response has been parsed and transformed by the frontend into a structured ItineraryDay[] format. This data is now being passed to handleServerItineraryResponse for state management.');
       const finalItinerary = handleServerItineraryResponse(parsedItinerary);
       
       console.log('[useScheduleGenerationRunner] 일정 생성 및 처리 완료.');
@@ -58,12 +54,10 @@ export const useScheduleGenerationRunner = () => {
     } catch (error) {
       console.error('[useScheduleGenerationRunner] 일정 생성 중 오류 발생:', error);
       toast.error(`일정 생성 중 오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
-      // Send empty array to handleServerItineraryResponse
       handleServerItineraryResponse([]);
       return null;
     }
-  }, [generateSchedule, /*getLastSentPayload,*/ parseServerResponse, handleServerItineraryResponse]); // Removed getLastSentPayload if not used
+  }, [generateSchedule, parseServerResponse, handleServerItineraryResponse]);
 
   return { runScheduleGeneration, isGenerating: isLoadingScheduleGenerator };
 };
-
