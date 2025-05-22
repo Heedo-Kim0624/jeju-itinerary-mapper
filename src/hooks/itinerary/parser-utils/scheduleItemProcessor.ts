@@ -7,6 +7,7 @@ import { parseIntId } from '@/utils/id-utils';
 import { usePlaceContext } from '@/contexts/PlaceContext'; // Import the context hook
 import type { DetailedPlace } from '@/types/detailedPlace'; // Import DetailedPlace
 import { toCategoryName } from '@/utils/typeConversionUtils';
+import type { CategoryName } from '@/types/core';
 
 
 // Define the return type for getProcessedItemDetails
@@ -17,7 +18,7 @@ interface ProcessedScheduleItemDetails {
   isFallback: boolean; // Indicates if we're using fallback data due to missing details
   // Core fields, derived from 'details' or fallback
   name: string;
-  category: string; // This should be CategoryName type
+  category: CategoryName; // This should be CategoryName type
   x: number;
   y: number;
   address: string;
@@ -86,10 +87,9 @@ export const getProcessedItemDetails = (
     isFallback: true,
     name: serverItem.place_name || '정보 없음',
     category: fallbackCategory,
-    // Assuming ServerScheduleItem might have x, y like other place types.
-    // If not, these will be undefined and use the default.
-    x: serverItem.x !== undefined ? (typeof serverItem.x === 'string' ? parseFloat(serverItem.x) : serverItem.x) : 126.57, // Default to Jeju City Hall approx.
-    y: serverItem.y !== undefined ? (typeof serverItem.y === 'string' ? parseFloat(serverItem.y) : serverItem.y) : 33.49, // Default to Jeju City Hall approx.
+    // Use longitude/latitude from ServerScheduleItem if available for fallback coordinates
+    x: serverItem.longitude !== undefined ? (typeof serverItem.longitude === 'string' ? parseFloat(serverItem.longitude) : serverItem.longitude) : 126.57, // Default to Jeju City Hall approx.
+    y: serverItem.latitude !== undefined ? (typeof serverItem.latitude === 'string' ? parseFloat(serverItem.latitude) : serverItem.latitude) : 33.49, // Default to Jeju City Hall approx.
     address: '주소 정보 없음 (상세 정보 누락)',
     road_address: '도로명 주소 정보 없음 (상세 정보 누락)',
     phone: 'N/A',
@@ -105,7 +105,7 @@ export const getProcessedItemDetails = (
  * Maps server place_type to a local CategoryName.
  * This ensures consistency in category naming.
  */
-const mapServerTypeToCategory = (serverType: string): string => {
+const mapServerTypeToCategory = (serverType: string): CategoryName => {
   // Match serverType to CategoryName values
   const typeLower = serverType?.toLowerCase();
   if (typeLower === 'accommodation' || typeLower === '숙박') return toCategoryName('숙소');
@@ -118,7 +118,10 @@ const mapServerTypeToCategory = (serverType: string): string => {
   if (typeLower?.includes('관광') || typeLower?.includes('명소')) return toCategoryName('관광지');
   if (typeLower?.includes('식당') || typeLower?.includes('맛집')) return toCategoryName('음식점');
   
-  console.warn(`[mapServerTypeToCategory] Unknown server place type: "${serverType}". Defaulting to "기타". Consider updating mapping.`);
-  return toCategoryName('기타'); // Default category, using toCategoryName for validation
+  // If '기타' needs to be a distinct category, CategoryName type and related utils should be updated.
+  // For now, toCategoryName will handle '기타' and convert it to its default (e.g., '관광지') with a warning.
+  // If a specific fallback like '기타' -> '관광지' is desired without warning, handle it here explicitly.
+  // console.warn(`[mapServerTypeToCategory] Unknown server place type: "${serverType}". Defaulting to "기타", which will be processed by toCategoryName.`);
+  return toCategoryName(serverType, '관광지'); // Pass original serverType, toCategoryName will handle unknown/English. Default to '관광지'.
 };
 
