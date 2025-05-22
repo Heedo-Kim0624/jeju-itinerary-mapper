@@ -78,7 +78,7 @@ export const formatServerItinerary = (
           stayDuration: undefined,
           travelTimeToNext: undefined,
           isFallback: true,
-          numericDbId: typeof scheduleItem.id === 'number' ? scheduleItem.id : null,
+          numericDbId: typeof item.id === 'number' ? item.id : null, // Changed scheduleItem.id to item.id
         };
       });
 
@@ -107,3 +107,4 @@ export const formatServerItinerary = (
     };
   });
 };
+
