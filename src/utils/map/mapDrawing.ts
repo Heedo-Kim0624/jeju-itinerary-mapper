@@ -1,4 +1,5 @@
 import { Place } from '@/types/supabase';
+import type { ItineraryPlaceWithTime } from '@/types/core';
 
 const DEFAULT_MARKER_ICON_URL = '/assets/markers/default-marker.png';
 const SELECTED_MARKER_ICON_URL = '/assets/markers/selected-marker.png'; // 선택된 장소 아이콘
@@ -9,6 +10,44 @@ const CATEGORY_MARKERS: Record<string, string> = {
   '관광지': '/assets/markers/landmark-marker.png',
   '음식점': '/assets/markers/restaurant-marker.png',
   '카페': '/assets/markers/cafe-marker.png',
+};
+
+// Helper function to create SVG string for a map pin
+// Uses the structure of lucide-react's map-pin icon
+const createPinSvg = (
+  color: string,
+  size: number = 28, // Adjusted default size
+  label?: string | number,
+  innerCircleColor: string = 'white'
+): string => {
+  const strokeColor = "black"; // Outline for the pin shape itself for better visibility
+  const strokeWeight = 0.5; // Thinner stroke for the pin outline
+  
+  // Scale down viewBox elements if using a fixed viewBox="0 0 24 24"
+  const pathScaleFactor = size / 24;
+  const scaledInnerRadius = 3 * pathScaleFactor; // Original inner circle radius is 3 in a 24x24 viewbox
+  const scaledCx = 12 * pathScaleFactor;
+  const scaledCy = 10 * pathScaleFactor;
+
+  let labelContent = '';
+  if (label) {
+    const fontSize = size * 0.45; // Adjust font size based on pin size
+    // Position text within the head of the pin.
+    // For a 24x24 viewBox, text at y="10" (cy of circle) works well.
+    const textY = 10; // Y position in viewBox units
+    const textX = 12; // X position in viewBox units
+
+    labelContent = `<text x="${textX}" y="${textY}" dominant-baseline="middle" text-anchor="middle" fill="white" font-size="${fontSize}" font-family="Arial, sans-serif" font-weight="bold">${label}</text>`;
+  }
+
+  // Standard 24x24 viewBox, actual display size controlled by width/height attributes of SVG tag
+  return `
+    <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" style="overflow: visible;">
+      <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" fill="${color}" stroke="${strokeColor}" stroke-width="${strokeWeight}" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="12" cy="10" r="3" fill="${innerCircleColor}"/>
+      ${labelContent}
+    </svg>
+  `;
 };
 
 export const createNaverMap = (mapContainerId: string, center: { lat: number; lng: number }, zoom: number) => {
@@ -123,59 +162,64 @@ export const createNaverMarker = (
   });
 };
 
-// 기존 마커 옵션 함수는 유지하되, 새로운 마커 타입을 위한 설정 추가
 export const getMarkerIconOptions = (
-  place: Place,
-  isSelected: boolean,
-  isCandidate: boolean,
-  isItineraryPlace: boolean,
-  useColorByCategory?: boolean // New optional parameter
-): { url?: string; size?: { width: number; height: number }; anchor?: { x: number; y: number }; content?: string } => {
-  if (isItineraryPlace) {
-    return {
-      content: '<div style="width:10px;height:10px;background-color:red;border-radius:50%;border:1px solid darkred;box-shadow: 0 0 3px rgba(0,0,0,0.5);"></div>',
-      anchor: { x: 5, y: 5 }
-    };
+  place: Place | ItineraryPlaceWithTime, // Union type to handle both
+  isSelected: boolean, // For info window target or general highlight
+  isCandidate: boolean, // For 'globally selected' from left panel (selectedPlaces)
+  isItineraryDayPlace: boolean, // True if this place is part of the currently displayed itinerary day
+  itineraryOrder?: number // The number for itinerary day place (e.g., 1, 2, 3)
+): { content: string; anchor: { x: number; y: number }; size?: {width: number; height: number} } => {
+  let pinColor = '#28A745'; // Default Green
+  let pinSize = 28;
+  let label: string | number | undefined = undefined;
+  const anchorY = pinSize; // Tip of the pin
+
+  if (isItineraryDayPlace) {
+    pinColor = (place as ItineraryPlaceWithTime).isFallback ? '#757575' : '#FF5A5F'; // Red for itinerary items, gray for fallback
+    pinSize = 32; // Slightly larger for itinerary items
+    label = itineraryOrder;
+  } else if (isSelected) {
+    pinColor = '#007BFF'; // Blue for selected
+    pinSize = 32; // Larger for selected
+  } else if (isCandidate) {
+    pinColor = '#FFA500'; // Orange for candidate
   }
-  if (isSelected) {
-    return { url: SELECTED_MARKER_ICON_URL, size: { width: 30, height: 40 }, anchor: { x: 15, y: 40 } };
-  }
-  if (isCandidate) { // This was often used for 'recommended style' or similar general highlighting
-    return { url: CANDIDATE_MARKER_ICON_URL, size: { width: 28, height: 36 }, anchor: { x: 14, y: 36 } };
-  }
-  
-  // If useColorByCategory is true, prioritize category markers
-  if (useColorByCategory && place.category && CATEGORY_MARKERS[place.category]) {
-    return { url: CATEGORY_MARKERS[place.category], size: { width: 25, height: 34 }, anchor: { x: 12.5, y: 34 } };
-  }
-  
-  // Fallback to default or existing category logic if not using color by category explicitly or if category marker doesn't exist
-  const iconUrl = CATEGORY_MARKERS[place.category] || DEFAULT_MARKER_ICON_URL;
-  return { url: iconUrl, size: { width: 25, height: 34 }, anchor: { x: 12.5, y: 34 } };
+  // Else, default green is used.
+
+  return {
+    content: createPinSvg(pinColor, pinSize, label),
+    anchor: { x: pinSize / 2, y: pinSize }, // Anchor at the bottom center (tip of the pin)
+    size: { width: pinSize, height: pinSize } // Required by Naver Maps for content icons if not using URL
+  };
 };
 
 export const addMarkersToMap = (
   map: any,
   places: Place[],
   selectedPlace: Place | null,
-  candidatePlaces: Place[] = [], // isCandidate로 판단
-  itineraryPlaces: Place[] = [], // 현재 날짜의 일정 장소들
+  candidatePlaces: Place[] = [],
+  itineraryPlaces: Place[] = [], // This might be unused if useMapMarkers is the main driver
   onMarkerClick: (place: Place, index: number) => void
 ) => {
   const markers: any[] = [];
   places.forEach((place, index) => {
     const position = createNaverLatLng(place.y, place.x);
+    if (!position) return;
+
     const isSelected = selectedPlace?.id === place.id;
     const isCandidate = candidatePlaces.some(cp => cp.id === place.id);
-    const isItineraryPlace = itineraryPlaces.some(ip => ip.id === place.id);
+    // For this generic function, isItineraryDayPlace and itineraryOrder are not easily determined
+    // It should perhaps take a simpler marker type or rely on a simpler version of getMarkerIconOptions
     
-    const iconOptions = getMarkerIconOptions(place, isSelected, isCandidate, isItineraryPlace);
+    const iconOptions = getMarkerIconOptions(place, isSelected, isCandidate, false, undefined);
     
     const marker = createNaverMarker(map, position, iconOptions, place.name);
     
-    window.naver.maps.Event.addListener(marker, 'click', () => {
-      onMarkerClick(place, index);
-    });
+    if (window.naver && window.naver.maps && window.naver.maps.Event) {
+      window.naver.maps.Event.addListener(marker, 'click', () => {
+        onMarkerClick(place, index);
+      });
+    }
     markers.push(marker);
   });
   return markers;

@@ -1,17 +1,17 @@
 
 import { useRef, useEffect } from 'react';
 import { useMapContext } from '../MapContext';
-import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/core';
+import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/core'; // ItineraryPlaceWithTime needed for properties like isFallback
 import { clearMarkers, getMarkerIconOptions, createNaverMarker, createNaverLatLng, fitBoundsToPlaces, panToPosition } from '@/utils/map/mapDrawing';
 
 interface UseMapMarkersProps {
-  places: Place[];
-  selectedPlace: Place | null;
-  itinerary: ItineraryDay[] | null;
-  selectedDay: number | null;
-  selectedPlaces?: Place[];
+  places: Place[]; // General list of places (e.g., recommendations)
+  selectedPlace: Place | null; // For highlighting a single place (e.g., opening info window)
+  itinerary: ItineraryDay[] | null; // Full itinerary data
+  selectedDay: number | null; // Currently selected day in the itinerary
+  selectedPlaces?: Place[]; // Places selected in a list/cart, to be styled as 'candidate'
   onPlaceClick?: (place: Place | ItineraryPlaceWithTime, index: number) => void;
-  highlightPlaceId?: string;
+  highlightPlaceId?: string; // Another way to highlight a specific place
 }
 
 export const useMapMarkers = ({
@@ -27,53 +27,50 @@ export const useMapMarkers = ({
   const markersRef = useRef<naver.maps.Marker[]>([]);
   const prevSelectedDayRef = useRef<number | null>(null);
   const prevItineraryRef = useRef<ItineraryDay[] | null>(null);
-  
-  // Clear all markers function
+  const prevPlacesRef = useRef<Place[] | null>(null); // To track changes in the 'places' prop
+
   const clearAllMarkers = () => {
     if (markersRef.current.length > 0) {
-      console.log("[useMapMarkers] 기존 마커 모두 제거 중:", markersRef.current.length + "개");
-      clearMarkers(markersRef.current); 
+      console.log("[useMapMarkers] Clearing all existing markers:", markersRef.current.length);
+      clearMarkers(markersRef.current);
       markersRef.current = [];
     }
   };
-  
-  // Main marker update effect
+
   useEffect(() => {
     if (!map || !isMapInitialized || !isNaverLoaded || !window.naver || !window.naver.maps) {
-      console.log("[useMapMarkers] 지도 미초기화, Naver API 미로드, 또는 window.naver.maps 없음. 마커 표시 건너뜀.");
+      console.log("[useMapMarkers] Map not ready or Naver API not loaded. Skipping marker update.");
       return;
     }
 
-    const isItineraryStructurallyChanged = prevItineraryRef.current !== itinerary;
-    const isDayChanged = selectedDay !== prevSelectedDayRef.current;
-    const currentPlacesForComparison = itinerary ? null : places;
-    const prevPlacesForComparison = prevItineraryRef.current ? null : (markersRef as any)._prevPlacesList;
-    const isPlacesListChanged = !itinerary && currentPlacesForComparison !== prevPlacesForComparison;
+    // Determine if a significant change occurred that requires re-rendering markers
+    const itineraryChanged = prevItineraryRef.current !== itinerary;
+    const dayChanged = selectedDay !== prevSelectedDayRef.current;
+    const placesPropChanged = prevPlacesRef.current !== places; // Check if the general places list changed
+    const selectedPlaceChanged = selectedPlace !== (markersRef.current as any)._prevSelectedPlace;
+    const highlightChanged = highlightPlaceId !== (markersRef.current as any)._prevHighlightPlaceId;
+    const selectedPlacesListChanged = JSON.stringify(selectedPlaces) !== JSON.stringify((markersRef.current as any)._prevSelectedPlacesList);
 
-    if (isItineraryStructurallyChanged || isDayChanged || isPlacesListChanged || 
-        selectedPlace !== (markersRef as any)._prevSelectedPlace || 
-        highlightPlaceId !== (markersRef as any)._prevHighlightPlaceId) {
-      
-      console.log("[useMapMarkers] 변경 감지, 마커 재생성:", {
-        isItineraryStructurallyChanged,
-        isDayChanged,
-        isPlacesListChanged,
+
+    if (itineraryChanged || dayChanged || placesPropChanged || selectedPlaceChanged || highlightChanged || selectedPlacesListChanged) {
+      console.log("[useMapMarkers] Change detected, regenerating markers:", {
+        itineraryChanged,
+        dayChanged,
+        placesPropChanged,
         selectedDay,
         itineraryLength: itinerary?.length,
         placesLength: places?.length,
-        selectedPlaceId: selectedPlace?.id,
-        highlightPlaceId,
       });
-      
+
       clearAllMarkers();
-      
+
+      prevItineraryRef.current = itinerary;
       prevSelectedDayRef.current = selectedDay;
-      prevItineraryRef.current = itinerary; 
-      (markersRef as any)._prevSelectedPlace = selectedPlace;
-      (markersRef as any)._prevHighlightPlaceId = highlightPlaceId;
-      if (!itinerary) {
-        (markersRef as any)._prevPlacesList = places;
-      }
+      prevPlacesRef.current = places; // Store current general places list
+      (markersRef.current as any)._prevSelectedPlace = selectedPlace;
+      (markersRef.current as any)._prevHighlightPlaceId = highlightPlaceId;
+      (markersRef.current as any)._prevSelectedPlacesList = selectedPlaces;
+
 
       renderMarkers();
     }
@@ -83,37 +80,47 @@ export const useMapMarkers = ({
     onPlaceClick, highlightPlaceId
   ]);
 
-  // Render markers function
   const renderMarkers = () => {
     let placesToDisplay: (Place | ItineraryPlaceWithTime)[] = [];
     let isDisplayingItineraryDay = false;
 
-    if (selectedDay !== null && itinerary && itinerary.length > 0) {
+    // Priority: If an itinerary is active and a day is selected, show that day's places.
+    if (itinerary && itinerary.length > 0 && selectedDay !== null) {
       const currentDayData = itinerary.find(day => day.day === selectedDay);
       if (currentDayData && currentDayData.places && currentDayData.places.length > 0) {
         placesToDisplay = currentDayData.places;
         isDisplayingItineraryDay = true;
-        console.log(`[useMapMarkers] ${selectedDay}일차 일정 장소 ${placesToDisplay.length}개 표시합니다.`);
+        console.log(`[useMapMarkers] Displaying itinerary day ${selectedDay}: ${placesToDisplay.length} places.`);
       } else {
-        console.log(`[useMapMarkers] ${selectedDay}일차 데이터/장소 없음. 일반 장소 표시.`);
-        placesToDisplay = places || [];
+        console.log(`[useMapMarkers] Itinerary active for day ${selectedDay}, but no places found for this day. No itinerary markers shown.`);
+        placesToDisplay = []; // Explicitly empty
       }
+    } 
+    // Fallback: If no itinerary is active (or no day selected within an active itinerary, though user wants selected day only)
+    // then show general places from the 'places' prop.
+    // Crucially, if an itinerary *is* active, we DON'T fall back to general 'places' here,
+    // ensuring "장소 추천 목록" markers are hidden when itinerary is active.
+    else if (!itinerary || itinerary.length === 0) {
+        placesToDisplay = places || [];
+        console.log(`[useMapMarkers] No active itinerary. Displaying general places: ${placesToDisplay.length}`);
     } else {
-      placesToDisplay = places || [];
-      console.log(`[useMapMarkers] 일정/선택일자 없음. 일반 장소 ${placesToDisplay.length}개 표시.`);
+        // Itinerary exists but no selected day. Per user request, show nothing from itinerary then.
+        // And also don't show general places.
+        console.log(`[useMapMarkers] Itinerary active, but no specific day selected. No markers shown.`);
+        placesToDisplay = []; // Explicitly empty
     }
     
     if (placesToDisplay.length > 0) {
       const validPlacesToDisplay = placesToDisplay.filter(p => {
         if (p.x != null && p.y != null && !isNaN(Number(p.x)) && !isNaN(Number(p.y))) return true;
-        console.warn(`[useMapMarkers] 장소 '${p.name}' 좌표 유효하지 않음: x=${p.x}, y=${p.y}`);
+        console.warn(`[useMapMarkers] Place '${p.name}' has invalid coordinates: x=${p.x}, y=${p.y}`);
         return false;
       });
 
       if (validPlacesToDisplay.length === 0) {
-        console.log("[useMapMarkers] 유효한 좌표를 가진 표시할 장소가 없습니다.");
+        console.log("[useMapMarkers] No valid places to display markers for.");
       } else {
-        console.log(`[useMapMarkers] 유효한 장소 ${validPlacesToDisplay.length}개에 대해 마커 생성 중`);
+        console.log(`[useMapMarkers] Creating markers for ${validPlacesToDisplay.length} valid places.`);
         const newMarkers: naver.maps.Marker[] = [];
 
         validPlacesToDisplay.forEach((place, index) => {
@@ -122,61 +129,53 @@ export const useMapMarkers = ({
           const position = createNaverLatLng(place.y!, place.x!);
           if (!position) return;
           
-          const isGloballySelected = selectedPlaces.some(sp => sp.id === place.id);
+          const isGloballySelectedCandidate = selectedPlaces.some(sp => sp.id === place.id);
           const isInfoWindowTarget = selectedPlace?.id === place.id;
           const isGeneralHighlightTarget = highlightPlaceId === place.id;
-
-          let iconOptions;
-          if (isDisplayingItineraryDay) {
-            iconOptions = {
-              content: `<div style="width:28px;height:28px;background-color:${(place as ItineraryPlaceWithTime).isFallback ? '#757575' : '#FF5A5F'};border-radius:50%;border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.3);color:white;font-weight:bold;font-size:12px;display:flex;align-items:center;justify-content:center;">${index + 1}</div>`,
-              anchor: new window.naver.maps.Point(14, 14)
-            };
-          } else {
-            const placeForIcon = place as Place;
-            iconOptions = getMarkerIconOptions(
-              placeForIcon, 
-              isInfoWindowTarget || isGeneralHighlightTarget, 
-              isGloballySelected && !isInfoWindowTarget && !isGeneralHighlightTarget, 
-              false
-            );
-          }
+          
+          const iconOptions = getMarkerIconOptions(
+            place,
+            isInfoWindowTarget || isGeneralHighlightTarget, // isSelected
+            isGloballySelectedCandidate && !isInfoWindowTarget && !isGeneralHighlightTarget, // isCandidate
+            isDisplayingItineraryDay, // isItineraryDayPlace
+            isDisplayingItineraryDay ? index + 1 : undefined // itineraryOrder
+          );
           
           const marker = createNaverMarker(map, position, iconOptions, place.name);
           
           if (onPlaceClick && window.naver && window.naver.maps && window.naver.maps.Event) {
             window.naver.maps.Event.addListener(marker, 'click', () => {
-              console.log(`[useMapMarkers] 마커 클릭: ${place.name} (인덱스: ${index})`);
+              console.log(`[useMapMarkers] Marker clicked: ${place.name} (Index: ${index}, ItineraryDayPlace: ${isDisplayingItineraryDay})`);
               onPlaceClick(place, index);
             });
           }
-          
           newMarkers.push(marker);
         });
-        
         markersRef.current = newMarkers;
 
-        // Handle map bounds and focus
-        if (isDisplayingItineraryDay && validPlacesToDisplay.length > 0) {
-          console.log("[useMapMarkers] 일정 모드: 마커에 맞게 지도 범위 조정");
-          fitBoundsToPlaces(map, validPlacesToDisplay as Place[]);
-        } else if (validPlacesToDisplay.length > 0 && !selectedPlace && !highlightPlaceId) {
-          console.log("[useMapMarkers] 일반 모드 (선택된 장소/하이라이트 없음): 지도 범위 조정");
-          fitBoundsToPlaces(map, validPlacesToDisplay as Place[]);
+        if (validPlacesToDisplay.length > 0) {
+            // Only fit bounds if not focusing on a single selected/highlighted place
+            if (!(selectedPlace || highlightPlaceId)) {
+                console.log("[useMapMarkers] Fitting map bounds to displayed markers.");
+                fitBoundsToPlaces(map, validPlacesToDisplay as Place[]);
+            } else if ((selectedPlace || (highlightPlaceId && placesToDisplay.find(p => p.id === highlightPlaceId )))) {
+                // If a place is selected/highlighted, pan to it instead of fitting all bounds
+                // This logic is handled below
+            }
         }
       }
     } else {
-      console.log("[useMapMarkers] 표시할 장소가 없습니다.");
+      console.log("[useMapMarkers] No places to display after filtering.");
     }
     
-    // Handle focusing on selected place
+    // Handle focusing on selected/highlighted place (pan and zoom)
     const placeToFocus = selectedPlace || (highlightPlaceId ? placesToDisplay.find(p => p.id === highlightPlaceId) : null);
     if (placeToFocus && placeToFocus.y != null && placeToFocus.x != null) {
-      console.log(`[useMapMarkers] 특정 장소로 이동: ${placeToFocus.name}`);
-      if (map.getZoom() < 15) map.setZoom(15);
+      console.log(`[useMapMarkers] Panning to focused place: ${placeToFocus.name}`);
+      if (map.getZoom() < 15) map.setZoom(15, true); // Smooth zoom if too far out
       panToPosition(map, placeToFocus.y, placeToFocus.x);
     } else if (placeToFocus) {
-      console.warn(`[useMapMarkers] 포커스 대상 장소 '${placeToFocus.name}' 좌표 없음.`);
+      console.warn(`[useMapMarkers] Target focus place '${placeToFocus.name}' has no valid coordinates.`);
     }
   };
   
