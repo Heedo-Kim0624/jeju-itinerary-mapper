@@ -1,3 +1,4 @@
+
 import { useCallback } from 'react';
 import { toast } from 'sonner';
 import type { SelectedPlace as CoreSelectedPlace } from '@/types/core';
@@ -35,7 +36,7 @@ export const useScheduleGenerationRunner = () => {
       console.log('[useScheduleGenerationRunner] 파서에 전달할 lastSentPayload:', lastSentPayload);
       
       // Pass lastSentPayload to the parser
-      const parsedItinerary = parseServerResponse(serverResponse, selectedPlaces, tripStartDate, lastSentPayload); 
+      const parsedItinerary = await parseServerResponse(serverResponse, selectedPlaces, tripStartDate, lastSentPayload); 
       
       console.log('[useScheduleGenerationRunner] 파싱된 일정 데이터 요약:', summarizeItineraryData(parsedItinerary));
       

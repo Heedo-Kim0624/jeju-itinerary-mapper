@@ -1,85 +1,129 @@
+import { useState, useEffect, useCallback } from 'react';
+import { useMapContext } from '@/components/rightpanel/MapContext';
+import type { Place } from '@/types/core';
 
-import { useState, useCallback } from 'react';
-import { Place } from '@/types/supabase';
-import { toast } from 'sonner';
+interface UseGeoJsonStateProps {
+  geoJsonUrl: string;
+  places: Place[];
+}
 
-/**
- * GeoJson 상태 관리 훅
- */
-export const useGeoJsonState = () => {
-  // GeoJSON 관련 상태
-  const [showGeoJson, setShowGeoJson] = useState(false);
-  const [isGeoJsonLoaded, setIsGeoJsonLoaded] = useState(false);
-  const [geoJsonNodes, setGeoJsonNodes] = useState<any[]>([]);
-  const [geoJsonLinks, setGeoJsonLinks] = useState<any[]>([]);
-  
-  // GeoJSON 가시성 토글
-  const toggleGeoJsonVisibility = useCallback(() => {
-    setShowGeoJson(prev => !prev);
-  }, []);
+export const useGeoJsonState = ({ geoJsonUrl, places }: UseGeoJsonStateProps) => {
+  const { map, isMapInitialized, isNaverLoaded } = useMapContext();
+  const [geoJsonLayer, setGeoJsonLayer] = useState<naver.maps.Data | null>(null);
+  const [nearestNodeCache, setNearestNodeCache] = useState<Map<string, { nodeId: string; distance: number }>>(new Map());
 
-  // GeoJSON 데이터 로드 완료 핸들러
-  const handleGeoJsonLoaded = useCallback((nodes: any[], links: any[]) => {
-    console.log('GeoJSON 데이터 로드 완료:', { 
-      노드수: nodes.length,
-      링크수: links.length
-    });
-    
-    setGeoJsonNodes(nodes);
-    setGeoJsonLinks(links);
-    setIsGeoJsonLoaded(true);
-  }, []);
-
-  // 장소-GeoJSON 노드 매핑 품질 검사
-  const checkGeoJsonMapping = useCallback((places: Place[]) => {
-    if (!isGeoJsonLoaded || places.length === 0) {
-      return {
-        totalPlaces: places.length,
-        mappedPlaces: 0,
-        mappingRate: '0%',
-        averageDistance: 'N/A',
-        success: false,
-        message: 'GeoJSON 데이터가 로드되지 않았거나 장소가 없습니다.'
-      };
+  const loadGeoJson = useCallback(async (url: string) => {
+    try {
+      const response = await fetch(url);
+      const geoJsonData = await response.json();
+      return geoJsonData;
+    } catch (error) {
+      console.error("Error fetching GeoJSON:", error);
+      return null;
     }
-    
-    const totalPlaces = places.length;
-    const placesWithGeoNodeId = places.filter(p => p.geoNodeId);
-    const mappedPlaces = placesWithGeoNodeId.length;
-    const mappingRate = totalPlaces > 0 ? ((mappedPlaces / totalPlaces) * 100).toFixed(1) : '0.0';
-    
-    // 평균 거리 계산
-    const distanceSum = placesWithGeoNodeId.reduce((sum, place) => {
-      return sum + (place.geoNodeDistance || 0);
-    }, 0);
-    
-    const averageDistanceFloat = mappedPlaces > 0 ? (distanceSum / mappedPlaces) : 0;
-    const averageDistance = mappedPlaces > 0 ? averageDistanceFloat.toFixed(1) : 'N/A';
-    
-    // 매핑 성공 여부 판단 (50% 이상이고 평균 거리 100m 이내)
-    const success = 
-      (mappedPlaces / totalPlaces >= 0.5 || totalPlaces === 0) && 
-      (averageDistance === 'N/A' || averageDistanceFloat < 100);
-    
-    return {
-      totalPlaces,
-      mappedPlaces,
-      mappingRate: `${mappingRate}%`,
-      averageDistance: averageDistance === 'N/A' ? averageDistance : parseFloat(averageDistance),
-      success,
-      message: success ? 
-        `매핑 성공: ${mappedPlaces}/${totalPlaces} 장소 매핑됨 (${mappingRate}%), 평균 거리: ${averageDistance}m` :
-        `매핑 부족: ${mappedPlaces}/${totalPlaces} 장소만 매핑됨 (${mappingRate}%), 평균 거리: ${averageDistance}m`
-    };
-  }, [isGeoJsonLoaded]);
+  }, []);
 
-  return {
-    showGeoJson,
-    isGeoJsonLoaded,
-    geoJsonNodes,
-    geoJsonLinks,
-    toggleGeoJsonVisibility,
-    handleGeoJsonLoaded,
-    checkGeoJsonMapping
+  const addGeoJsonLayer = useCallback(async () => {
+    if (!map || !isMapInitialized || !isNaverLoaded) {
+      console.log("[useGeoJsonState] Map not ready, skipping GeoJSON layer addition.");
+      return;
+    }
+
+    const geoJsonData = await loadGeoJson(geoJsonUrl);
+    if (!geoJsonData) {
+      console.warn("[useGeoJsonState] No GeoJSON data to add.");
+      return;
+    }
+
+    // Remove existing layer if it exists
+    if (geoJsonLayer) {
+      geoJsonLayer.setMap(null);
+      setGeoJsonLayer(null);
+    }
+
+    const newLayer = new naver.maps.Data({ map: map });
+    newLayer.loadGeoJson(geoJsonData);
+    setGeoJsonLayer(newLayer);
+
+    console.log("[useGeoJsonState] GeoJSON layer added successfully.");
+  }, [map, isMapInitialized, isNaverLoaded, geoJsonUrl, loadGeoJson, geoJsonLayer]);
+
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const R = 6371; // Radius of the Earth in kilometers
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const distance = R * c; // Distance in kilometers
+    return distance;
   };
+
+  const findNearestNode = useCallback((place: Place): { nodeId: string; distance: number } | null => {
+    if (!geoJsonLayer) {
+      console.warn("[useGeoJsonState] GeoJSON layer not loaded, cannot find nearest node.");
+      return null;
+    }
+
+    const cacheKey = `${place.id}-${place.x}-${place.y}`;
+    if (nearestNodeCache.has(cacheKey)) {
+      return nearestNodeCache.get(cacheKey) || null;
+    }
+
+    let minDistance = Infinity;
+    let nearestNodeId = null;
+
+    geoJsonLayer.forEach(feature => {
+      const geometry = feature.getGeometry();
+      if (geometry.getType() === 'Point') {
+        const coordinates = geometry.get(); // Returns naver.maps.LatLng
+        const nodeLat = coordinates.lat();
+        const nodeLng = coordinates.lng();
+
+        if (place.y != null && place.x != null) {
+          const distance = calculateDistance(place.y, place.x, nodeLat, nodeLng);
+
+          if (distance < minDistance) {
+            minDistance = distance;
+            nearestNodeId = feature.getProperty('id');
+          }
+        }
+      }
+    });
+
+    if (nearestNodeId !== null) {
+      const result = { nodeId: nearestNodeId, distance: minDistance };
+      setNearestNodeCache(prevCache => new Map(prevCache).set(cacheKey, result));
+      return result;
+    }
+
+    return null;
+  }, [geoJsonLayer, calculateDistance, nearestNodeCache]);
+
+  useEffect(() => {
+    addGeoJsonLayer();
+  }, [addGeoJsonLayer]);
+
+  useEffect(() => {
+    if (places && places.length > 0) {
+      const updatedPlaces = places.map(place => {
+        const nearestNode = findNearestNode(place);
+        if (nearestNode) {
+          return {
+            ...place,
+            geoNodeId: nearestNode.nodeId,
+            geoNodeDistance: nearestNode.distance
+          };
+        }
+        return place;
+      });
+      // Dispatch an event or use a callback to notify the parent component about the updated places
+      const event = new CustomEvent('placesWithGeoNodesUpdated', { detail: updatedPlaces });
+      window.dispatchEvent(event);
+    }
+  }, [places, findNearestNode]);
+
+  return { geoJsonLayer, findNearestNode };
 };

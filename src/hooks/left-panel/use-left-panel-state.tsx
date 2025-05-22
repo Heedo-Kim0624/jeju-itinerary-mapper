@@ -1,6 +1,5 @@
-
 import { useState } from 'react';
-import type { CategoryName } from '@/types';
+import { Place, CategoryName } from '@/types/core';
 
 /**
  * Manages the local state for the left panel

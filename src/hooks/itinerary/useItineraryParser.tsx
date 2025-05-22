@@ -1,3 +1,4 @@
+
 import { useCallback } from 'react';
 import { NewServerScheduleResponse, ServerScheduleItem, SchedulePayload, PlaceDetails } from '@/types/schedule';
 import { ItineraryDay, ItineraryPlaceWithTime, SelectedPlace as CoreSelectedPlace, Place } from '@/types/core';
@@ -55,6 +56,11 @@ const determineFinalId = (originalId: string | number | undefined | null, fallba
   return `${fallbackNamePrefix.replace(/\s+/g, '_')}_${itemIndex}_${dayNumber}_gen`;
 };
 
+// 테이블 이름에 대한 타입 가드 함수
+const isValidTableName = (tableName: string): tableName is 'accommodation_information' | 'cafe_information' | 'landmark_information' | 'restaurant_information' => {
+  return ['accommodation_information', 'cafe_information', 'landmark_information', 'restaurant_information'].includes(tableName);
+};
+
 const mapCategoryToSupabaseTable = (category: string): string | null => {
   switch (category) {
     case '숙소': return 'accommodation_information';
@@ -106,7 +112,7 @@ const enrichScheduleWithSupabaseDetails = async (itineraryDays: ItineraryDay[]):
 
   for (const tableName in placesByTable) {
     const idsToFetch = placesByTable[tableName];
-    if (idsToFetch.length > 0) {
+    if (idsToFetch.length > 0 && isValidTableName(tableName)) {
       console.log(`테이블 '${tableName}'에서 ID ${idsToFetch.join(', ')} 로딩 중...`);
       const fetchPromise = supabase
         .from(tableName)
@@ -345,12 +351,12 @@ export const useItineraryParser = () => {
     return `${(targetDate.getMonth() + 1).toString().padStart(2, '0')}/${targetDate.getDate().toString().padStart(2, '0')}`;
   };
 
-  const parseServerResponse = useCallback(async ( // Made async
+  const parseServerResponse = useCallback(async (
     serverResponse: NewServerScheduleResponse,
     currentSelectedPlaces: CoreSelectedPlace[] = [],
     tripStartDate: Date | null = null,
     lastPayload: SchedulePayload | null = null
-  ): Promise<ItineraryDay[]> => { // Return Promise
+  ): Promise<ItineraryDay[]> => {
     console.group('[PARSE_SERVER_RESPONSE] 서버 응답 파싱 시작');
     console.log('원본 서버 응답 데이터:', JSON.stringify(serverResponse, null, 2));
     console.log('현재 선택된 장소 (상세정보용) 수:', currentSelectedPlaces.length);

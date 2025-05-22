@@ -1,6 +1,6 @@
 
 import { toast } from 'sonner';
-import { SelectedPlace, SchedulePlace, SchedulePayload } from '@/types'; // Import from @/types
+import { SelectedPlace, SchedulePlace, SchedulePayload } from '@/types/core'; // 직접 core에서 import
 
 interface UseSchedulePayloadBuilderProps {
   // No props needed for the hook itself, but for the returned function

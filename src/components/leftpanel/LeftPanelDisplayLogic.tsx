@@ -1,8 +1,9 @@
+
 import React from 'react';
 import { ScheduleLoadingIndicator } from './ScheduleLoadingIndicator';
 import ItineraryDisplayWrapper from './ItineraryDisplayWrapper';
 import MainPanelWrapper from './MainPanelWrapper';
-import type { Place, ItineraryDay, CategoryName } from '@/types'; // Assuming types are in @/types
+import type { Place, ItineraryDay, CategoryName } from '@/types/core'; // 직접 core에서 import
 
 // Props for ItineraryDisplayWrapper
 interface ItineraryDisplayWrapperPassedProps {

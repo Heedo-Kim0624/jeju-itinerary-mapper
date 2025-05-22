@@ -1,7 +1,6 @@
-
 import { useCallback } from 'react';
 import { toast } from 'sonner';
-import type { Place, CategoryName } from '@/types';
+import type { Place, CategoryName } from '@/types/core';
 
 /**
  * Provides handlers for category result operations

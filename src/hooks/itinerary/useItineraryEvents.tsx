@@ -1,14 +1,17 @@
-
 import { useEffect } from 'react';
 import { toast } from 'sonner';
-import type { ItineraryDay } from '@/types';
+import type { ItineraryDay, CoreSelectedPlace, NewServerScheduleResponse } from '@/types';
 
 interface UseItineraryEventsProps {
-  setItinerary: (itinerary: ItineraryDay[] | null) => void;
+  setItinerary: (itinerary: ItineraryDay[]) => void;
   setSelectedItineraryDay: (day: number | null) => void;
   setShowItinerary: (show: boolean) => void;
   setIsItineraryCreated: (created: boolean) => void;
-  parseServerResponse: (serverResponse: any) => ItineraryDay[];
+  parseServerResponse: (
+    serverResponse: NewServerScheduleResponse, 
+    selectedPlaces?: CoreSelectedPlace[],
+    tripStartDate?: Date | null
+  ) => Promise<ItineraryDay[]>; // Promise 반환 타입으로 수정
 }
 
 export const useItineraryEvents = ({
@@ -19,46 +22,51 @@ export const useItineraryEvents = ({
   parseServerResponse,
 }: UseItineraryEventsProps) => {
   useEffect(() => {
-    const handleRawServerResponse = (event: Event) => {
-      console.log("[useItineraryEvents] rawServerResponseReceived 이벤트 수신", (event as CustomEvent).detail);
-      const serverResponse = (event as CustomEvent).detail?.response;
-      
-      if (serverResponse && serverResponse.schedule && serverResponse.route_summary) {
-        const parsedItinerary = parseServerResponse(serverResponse); 
-        console.log("[useItineraryEvents] 서버 응답 파싱 완료. 파싱된 일정:", parsedItinerary);
+    const handleRawServerResponse = async (event: CustomEvent<{
+      serverResponse: NewServerScheduleResponse;
+      selectedPlaces?: CoreSelectedPlace[];
+      tripStartDate?: Date | null;
+    }>) => {
+      try {
+        console.log('[useItineraryEvents] Raw server response event captured:', event.detail);
         
-        const itineraryCreatedEventDetail = {
-          itinerary: parsedItinerary,
-          selectedDay: (parsedItinerary && parsedItinerary.length > 0 && parsedItinerary[0]?.day) ? parsedItinerary[0].day : null,
-        };
-
-        if (!parsedItinerary || parsedItinerary.length === 0) {
-          toast.error("일정 생성에 실패했거나 데이터가 없습니다. (rawServerResponse)");
-          itineraryCreatedEventDetail.itinerary = []; // Ensure empty array for event
+        const { serverResponse, selectedPlaces = [], tripStartDate = null } = event.detail;
+        
+        // parseServerResponse가 이제 Promise를 반환하므로 await로 처리
+        const parsedItinerary = await parseServerResponse(serverResponse, selectedPlaces, tripStartDate);
+        
+        console.log('[useItineraryEvents] Parsed itinerary from raw server response:', parsedItinerary);
+        
+        if (parsedItinerary.length === 0) {
+          console.warn('[useItineraryEvents] No itinerary days were parsed from raw server response');
+          setItinerary([]);
+          setSelectedItineraryDay(null);
+          setIsItineraryCreated(false);
+          return;
         }
         
-        const itineraryCreatedEvent = new CustomEvent('itineraryCreated', {
-          detail: itineraryCreatedEventDetail
-        });
-        console.log("[useItineraryEvents] itineraryCreated 이벤트 발생 (from rawServerResponseReceived)");
-        window.dispatchEvent(itineraryCreatedEvent);
-
-      } else {
-        console.error("[useItineraryEvents] 서버 응답이 유효하지 않거나 필요한 데이터가 없습니다:", serverResponse);
-        toast.error("서버 응답이 유효하지 않습니다. 다시 시도해주세요.");
-        const itineraryCreatedEvent = new CustomEvent('itineraryCreated', {
-          detail: { itinerary: [], selectedDay: null }
-        });
-        window.dispatchEvent(itineraryCreatedEvent);
+        setItinerary(parsedItinerary);
+        setShowItinerary(true);
+        setIsItineraryCreated(true);
+        
+        // Select the first day automatically
+        if (parsedItinerary.length > 0 && parsedItinerary[0].day) {
+          setSelectedItineraryDay(parsedItinerary[0].day);
+        }
+      } catch (error) {
+        console.error('[useItineraryEvents] Error handling raw server response:', error);
+        setItinerary([]);
+        setSelectedItineraryDay(null);
+        setIsItineraryCreated(false);
       }
     };
     
-    window.addEventListener('rawServerResponseReceived', handleRawServerResponse);
+    window.addEventListener('rawServerResponseReceived', handleRawServerResponse as EventListener);
     
     return () => {
-      window.removeEventListener('rawServerResponseReceived', handleRawServerResponse);
+      window.removeEventListener('rawServerResponseReceived', handleRawServerResponse as EventListener);
     };
-  }, [parseServerResponse, setItinerary, setSelectedItineraryDay, setShowItinerary, setIsItineraryCreated]); // Dependencies for event handler closure
+  }, [setItinerary, setSelectedItineraryDay, setShowItinerary, setIsItineraryCreated, parseServerResponse]); // Dependencies for event handler closure
 
   useEffect(() => {
     const handleItineraryCreated = (event: Event) => {
