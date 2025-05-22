@@ -1,5 +1,7 @@
+
 import { useCallback, useEffect, useRef } from 'react';
-import { NewServerScheduleResponse, ItineraryDay } from '@/types/core';
+import { NewServerScheduleResponse, ItineraryDay, ServerScheduleItem, ItineraryPlaceWithTime, RouteData } from '@/types/core';
+import { getDateStringMMDD, getDayOfWeekString } from '../itinerary/parser-utils/timeUtils'; // 경로 수정 및 임포트 추가
 
 interface ServerResponseHandlerProps {
   onServerResponse: (response: NewServerScheduleResponse) => void;
@@ -65,22 +67,82 @@ export const parseServerResponse = (
   console.log("[parseServerResponse] 서버 응답 파싱 시작:", serverResponse);
   
   try {
-    // 서버 응답 구조에 맞게 수정 (itinerary가 아닌 schedule 사용)
-    if (!serverResponse || !serverResponse.schedule) {
-      console.error("[parseServerResponse] 서버 응답에 schedule 데이터가 없습니다");
+    if (!serverResponse || !serverResponse.schedule || !serverResponse.route_summary) {
+      console.error("[parseServerResponse] 서버 응답에 schedule 또는 route_summary 데이터가 없습니다");
       return [];
     }
+    if (serverResponse.route_summary.length === 0) {
+        console.warn("[parseServerResponse] route_summary is empty, returning empty itinerary.");
+        return [];
+    }
     
-    // 일정 데이터 파싱
-    return serverResponse.schedule.map((day, index) => ({
-      day: index + 1,
-      date: new Date(startDate.getTime() + index * 24 * 60 * 60 * 1000),
-      places: day.places || [],
-      routeData: day.routeData || { nodeIds: [], linkIds: [] },
-      interleaved_route: day.interleaved_route || []
-    }));
+    return serverResponse.route_summary.map((summaryItem, index) => {
+      const currentDayDate = new Date(startDate.getTime() + index * 24 * 60 * 60 * 1000);
+      const dayOfWeek = getDayOfWeekString(currentDayDate);
+      const dateStr = getDateStringMMDD(currentDayDate);
+
+      const dayScheduleItems = serverResponse.schedule.filter(item =>
+        item.time_block.startsWith(summaryItem.day)
+      );
+
+      const placesForDay: ItineraryPlaceWithTime[] = dayScheduleItems.map((scheduleItem: ServerScheduleItem) => {
+        const placeId = scheduleItem.id?.toString() || scheduleItem.place_name;
+        return {
+          id: placeId,
+          name: scheduleItem.place_name,
+          category: scheduleItem.place_type,
+          timeBlock: scheduleItem.time_block,
+          x: 0, // 기본값 또는 플레이스홀더 값
+          y: 0, // 기본값 또는 플레이스홀더 값
+          address: '', // 기본값 또는 플레이스홀더 값
+          road_address: '', // 기본값 또는 플레이스홀더 값
+          phone: '', // 기본값 또는 플레이스홀더 값
+          description: '', // 기본값 또는 플레이스홀더 값
+          rating: 0, // 기본값 또는 플레이스홀더 값
+          image_url: '', // 기본값 또는 플레이스홀더 값
+          homepage: '', // 기본값 또는 플레이스홀더 값
+          // Optional fields
+          arriveTime: undefined,
+          departTime: undefined,
+          stayDuration: undefined,
+          travelTimeToNext: undefined,
+          geoNodeId: placeId, // geoNodeId는 string | undefined 이므로, placeId 사용
+          isFallback: true,
+          isSelected: false,
+          isCandidate: false,
+          numericDbId: typeof scheduleItem.id === 'number' ? scheduleItem.id : null,
+        };
+      });
+
+      const nodeIds: string[] = [];
+      const linkIds: string[] = [];
+      summaryItem.interleaved_route.forEach((id, i) => {
+        if (i % 2 === 0) {
+          nodeIds.push(String(id));
+        } else {
+          linkIds.push(String(id));
+        }
+      });
+
+      const routeData: RouteData = {
+        nodeIds,
+        linkIds,
+        segmentRoutes: [], // 기본값
+      };
+
+      return {
+        day: index + 1,
+        date: dateStr,
+        dayOfWeek: dayOfWeek,
+        places: placesForDay,
+        totalDistance: summaryItem.total_distance_m / 1000, // km 단위
+        routeData: routeData,
+        interleaved_route: summaryItem.interleaved_route.map(String),
+      };
+    });
   } catch (error) {
     console.error("[parseServerResponse] 서버 응답 파싱 중 오류:", error);
     return [];
   }
 };
+
