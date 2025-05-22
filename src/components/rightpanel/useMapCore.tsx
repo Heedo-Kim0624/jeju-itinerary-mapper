@@ -1,7 +1,6 @@
-
 import { useMapInitialization } from '@/hooks/map/useMapInitialization';
 import { useMapNavigation } from '@/hooks/map/useMapNavigation';
-import { useGeoJsonState } from './geojson/useGeoJsonState'; // 원래 경로를 사용
+import { useGeoJsonState as useAppGeoJsonState } from '@/hooks/map/useGeoJsonState'; // Renamed to avoid conflict
 import { useServerRoutes } from '@/hooks/map/useServerRoutes';
 import { useMapFeatures } from '@/hooks/map/useMapFeatures';
 import type { Place, ItineraryDay } from '@/types/supabase'; // Supabase was an example, ensure it's the correct core Place type
@@ -30,14 +29,14 @@ const useMapCore = () => {
     panTo 
   } = useMapNavigation(map);
 
-  // useGeoJsonState를 직접 사용
-  const geoJsonHookState = useGeoJsonState(map);
+  const appGeoJsonHookState = useAppGeoJsonState(); // Use renamed hook
+  const { showGeoJson, toggleGeoJsonVisibility, handleGeoJsonLoaded: appHandleGeoJsonLoaded } = appGeoJsonHookState;
   
   const setShowGeoJson = useCallback((show: boolean) => {
-    // GeoJsonState가 다른 인터페이스를 사용하므로, 직접적인 호출은 제거합니다.
-    console.log("GeoJSON visibility toggle requested:", show);
-    // 실제 토글 기능이 필요하면 geoJsonHookState에서 적절한 메서드를 찾거나 구현해야 합니다.
-  }, []);
+    if (appGeoJsonHookState.showGeoJson !== show) {
+      toggleGeoJsonVisibility();
+    }
+  }, [appGeoJsonHookState.showGeoJson, toggleGeoJsonVisibility]);
 
   const {
     serverRoutesData,
@@ -56,7 +55,11 @@ const useMapCore = () => {
     } else {
         setAllServerRoutesData(dayRoutes as any);
     }
-  }, [setAllServerRoutesData]);
+    // Logic to show GeoJSON if routes are set (example)
+    // if (Object.keys(dayRoutes).length > 0 && !showGeoJson) {
+    //   setShowGeoJson(true);
+    // }
+  }, [setAllServerRoutesData /*, showGeoJson, setShowGeoJson */ ]); // Dependencies updated
   
   const renderItineraryRouteWrapper = ( 
     itineraryDay: ItineraryDay | null,
@@ -105,18 +108,13 @@ const useMapCore = () => {
     calculateRoutes: features.calculateRoutes, // Direct pass
     clearMarkersAndUiElements,
     panTo,
-    // geoJsonHookState 대신 원래의 geoJsonHookState 인터페이스를 사용
-    isLoading: geoJsonHookState.isLoading,
-    error: geoJsonHookState.error,
-    isLoaded: geoJsonHookState.isLoaded,
-    nodes: geoJsonHookState.nodes,
-    links: geoJsonHookState.links,
-    handleLoadSuccess: geoJsonHookState.handleLoadSuccess,
-    handleLoadError: geoJsonHookState.handleLoadError,
-    getNodeById: geoJsonHookState.getNodeById,
-    getLinkById: geoJsonHookState.getLinkById,
-    clearDisplayedFeatures: geoJsonHookState.clearDisplayedFeatures,
-    renderRoute: geoJsonHookState.renderRoute,
+    showGeoJson: appGeoJsonHookState.showGeoJson,
+    toggleGeoJsonVisibility: appGeoJsonHookState.toggleGeoJsonVisibility,
+    isGeoJsonLoaded: appGeoJsonHookState.isGeoJsonLoaded,
+    geoJsonNodes: appGeoJsonHookState.geoJsonNodes,
+    geoJsonLinks: appGeoJsonHookState.geoJsonLinks,
+    handleGeoJsonLoaded: appHandleGeoJsonLoaded, // Pass through the app-level GeoJSON loaded handler
+    checkGeoJsonMapping: appGeoJsonHookState.checkGeoJsonMapping,
     mapPlacesWithGeoNodes: features.mapPlacesWithGeoNodes,
     renderItineraryRoute: renderItineraryRouteWrapper, 
     clearAllRoutes: features.clearAllRoutes,

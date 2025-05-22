@@ -12,7 +12,7 @@ import { useLeftPanelState } from './left-panel/use-left-panel-state';
 import { useItineraryCreation } from './left-panel/use-itinerary-creation';
 import { useCategoryResultHandlers } from './left-panel/use-category-result-handlers';
 import { useEventListeners } from './left-panel/use-event-listeners';
-import { SchedulePayload, Place, ItineraryDay, CategoryName } from '@/types/core';
+import { SchedulePayload, Place, ItineraryDay } from '@/types/core'; // Place, ItineraryDay 임포트 추가
 import { toast } from 'sonner'; // toast 임포트 추가
 
 /**
@@ -57,10 +57,7 @@ export const useLeftPanel = () => {
     handleConfirmCategory: (category: string, finalKeywords: string[], clearSelection: boolean = false) => {
       categorySelection.handleConfirmCategory(category as any, finalKeywords, clearSelection);
       if (clearSelection) {
-        // CategoryName 타입으로 안전하게 캐스팅
-        if (category === '숙소' || category === '관광지' || category === '음식점' || category === '카페') {
-          leftPanelState.setShowCategoryResult(category);
-        }
+        leftPanelState.setShowCategoryResult(category as any);
       }
     }
   };
@@ -190,3 +187,4 @@ export const useLeftPanel = () => {
     itineraryReceived: leftPanelState.itineraryReceived,
   };
 };
+

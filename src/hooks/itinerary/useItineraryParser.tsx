@@ -1,4 +1,3 @@
-
 import { useCallback } from 'react';
 import { NewServerScheduleResponse, ServerScheduleItem, SchedulePayload, SchedulePlace } from '@/types/schedule';
 import { ItineraryDay, ItineraryPlaceWithTime, SelectedPlace as CoreSelectedPlace, Place } from '@/types/core';
@@ -33,27 +32,7 @@ const calculateDepartTime = (arriveTime: string, stayDurationMinutes: number): s
   date.setMinutes(date.getMinutes() + stayDurationMinutes);
   return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
 };
-
-// Helper function to determine the final ID, parsing to int if possible
-const determineFinalId = (originalId: string | number | undefined | null, fallbackNamePrefix: string, itemIndex: number, dayNumber: number): string | number => {
-  if (originalId !== null && originalId !== undefined) {
-    if (typeof originalId === 'number') {
-      return originalId; // Already a number
-    }
-    if (typeof originalId === 'string') {
-      // Try to parse as integer if it's a string representation of a number
-      const numericId = parseInt(originalId, 10);
-      // Ensure the string was purely numeric and the parse was successful
-      if (!isNaN(numericId) && String(numericId) === originalId) {
-        return numericId;
-      }
-      // Otherwise, it's a non-numeric string ID (e.g., "place_abc")
-      return originalId;
-    }
-  }
-  // Fallback: generate a string ID if originalId is null, undefined, or an unexpected type
-  return `${fallbackNamePrefix.replace(/\s+/g, '_')}_${itemIndex}_${dayNumber}_gen`;
-};
+// --- End Helper Function Stubs ---
 
 // Adapted from user's prompt and existing structure
 const processServerScheduleItem = (
@@ -70,31 +49,26 @@ const processServerScheduleItem = (
 
   let placeIdToMatch: string | number | null = null;
   let matchSource: string | null = null;
-  const serverItemIdAsNumber = parseIntId(serverItem.id); // serverItem.id could be string, number or undefined
+  const serverItemIdInt = parseIntId(serverItem.id);
 
-  if (serverItemIdAsNumber !== null) {
-    console.log(`서버 항목 ID "${serverItem.id}" 정수 변환 시도: ${serverItemIdAsNumber}`);
-  } else if (serverItem.id !== undefined) {
-    console.log(`서버 항목 ID "${serverItem.id}"는 정수로 변환되지 않음 (문자열 가능성).`);
+  if (serverItemIdInt !== null) {
+    console.log(`서버 항목 ID "${serverItem.id}" 정수 변환: ${serverItemIdInt}`);
   } else {
-    console.log(`서버 항목 ID 없음.`);
+    console.log(`서버 항목 ID "${serverItem.id}" 없거나 변환 불가.`);
   }
 
   if (lastPayload) {
-    // 1. 서버 항목 ID (정수 또는 문자열) -> 페이로드 ID (정수 또는 문자열) 매칭
-    // isSameId can compare number with string representation of number
-    const serverIdToCompare = serverItem.id; // Use original serverItem.id for isSameId
-
-    if (serverIdToCompare !== undefined) {
-      const foundInSelected = lastPayload.selected_places?.find(p => isSameId(p.id, serverIdToCompare));
+    // 1. 서버 항목 ID (정수) -> 페이로드 ID (정수) 매칭
+    if (serverItemIdInt !== null) {
+      const foundInSelected = lastPayload.selected_places?.find(p => isSameId(p.id, serverItemIdInt));
       if (foundInSelected) {
-        placeIdToMatch = foundInSelected.id; // Keep original type from payload (string | number)
+        placeIdToMatch = foundInSelected.id;
         matchSource = 'selected_places (ID 매칭)';
       }
       if (!placeIdToMatch) {
-        const foundInCandidate = lastPayload.candidate_places?.find(p => isSameId(p.id, serverIdToCompare));
+        const foundInCandidate = lastPayload.candidate_places?.find(p => isSameId(p.id, serverItemIdInt));
         if (foundInCandidate) {
-          placeIdToMatch = foundInCandidate.id; // Keep original type from payload (string | number)
+          placeIdToMatch = foundInCandidate.id;
           matchSource = 'candidate_places (ID 매칭)';
         }
       }
@@ -104,20 +78,20 @@ const processServerScheduleItem = (
     if (!placeIdToMatch && serverItem.place_name) {
       const foundInSelectedByName = lastPayload.selected_places?.find(p => p.name === serverItem.place_name);
       if (foundInSelectedByName) {
-        placeIdToMatch = foundInSelectedByName.id; // Keep original type from payload (string | number)
+        placeIdToMatch = foundInSelectedByName.id;
         matchSource = 'selected_places (이름 매칭)';
       }
       if (!placeIdToMatch) {
         const foundInCandidateByName = lastPayload.candidate_places?.find(p => p.name === serverItem.place_name);
         if (foundInCandidateByName) {
-          placeIdToMatch = foundInCandidateByName.id; // Keep original type from payload (string | number)
+          placeIdToMatch = foundInCandidateByName.id;
           matchSource = 'candidate_places (이름 매칭)';
         }
       }
     }
     
     if (placeIdToMatch) {
-      console.log(`장소 "${serverItem.place_name}" 매칭 ID: ${placeIdToMatch} (타입: ${typeof placeIdToMatch}, 소스: ${matchSource})`);
+      console.log(`장소 "${serverItem.place_name}" 매칭 ID: ${placeIdToMatch} (소스: ${matchSource}, 정수형: ${parseIntId(placeIdToMatch)})`);
     } else {
       console.warn(`장소 "${serverItem.place_name}"에 대한 ID를 페이로드에서 찾지 못했습니다.`);
     }
@@ -132,8 +106,8 @@ const processServerScheduleItem = (
     const isFirstOrLastPlace = (itemIndex === 0 || itemIndex === totalPlacesInDay - 1);
     if (isFirstOrLastPlace) {
       console.log(`[useItineraryParser] Applying fixed coordinates for Jeju International Airport as first/last place of day ${dayNumber}.`);
-      const airportResult: ItineraryPlaceWithTime = { // Explicitly type
-        id: determineFinalId(placeIdToMatch, 'airport', itemIndex, dayNumber),
+      const airportResult = {
+        id: String(placeIdToMatch || `airport_${itemIndex}_${dayNumber}`),
         name: "제주국제공항",
         category: "교통", 
         x: 126.4891647,
@@ -158,20 +132,20 @@ const processServerScheduleItem = (
   }
 
   let placeDetails: CoreSelectedPlace | undefined = undefined;
-  if (placeIdToMatch !== null) { // Check for null explicitly
+  if (placeIdToMatch) {
     // currentSelectedPlaces에서 최종 ID로 상세 정보 찾기
     placeDetails = currentSelectedPlaces.find(p => isSameId(p.id, placeIdToMatch));
     if(placeDetails){
-       console.log(`ID ${placeIdToMatch} (타입: ${typeof placeIdToMatch})로 currentSelectedPlaces에서 상세 정보 찾음:`, placeDetails.name);
+       console.log(`ID ${placeIdToMatch} (정수: ${parseIntId(placeIdToMatch)})로 currentSelectedPlaces에서 상세 정보 찾음:`, placeDetails.name);
     } else {
-       console.warn(`ID ${placeIdToMatch} (타입: ${typeof placeIdToMatch})로 currentSelectedPlaces에서 상세 정보 찾지 못함.`);
+       console.warn(`ID ${placeIdToMatch} (정수: ${parseIntId(placeIdToMatch)})로 currentSelectedPlaces에서 상세 정보 찾지 못함.`);
     }
   }
 
 
   if (placeDetails) {
-    const result: ItineraryPlaceWithTime = { // Explicitly type
-      id: determineFinalId(placeDetails.id, placeDetails.name, itemIndex, dayNumber), 
+    const result = {
+      id: String(placeDetails.id), // Ensure ID is string for ItineraryPlaceWithTime
       name: placeDetails.name,
       category: placeDetails.category || mapServerTypeToCategory(serverItem.place_type || '기타'),
       x: placeDetails.x,
@@ -196,8 +170,8 @@ const processServerScheduleItem = (
   }
 
   console.warn(`[useItineraryParser] 장소 "${serverItem.place_name}"에 대한 상세 정보를 찾을 수 없습니다. 기본값을 사용합니다.`);
-  const fallbackResult: ItineraryPlaceWithTime = { // Explicitly type
-    id: determineFinalId(serverItem.id, (serverItem.place_name || 'unknown'), itemIndex, dayNumber),
+  const fallbackResult = {
+    id: String(serverItem.id || `fallback_${(serverItem.place_name || 'unknown').replace(/\s+/g, '_')}_${itemIndex}_${dayNumber}`),
     name: serverItem.place_name || '정보 없음',
     category: mapServerTypeToCategory(serverItem.place_type || '기타'),
     x: 126.5, 
@@ -302,7 +276,6 @@ export const useItineraryParser = () => {
       // ... keep existing code (routeData processing)
       const nodeIds: string[] = [];
       const linkIds: string[] = [];
-      // 수정: interleaved_route 배열을 타입 호환성 문제 없이 처리
       const interleaved_route: (string | number)[] = [];
 
       if (routeInfo && routeInfo.interleaved_route) {

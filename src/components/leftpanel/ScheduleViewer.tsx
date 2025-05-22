@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { format } from 'date-fns';
 import { Calendar, Clock, MapPin, Navigation, X } from 'lucide-react'; // X 아이콘 추가
@@ -46,7 +47,7 @@ const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
   // Use the specific day data if available
   const dayToDisplay = itineraryDay || 
     (selectedDay !== null ? schedule.find(d => d.day === selectedDay) : null) ||
-    (schedule.length > 0 ? schedule[0] : null); // Ensure schedule[0] is accessed only if schedule.length > 0
+    schedule[0];
 
   if (!dayToDisplay) {
     return (
@@ -70,10 +71,10 @@ const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
 
   // Get unique places by ID for the selected day
   const uniquePlaces: ItineraryPlaceWithTime[] = [];
-  const seenPlaceIds = new Set<string | number>(); // CHANGED TYPE
+  const seenPlaceIds = new Set<string>();
   
   dayToDisplay.places.forEach(place => {
-    if (!seenPlaceIds.has(place.id)) { // place.id can be string or number
+    if (!seenPlaceIds.has(place.id)) {
       seenPlaceIds.add(place.id);
       uniquePlaces.push(place);
     }
@@ -111,7 +112,7 @@ const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
             const categoryColor = getCategoryColor(categoryKey);
             
             return (
-              <div key={`${String(place.id)}-${index}`} className="relative pl-8 border-l border-muted pb-6 last:pb-0"> {/* Ensure key is string */}
+              <div key={`${place.id}-${index}`} className="relative pl-8 border-l border-muted pb-6 last:pb-0">
                 <div className="absolute top-0 left-[-16px] bg-background rounded-full border border-muted flex items-center justify-center h-8 w-8 text-primary font-bold">
                   {index + 1}
                 </div>

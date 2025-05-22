@@ -1,20 +1,7 @@
 
-import { useCallback } from 'react';
-import { useItineraryCreatorCore } from './itinerary-creator/useItineraryCreatorCore';
-import type { Place, ItineraryDay } from '@/types/core';
+/**
+ * Re-export from the new modular structure
+ */
+export { useItineraryCreator } from './itinerary-creator/useItineraryCreatorCore';
+export type { ItineraryDay } from '@/types/core'; // ItineraryDay 타입을 core에서 직접 익스포트
 
-export const useItineraryCreator = () => {
-  const { createItinerary } = useItineraryCreatorCore();
-
-  const createItineraryFromPlaces = useCallback((
-    places: Place[],
-    startDate: Date,
-    endDate: Date,
-    startTime: string,
-    endTime: string
-  ): ItineraryDay[] => {
-    return createItinerary(places, startDate, endDate, startTime, endTime);
-  }, [createItinerary]);
-
-  return { createItineraryFromPlaces };
-};
