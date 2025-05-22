@@ -1,7 +1,9 @@
-
 import { useRef, useCallback } from 'react';
 import { Place } from '@/types/supabase';
 import { getCategoryColor, mapCategoryNameToKey } from '@/utils/categoryColors';
+import { createNaverLatLng } from '@/utils/map/mapSetup';
+import { createNaverMarker } from '@/utils/map/markerUtils';
+import { createNaverPolyline } from '@/utils/map/polylineUtils';
 
 type MarkerOptions = {
   highlight?: boolean;
@@ -62,17 +64,15 @@ export const useMapMarkers = (map: any) => {
         return;
       }
 
-      const position = new window.naver.maps.LatLng(place.y, place.x);
+      const position = createNaverLatLng(place.y, place.x);
+      if (!position) return;
 
-      // 장소 카테고리에 따른 색상 결정
       const categoryColor = useColorByCategory && place.category 
         ? getCategoryColor(mapCategoryNameToKey(place.category)) 
         : (highlight ? '#FF3B30' : '#4CD964');
 
-      // 마커 스타일 결정
       let markerIcon;
       if (isItinerary) {
-        // 일정 마커는 순서 번호가 포함된 원형 마커
         markerIcon = {
           content: `
             <div class="custom-marker" style="
@@ -88,7 +88,6 @@ export const useMapMarkers = (map: any) => {
           anchor: new window.naver.maps.Point(18, 18)
         };
       } else if (useRecommendedStyle) {
-        // 추천 장소 마커 스타일
         markerIcon = {
           content: `
             <div class="custom-marker" style="
@@ -104,7 +103,6 @@ export const useMapMarkers = (map: any) => {
           anchor: new window.naver.maps.Point(16, 16)
         };
       } else {
-        // 기본 마커 스타일
         markerIcon = {
           content: `
             <div class="custom-marker" style="
@@ -117,17 +115,10 @@ export const useMapMarkers = (map: any) => {
           anchor: new window.naver.maps.Point(12, 12)
         };
       }
+      
+      const marker = createNaverMarker(map, position, markerIcon, place.name, true, true);
+      if (!marker) return;
 
-      // 마커 생성
-      const marker = new window.naver.maps.Marker({
-        position: position,
-        map: map,
-        title: place.name,
-        icon: markerIcon,
-        zIndex: highlight ? 100 : isItinerary ? 90 - index : 50
-      });
-
-      // 클릭 시 정보창 표시
       const contentString = `
         <div style="padding: 10px; max-width: 200px; font-size: 13px;">
           <h3 style="font-weight: bold; margin-bottom: 5px;">${place.name}</h3>
@@ -148,15 +139,9 @@ export const useMapMarkers = (map: any) => {
         pixelOffset: new window.naver.maps.Point(0, -5)
       });
 
-      // 마커 클릭 이벤트
       window.naver.maps.Event.addListener(marker, 'click', () => {
-        // 열려있는 정보창 모두 닫기
         infoWindows.current.forEach(iw => iw.close());
-        
-        // 새로운 정보창 열기
         infoWindow.open(map, marker);
-        
-        // 커스텀 onClick 핸들러가 있으면 호출
         if (onClick) {
           onClick(place, index);
         }
@@ -174,7 +159,6 @@ export const useMapMarkers = (map: any) => {
   const calculateRoutes = useCallback((places: Place[]) => {
     if (!map || !window.naver || places.length <= 1) return;
 
-    // 경로를 나타낼 선 그리기
     for (let i = 0; i < places.length - 1; i++) {
       const currentPlace = places[i];
       const nextPlace = places[i + 1];
@@ -185,20 +169,19 @@ export const useMapMarkers = (map: any) => {
       }
 
       const path = [
-        new window.naver.maps.LatLng(currentPlace.y, currentPlace.x),
-        new window.naver.maps.LatLng(nextPlace.y, nextPlace.x)
-      ];
+        createNaverLatLng(currentPlace.y, currentPlace.x),
+        createNaverLatLng(nextPlace.y, nextPlace.x)
+      ].filter(p => p !== null) as naver.maps.LatLng[];
 
-      const polyline = new window.naver.maps.Polyline({
-        map: map,
-        path: path,
+      if (path.length < 2) continue;
+
+      const polyline = createNaverPolyline(map, path, {
         strokeColor: '#007AFF',
         strokeWeight: 3,
         strokeOpacity: 0.7,
         strokeStyle: 'solid'
       });
-
-      polylines.current.push(polyline);
+      if (polyline) polylines.current.push(polyline);
     }
   }, [map]);
 

@@ -1,17 +1,19 @@
-
 import { useRef, useEffect } from 'react';
 import { useMapContext } from '../MapContext';
-import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/core'; // ItineraryPlaceWithTime needed for properties like isFallback
-import { clearMarkers, getMarkerIconOptions, createNaverMarker, createNaverLatLng, fitBoundsToPlaces, panToPosition } from '@/utils/map/mapDrawing';
+import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/core';
+import { clearMarkers } from '@/utils/map/mapCleanup';
+import { getMarkerIconOptions, createNaverMarker } from '@/utils/map/markerUtils';
+import { createNaverLatLng } from '@/utils/map/mapSetup';
+import { fitBoundsToPlaces, panToPosition } from '@/utils/map/mapViewControls';
 
 interface UseMapMarkersProps {
-  places: Place[]; // General list of places (e.g., recommendations)
-  selectedPlace: Place | null; // For highlighting a single place (e.g., opening info window)
-  itinerary: ItineraryDay[] | null; // Full itinerary data
-  selectedDay: number | null; // Currently selected day in the itinerary
-  selectedPlaces?: Place[]; // Places selected in a list/cart, to be styled as 'candidate'
+  places: Place[];
+  selectedPlace: Place | null;
+  itinerary: ItineraryDay[] | null;
+  selectedDay: number | null;
+  selectedPlaces?: Place[];
   onPlaceClick?: (place: Place | ItineraryPlaceWithTime, index: number) => void;
-  highlightPlaceId?: string; // Another way to highlight a specific place
+  highlightPlaceId?: string;
 }
 
 export const useMapMarkers = ({
@@ -27,13 +29,12 @@ export const useMapMarkers = ({
   const markersRef = useRef<naver.maps.Marker[]>([]);
   const prevSelectedDayRef = useRef<number | null>(null);
   const prevItineraryRef = useRef<ItineraryDay[] | null>(null);
-  const prevPlacesRef = useRef<Place[] | null>(null); // To track changes in the 'places' prop
+  const prevPlacesRef = useRef<Place[] | null>(null);
 
   const clearAllMarkers = () => {
     if (markersRef.current.length > 0) {
       console.log("[useMapMarkers] Clearing all existing markers:", markersRef.current.length);
-      clearMarkers(markersRef.current);
-      markersRef.current = [];
+      markersRef.current = clearMarkers(markersRef.current);
     }
   };
 
@@ -43,14 +44,12 @@ export const useMapMarkers = ({
       return;
     }
 
-    // Determine if a significant change occurred that requires re-rendering markers
     const itineraryChanged = prevItineraryRef.current !== itinerary;
     const dayChanged = selectedDay !== prevSelectedDayRef.current;
-    const placesPropChanged = prevPlacesRef.current !== places; // Check if the general places list changed
+    const placesPropChanged = prevPlacesRef.current !== places;
     const selectedPlaceChanged = selectedPlace !== (markersRef.current as any)._prevSelectedPlace;
     const highlightChanged = highlightPlaceId !== (markersRef.current as any)._prevHighlightPlaceId;
     const selectedPlacesListChanged = JSON.stringify(selectedPlaces) !== JSON.stringify((markersRef.current as any)._prevSelectedPlacesList);
-
 
     if (itineraryChanged || dayChanged || placesPropChanged || selectedPlaceChanged || highlightChanged || selectedPlacesListChanged) {
       console.log("[useMapMarkers] Change detected, regenerating markers:", {
@@ -66,11 +65,10 @@ export const useMapMarkers = ({
 
       prevItineraryRef.current = itinerary;
       prevSelectedDayRef.current = selectedDay;
-      prevPlacesRef.current = places; // Store current general places list
+      prevPlacesRef.current = places;
       (markersRef.current as any)._prevSelectedPlace = selectedPlace;
       (markersRef.current as any)._prevHighlightPlaceId = highlightPlaceId;
       (markersRef.current as any)._prevSelectedPlacesList = selectedPlaces;
-
 
       renderMarkers();
     }
@@ -84,7 +82,6 @@ export const useMapMarkers = ({
     let placesToDisplay: (Place | ItineraryPlaceWithTime)[] = [];
     let isDisplayingItineraryDay = false;
 
-    // Priority: If an itinerary is active and a day is selected, show that day's places.
     if (itinerary && itinerary.length > 0 && selectedDay !== null) {
       const currentDayData = itinerary.find(day => day.day === selectedDay);
       if (currentDayData && currentDayData.places && currentDayData.places.length > 0) {
@@ -93,21 +90,15 @@ export const useMapMarkers = ({
         console.log(`[useMapMarkers] Displaying itinerary day ${selectedDay}: ${placesToDisplay.length} places.`);
       } else {
         console.log(`[useMapMarkers] Itinerary active for day ${selectedDay}, but no places found for this day. No itinerary markers shown.`);
-        placesToDisplay = []; // Explicitly empty
+        placesToDisplay = [];
       }
     } 
-    // Fallback: If no itinerary is active (or no day selected within an active itinerary, though user wants selected day only)
-    // then show general places from the 'places' prop.
-    // Crucially, if an itinerary *is* active, we DON'T fall back to general 'places' here,
-    // ensuring "장소 추천 목록" markers are hidden when itinerary is active.
     else if (!itinerary || itinerary.length === 0) {
         placesToDisplay = places || [];
         console.log(`[useMapMarkers] No active itinerary. Displaying general places: ${placesToDisplay.length}`);
     } else {
-        // Itinerary exists but no selected day. Per user request, show nothing from itinerary then.
-        // And also don't show general places.
         console.log(`[useMapMarkers] Itinerary active, but no specific day selected. No markers shown.`);
-        placesToDisplay = []; // Explicitly empty
+        placesToDisplay = [];
     }
     
     if (placesToDisplay.length > 0) {
@@ -135,32 +126,28 @@ export const useMapMarkers = ({
           
           const iconOptions = getMarkerIconOptions(
             place,
-            isInfoWindowTarget || isGeneralHighlightTarget, // isSelected
-            isGloballySelectedCandidate && !isInfoWindowTarget && !isGeneralHighlightTarget, // isCandidate
-            isDisplayingItineraryDay, // isItineraryDayPlace
-            isDisplayingItineraryDay ? index + 1 : undefined // itineraryOrder
+            isInfoWindowTarget || isGeneralHighlightTarget,
+            isGloballySelectedCandidate && !isInfoWindowTarget && !isGeneralHighlightTarget,
+            isDisplayingItineraryDay,
+            isDisplayingItineraryDay ? index + 1 : undefined
           );
           
           const marker = createNaverMarker(map, position, iconOptions, place.name);
           
-          if (onPlaceClick && window.naver && window.naver.maps && window.naver.maps.Event) {
+          if (marker && onPlaceClick && window.naver && window.naver.maps && window.naver.maps.Event) {
             window.naver.maps.Event.addListener(marker, 'click', () => {
               console.log(`[useMapMarkers] Marker clicked: ${place.name} (Index: ${index}, ItineraryDayPlace: ${isDisplayingItineraryDay})`);
               onPlaceClick(place, index);
             });
           }
-          newMarkers.push(marker);
+          if (marker) newMarkers.push(marker);
         });
         markersRef.current = newMarkers;
 
         if (validPlacesToDisplay.length > 0) {
-            // Only fit bounds if not focusing on a single selected/highlighted place
             if (!(selectedPlace || highlightPlaceId)) {
                 console.log("[useMapMarkers] Fitting map bounds to displayed markers.");
                 fitBoundsToPlaces(map, validPlacesToDisplay as Place[]);
-            } else if ((selectedPlace || (highlightPlaceId && placesToDisplay.find(p => p.id === highlightPlaceId )))) {
-                // If a place is selected/highlighted, pan to it instead of fitting all bounds
-                // This logic is handled below
             }
         }
       }
@@ -168,11 +155,10 @@ export const useMapMarkers = ({
       console.log("[useMapMarkers] No places to display after filtering.");
     }
     
-    // Handle focusing on selected/highlighted place (pan and zoom)
     const placeToFocus = selectedPlace || (highlightPlaceId ? placesToDisplay.find(p => p.id === highlightPlaceId) : null);
     if (placeToFocus && placeToFocus.y != null && placeToFocus.x != null) {
       console.log(`[useMapMarkers] Panning to focused place: ${placeToFocus.name}`);
-      if (map.getZoom() < 15) map.setZoom(15, true); // Smooth zoom if too far out
+      if (map.getZoom() < 15) map.setZoom(15, true);
       panToPosition(map, placeToFocus.y, placeToFocus.x);
     } else if (placeToFocus) {
       console.warn(`[useMapMarkers] Target focus place '${placeToFocus.name}' has no valid coordinates.`);
