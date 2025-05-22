@@ -1,4 +1,3 @@
-
 /**
  * Types related to itinerary structure and places with time
  */
@@ -8,7 +7,7 @@ import { RouteData } from './route-data';
 
 // Place with time information
 export interface ItineraryPlaceWithTime {
-  id: string;                   // Unique identifier for this itinerary entry (can be original place ID or generated)
+  id: string | number;          // Unique identifier for this itinerary entry (can be original place ID or generated) - CHANGED
   name: string;                 // Name of the place
   category: string;             // Category of the place (e.g., 'restaurant', 'attraction')
   
@@ -17,7 +16,7 @@ export interface ItineraryPlaceWithTime {
   departTime?: string;          // Formatted departure time, e.g., "10:30"
   stayDuration?: number;        // Duration of stay in minutes
   travelTimeToNext?: string;    // Estimated travel time to the next place, e.g., "15분"
-
+  
   // Geographic and Detailed Information (aligned with Place to ensure assignability)
   x: number;                   // Longitude (required)
   y: number;                   // Latitude (required)
@@ -28,10 +27,10 @@ export interface ItineraryPlaceWithTime {
   rating: number;              // Place rating (required)
   image_url: string;           // URL for an image of the place (required)
   homepage: string;            // URL for the place's homepage (required)
-
-  // For GeoJSON based routing if applicable
-  geoNodeId?: string;  // ID of the corresponding node in GeoJSON data - CHANGED to string | undefined
   
+  // For GeoJSON based routing if applicable
+  geoNodeId?: string;  // ID of the corresponding node in GeoJSON data
+      
   isFallback?: boolean;         // True if detailed information could not be found and default/server values are used
   
   // Properties for compatibility with Place selection logic
@@ -64,4 +63,3 @@ export interface ServerResponseParsingResult {
   itineraryDays: ItineraryDay[];
   error?: string;
 }
-
