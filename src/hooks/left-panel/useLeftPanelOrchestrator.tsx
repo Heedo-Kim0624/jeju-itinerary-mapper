@@ -4,8 +4,9 @@ import { useScheduleGenerationRunner } from '@/hooks/schedule/useScheduleGenerat
 import { useCreateItineraryHandler } from '@/hooks/left-panel/useCreateItineraryHandler';
 import { useLeftPanelCallbacks } from '@/hooks/left-panel/use-left-panel-callbacks';
 import { useLeftPanelProps } from '@/hooks/left-panel/use-left-panel-props';
-import { useAdaptedScheduleGenerator } from '@/hooks/left-panel/useAdaptedScheduleGenerator'; // 새 훅 임포트
-import { useItineraryViewDecider } from '@/hooks/left-panel/useItineraryViewDecider'; // 새 훅 임포트
+import { useAdaptedScheduleGenerator } from '@/hooks/left-panel/useAdaptedScheduleGenerator';
+import { useItineraryViewDecider } from '@/hooks/left-panel/useItineraryViewDecider';
+import { useEnhancedPanelProps } from '@/hooks/left-panel/useEnhancedPanelProps';
 import { toast } from 'sonner';
 import { summarizeItineraryData } from '@/utils/debugUtils';
 import type { ItineraryDay, Place, SchedulePayload } from '@/types';
@@ -90,8 +91,8 @@ export const useLeftPanelOrchestrator = () => {
   ) ? currentPanel : 'category' as const;
 
   const {
-    itineraryDisplayProps,
-    mainPanelProps,
+    itineraryDisplayProps: baseItineraryDisplayProps,
+    mainPanelProps: baseMainPanelProps,
     devDebugInfoProps,
   } = useLeftPanelProps({
     uiVisibility,
@@ -166,22 +167,16 @@ export const useLeftPanelOrchestrator = () => {
     }
   }, [isActuallyGenerating, createItinerary]);
 
-  const enhancedItineraryDisplayProps = itineraryDisplayProps
-    ? {
-        ...itineraryDisplayProps,
-        handleClosePanelWithBackButton: callbacks.handleClosePanelWithBackButton,
-      }
-    : null;
-
-  const enhancedMainPanelProps = mainPanelProps
-    ? {
-        leftPanelContainerProps: {
-          ...mainPanelProps.leftPanelContainerProps,
-          onCreateItinerary: handleTriggerCreateItinerary,
-        },
-        leftPanelContentProps: mainPanelProps.leftPanelContentProps,
-      }
-    : null;
+  // 새로운 훅을 사용하여 향상된 props 생성
+  const {
+    enhancedItineraryDisplayProps,
+    enhancedMainPanelProps,
+  } = useEnhancedPanelProps({
+    itineraryDisplayProps: baseItineraryDisplayProps,
+    mainPanelProps: baseMainPanelProps,
+    callbacks,
+    handleTriggerCreateItinerary,
+  });
 
   return {
     regionSelection,
