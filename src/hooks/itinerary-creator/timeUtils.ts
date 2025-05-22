@@ -42,3 +42,55 @@ export const addTravelTime = (currentTime: Date, travelTimeMinutes: number): Dat
   return addMinutes(currentTime, travelTimeMinutes);
 };
 
+/**
+ * 이동 시간을 사람이 읽기 쉬운 문자열로 포맷합니다.
+ * @param minutes - 이동 시간 (분 단위)
+ * @returns 포맷된 이동 시간 문자열 (예: "30분" 또는 "1시간 30분")
+ */
+export const formatTravelTimeString = (minutes: number): string => {
+  if (!minutes || minutes <= 0) return "-";
+  
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  
+  if (hours === 0) {
+    return `${remainingMinutes}분`;
+  } else if (remainingMinutes === 0) {
+    return `${hours}시간`;
+  } else {
+    return `${hours}시간 ${remainingMinutes}분`;
+  }
+};
+
+/**
+ * 주어진 Date와 시간 문자열을 결합하여 새로운 Date 객체를 생성합니다.
+ * @param date - 기준 날짜
+ * @param timeString - 시간 문자열 (HH:MM 형식)
+ * @returns 날짜와 시간이 결합된 새로운 Date 객체
+ */
+export const combineDateAndTime = (date: Date, timeString: string): Date => {
+  const result = new Date(date);
+  const [hours, minutes] = timeString.split(':').map(Number);
+  
+  result.setHours(hours, minutes, 0, 0);
+  return result;
+};
+
+/**
+ * 요일 문자열을 한국어로 변환합니다.
+ * @param dayOfWeek - 영문 요일 문자열 (예: "Mon", "Tue")
+ * @returns 한국어 요일 문자열 (예: "월", "화")
+ */
+export const getDayOfWeekKorean = (dayOfWeek: string): string => {
+  const dayMap: Record<string, string> = {
+    'Sun': '일',
+    'Mon': '월',
+    'Tue': '화',
+    'Wed': '수',
+    'Thu': '목',
+    'Fri': '금',
+    'Sat': '토'
+  };
+  
+  return dayMap[dayOfWeek] || dayOfWeek;
+};

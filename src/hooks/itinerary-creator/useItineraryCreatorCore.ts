@@ -4,13 +4,6 @@ import { estimateTravelTime, getTimeBlock } from './timeUtils';
 import { assignPlacesToDays } from './placeAssignmentUtils';
 import { calculateDistance } from '../../utils/distance';
 
-// Main interface for itinerary day structure - 이 파일 내의 ItineraryDay 정의 삭제
-// export interface ItineraryDay {
-//   day: number;
-//   places: ItineraryPlaceWithTime[];
-//   totalDistance: number;
-// }
-
 export const useItineraryCreator = () => {
   const createItinerary = (
     places: Place[],
@@ -47,4 +40,3 @@ export const useItineraryCreator = () => {
 
   return { createItinerary };
 };
-

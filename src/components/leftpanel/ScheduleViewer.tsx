@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { ItineraryDay, ItineraryPlaceWithTime } from '@/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -70,37 +71,42 @@ const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
                  <div className="absolute top-6 bottom-6 left-[23px] w-0.5 bg-gray-300 z-0"></div>
               )}
               
-              {currentDayToDisplay.places.map((place, idx) => (
-                <div key={place.id || `place-${idx}`} className="flex items-start relative z-10">
-                  <div className="h-12 w-12 rounded-full bg-blue-500 text-white font-bold flex items-center justify-center border-4 border-white shadow-md shrink-0">
-                    {idx + 1}
-                  </div>
-                  
-                  <div className="ml-4 flex-1 border rounded-lg p-3 bg-white shadow">
-                    <div className="font-medium">{place.name}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {categoryToKorean(place.category)} 
+              {currentDayToDisplay.places.map((place, idx) => {
+                // 고유한 키 생성 - 장소 ID, 인덱스, 날짜를 조합하여 고유성 보장
+                const uniquePlaceKey = `place-${place.numericDbId || place.id || place.name.replace(/\s+/g, '')}-${idx}-day${currentDayToDisplay.day}`;
+                
+                return (
+                  <div key={uniquePlaceKey} className="flex items-start relative z-10">
+                    <div className="h-12 w-12 rounded-full bg-blue-500 text-white font-bold flex items-center justify-center border-4 border-white shadow-md shrink-0">
+                      {idx + 1}
                     </div>
                     
-                    {(place.arriveTime || place.timeBlock) && (
-                      <div className="flex items-center mt-2 text-xs text-gray-600">
-                        <Clock className="w-3 h-3 mr-1.5" />
-                        <span>{place.arriveTime || place.timeBlock}</span>
-                        {place.stayDuration && place.stayDuration > 0 && (
-                          <span className="ml-2">({Math.floor(place.stayDuration / 60)}시간 {place.stayDuration % 60 > 0 ? `${place.stayDuration % 60}분` : ''} 체류)</span>
-                        )}
+                    <div className="ml-4 flex-1 border rounded-lg p-3 bg-white shadow">
+                      <div className="font-medium">{place.name}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {categoryToKorean(place.category)} 
                       </div>
-                    )}
-                    
-                    {place.travelTimeToNext && place.travelTimeToNext !== "-" && (
-                      <div className="flex items-center mt-1 text-xs text-gray-600">
-                        <Navigation className="w-3 h-3 mr-1.5" />
-                        <span>다음 장소까지: {place.travelTimeToNext}</span>
-                      </div>
-                    )}
+                      
+                      {(place.arriveTime || place.timeBlock) && (
+                        <div className="flex items-center mt-2 text-xs text-gray-600">
+                          <Clock className="w-3 h-3 mr-1.5" />
+                          <span>{place.arriveTime || place.timeBlock}</span>
+                          {place.stayDuration && place.stayDuration > 0 && (
+                            <span className="ml-2">({Math.floor(place.stayDuration / 60)}시간 {place.stayDuration % 60 > 0 ? `${place.stayDuration % 60}분` : ''} 체류)</span>
+                          )}
+                        </div>
+                      )}
+                      
+                      {place.travelTimeToNext && place.travelTimeToNext !== "-" && (
+                        <div className="flex items-center mt-1 text-xs text-gray-600">
+                          <Navigation className="w-3 h-3 mr-1.5" />
+                          <span>다음 장소까지: {place.travelTimeToNext}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         ) : (

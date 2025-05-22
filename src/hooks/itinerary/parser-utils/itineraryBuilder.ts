@@ -1,7 +1,7 @@
 
 import { ItineraryDay, ItineraryPlaceWithTime, ServerScheduleItem, NewServerScheduleResponse, CoreSelectedPlace, SchedulePayload } from '@/types/core';
 import { getProcessedItemDetails } from './scheduleItemProcessor';
-import { extractTimeFromTimeBlock, calculateDepartTime, formatDate } from './timeUtils';
+import { extractTimeFromTimeBlock, calculateDepartTime, formatDate, formatTravelTime, estimateTravelTimeFromDistance } from './timeUtils';
 
 /**
  * Handles special cases like airports
@@ -68,7 +68,7 @@ const createItineraryPlace = (
     arriveTime: arriveTime,
     departTime: departTime,
     stayDuration: stayDurationMinutes,
-    travelTimeToNext: "15분", // Placeholder
+    travelTimeToNext: "N/A", // Will be updated later
     isFallback: item.isFallback,
     geoNodeId: geoNodeId,
     numericDbId: numericId,
@@ -128,7 +128,48 @@ export const buildGroupedItineraryPlaces = (
     i = j;
   }
 
+  // Calculate and update travel times between places
+  for (let i = 0; i < groupedPlaces.length - 1; i++) {
+    const currentPlace = groupedPlaces[i];
+    const nextPlace = groupedPlaces[i + 1];
+    
+    // Calculate distance between places
+    const distanceKm = calculateDistanceBetweenPlaces(currentPlace, nextPlace);
+    
+    // Estimate travel time based on distance
+    const travelTimeMinutes = estimateTravelTimeFromDistance(distanceKm);
+    
+    // Update travel time in formatted string
+    currentPlace.travelTimeToNext = formatTravelTime(travelTimeMinutes);
+  }
+
   return groupedPlaces;
+};
+
+/**
+ * Calculates distance between two places using Haversine formula
+ */
+const calculateDistanceBetweenPlaces = (place1: ItineraryPlaceWithTime, place2: ItineraryPlaceWithTime): number => {
+  const R = 6371; // Earth radius in kilometers
+  const dLat = deg2rad(place2.y - place1.y);
+  const dLon = deg2rad(place2.x - place1.x);
+  
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(deg2rad(place1.y)) * Math.cos(deg2rad(place2.y)) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  const distance = R * c; // Distance in kilometers
+  
+  return Math.round(distance * 10) / 10; // Round to 1 decimal place
+};
+
+/**
+ * Convert degrees to radians
+ */
+const deg2rad = (deg: number): number => {
+  return deg * (Math.PI/180);
 };
 
 /**
