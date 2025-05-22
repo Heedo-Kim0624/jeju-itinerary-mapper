@@ -1,7 +1,9 @@
 
 import { useCallback, useEffect, useRef } from 'react';
-import { NewServerScheduleResponse, ItineraryDay, ServerScheduleItem, ItineraryPlaceWithTime, RouteData, ServerRouteSummaryItem } from '@/types/core'; // ServerRouteSummaryItem 추가
-import { getDateStringMMDD, getDayOfWeekString } from '../itinerary/parser-utils/timeUtils'; // 경로 수정 및 임포트 추가
+import { NewServerScheduleResponse, ItineraryDay, ServerScheduleItem, ItineraryPlaceWithTime, RouteData, ServerRouteSummaryItem } from '@/types/core';
+import { getDateStringMMDD, getDayOfWeekString } from '../itinerary/parser-utils/timeUtils';
+import { useSupabaseDataFetcher } from '../data/useSupabaseDataFetcher';
+import { useItineraryEnricher } from '../itinerary/useItineraryEnricher';
 
 interface ServerResponseHandlerProps {
   onServerResponse: (response: NewServerScheduleResponse) => void;
@@ -17,20 +19,28 @@ export const useServerResponseHandler = ({
 }: ServerResponseHandlerProps) => {
   // 이벤트 리스너가 이미 등록되었는지 추적
   const listenerRegistered = useRef(false);
+  const { fetchAllCategoryData } = useSupabaseDataFetcher();
+  const { enrichItineraryData } = useItineraryEnricher();
   
   // 서버 응답 이벤트 핸들러
-  const handleRawServerResponse = useCallback((event: Event) => {
+  const handleRawServerResponse = useCallback(async (event: Event) => {
     const customEvent = event as CustomEvent<{response: NewServerScheduleResponse}>;
     const serverResponse = customEvent.detail?.response;
     
     console.log('[useServerResponseHandler] rawServerResponseReceived 이벤트 받음:', serverResponse);
     
     if (serverResponse) {
-      onServerResponse(serverResponse);
+      try {
+        // Ensure Supabase data is loaded before processing
+        await fetchAllCategoryData();
+        onServerResponse(serverResponse);
+      } catch (error) {
+        console.error("[useServerResponseHandler] 서버 응답 처리 중 오류:", error);
+      }
     } else {
       console.error("[useServerResponseHandler] 서버 응답 이벤트에 올바른 응답이 포함되어 있지 않습니다");
     }
-  }, [onServerResponse]);
+  }, [onServerResponse, fetchAllCategoryData]);
 
   // 이벤트 리스너 등록 및 해제
   useEffect(() => {
@@ -51,8 +61,32 @@ export const useServerResponseHandler = ({
     }
   }, [enabled, handleRawServerResponse]);
 
+  // 서버 응답을 파싱하고 데이터를 Supabase로 보강하는 함수
+  const processServerResponse = useCallback((
+    serverResponse: NewServerScheduleResponse,
+    startDate: Date
+  ): ItineraryDay[] => {
+    console.log("[processServerResponse] 서버 응답 처리 시작");
+    
+    try {
+      // 1. 기본 서버 응답 파싱하여 itineraryDays 생성
+      const parsedItinerary = parseServerResponse(serverResponse, startDate);
+      console.log("[processServerResponse] 기본 파싱 완료:", parsedItinerary.length, "일차 생성됨");
+      
+      // 2. Supabase 데이터로 보강
+      const enrichedItinerary = enrichItineraryData(parsedItinerary);
+      console.log("[processServerResponse] Supabase 데이터 보강 완료");
+      
+      return enrichedItinerary;
+    } catch (error) {
+      console.error("[processServerResponse] 응답 처리 중 오류:", error);
+      return [];
+    }
+  }, [enrichItineraryData]);
+
   return {
-    isListenerRegistered: listenerRegistered.current
+    isListenerRegistered: listenerRegistered.current,
+    processServerResponse
   };
 };
 
@@ -147,7 +181,6 @@ export const parseServerResponse = (
       // but other parts like formatServerItinerary.ts use string[].
       const finalInterleavedRoute = currentInterleavedRoute.map(id => String(id));
 
-
       const routeData: RouteData = {
         nodeIds,
         linkIds,
@@ -169,4 +202,3 @@ export const parseServerResponse = (
     return [];
   }
 };
-

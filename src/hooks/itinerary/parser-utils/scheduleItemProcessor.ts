@@ -1,18 +1,15 @@
+
 import { ServerScheduleItem } from '@/types/core';
-// SelectedPlace and SchedulePayload might not be needed here if all details come from global store
-// import { SelectedPlace } from '@/types/core';
-// import { SchedulePayload } from '@/types/core';
 import { parseIntId } from '@/utils/id-utils';
-import { usePlaceContext } from '@/contexts/PlaceContext'; // Import the context hook
-import type { DetailedPlace } from '@/types/detailedPlace'; // Import DetailedPlace
+import type { DetailedPlace } from '@/types/detailedPlace';
 import { toCategoryName } from '@/utils/typeConversionUtils';
 import type { CategoryName } from '@/types/core';
-
+import { PlaceData } from '@/hooks/data/useSupabaseDataFetcher';
 
 // Define the return type for getProcessedItemDetails
 interface ProcessedScheduleItemDetails {
   item: ServerScheduleItem;
-  details: DetailedPlace | undefined; // Now uses DetailedPlace
+  details: DetailedPlace | PlaceData | undefined; // Can be DetailedPlace or our PlaceData
   numericId: number | null;
   isFallback: boolean; // Indicates if we're using fallback data due to missing details
   // Core fields, derived from 'details' or fallback
@@ -30,54 +27,53 @@ interface ProcessedScheduleItemDetails {
   geoNodeId?: string;
 }
 
-
 /**
- * Processes a single server item to find matched place details and extract relevant information
- * This version uses the global PlaceContext for details.
+ * Processes a single server item using detailed place data from provided source
+ * No longer uses context hook - receives place details as parameter
  */
 export const getProcessedItemDetails = (
-  serverItem: ServerScheduleItem
-  // lastPayload and currentSelectedPlaces are removed as we use global store
+  serverItem: ServerScheduleItem,
+  getPlaceDetails: (id: number) => DetailedPlace | PlaceData | undefined
 ): ProcessedScheduleItemDetails => {
-  const { getPlaceById, isLoadingPlaces } = usePlaceContext(); // Get access to the global place store
-
   const serverItemIdInt = parseIntId(serverItem.id);
 
-  let placeDetails: DetailedPlace | undefined = undefined;
+  let placeDetails: DetailedPlace | PlaceData | undefined = undefined;
 
-  if (serverItemIdInt !== null && !isLoadingPlaces) {
-    placeDetails = getPlaceById(serverItemIdInt);
+  if (serverItemIdInt !== null) {
+    placeDetails = getPlaceDetails(serverItemIdInt);
     if (!placeDetails) {
       // This log is important for debugging consistency between server schedule and place DB
-      console.warn(`[scheduleItemProcessor] Place details not found in global store for ID ${serverItemIdInt} (Name: "${serverItem.place_name}"). This might indicate a data inconsistency or a new place not yet in the DB.`);
+      console.warn(`[scheduleItemProcessor] Place details not found for ID ${serverItemIdInt} (Name: "${serverItem.place_name}")`);
     }
-  } else if (isLoadingPlaces && serverItemIdInt !== null) {
-    console.warn(`[scheduleItemProcessor] Place store is still loading. Details for ID ${serverItemIdInt} (Name: "${serverItem.place_name}") might be temporarily unavailable.`);
   }
 
-
   if (placeDetails) {
+    // Handle both DetailedPlace and PlaceData types
+    const isDetailedPlace = 'category' in placeDetails;
+    
     return {
       item: serverItem,
       details: placeDetails,
-      numericId: placeDetails.id, // Should be number already
+      numericId: serverItemIdInt,
       isFallback: false,
-      name: placeDetails.name,
-      category: placeDetails.category, // Already CategoryName from DetailedPlace
-      x: placeDetails.x,
-      y: placeDetails.y,
-      address: placeDetails.address,
-      road_address: placeDetails.road_address || placeDetails.address,
+      name: placeDetails.name || placeDetails.place_name || serverItem.place_name,
+      category: isDetailedPlace ? placeDetails.category : toCategoryName(serverItem.place_type || '관광지'),
+      // Handle different property names between DetailedPlace and PlaceData
+      x: isDetailedPlace ? placeDetails.x : placeDetails.longitude,
+      y: isDetailedPlace ? placeDetails.y : placeDetails.latitude,
+      address: placeDetails.address || '',
+      road_address: placeDetails.road_address || placeDetails.address || '',
       phone: placeDetails.phone || 'N/A',
-      description: placeDetails.description || '',
+      description: isDetailedPlace ? placeDetails.description : (placeDetails.categories_details || ''),
       rating: placeDetails.rating || 0,
-      image_url: placeDetails.image_url || '',
-      homepage: placeDetails.homepage || placeDetails.link_url || '', // Prefer homepage, fallback to link_url
-      geoNodeId: placeDetails.geoNodeId,
+      image_url: isDetailedPlace ? placeDetails.image_url : '',
+      homepage: isDetailedPlace ? (placeDetails.homepage || placeDetails.link_url || '') : 
+                                (placeDetails.link || ''),
+      geoNodeId: isDetailedPlace ? placeDetails.geoNodeId : undefined,
     };
   }
 
-  // Fallback if no details found or store is loading
+  // Fallback if no details found
   const fallbackCategory = mapServerTypeToCategory(serverItem.place_type || '기타');
   return {
     item: serverItem,
@@ -86,7 +82,6 @@ export const getProcessedItemDetails = (
     isFallback: true,
     name: serverItem.place_name || '정보 없음',
     category: fallbackCategory,
-    // Corrected: Use default coordinates directly as ServerScheduleItem lacks longitude/latitude properties.
     x: 126.57, // Default to Jeju City Hall approx. longitude
     y: 33.49,  // Default to Jeju City Hall approx. latitude
     address: '주소 정보 없음 (상세 정보 누락)',
@@ -117,9 +112,5 @@ const mapServerTypeToCategory = (serverType: string): CategoryName => {
   if (typeLower?.includes('관광') || typeLower?.includes('명소')) return toCategoryName('관광지');
   if (typeLower?.includes('식당') || typeLower?.includes('맛집')) return toCategoryName('음식점');
   
-  // If '기타' needs to be a distinct category, CategoryName type and related utils should be updated.
-  // For now, toCategoryName will handle '기타' and convert it to its default (e.g., '관광지') with a warning.
-  // If a specific fallback like '기타' -> '관광지' is desired without warning, handle it here explicitly.
-  // console.warn(`[mapServerTypeToCategory] Unknown server place type: "${serverType}". Defaulting to "기타", which will be processed by toCategoryName.`);
-  return toCategoryName(serverType, '관광지'); // Pass original serverType, toCategoryName will handle unknown/English. Default to '관광지'.
+  return toCategoryName(serverType, '관광지');
 };
