@@ -1,10 +1,8 @@
 
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import MapContainer from './MapContainer';
-// DaySelector import 제거
-// import DaySelector from '@/components/map/DaySelector';
-import { useMapItineraryVisualization } from '@/hooks/map/useMapItineraryVisualization';
 import { useMapResize } from '@/hooks/useMapResize';
+import { useMapContext } from './MapContext'; // useMapContext 추가
 import type { Place, ItineraryDay } from '@/types/core';
 
 interface RightPanelProps {
@@ -20,50 +18,12 @@ const RightPanel: React.FC<RightPanelProps> = ({
   itinerary,
   selectedDay,
 }) => {
-  const mapRef = useRef<naver.maps.Map | null>(null);
-  const { initializeMap, addMarkers, clearMarkers, fitBoundsToMarkers, clearPolylines, drawPolyline } = useMapItineraryVisualization(mapRef);
+  const { map } = useMapContext(); // map 객체를 컨텍스트에서 가져옵니다.
   
-  useMapResize(mapRef);
+  useMapResize(map); // 컨텍스트의 map 객체를 사용하여 리사이즈 훅 호출
 
-  useEffect(() => {
-    if (!mapRef.current) {
-      console.log("[RightPanel] Initializing map");
-      initializeMap('map'); // map div ID
-    }
-  }, [initializeMap]);
-
-  useEffect(() => {
-    console.log("[RightPanel] Places or selectedPlace changed:", {
-      placesCount: places?.length,
-      selectedPlaceId: selectedPlace?.id,
-    });
-    clearMarkers();
-    if (places && places.length > 0) {
-      addMarkers(places, selectedPlace);
-      if (!selectedPlace) { // Only fit to all markers if no specific place is selected
-        fitBoundsToMarkers(places);
-      }
-    }
-  }, [places, selectedPlace, clearMarkers, addMarkers, fitBoundsToMarkers]);
-  
-  useEffect(() => {
-    console.log("[RightPanel] Itinerary or selectedDay changed:", {
-      itineraryDays: itinerary?.length,
-      selectedDay,
-    });
-    clearPolylines();
-    if (itinerary && selectedDay !== null) {
-      const currentDayData = itinerary.find(day => day.day === selectedDay);
-      if (currentDayData && currentDayData.places.length > 0) {
-        console.log("[RightPanel] Drawing polyline for selected day's places:", currentDayData.places.map(p => p.name));
-        drawPolyline(currentDayData.places);
-        addMarkers(currentDayData.places, null, true); // Add itinerary place markers
-        fitBoundsToMarkers(currentDayData.places);
-      } else {
-        console.log("[RightPanel] No places to draw for selected day or currentDayData not found.");
-      }
-    }
-  }, [itinerary, selectedDay, clearPolylines, drawPolyline, addMarkers, fitBoundsToMarkers]);
+  // 직접적인 지도 조작 로직 (initializeMap, addMarkers, clearMarkers 등) 제거
+  // 해당 로직은 Map.tsx, MapMarkers.tsx 등 하위 컴포넌트에서 props와 context를 통해 처리
 
   console.log("[RightPanel] Rendering with props:", {
     placesCount: places?.length,
@@ -74,22 +34,13 @@ const RightPanel: React.FC<RightPanelProps> = ({
 
   return (
     <div className="flex-1 h-full relative">
-      <MapContainer mapId="map" />
-      {/* DaySelector 컴포넌트 제거 */}
-      {/* 
-      {itinerary && itinerary.length > 0 && selectedDay !== null && (
-        <DaySelector
-          itinerary={itinerary}
-          currentDay={selectedDay}
-          onDaySelect={(dayItem) => {
-            const event = new CustomEvent('selectItineraryDay', { detail: { dayNumber: dayItem.day } });
-            window.dispatchEvent(event);
-            console.log(`[Map DaySelector] Day ${dayItem.day} selected, event dispatched.`);
-          }}
-          totalDistance={itinerary.find(d => d.day === selectedDay)?.totalDistance || 0}
-        />
-      )}
-      */}
+      {/* MapContainer에 필요한 props만 전달하고 mapId prop 제거 */}
+      <MapContainer
+        places={places}
+        selectedPlace={selectedPlace}
+        itinerary={itinerary}
+        selectedDay={selectedDay}
+      />
     </div>
   );
 };
