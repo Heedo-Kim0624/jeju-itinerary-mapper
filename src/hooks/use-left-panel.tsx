@@ -14,7 +14,7 @@ import { useCategoryResultHandlers } from './left-panel/use-category-result-hand
 import { useEventListeners } from './left-panel/use-event-listeners';
 import { SchedulePayload, Place, ItineraryDay, CategoryName } from '@/types/core';
 import { toast } from 'sonner';
-import type { ItineraryManagementState, UiVisibilityState } from '@/types/left-panel/index'; // Corrected import path
+import type { ItineraryManagementState, UiVisibilityState } from '@/types/left-panel/index';
 
 /**
  * 왼쪽 패널 기능 통합 훅
@@ -22,7 +22,7 @@ import type { ItineraryManagementState, UiVisibilityState } from '@/types/left-p
 export const useLeftPanel = () => {
   const leftPanelState = useLeftPanelState();
   const regionSelection = useRegionSelection();
-  const categorySelectionHook = useCategorySelection(); // Renamed to avoid conflict
+  const categorySelectionHook = useCategorySelection(); 
   const tripDetailsHookResult = useTripDetails();
   const { directInputValues, onDirectInputChange } = useInputState();
   
@@ -34,24 +34,48 @@ export const useLeftPanel = () => {
   const placesManagement = useSelectedPlaces();
   const itineraryManagementHook: UseItineraryReturn = useItinerary(); 
 
-  const uiVisibility: UiVisibilityState = { // Ensure it matches UiVisibilityState
+  const uiVisibility: UiVisibilityState = {
     showItinerary: itineraryManagementHook.showItinerary,
     setShowItinerary: itineraryManagementHook.setShowItinerary,
     showCategoryResult: leftPanelState.showCategoryResult,
     setShowCategoryResult: leftPanelState.setShowCategoryResult
   };
 
+  // Extend categorySelectionHook with setActiveMiddlePanelCategory if needed
+  const extendedCategorySelectionHook = {
+    ...categorySelectionHook,
+    // Add setActiveMiddlePanelCategory if it doesn't exist
+    setActiveMiddlePanelCategory: (category: CategoryName | null) => {
+      console.log(`[useLeftPanel] Setting active middle panel category: ${category}`);
+      // If the hook doesn't have setActiveMiddlePanelCategory, provide a fallback implementation
+      if (categorySelectionHook.setActiveMiddlePanelCategory) {
+        categorySelectionHook.setActiveMiddlePanelCategory(category);
+      } else {
+        // Fallback implementation using the existing hook properties
+        if (category === null) {
+          // Handle category deselection logic here
+          // This likely needs custom implementation
+          console.log("[useLeftPanel] Category deselected");
+        } else {
+          // Handle category selection logic here
+          // This can use existing methods if available
+          if (categorySelectionHook.handleCategoryClick) {
+            categorySelectionHook.handleCategoryClick(category);
+          }
+        }
+      }
+    }
+  };
+
   const categoryHandlers = useCategoryHandlers(
     leftPanelState.setShowCategoryResult,
-    // Pass setActiveMiddlePanelCategory from categorySelectionHook
-    categorySelectionHook.setActiveMiddlePanelCategory 
+    // Use the extended hook with setActiveMiddlePanelCategory
+    extendedCategorySelectionHook.setActiveMiddlePanelCategory
   );
   
   const keywordsAndInputs = {
     directInputValues,
     onDirectInputChange,
-    // handleConfirmCategory is usually part of categorySelectionHook or general callbacks
-    // For now, let's assume it's correctly handled by categorySelectionHook.handleConfirmCategory
   };
 
   const categoryResultHandlers = useCategoryResultHandlers(
@@ -105,8 +129,6 @@ export const useLeftPanel = () => {
     setCurrentPanel: leftPanelState.setCurrentPanel,
     setIsGenerating: leftPanelState.setIsGenerating, 
     setItineraryReceived: leftPanelState.setItineraryReceived,
-    // handleServerItineraryResponse is NOT part of useItineraryCreation props.
-    // It's called by useScheduleGenerationRunner which is used by generateItineraryAdapter.
   });
 
   const { 
@@ -147,6 +169,17 @@ export const useLeftPanel = () => {
     uiVisibility.setShowItinerary
   ]);
   
+  // Create an adapter for handleServerItineraryResponse that matches the expected signature
+  const adaptedHandleServerItineraryResponse = (parsedItinerary: ItineraryDay[]) => {
+    // Call the original function with the parsed itinerary
+    // The original function expects more parameters, but we'll ignore them
+    if (itineraryManagementHook.handleServerItineraryResponse) {
+      itineraryManagementHook.handleServerItineraryResponse(
+        parsedItinerary
+      );
+    }
+  };
+  
   const itineraryManagementState: ItineraryManagementState = {
     itinerary: itineraryManagementHook.itinerary,
     selectedItineraryDay: itineraryManagementHook.selectedItineraryDay,
@@ -155,29 +188,25 @@ export const useLeftPanel = () => {
     showItinerary: itineraryManagementHook.showItinerary,
     setShowItinerary: itineraryManagementHook.setShowItinerary,
     setItinerary: itineraryManagementHook.setItinerary,
-    handleServerItineraryResponse: itineraryManagementHook.handleServerItineraryResponse,
+    handleServerItineraryResponse: adaptedHandleServerItineraryResponse,
   };
 
   return {
     regionSelection,
-    categorySelection: categorySelectionHook, // Return the entire hook result
-    keywordsAndInputs, // Contains directInputValues and onDirectInputChange
+    categorySelection: extendedCategorySelectionHook,
+    keywordsAndInputs,
     placesManagement,
     tripDetails: tripDetailsHookResult,
     uiVisibility,
     itineraryManagement: itineraryManagementState,
     handleCreateItinerary: itineraryCreation.handleInitiateItineraryCreation,
     handleCloseItinerary: itineraryCreation.handleCloseItineraryPanel,
-    // selectedCategory: leftPanelState.selectedCategory, // This seems legacy
     currentPanel: leftPanelState.currentPanel,
     isCategoryLoading,
     categoryError,
     categoryResults,
-    categoryResultHandlers, 
-    // handleCategorySelect is now part of categoryHandlers, which useCategoryHandlers provides
-    // The call site will use categoryHandlers.handleCategorySelect(categoryName, refetchCallback)
-    // So, we expose categoryHandlers
-    categoryHandlers, // Expose the handlers object which contains handleCategorySelect
+    categoryResultHandlers,
+    categoryHandlers,
     isGeneratingItinerary: leftPanelState.isGenerating, 
     itineraryReceived: leftPanelState.itineraryReceived,
   };

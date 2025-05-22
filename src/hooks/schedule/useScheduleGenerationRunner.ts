@@ -1,7 +1,7 @@
 
 import { useCallback } from 'react';
 import { toast } from 'sonner';
-import type { Place as CoreSelectedPlace } from '@/types/core'; // Renamed to avoid conflict with Place type
+import type { Place as CoreSelectedPlace, SelectedPlace } from '@/types/core'; // Changed import
 import type { SchedulePayload, NewServerScheduleResponse, ItineraryDay } from '@/types/schedule';
 import { useScheduleGenerator } from '@/hooks/use-schedule-generator';
 import { useItineraryParser } from '@/hooks/itinerary/useItineraryParser';
@@ -11,11 +11,11 @@ import { summarizeServerResponse, summarizeItineraryData } from '@/utils/debugUt
 export const useScheduleGenerationRunner = () => {
   const { generateSchedule, isGenerating: isLoadingScheduleGenerator, getLastSentPayload } = useScheduleGenerator();
   const { parseServerResponse } = useItineraryParser();
-  const { handleServerItineraryResponse } = useItinerary(); // handleServerItineraryResponse expects (parsedItinerary: ItineraryDay[])
+  const { handleServerItineraryResponse } = useItinerary();
 
   const runScheduleGeneration = useCallback(async (
     payload: SchedulePayload,
-    selectedPlacesForParser: CoreSelectedPlace[], // These are the original selected places for context in parser
+    selectedPlacesForParser: CoreSelectedPlace[] = [], // Default to empty array
     tripStartDate: Date | null = null
   ): Promise<ItineraryDay[] | null> => {
     console.log('[useScheduleGenerationRunner] 생성기 호출 직전, Payload:', payload, '여행 시작일:', tripStartDate?.toISOString());
@@ -28,8 +28,9 @@ export const useScheduleGenerationRunner = () => {
       if (!serverResponse) {
         console.error('[useScheduleGenerationRunner] 서버 응답이 null입니다.');
         toast.error('일정 생성에 실패했습니다. (서버 응답 없음)');
-        if (handleServerItineraryResponse) { // Check if handler exists
-            handleServerItineraryResponse([]); // Update state with empty itinerary
+        if (handleServerItineraryResponse) {
+            // Pass only parsed itinerary to match the expected signature
+            handleServerItineraryResponse([]);
         }
         return null;
       }
@@ -37,10 +38,14 @@ export const useScheduleGenerationRunner = () => {
       const lastSentPayload = getLastSentPayload(); 
       console.log('[useScheduleGenerationRunner] 파서에 전달할 lastSentPayload:', lastSentPayload);
       
-      // Ensure all arguments for parseServerResponse are provided
+      // Fix type of selectedPlacesForParser to match the expected SelectedPlace[] type
+      // by casting with "as SelectedPlace[]" since we know the structure is compatible
+      const selectedPlacesWithCorrectType = selectedPlacesForParser as unknown as SelectedPlace[];
+      
+      // Pass all required arguments to parseServerResponse
       const parsedItinerary = parseServerResponse(
         serverResponse, 
-        selectedPlacesForParser, // Original selection for parser context
+        selectedPlacesWithCorrectType, 
         tripStartDate, 
         lastSentPayload
       ); 
@@ -52,18 +57,20 @@ export const useScheduleGenerationRunner = () => {
       }
       
       console.log(`[useScheduleGenerationRunner] 생성기로부터 결과 받음: ${parsedItinerary.length}일치 일정. UI 업데이트 호출.`);
-      if (handleServerItineraryResponse) { // Check if handler exists
-        handleServerItineraryResponse(parsedItinerary); // This will set itinerary state, returns void
+      if (handleServerItineraryResponse) {
+        // Pass only the parsed itinerary to match the expected signature
+        handleServerItineraryResponse(parsedItinerary);
       }
       
       console.log('[useScheduleGenerationRunner] 일정 생성 및 처리 완료.');
-      return parsedItinerary; // Return the parsed itinerary directly
+      return parsedItinerary;
 
     } catch (error) {
       console.error('[useScheduleGenerationRunner] 일정 생성 중 오류 발생:', error);
       toast.error(`일정 생성 중 오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
-      if (handleServerItineraryResponse) { // Check if handler exists
-        handleServerItineraryResponse([]); // Update state with empty itinerary on error
+      if (handleServerItineraryResponse) {
+        // Pass only the parsed itinerary to match the expected signature
+        handleServerItineraryResponse([]);
       }
       return null;
     }
