@@ -1,4 +1,3 @@
-
 import { useEffect, useCallback } from 'react'; // useCallback 추가
 import { useSelectedPlaces } from './use-selected-places';
 import { useTripDetails } from './use-trip-details';
@@ -12,7 +11,7 @@ import { useLeftPanelState } from './left-panel/use-left-panel-state';
 import { useItineraryCreation } from './left-panel/use-itinerary-creation';
 import { useCategoryResultHandlers } from './left-panel/use-category-result-handlers';
 import { useEventListeners } from './left-panel/use-event-listeners';
-import { SchedulePayload, Place, ItineraryDay } from '@/types/core'; // Place, ItineraryDay 임포트 추가
+import { SchedulePayload, Place, ItineraryDay, CategoryName } from '@/types/core'; // Place, ItineraryDay, CategoryName 임포트 추가
 import { toast } from 'sonner'; // toast 임포트 추가
 
 /**
@@ -21,9 +20,9 @@ import { toast } from 'sonner'; // toast 임포트 추가
  */
 export const useLeftPanel = () => {
   // Core state management
-  const leftPanelState = useLeftPanelState();
+  const leftPanelState = useLeftPanelState(); // Returns showCategoryResult as core CategoryName | null
   const regionSelection = useRegionSelection();
-  const categorySelection = useCategorySelection();
+  const categorySelectionHook = useCategorySelection(); // Renamed to avoid conflict
   const tripDetailsHookResult = useTripDetails();
   const { directInputValues, onDirectInputChange } = useInputState();
   
@@ -43,8 +42,10 @@ export const useLeftPanel = () => {
   const uiVisibility = {
     showItinerary: itineraryManagementHook.showItinerary,
     setShowItinerary: itineraryManagementHook.setShowItinerary,
-    showCategoryResult: leftPanelState.showCategoryResult,
-    setShowCategoryResult: leftPanelState.setShowCategoryResult
+    // This showCategoryResult is CategoryName (core) | null from useLeftPanelState
+    showCategoryResult: leftPanelState.showCategoryResult, 
+    // This setShowCategoryResult expects CategoryName (core) | null
+    setShowCategoryResult: leftPanelState.setShowCategoryResult 
   };
 
   // Category handlers
@@ -54,10 +55,12 @@ export const useLeftPanel = () => {
   const keywordsAndInputs = {
     directInputValues,
     onDirectInputChange,
-    handleConfirmCategory: (category: string, finalKeywords: string[], clearSelection: boolean = false) => {
-      categorySelection.handleConfirmCategory(category as any, finalKeywords, clearSelection);
+    handleConfirmCategory: (category: CategoryName, finalKeywords: string[], clearSelection: boolean = false) => {
+      // categorySelectionHook.handleConfirmCategory expects its own CategoryName, might need adjustment if different
+      // For now, assuming it can handle the core CategoryName or casting is appropriate.
+      categorySelectionHook.handleConfirmCategory(category as any, finalKeywords, clearSelection);
       if (clearSelection) {
-        leftPanelState.setShowCategoryResult(category as any);
+        leftPanelState.setShowCategoryResult(category); // This is fine, expects core CategoryName
       }
     }
   };
@@ -67,7 +70,7 @@ export const useLeftPanel = () => {
     regionSelection.selectedRegions,
     tripDetailsHookResult,
     placesManagement.handleAutoCompletePlaces,
-    leftPanelState.setShowCategoryResult
+    leftPanelState.setShowCategoryResult // This expects core CategoryName
   );
 
   // Adapter function for generateItinerary
@@ -124,9 +127,10 @@ export const useLeftPanel = () => {
     normalPlaces,
     refetch
   } = useCategoryResults(
-    leftPanelState.showCategoryResult, 
+    leftPanelState.showCategoryResult, // This is core CategoryName | null
+    // Ensure selectedKeywordsByCategory uses core CategoryName as key, or adapt access
     leftPanelState.showCategoryResult 
-      ? categorySelection.selectedKeywordsByCategory[leftPanelState.showCategoryResult] || [] 
+      ? categorySelectionHook.selectedKeywordsByCategory[leftPanelState.showCategoryResult as any] || [] 
       : [], 
     regionSelection.selectedRegions
   );
@@ -159,32 +163,32 @@ export const useLeftPanel = () => {
   // Combine and return all necessary functionality
   return {
     regionSelection,
-    categorySelection,
+    categorySelection: categorySelectionHook, // Return the renamed hook
     keywordsAndInputs,
     placesManagement,
     tripDetails: tripDetailsHookResult,
-    uiVisibility,
+    uiVisibility, // This now provides showCategoryResult as core CategoryName
     itineraryManagement: { // Ensure this object has all needed properties
       itinerary: itineraryManagementHook.itinerary,
       selectedItineraryDay: itineraryManagementHook.selectedItineraryDay,
       handleSelectItineraryDay: itineraryManagementHook.handleSelectItineraryDay,
       isItineraryCreated: itineraryManagementHook.isItineraryCreated,
-      handleServerItineraryResponse: itineraryManagementHook.handleServerItineraryResponse,
+      handleServerItineraryResponse: itineraryManagementHook.handleServerItineraryResponse, // Ensure this exists on itineraryHook
       showItinerary: itineraryManagementHook.showItinerary,
       setShowItinerary: itineraryManagementHook.setShowItinerary,
     },
     handleCreateItinerary: itineraryCreation.handleInitiateItineraryCreation,
     handleCloseItinerary: itineraryCreation.handleCloseItineraryPanel,
-    selectedCategory: leftPanelState.selectedCategory,
+    selectedCategory: leftPanelState.selectedCategory, // This is core CategoryName | null
     currentPanel: leftPanelState.currentPanel,
     isCategoryLoading,
     categoryError,
     categoryResults,
     categoryResultHandlers, 
-    handleCategorySelect: (category: string) => 
-      categoryHandlers.handleCategorySelect(category, refetch),
+    // Ensure handleCategorySelect from categoryHandlers can accept core CategoryName
+    handleCategorySelect: (category: CategoryName) => 
+      categoryHandlers.handleCategorySelect(category as any, refetch),
     isGeneratingItinerary: leftPanelState.isGenerating,
     itineraryReceived: leftPanelState.itineraryReceived,
   };
 };
-

@@ -1,7 +1,6 @@
-
 import { useCallback } from 'react';
 import { NewServerScheduleResponse, ServerScheduleItem, SchedulePayload, PlaceDetails } from '@/types/schedule';
-import { ItineraryDay, ItineraryPlaceWithTime, SelectedPlace as CoreSelectedPlace, Place } from '@/types/core';
+import { ItineraryDay, ItineraryPlaceWithTime, SelectedPlace, Place } from '@/types/core';
 import { mergeScheduleItems } from './parser-utils/mergeScheduleItems';
 import { parseIntId, isSameId } from '@/utils/id-utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -35,28 +34,22 @@ const calculateDepartTime = (arriveTime: string, stayDurationMinutes: number): s
   return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
 };
 
-// Helper function to determine the final ID, parsing to int if possible
 const determineFinalId = (originalId: string | number | undefined | null, fallbackNamePrefix: string, itemIndex: number, dayNumber: number): string | number => {
   if (originalId !== null && originalId !== undefined) {
     if (typeof originalId === 'number') {
-      return originalId; // Already a number
+      return originalId;
     }
     if (typeof originalId === 'string') {
-      // Try to parse as integer if it's a string representation of a number
       const numericId = parseInt(originalId, 10);
-      // Ensure the string was purely numeric and the parse was successful
       if (!isNaN(numericId) && String(numericId) === originalId) {
         return numericId;
       }
-      // Otherwise, it's a non-numeric string ID (e.g., "place_abc")
       return originalId;
     }
   }
-  // Fallback: generate a string ID if originalId is null, undefined, or an unexpected type
   return `${fallbackNamePrefix.replace(/\s+/g, '_')}_${itemIndex}_${dayNumber}_gen`;
 };
 
-// 테이블 이름에 대한 타입 가드 함수
 const isValidTableName = (tableName: string): tableName is 'accommodation_information' | 'cafe_information' | 'landmark_information' | 'restaurant_information' => {
   return ['accommodation_information', 'cafe_information', 'landmark_information', 'restaurant_information'].includes(tableName);
 };
@@ -67,7 +60,6 @@ const mapCategoryToSupabaseTable = (category: string): string | null => {
     case '카페': return 'cafe_information';
     case '관광지': return 'landmark_information';
     case '음식점': return 'restaurant_information';
-    // Add other mappings if necessary. '교통', '기타' might not have corresponding info tables.
     default: return null;
   }
 };
@@ -75,16 +67,29 @@ const mapCategoryToSupabaseTable = (category: string): string | null => {
 const enrichScheduleWithSupabaseDetails = async (itineraryDays: ItineraryDay[]): Promise<ItineraryDay[]> => {
   console.group('[ENRICH_SCHEDULE_WITH_SUPABASE_DETAILS] Supabase 상세 정보 로딩 시작');
   
-  const placesToFetchDetailsFor = new Map<number, { place: ItineraryPlaceWithTime, tableName: string }>();
+  const placesToFetchDetailsFor = new Map<string | number, { place: ItineraryPlaceWithTime, tableName: string }>();
 
   itineraryDays.forEach(day => {
     day.places.forEach(place => {
-      // Fetch if it's a fallback OR if we want to always refresh from Supabase (here, only for fallbacks with numeric ID)
-      // And ensure the ID is a number (original DB ID)
-      if (place.isFallback && typeof place.id === 'number') {
+      // Fetch if it's a fallback OR if we want to always refresh from Supabase
+      // And ensure the ID is a number (original DB ID) OR a string that can be parsed to a number.
+      // For string IDs that are not purely numeric, Supabase lookup by 'id' might fail if 'id' column is numeric.
+      // Assuming 'id' in Supabase tables is numeric for this logic.
+      let numericId: number | null = null;
+      if (typeof place.id === 'number') {
+        numericId = place.id;
+      } else if (typeof place.id === 'string') {
+        const parsed = parseInt(place.id, 10);
+        if (!isNaN(parsed) && String(parsed) === place.id) {
+          numericId = parsed;
+        }
+      }
+
+      if (place.isFallback && numericId !== null) {
         const tableName = mapCategoryToSupabaseTable(place.category);
         if (tableName) {
-          placesToFetchDetailsFor.set(place.id, { place, tableName });
+          // Use numericId for map key if Supabase ID is numeric
+          placesToFetchDetailsFor.set(numericId, { place, tableName });
         }
       }
     });
@@ -98,17 +103,17 @@ const enrichScheduleWithSupabaseDetails = async (itineraryDays: ItineraryDay[]):
 
   console.log(`${placesToFetchDetailsFor.size}개 장소에 대한 상세 정보를 Supabase에서 로드합니다.`);
 
-  const allFetches: Promise<any>[] = [];
-  const placesByTable: Record<string, number[]> = {};
+  const allFetches: Promise<PlaceDetails[] | null | undefined>[] = []; // Ensure it's Promise<any compatible>
+  const placesByTable: Record<string, (string | number)[]> = {}; // ID can be string or number
 
   placesToFetchDetailsFor.forEach(({ tableName }, id) => {
     if (!placesByTable[tableName]) {
       placesByTable[tableName] = [];
     }
-    placesByTable[tableName].push(id);
+    placesByTable[tableName].push(id); // id is the key from placesToFetchDetailsFor, which is numeric here
   });
 
-  const fetchedDetailsById = new Map<number, PlaceDetails>();
+  const fetchedDetailsById = new Map<string | number, PlaceDetails>();
 
   for (const tableName in placesByTable) {
     const idsToFetch = placesByTable[tableName];
@@ -116,27 +121,32 @@ const enrichScheduleWithSupabaseDetails = async (itineraryDays: ItineraryDay[]):
       console.log(`테이블 '${tableName}'에서 ID ${idsToFetch.join(', ')} 로딩 중...`);
       const fetchPromise = supabase
         .from(tableName)
-        .select('id, place_name, road_address, lot_address, latitude, longitude, location') // Adjust columns as needed
-        .in('id', idsToFetch)
-        .then(({ data, error }) => {
+        .select('id, place_name, road_address, lot_address, latitude, longitude, location')
+        .in('id', idsToFetch) // Supabase client handles array of numbers or strings for 'in'
+        .then(({ data, error }) => { // This .then returns Promise<void> implicitly
           if (error) {
             console.error(`테이블 '${tableName}' 정보 로딩 오류:`, error);
-            return;
+            return null; // Explicitly return null or undefined to make it Promise<null>
           }
           if (data) {
-            data.forEach((dbRow: any) => {
+            const details: PlaceDetails[] = data.map((dbRow: any) => {
               const placeDetail: PlaceDetails = {
-                id: dbRow.id, // Should be number
+                id: dbRow.id,
                 place_name: dbRow.place_name,
                 road_address: dbRow.road_address,
                 lot_address: dbRow.lot_address,
-                latitude: dbRow.latitude,   // y
-                longitude: dbRow.longitude, // x
+                latitude: dbRow.latitude,
+                longitude: dbRow.longitude,
                 location: dbRow.location,
               };
+              // Use original place.id from placesToFetchDetailsFor for mapping if it was string
+              // However, dbRow.id is the definitive ID from DB (number)
               fetchedDetailsById.set(dbRow.id, placeDetail);
+              return placeDetail;
             });
+            return details; // Return mapped details
           }
+          return null; // Return null if no data
         });
       allFetches.push(fetchPromise);
     }
@@ -145,23 +155,33 @@ const enrichScheduleWithSupabaseDetails = async (itineraryDays: ItineraryDay[]):
   await Promise.all(allFetches);
   console.log('모든 Supabase 정보 로딩 완료. 총', fetchedDetailsById.size, '개 상세 정보 획득.');
 
-  // Update ItineraryPlaceWithTime objects
   itineraryDays.forEach(day => {
     day.places.forEach(place => {
-      if (typeof place.id === 'number' && fetchedDetailsById.has(place.id)) {
-        const details = fetchedDetailsById.get(place.id)!;
-        console.log(`ID ${place.id} (${place.name}) 장소 정보 업데이트:`, details);
+      let keyForMap: string | number | null = null;
+      if (typeof place.id === 'number') {
+        keyForMap = place.id;
+      } else if (typeof place.id === 'string') {
+        const parsed = parseInt(place.id, 10);
+        if (!isNaN(parsed) && String(parsed) === place.id) {
+          keyForMap = parsed; // Use numeric key if original ID was string representation of number
+        } else {
+          keyForMap = place.id; // Keep as string if non-numeric string ID (though Supabase part assumes numeric)
+        }
+      }
+
+      if (keyForMap !== null && fetchedDetailsById.has(keyForMap)) {
+        const details = fetchedDetailsById.get(keyForMap)!;
+        console.log(`ID ${keyForMap} (${place.name}) 장소 정보 업데이트:`, details);
         place.details = details;
         if (details.longitude !== undefined && details.latitude !== undefined) {
           place.x = details.longitude;
           place.y = details.latitude;
         }
-        place.name = details.place_name || place.name; // Update name if different
+        place.name = details.place_name || place.name;
         place.address = details.road_address || details.lot_address || place.address;
-        // If road_address exists in details, update place.road_address
         if (details.road_address) place.road_address = details.road_address;
         
-        place.isFallback = false; // Details successfully fetched and applied
+        place.isFallback = false;
       }
     });
   });
@@ -170,14 +190,13 @@ const enrichScheduleWithSupabaseDetails = async (itineraryDays: ItineraryDay[]):
   return itineraryDays;
 };
 
-// Adapted from user's prompt and existing structure
 const processServerScheduleItem = (
   serverItem: ServerScheduleItem,
   itemIndex: number, 
   dayNumber: number, 
   totalPlacesInDay: number,
-  lastPayload: SchedulePayload | null, // lastSentPayload
-  currentSelectedPlaces: CoreSelectedPlace[] // List of places with full details
+  lastPayload: SchedulePayload | null,
+  currentSelectedPlaces: SelectedPlace[] // Changed from CoreSelectedPlace
 ): ItineraryPlaceWithTime => {
   
   console.group(`[PROCESS_SERVER_ITEM] 서버 항목 "${serverItem.place_name || '이름 없음'}" 처리 (${itemIndex}번째, ${dayNumber}일차)`);
@@ -185,47 +204,36 @@ const processServerScheduleItem = (
 
   let placeIdToMatch: string | number | null = null;
   let matchSource: string | null = null;
-  const serverItemIdAsNumber = parseIntId(serverItem.id); // serverItem.id could be string, number or undefined
-
-  if (serverItemIdAsNumber !== null) {
-    console.log(`서버 항목 ID "${serverItem.id}" 정수 변환 시도: ${serverItemIdAsNumber}`);
-  } else if (serverItem.id !== undefined) {
-    console.log(`서버 항목 ID "${serverItem.id}"는 정수로 변환되지 않음 (문자열 가능성).`);
-  } else {
-    console.log(`서버 항목 ID 없음.`);
-  }
+  
+  // serverItem.id can be string or number from server. parseIntId handles undefined.
+  const serverItemIdToCompare = serverItem.id; 
 
   if (lastPayload) {
-    // 1. 서버 항목 ID (정수 또는 문자열) -> 페이로드 ID (정수 또는 문자열) 매칭
-    // isSameId can compare number with string representation of number
-    const serverIdToCompare = serverItem.id; // Use original serverItem.id for isSameId
-
-    if (serverIdToCompare !== undefined) {
-      const foundInSelected = lastPayload.selected_places?.find(p => isSameId(p.id, serverIdToCompare));
+    if (serverItemIdToCompare !== undefined) {
+      const foundInSelected = lastPayload.selected_places?.find(p => isSameId(p.id, serverItemIdToCompare));
       if (foundInSelected) {
-        placeIdToMatch = foundInSelected.id; // Keep original type from payload (string | number)
+        placeIdToMatch = foundInSelected.id; 
         matchSource = 'selected_places (ID 매칭)';
       }
       if (!placeIdToMatch) {
-        const foundInCandidate = lastPayload.candidate_places?.find(p => isSameId(p.id, serverIdToCompare));
+        const foundInCandidate = lastPayload.candidate_places?.find(p => isSameId(p.id, serverItemIdToCompare));
         if (foundInCandidate) {
-          placeIdToMatch = foundInCandidate.id; // Keep original type from payload (string | number)
+          placeIdToMatch = foundInCandidate.id; 
           matchSource = 'candidate_places (ID 매칭)';
         }
       }
     }
 
-    // 2. ID 매칭 실패 시, 서버 항목 이름 -> 페이로드 이름 매칭
     if (!placeIdToMatch && serverItem.place_name) {
       const foundInSelectedByName = lastPayload.selected_places?.find(p => p.name === serverItem.place_name);
       if (foundInSelectedByName) {
-        placeIdToMatch = foundInSelectedByName.id; // Keep original type from payload (string | number)
+        placeIdToMatch = foundInSelectedByName.id;
         matchSource = 'selected_places (이름 매칭)';
       }
       if (!placeIdToMatch) {
         const foundInCandidateByName = lastPayload.candidate_places?.find(p => p.name === serverItem.place_name);
         if (foundInCandidateByName) {
-          placeIdToMatch = foundInCandidateByName.id; // Keep original type from payload (string | number)
+          placeIdToMatch = foundInCandidateByName.id;
           matchSource = 'candidate_places (이름 매칭)';
         }
       }
@@ -246,9 +254,9 @@ const processServerScheduleItem = (
   if (isAirport) {
     const isFirstOrLastPlace = (itemIndex === 0 || itemIndex === totalPlacesInDay - 1);
     if (isFirstOrLastPlace) {
-      console.log(`[useItineraryParser] Applying fixed coordinates for Jeju International Airport as first/last place of day ${dayNumber}.`);
-      const airportResult: ItineraryPlaceWithTime = { // Explicitly type
-        id: determineFinalId(placeIdToMatch, 'airport', itemIndex, dayNumber),
+      console.log(`[useItineraryParser] 제주국제공항 고정 좌표 적용 (날짜 ${dayNumber}).`);
+      const airportResult: ItineraryPlaceWithTime = {
+        id: determineFinalId(placeIdToMatch ?? serverItem.id, 'airport', itemIndex, dayNumber),
         name: "제주국제공항",
         category: "교통", 
         x: 126.4891647,
@@ -272,9 +280,8 @@ const processServerScheduleItem = (
     }
   }
 
-  let placeDetails: CoreSelectedPlace | undefined = undefined;
-  if (placeIdToMatch !== null) { // Check for null explicitly
-    // currentSelectedPlaces에서 최종 ID로 상세 정보 찾기
+  let placeDetails: SelectedPlace | undefined = undefined;
+  if (placeIdToMatch !== null) {
     placeDetails = currentSelectedPlaces.find(p => isSameId(p.id, placeIdToMatch));
     if(placeDetails){
        console.log(`ID ${placeIdToMatch} (타입: ${typeof placeIdToMatch})로 currentSelectedPlaces에서 상세 정보 찾음:`, placeDetails.name);
@@ -283,9 +290,11 @@ const processServerScheduleItem = (
     }
   }
 
+  const finalId = determineFinalId(placeDetails?.id ?? placeIdToMatch ?? serverItem.id, serverItem.place_name || 'unknown', itemIndex, dayNumber);
+
   if (placeDetails) {
-    const result: ItineraryPlaceWithTime = { // Explicitly type
-      id: determineFinalId(placeDetails.id, placeDetails.name, itemIndex, dayNumber), 
+    const result: ItineraryPlaceWithTime = {
+      id: finalId,
       name: placeDetails.name,
       category: placeDetails.category || mapServerTypeToCategory(serverItem.place_type || '기타'),
       x: placeDetails.x,
@@ -300,19 +309,18 @@ const processServerScheduleItem = (
       timeBlock: serverItem.time_block,
       arriveTime: extractTimeFromTimeBlock(serverItem.time_block),
       departTime: calculateDepartTime(extractTimeFromTimeBlock(serverItem.time_block), 60),
-      stayDuration: 60, // Default stay duration
-      travelTimeToNext: "15분", // Example, should be from route_summary if available
-      isFallback: false, // Details found from currentSelectedPlaces
+      stayDuration: 60,
+      travelTimeToNext: serverItem.route_info_to_next?.duration_str || "15분",
+      isFallback: false,
       geoNodeId: placeDetails.geoNodeId,
-      // details field is not populated here, will be done by enrichScheduleWithSupabaseDetails if needed
     };
     console.groupEnd();
     return result;
   }
 
-  console.warn(`[useItineraryParser] 장소 "${serverItem.place_name}"에 대한 상세 정보를 찾을 수 없습니다. 기본값을 사용합니다.`);
-  const fallbackResult: ItineraryPlaceWithTime = { // Explicitly type
-    id: determineFinalId(serverItem.id, (serverItem.place_name || 'unknown'), itemIndex, dayNumber),
+  console.warn(`[useItineraryParser] 장소 "${serverItem.place_name}"에 대한 상세 정보를 찾을 수 없습니다. 폴백값을 사용합니다.`);
+  const fallbackResult: ItineraryPlaceWithTime = {
+    id: finalId,
     name: serverItem.place_name || '정보 없음',
     category: mapServerTypeToCategory(serverItem.place_type || '기타'),
     x: 126.5, 
@@ -328,9 +336,8 @@ const processServerScheduleItem = (
     arriveTime: extractTimeFromTimeBlock(serverItem.time_block),
     departTime: calculateDepartTime(extractTimeFromTimeBlock(serverItem.time_block), 60),
     stayDuration: 60,
-    travelTimeToNext: "15분", 
-    isFallback: true, // Mark as fallback, to be potentially enriched by Supabase
-    // details field is not populated here
+    travelTimeToNext: serverItem.route_info_to_next?.duration_str || "15분",
+    isFallback: true,
   };
   console.groupEnd();
   return fallbackResult;
@@ -353,9 +360,9 @@ export const useItineraryParser = () => {
 
   const parseServerResponse = useCallback(async (
     serverResponse: NewServerScheduleResponse,
-    currentSelectedPlaces: CoreSelectedPlace[] = [],
+    currentSelectedPlaces: SelectedPlace[] = [], // Changed from CoreSelectedPlace
     tripStartDate: Date | null = null,
-    lastPayload: SchedulePayload | null = null
+    lastPayload: SchedulePayload | null = null // Added lastPayload
   ): Promise<ItineraryDay[]> => {
     console.group('[PARSE_SERVER_RESPONSE] 서버 응답 파싱 시작');
     console.log('원본 서버 응답 데이터:', JSON.stringify(serverResponse, null, 2));
@@ -390,14 +397,17 @@ export const useItineraryParser = () => {
     const dayMapping: Record<string, number> = {};
     const sortedDayKeys = [...scheduleByDay.keys()].sort((a, b) => {
       const dayOrder = { 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6, 'Sun': 7 };
-      return (dayOrder[a as keyof typeof dayOrder] || 8) - (dayOrder[b as keyof typeof dayOrder] || 8);
+      // Fallback for day keys not in dayOrder (e.g., "Day1")
+      const aOrder = dayOrder[a as keyof typeof dayOrder] || parseInt(a.replace(/\D/g, ''), 10) || 8;
+      const bOrder = dayOrder[b as keyof typeof dayOrder] || parseInt(b.replace(/\D/g, ''), 10) || 8;
+      return aOrder - bOrder;
     });
     
     sortedDayKeys.forEach((dayKey, index) => {
       dayMapping[dayKey] = index + 1; 
     });
 
-    console.log('[useItineraryParser] 요일 -> 일차 매핑:', dayMapping);
+    console.log('[useItineraryParser] 요일/날짜 키 -> 일차 매핑:', dayMapping);
 
     let result: ItineraryDay[] = sortedDayKeys.map((dayOfWeekKey) => {
       const dayItemsOriginal = scheduleByDay.get(dayOfWeekKey) || [];
@@ -405,30 +415,41 @@ export const useItineraryParser = () => {
       const dayNumber = dayMapping[dayOfWeekKey];
       
       const places: ItineraryPlaceWithTime[] = dayItemsOriginal.map((item, itemIndex) => {
+        // Pass lastPayload and currentSelectedPlaces to processServerScheduleItem
         return processServerScheduleItem(
           item,
           itemIndex,
           dayNumber,
-          dayItemsOriginal.length, // totalPlacesInDay for this day
-          lastPayload,             // pass lastPayload
-          currentSelectedPlaces    // pass currentSelectedPlaces
+          dayItemsOriginal.length,
+          lastPayload,            
+          currentSelectedPlaces   
         );
       });
 
       // ... keep existing code (routeData processing)
       const nodeIds: string[] = [];
       const linkIds: string[] = [];
-      const interleaved_route: (string | number)[] = [];
+      const interleaved_route_processed: (string | number)[] = []; // Use a new array for processed route
 
       if (routeInfo && routeInfo.interleaved_route) {
         routeInfo.interleaved_route.forEach((id: number | string) => { 
-          const idStr = String(id);
-          interleaved_route.push(idStr); 
+          // Ensure all IDs are strings for consistency if GeoJSON nodes/links use string IDs
+          const idStr = String(id); 
+          interleaved_route_processed.push(idStr); 
           // This logic might need refinement based on actual interleaved_route structure
-          if (interleaved_route.length % 2 !== 0 || typeof id === 'string' && id.startsWith('N')) { // Simple heuristic
-            nodeIds.push(idStr);
+          // Assuming nodes start with 'N' or are odd-indexed in a simple sequence
+          if (typeof id === 'string' && (id.startsWith('N') || id.startsWith('n_'))) {
+             nodeIds.push(idStr);
+          } else if (typeof id === 'string' && (id.startsWith('L') || id.startsWith('l_'))) {
+             linkIds.push(idStr);
           } else {
-            linkIds.push(idStr);
+            // Fallback logic for numeric IDs or other patterns
+            // This heuristic might not be robust. A clear indicator for nodes vs links is better.
+             if (interleaved_route_processed.length % 2 !== 0) { 
+               nodeIds.push(idStr);
+             } else {
+               linkIds.push(idStr);
+             }
           }
         });
       }
@@ -439,18 +460,17 @@ export const useItineraryParser = () => {
         day: dayNumber,
         dayOfWeek: dayOfWeekKey,
         date: formatDate(tripStartDate, dayNumber - 1),
-        places: places, // places array created by processServerScheduleItem
+        places: places,
         totalDistance: totalDistance,
         routeData: {
           nodeIds: nodeIds,
           linkIds: linkIds,
           segmentRoutes: routeInfo?.segment_routes || [] 
         },
-        interleaved_route: interleaved_route
+        interleaved_route: interleaved_route_processed // Use the processed array
       };
     });
     
-    // Enrich with Supabase details
     result = await enrichScheduleWithSupabaseDetails(result);
 
     const totalPlaces = result.reduce((sum, day) => sum + day.places.length, 0);
@@ -470,7 +490,7 @@ export const useItineraryParser = () => {
     if (placesWithDefaultCoords > 0) {
       console.warn(`[useItineraryParser] ${placesWithDefaultCoords}개의 장소가 기본 좌표 및 정보를 사용합니다. 상세 정보 매칭에 실패했을 수 있습니다.`);
     }
-    console.groupEnd(); // End PARSE_SERVER_RESPONSE group
+    console.groupEnd(); 
     return result;
   }, []);
 

@@ -1,31 +1,54 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useMapContext } from '@/components/rightpanel/MapContext';
 import type { Place } from '@/types/core';
 
 interface UseGeoJsonStateProps {
+  map: any; // Pass map instance directly
+  isMapInitialized: boolean; // Pass status directly
+  isNaverLoaded: boolean; // Pass status directly
   geoJsonUrl: string;
-  places: Place[];
+  places?: Place[]; // Make places optional, as it might not always be available or needed initially
 }
 
-export const useGeoJsonState = ({ geoJsonUrl, places }: UseGeoJsonStateProps) => {
-  const { map, isMapInitialized, isNaverLoaded } = useMapContext();
-  const [geoJsonLayer, setGeoJsonLayer] = useState<naver.maps.Data | null>(null);
+export const useGeoJsonState = ({ map, isMapInitialized, isNaverLoaded, geoJsonUrl, places = [] }: UseGeoJsonStateProps) => {
+  const [geoJsonLayer, setGeoJsonLayer] = useState<any | null>(null); // Use 'any' for naver.maps.Data due to typing issue
   const [nearestNodeCache, setNearestNodeCache] = useState<Map<string, { nodeId: string; distance: number }>>(new Map());
+  const [loadedNodes, setLoadedNodes] = useState<any[]>([]);
+  const [loadedLinks, setLoadedLinks] = useState<any[]>([]);
+  const [isLayerLoaded, setIsLayerLoaded] = useState<boolean>(false);
 
   const loadGeoJson = useCallback(async (url: string) => {
     try {
       const response = await fetch(url);
       const geoJsonData = await response.json();
+      
+      // Extract nodes and links (assuming a specific GeoJSON structure)
+      const nodes: any[] = [];
+      const links: any[] = [];
+      if (geoJsonData && geoJsonData.features) {
+        geoJsonData.features.forEach((feature: any) => {
+          if (feature.geometry && feature.geometry.type === 'Point' && feature.properties && feature.properties.NODE_ID) {
+            nodes.push(feature);
+          } else if (feature.geometry && feature.geometry.type === 'LineString' && feature.properties && feature.properties.LINK_ID) {
+            links.push(feature);
+          }
+        });
+      }
+      setLoadedNodes(nodes);
+      setLoadedLinks(links);
+      setIsLayerLoaded(true);
       return geoJsonData;
     } catch (error) {
       console.error("Error fetching GeoJSON:", error);
+      setLoadedNodes([]);
+      setLoadedLinks([]);
+      setIsLayerLoaded(false);
       return null;
     }
   }, []);
 
   const addGeoJsonLayer = useCallback(async () => {
-    if (!map || !isMapInitialized || !isNaverLoaded) {
-      console.log("[useGeoJsonState] Map not ready, skipping GeoJSON layer addition.");
+    if (!map || !isMapInitialized || !isNaverLoaded || !window.naver || !window.naver.maps) {
+      console.log("[useGeoJsonState] Map or Naver Maps API not ready, skipping GeoJSON layer addition.");
       return;
     }
 
@@ -35,15 +58,16 @@ export const useGeoJsonState = ({ geoJsonUrl, places }: UseGeoJsonStateProps) =>
       return;
     }
 
-    // Remove existing layer if it exists
     if (geoJsonLayer) {
       geoJsonLayer.setMap(null);
-      setGeoJsonLayer(null);
     }
 
-    const newLayer = new naver.maps.Data({ map: map });
-    newLayer.loadGeoJson(geoJsonData);
+    // Use 'any' for naver.maps.Data due to potential typing issues with 'Data' member
+    const newLayer = new (window.naver.maps as any).Data();
+    newLayer.addGeoJson(geoJsonData); // Use addGeoJson for features
+    newLayer.setMap(map);
     setGeoJsonLayer(newLayer);
+    
 
     console.log("[useGeoJsonState] GeoJSON layer added successfully.");
   }, [map, isMapInitialized, isNaverLoaded, geoJsonUrl, loadGeoJson, geoJsonLayer]);
@@ -62,8 +86,8 @@ export const useGeoJsonState = ({ geoJsonUrl, places }: UseGeoJsonStateProps) =>
   };
 
   const findNearestNode = useCallback((place: Place): { nodeId: string; distance: number } | null => {
-    if (!geoJsonLayer) {
-      console.warn("[useGeoJsonState] GeoJSON layer not loaded, cannot find nearest node.");
+    if (!geoJsonLayer && loadedNodes.length === 0) { // Check loadedNodes as well
+      console.warn("[useGeoJsonState] GeoJSON layer/data not loaded, cannot find nearest node.");
       return null;
     }
 
@@ -73,25 +97,26 @@ export const useGeoJsonState = ({ geoJsonUrl, places }: UseGeoJsonStateProps) =>
     }
 
     let minDistance = Infinity;
-    let nearestNodeId = null;
+    let nearestNodeId: string | null = null;
 
-    geoJsonLayer.forEach(feature => {
-      const geometry = feature.getGeometry();
-      if (geometry.getType() === 'Point') {
-        const coordinates = geometry.get(); // Returns naver.maps.LatLng
-        const nodeLat = coordinates.lat();
-        const nodeLng = coordinates.lng();
+    // Iterate over pre-extracted nodes if layer direct iteration is problematic
+    loadedNodes.forEach(feature => {
+      const geometry = feature.geometry; // Assuming GeoJSON structure
+      if (geometry && geometry.type === 'Point' && geometry.coordinates) {
+        const nodeLng = geometry.coordinates[0]; // longitude
+        const nodeLat = geometry.coordinates[1]; // latitude
 
         if (place.y != null && place.x != null) {
           const distance = calculateDistance(place.y, place.x, nodeLat, nodeLng);
 
           if (distance < minDistance) {
             minDistance = distance;
-            nearestNodeId = feature.getProperty('id');
+            nearestNodeId = feature.properties.NODE_ID ? String(feature.properties.NODE_ID) : null;
           }
         }
       }
     });
+    
 
     if (nearestNodeId !== null) {
       const result = { nodeId: nearestNodeId, distance: minDistance };
@@ -100,14 +125,14 @@ export const useGeoJsonState = ({ geoJsonUrl, places }: UseGeoJsonStateProps) =>
     }
 
     return null;
-  }, [geoJsonLayer, calculateDistance, nearestNodeCache]);
+  }, [geoJsonLayer, loadedNodes, calculateDistance, nearestNodeCache]);
 
   useEffect(() => {
     addGeoJsonLayer();
   }, [addGeoJsonLayer]);
 
   useEffect(() => {
-    if (places && places.length > 0) {
+    if (places && places.length > 0 && (geoJsonLayer || loadedNodes.length > 0)) {
       const updatedPlaces = places.map(place => {
         const nearestNode = findNearestNode(place);
         if (nearestNode) {
@@ -119,11 +144,20 @@ export const useGeoJsonState = ({ geoJsonUrl, places }: UseGeoJsonStateProps) =>
         }
         return place;
       });
-      // Dispatch an event or use a callback to notify the parent component about the updated places
       const event = new CustomEvent('placesWithGeoNodesUpdated', { detail: updatedPlaces });
       window.dispatchEvent(event);
     }
-  }, [places, findNearestNode]);
+  }, [places, findNearestNode, geoJsonLayer, loadedNodes]);
 
-  return { geoJsonLayer, findNearestNode };
+  return { 
+    geoJsonLayer, 
+    findNearestNode,
+    // These are needed by the component version of useGeoJsonState, 
+    // but this hook is simpler. Consumers of this hook will need to manage these themselves or use the component hook.
+    // For now, returning what this hook can provide.
+    isGeoJsonLoaded: isLayerLoaded, 
+    geoJsonNodes: loadedNodes,
+    geoJsonLinks: loadedLinks,
+    // toggleGeoJsonVisibility, checkGeoJsonMapping, handleGeoJsonLoaded are not part of this simpler hook.
+   };
 };

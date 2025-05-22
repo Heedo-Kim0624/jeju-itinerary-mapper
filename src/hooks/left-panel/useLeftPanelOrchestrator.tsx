@@ -1,4 +1,3 @@
-
 import { useEffect, useCallback } from 'react';
 import { useLeftPanel } from '@/hooks/use-left-panel';
 import { useScheduleGenerationRunner } from '@/hooks/schedule/useScheduleGenerationRunner';
@@ -7,7 +6,7 @@ import { useLeftPanelCallbacks } from '@/hooks/left-panel/use-left-panel-callbac
 import { useLeftPanelProps } from '@/hooks/left-panel/use-left-panel-props';
 import { toast } from 'sonner';
 import { summarizeItineraryData } from '@/utils/debugUtils';
-import type { ItineraryDay } from '@/types';
+import type { ItineraryDay, CategoryName } from '@/types';
 
 export const useLeftPanelOrchestrator = () => {
   const {
@@ -44,15 +43,22 @@ export const useLeftPanelOrchestrator = () => {
     setRegionSlidePanelOpen: regionSelection.setRegionSlidePanelOpen,
     selectedRegions: regionSelection.selectedRegions,
     setRegionConfirmed: regionSelection.setRegionConfirmed,
-    handleCreateItinerary: createItinerary, // Pass the actual createItinerary function
+    handleCreateItinerary: createItinerary,
   });
+
+  // Ensure uiVisibility properties match the expected types for useLeftPanelProps
+  const adaptedUiVisibility = {
+    ...uiVisibility,
+    // Ensure setShowCategoryResult matches CategoryName from @/types (core)
+    setShowCategoryResult: (category: CategoryName | null) => uiVisibility.setShowCategoryResult(category as any),
+  };
 
   const {
     itineraryDisplayProps,
     mainPanelProps,
     devDebugInfoProps,
   } = useLeftPanelProps({
-    uiVisibility,
+    uiVisibility: adaptedUiVisibility, // Use adapted version
     currentPanel,
     isGeneratingItinerary: isActuallyGenerating,
     itineraryReceived: !!itineraryManagement.itinerary && itineraryManagement.itinerary.length > 0,
@@ -61,7 +67,7 @@ export const useLeftPanelOrchestrator = () => {
     placesManagement,
     categorySelection,
     keywordsAndInputs,
-    categoryResultHandlers,
+    categoryResultHandlers, // Pass this down
     handleCloseItinerary,
     regionSelection,
     onConfirmCategoryCallbacks: callbacks.onConfirmCategoryCallbacks,
@@ -149,7 +155,7 @@ export const useLeftPanelOrchestrator = () => {
 
   return {
     regionSelection,
-    uiVisibility,
+    uiVisibility: adaptedUiVisibility, // Return adapted version
     categorySelection,
     placesManagement,
     callbacks,
@@ -158,6 +164,6 @@ export const useLeftPanelOrchestrator = () => {
     enhancedItineraryDisplayProps,
     enhancedMainPanelProps,
     devDebugInfoProps,
-    categoryResultHandlers, // Added this for CategoryResultHandler
+    categoryResultHandlers,
   };
 };

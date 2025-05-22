@@ -1,19 +1,14 @@
 
 import { useCallback } from 'react';
-import { SelectedPlace, ItineraryDay, NewServerScheduleResponse } from '@/types/core';
-// Removed ServerScheduleItem, ServerRouteSummaryItem, CategoryName, ItineraryPlaceWithTime as they are used in helpers
-// Removed extractAllNodesFromRoute, extractAllLinksFromRoute, getDateStringMMDD, getDayOfWeekString as they are used in helpers
+import { SelectedPlace, ItineraryDay, NewServerScheduleResponse, SchedulePayload } from '@/types/core';
 import { parseSingleRouteSummary } from './parser-utils/routeSummaryParser';
 
 interface UseScheduleParserProps {
   currentSelectedPlaces: SelectedPlace[];
+  lastPayload: SchedulePayload | null; // Add lastPayload here
 }
 
-// MapContextGeoNode, findCoordinatesFromMapContextNodes, updateItineraryWithCoordinates were moved to parser-utils
-// createPlaceWithTimeFromSchedule was moved to parser-utils
-// parseSingleRouteSummary is now imported
-
-export const useScheduleParser = ({ currentSelectedPlaces }: UseScheduleParserProps) => {
+export const useScheduleParser = ({ currentSelectedPlaces, lastPayload }: UseScheduleParserProps) => {
   const parseServerResponse = useCallback((
     response: NewServerScheduleResponse,
     tripStartDate: Date | null
@@ -32,23 +27,28 @@ export const useScheduleParser = ({ currentSelectedPlaces }: UseScheduleParserPr
     
     const dayOfWeekMap: { [key: string]: number } = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
 
+    // Sort route_summary by day key to ensure chronological order if server doesn't guarantee it.
+    // This is tricky if day keys are mixed ("Mon", "Day2").
+    // Assuming server sends route_summary in chronological order.
+    
     const itineraryDays: ItineraryDay[] = route_summary.map(
       (summaryItem, index) => parseSingleRouteSummary(
         summaryItem,
-        index,
+        index, // pass the index as dayIndex
         allScheduleItems,
         tripStartDate,
         currentSelectedPlaces,
-        dayOfWeekMap
+        dayOfWeekMap,
+        lastPayload // Pass lastPayload
       )
     );
 
-    // 일자순으로 정렬 (tripDayNumber 기준)
     itineraryDays.sort((a, b) => a.day - b.day);
     
-    console.log('[useScheduleParser] Processed itinerary days (before coord update):', JSON.parse(JSON.stringify(itineraryDays)));
+    console.log('[useScheduleParser] Processed itinerary days:', JSON.parse(JSON.stringify(itineraryDays)));
     return itineraryDays;
-  }, [currentSelectedPlaces]);
+  }, [currentSelectedPlaces, lastPayload]); // Add lastPayload to dependencies
 
   return { parseServerResponse };
 };
+
