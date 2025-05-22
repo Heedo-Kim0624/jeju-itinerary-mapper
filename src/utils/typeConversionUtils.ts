@@ -41,4 +41,3 @@ export function convertPlaceToSelectedPlace(place: Place): SelectedPlace {
 export function convertPlacesToSelectedPlaces(places: Place[]): SelectedPlace[] {
   return places.map(convertPlaceToSelectedPlace);
 }
-

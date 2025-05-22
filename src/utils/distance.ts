@@ -1,3 +1,4 @@
+
 /**
  * Calculates the distance between two geographic coordinates using the Haversine formula
  * @param lon1 Longitude of the first point
