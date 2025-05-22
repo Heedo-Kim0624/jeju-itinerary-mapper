@@ -1,26 +1,15 @@
-
 import { useEffect, useCallback } from 'react';
 import { useLeftPanel } from '@/hooks/use-left-panel';
 import { useScheduleGenerationRunner } from '@/hooks/schedule/useScheduleGenerationRunner';
 import { useCreateItineraryHandler } from '@/hooks/left-panel/useCreateItineraryHandler';
 import { useLeftPanelCallbacks } from '@/hooks/left-panel/use-left-panel-callbacks';
 import { useLeftPanelProps } from '@/hooks/left-panel/use-left-panel-props';
+import { useAdaptedScheduleGenerator } from '@/hooks/left-panel/useAdaptedScheduleGenerator'; // 새 훅 임포트
+import { useItineraryViewDecider } from '@/hooks/left-panel/useItineraryViewDecider'; // 새 훅 임포트
 import { toast } from 'sonner';
 import { summarizeItineraryData } from '@/utils/debugUtils';
-import type { ItineraryDay, Place, SchedulePayload, SelectedPlace } from '@/types';
+import type { ItineraryDay, Place, SchedulePayload } from '@/types';
 import type { CategoryName } from '@/utils/categoryUtils';
-
-/**
- * Place 타입을 SelectedPlace 타입으로 변환하는 어댑터 함수
- */
-const convertToSelectedPlaces = (places: Place[]): SelectedPlace[] => {
-  return places.map(place => ({
-    ...place,
-    category: place.category as CategoryName, // 여기서 타입 캐스팅을 수행합니다
-    isSelected: place.isSelected || false,
-    isCandidate: place.isCandidate || false
-  }));
-};
 
 export const useLeftPanelOrchestrator = () => {
   const leftPanelCore = useLeftPanel();
@@ -29,7 +18,7 @@ export const useLeftPanelOrchestrator = () => {
     regionSelection,
     categorySelection,
     keywordsAndInputs,
-    placesManagement, // placesManagement from useLeftPanel returns SelectedPlace[] for selectedPlaces/candidatePlaces
+    placesManagement,
     tripDetails,
     uiVisibility,
     itineraryManagement,
@@ -39,46 +28,40 @@ export const useLeftPanelOrchestrator = () => {
     isGeneratingItinerary: isGeneratingFromCoreHook,
   } = leftPanelCore;
 
-  // runScheduleGenerationFromRunner로 이름 변경하여 원래 함수 참조
   const { runScheduleGeneration: runScheduleGenerationFromRunner, isGenerating: isRunnerGenerating } = useScheduleGenerationRunner();
 
-  // runScheduleGenerationFromRunner를 위한 어댑터 함수
-  const adaptedRunScheduleGeneration = useCallback(async (payload: SchedulePayload): Promise<ItineraryDay[] | null> => {
-    const allPlacesForRunner = [
-      ...placesManagement.selectedPlaces, // Place[]
-      ...placesManagement.candidatePlaces // Place[]
-    ];
-    
-    // Place[] 타입을 SelectedPlace[]로 변환 (타입 캐스팅)
-    const convertedPlaces = convertToSelectedPlaces(allPlacesForRunner);
-    
-    return runScheduleGenerationFromRunner(
-      payload,
-      convertedPlaces, // 변환된 SelectedPlace[] 타입 사용
-      tripDetails.dates?.startDate || null
-    );
-  }, [runScheduleGenerationFromRunner, placesManagement.selectedPlaces, placesManagement.candidatePlaces, tripDetails.dates]);
+  const { adaptedRunScheduleGeneration } = useAdaptedScheduleGenerator({
+    runScheduleGenerationFromRunner,
+    selectedCorePlaces: placesManagement.selectedPlaces,
+    candidateCorePlaces: placesManagement.candidatePlaces,
+    tripStartDateFromDetails: tripDetails.dates?.startDate || null,
+  });
 
   const {
     createItinerary,
     isCreatingItinerary: isCreatingFromCustomHook,
   } = useCreateItineraryHandler({
-    placesManagement: { // placesManagement 객체를 전달, 타입은 useCreateItineraryHandler의 Deps와 일치해야 함
+    placesManagement: {
         selectedPlaces: placesManagement.selectedPlaces,
         candidatePlaces: placesManagement.candidatePlaces,
-        prepareSchedulePayload: placesManagement.prepareSchedulePayload, // 이 시그니처는 이미 (start, end) => Payload | null
-        // handleAutoCompletePlaces는 optional이므로 없어도 됨. 필요시 추가
+        prepareSchedulePayload: placesManagement.prepareSchedulePayload,
     },
-    tripDetails: { // tripDetails 객체 전달
+    tripDetails: {
       dates: tripDetails.dates,
-      startTime: tripDetails.startTime, // startTime, endTime 추가
+      startTime: tripDetails.startTime,
       endTime: tripDetails.endTime,
     },
-    runScheduleGeneration: adaptedRunScheduleGeneration, // 어댑터 함수 전달
+    runScheduleGeneration: adaptedRunScheduleGeneration,
+  });
+  
+  const { shouldShowItineraryView } = useItineraryViewDecider({
+    itineraryManagement: {
+      showItinerary: itineraryManagement.showItinerary,
+      isItineraryCreated: itineraryManagement.isItineraryCreated,
+      itinerary: itineraryManagement.itinerary,
+    }
   });
 
-  // Create adapter for placesManagement to match expected types in useLeftPanelProps
-  // This adaptedPlacesManagement is for useLeftPanelProps, not for useCreateItineraryHandler
   const adaptedPlacesManagementForProps = {
     ...placesManagement,
     handleAutoCompletePlaces: (category: CategoryName, placesFromApi: any[], keywords: string[]) => {
@@ -99,7 +82,6 @@ export const useLeftPanelOrchestrator = () => {
     handleCreateItinerary: createItinerary, 
   });
 
-  // Create a type-safe version of currentPanel
   const typedCurrentPanel = (
     currentPanel === 'region' || 
     currentPanel === 'date' || 
@@ -118,7 +100,7 @@ export const useLeftPanelOrchestrator = () => {
     itineraryReceived: !!itineraryManagement.itinerary && itineraryManagement.itinerary.length > 0,
     itineraryManagement: itineraryManagement,
     tripDetails,
-    placesManagement: adaptedPlacesManagementForProps, // Props용으로 어댑팅된 placesManagement 사용
+    placesManagement: adaptedPlacesManagementForProps,
     categorySelection,
     keywordsAndInputs,
     categoryResultHandlers,
@@ -148,14 +130,8 @@ export const useLeftPanelOrchestrator = () => {
     itineraryManagement.isItineraryCreated,
   ]);
 
-  const shouldShowItineraryView =
-    itineraryManagement.showItinerary &&
-    itineraryManagement.isItineraryCreated &&
-    itineraryManagement.itinerary &&
-    itineraryManagement.itinerary.length > 0;
-
   useEffect(() => {
-    console.log("LeftPanelOrchestrator - ItineraryView 표시 결정 로직:", {
+    console.log("LeftPanelOrchestrator - ItineraryView 표시 결정 로직 (from useItineraryViewDecider):", {
       showItineraryFromItineraryMgmt: itineraryManagement.showItinerary,
       isItineraryCreatedFromItineraryMgmt: itineraryManagement.isItineraryCreated,
       isCreatingItineraryPanelState: isCreatingFromCustomHook,
@@ -211,7 +187,7 @@ export const useLeftPanelOrchestrator = () => {
     regionSelection,
     uiVisibility,
     categorySelection,
-    placesManagement, // 원본 placesManagement 반환
+    placesManagement,
     callbacks,
     isActuallyGenerating,
     shouldShowItineraryView,
