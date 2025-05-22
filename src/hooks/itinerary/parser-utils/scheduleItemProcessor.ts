@@ -48,28 +48,69 @@ export const getProcessedItemDetails = (
   }
 
   if (placeDetails) {
-    // Handle both DetailedPlace and PlaceData types
-    const isDetailedPlace = 'category' in placeDetails;
+    // Use a more specific type guard. 'category' existing and being a string is a good indicator for DetailedPlace.
+    const isDetailedPlace = 'category' in placeDetails && typeof (placeDetails as DetailedPlace).category === 'string';
+
+    let name: string;
+    let categoryValue: CategoryName;
+    let x: number;
+    let y: number;
+    let address: string;
+    let road_address: string;
+    let phone: string;
+    let description: string;
+    let rating: number;
+    let image_url: string;
+    let homepage: string;
+    let geoNodeId: string | undefined;
+
+    if (isDetailedPlace) {
+      const pd = placeDetails as DetailedPlace;
+      name = pd.name || serverItem.place_name;
+      categoryValue = pd.category;
+      x = pd.x;
+      y = pd.y;
+      address = pd.address || '';
+      road_address = pd.road_address || pd.address || '';
+      phone = pd.phone || 'N/A';
+      description = pd.description || '';
+      rating = pd.rating || 0;
+      image_url = pd.image_url || '';
+      homepage = pd.homepage || pd.link_url || '';
+      geoNodeId = pd.geoNodeId;
+    } else {
+      const pd = placeDetails as PlaceData;
+      name = pd.place_name || serverItem.place_name;
+      categoryValue = toCategoryName(serverItem.place_type || '관광지'); // PlaceData doesn't have 'category: CategoryName'
+      x = pd.longitude;
+      y = pd.latitude;
+      address = pd.address || pd.road_address || '';
+      road_address = pd.road_address || pd.address || '';
+      phone = pd.phone || 'N/A';
+      description = pd.categories_details || '';
+      rating = pd.rating || 0;
+      image_url = pd.image_url || ''; // Assuming PlaceData might have image_url added
+      homepage = pd.link || '';
+      geoNodeId = undefined; // PlaceData doesn't typically have geoNodeId
+    }
     
     return {
       item: serverItem,
       details: placeDetails,
       numericId: serverItemIdInt,
       isFallback: false,
-      name: placeDetails.name || placeDetails.place_name || serverItem.place_name,
-      category: isDetailedPlace ? placeDetails.category : toCategoryName(serverItem.place_type || '관광지'),
-      // Handle different property names between DetailedPlace and PlaceData
-      x: isDetailedPlace ? placeDetails.x : placeDetails.longitude,
-      y: isDetailedPlace ? placeDetails.y : placeDetails.latitude,
-      address: placeDetails.address || '',
-      road_address: placeDetails.road_address || placeDetails.address || '',
-      phone: placeDetails.phone || 'N/A',
-      description: isDetailedPlace ? placeDetails.description : (placeDetails.categories_details || ''),
-      rating: placeDetails.rating || 0,
-      image_url: isDetailedPlace ? placeDetails.image_url : '',
-      homepage: isDetailedPlace ? (placeDetails.homepage || placeDetails.link_url || '') : 
-                                (placeDetails.link || ''),
-      geoNodeId: isDetailedPlace ? placeDetails.geoNodeId : undefined,
+      name,
+      category: categoryValue,
+      x,
+      y,
+      address,
+      road_address,
+      phone,
+      description,
+      rating,
+      image_url,
+      homepage,
+      geoNodeId,
     };
   }
 
@@ -112,5 +153,6 @@ const mapServerTypeToCategory = (serverType: string): CategoryName => {
   if (typeLower?.includes('관광') || typeLower?.includes('명소')) return toCategoryName('관광지');
   if (typeLower?.includes('식당') || typeLower?.includes('맛집')) return toCategoryName('음식점');
   
-  return toCategoryName(serverType, '관광지');
+  return toCategoryName(serverType, '관광지'); // Default to '관광지' if no match
 };
+

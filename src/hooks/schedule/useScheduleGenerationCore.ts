@@ -1,15 +1,17 @@
 
 import { useCallback } from 'react';
 import { toast } from 'sonner';
-import type { GeoJsonNode, NewServerScheduleResponse, ItineraryDay, SelectedPlace } from '@/types/core';
+// GeoJsonNode 타입을 any로 변경하거나, 실제 정의된 경로에서 가져와야 합니다.
+// 현재는 GeoJsonNode가 사용되지 않는 것으로 보여 any[]로 처리합니다.
+import type { NewServerScheduleResponse, ItineraryDay, SelectedPlace } from '@/types/core';
 import { useSupabaseDataFetcher } from '../data/useSupabaseDataFetcher';
 import { useItineraryEnricher } from '../itinerary/useItineraryEnricher';
-import { parseServerResponse } from './useServerResponseHandler';
+import { parseServerResponse } from './useServerResponseHandler'; // parseServerResponse는 useServerResponseHandler에서 export 되어야 합니다.
 
 interface ScheduleGenerationCoreProps {
   selectedPlaces: SelectedPlace[];
   startDate: Date;
-  geoJsonNodes: GeoJsonNode[];
+  geoJsonNodes: any[]; // GeoJsonNode[]에서 any[]로 변경
   setItinerary: (itinerary: ItineraryDay[]) => void;
   setSelectedDay: (day: number) => void;
   setServerRoutes: (routes: any) => void;
@@ -19,6 +21,7 @@ interface ScheduleGenerationCoreProps {
 export const useScheduleGenerationCore = ({
   selectedPlaces,
   startDate,
+  // geoJsonNodes, // 이 파라미터는 현재 사용되지 않는 것으로 보입니다.
   setItinerary,
   setSelectedDay,
   setServerRoutes,
@@ -37,6 +40,7 @@ export const useScheduleGenerationCore = ({
         console.log('[useScheduleGenerationCore] Supabase 데이터 로드 완료');
 
         // 2. 서버 응답 기본 파싱
+        // parseServerResponse 함수는 useServerResponseHandler.ts 에서 가져옵니다.
         const parsedItinerary = parseServerResponse(serverResponse, startDate);
         if (!parsedItinerary || parsedItinerary.length === 0) {
           console.error('[useScheduleGenerationCore] 서버 응답 파싱 결과가 비어 있습니다.');
@@ -63,10 +67,11 @@ export const useScheduleGenerationCore = ({
         setIsLoadingState(false);
       }
     },
-    [startDate, setItinerary, setSelectedDay, setServerRoutes, setIsLoadingState, fetchAllCategoryData, enrichItineraryData]
+    [startDate, setItinerary, setSelectedDay, setServerRoutes, setIsLoadingState, fetchAllCategoryData, enrichItineraryData, parseServerResponse] // parseServerResponse 추가
   );
 
   return {
     processServerResponse,
   };
 };
+

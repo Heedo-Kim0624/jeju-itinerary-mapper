@@ -4,6 +4,8 @@ import { ServerScheduleItem, SelectedPlace, ItineraryPlaceWithTime } from '@/typ
 import { getProcessedItemDetails } from './scheduleItemProcessor';
 import { groupAndCreateItineraryPlaces } from './placeGroupCreator';
 import { addTravelTimesToPlaces } from './travelTimeProcessor';
+import type { DetailedPlace } from '@/types/detailedPlace';
+import type { PlaceData } from '@/hooks/data/useSupabaseDataFetcher';
 
 /**
  * Builds a list of grouped itinerary places for a day, including processing,
@@ -11,16 +13,14 @@ import { addTravelTimesToPlaces } from './travelTimeProcessor';
  */
 export const buildGroupedItineraryPlaces = (
   dayItemsOriginal: ServerScheduleItem[],
-  // lastPayload: SchedulePayload | null, // Removed
-  // currentSelectedPlaces: SelectedPlace[], // Removed
+  getPlaceDetailsByIdCallback: (id: number) => DetailedPlace | PlaceData | undefined,
   dayNumber: number
 ): ItineraryPlaceWithTime[] => {
   // Step 1: Process raw server schedule items to get detailed place information
   // The type of `processedDayItems` elements implicitly matches `ProcessedScheduleItemDetails`
   // defined in `scheduleItemProcessor.ts` based on the return type of `getProcessedItemDetails`.
-  // `getProcessedItemDetails` now uses PlaceContext internally.
   const processedDayItems = dayItemsOriginal.map(serverItem =>
-    getProcessedItemDetails(serverItem) // Parameters updated
+    getProcessedItemDetails(serverItem, getPlaceDetailsByIdCallback) // Pass the callback here
   );
 
   // Step 2: Group consecutive places and create initial ItineraryPlaceWithTime objects
