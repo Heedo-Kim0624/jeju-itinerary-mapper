@@ -1,10 +1,9 @@
 
-import { ItineraryPlaceWithTime, ServerScheduleItem } from '@/types/core';
+import { ItineraryPlaceWithTime, ServerScheduleItem, Place } from '@/types/core'; // Added Place
 import { extractTimeFromTimeBlock, calculateDepartTime } from './timeUtils';
 import { createAirportEntry, createItineraryPlace, isAirport } from './placeFactory';
 
 // This interface describes the expected structure of items after processing by getProcessedItemDetails
-// It's based on the properties used within this function and in placeFactory
 interface ProcessedScheduleItemDetails {
   item: ServerScheduleItem; // The original server item
   name: string;
@@ -21,6 +20,7 @@ interface ProcessedScheduleItemDetails {
   isFallback: boolean;
   numericId: number | null;
   geoNodeId?: string;
+  placeFromStore?: Place; // Added to carry the full Place object if available
 }
 
 export const groupAndCreateItineraryPlaces = (
@@ -34,15 +34,25 @@ export const groupAndCreateItineraryPlaces = (
     const currentProcessedItem = processedDayItems[i];
     let j = i;
 
-    // Group consecutive items with the same numericId (if not null) or same name (if numericId is null)
+    // Group consecutive items with the same numericId (if not null and not fallback) or same name (if numericId is null or fallback)
+    // Prefer numericId for grouping if it's valid and not a fallback.
+    // Fallback items might share names but are distinct if their original server IDs differed,
+    // but here, if numericId is null (e.g. from server item not having ID), group by name.
     while (
       j < processedDayItems.length &&
-      ((currentProcessedItem.numericId !== null && processedDayItems[j].numericId === currentProcessedItem.numericId) ||
-        (currentProcessedItem.numericId === null && processedDayItems[j].name === currentProcessedItem.name))
+      (
+        (currentProcessedItem.numericId !== null && 
+         processedDayItems[j].numericId === currentProcessedItem.numericId &&
+         !currentProcessedItem.isFallback && !processedDayItems[j].isFallback 
+        ) || // Group by valid numeric ID if available and not fallback
+        (currentProcessedItem.name === processedDayItems[j].name && // Else, group by name
+          (currentProcessedItem.numericId === null || processedDayItems[j].numericId === null || currentProcessedItem.isFallback || processedDayItems[j].isFallback)
+        ) 
+      )
     ) {
       j++;
     }
-
+    
     const group = processedDayItems.slice(i, j);
     const firstInGroup = group[0];
 
@@ -50,11 +60,17 @@ export const groupAndCreateItineraryPlaces = (
     const arriveTime = extractTimeFromTimeBlock(firstInGroup.item.time_block);
     const departTime = calculateDepartTime(arriveTime, stayDurationMinutes);
 
-    const baseIdPart = String(firstInGroup.numericId || firstInGroup.name.replace(/\s+/g, '_'));
+    // Use numericId if available and valid, otherwise fall back to name for unique ID part.
+    // Ensure numericId from a non-fallback item is prioritized.
+    let baseIdPartSource = firstInGroup;
+    if (firstInGroup.isFallback && group.some(item => !item.isFallback && item.numericId !== null)) {
+        baseIdPartSource = group.find(item => !item.isFallback && item.numericId !== null) || firstInGroup;
+    }
+    
+    const baseIdPart = String(baseIdPartSource.numericId !== null ? baseIdPartSource.numericId : baseIdPartSource.name.replace(/\s+/g, '_'));
     const uniqueEntryId = `${baseIdPart}_${dayNumber}_${i}`;
 
     // Check if it's an airport and if it's the first or last item of the day
-    // Using processedDayItems.length as 'i' and 'group' are relative to processedDayItems
     const isFirstItemInDay = i === 0;
     const isLastItemGroupInDay = (i + group.length -1) === (processedDayItems.length - 1);
 
@@ -63,8 +79,22 @@ export const groupAndCreateItineraryPlaces = (
         createAirportEntry(uniqueEntryId, firstInGroup.item.time_block, arriveTime, departTime, stayDurationMinutes, firstInGroup.numericId)
       );
     } else {
+      // Pass the potentially richer firstInGroup.placeFromStore if available
+      const placeToUseForCreation = firstInGroup.placeFromStore ? 
+        {...firstInGroup, ...firstInGroup.placeFromStore, id: String(firstInGroup.numericId)} : // merge, prioritize store data but keep processed id
+        firstInGroup;
+
       groupedPlaces.push(
-        createItineraryPlace(uniqueEntryId, firstInGroup, firstInGroup.item.time_block, arriveTime, departTime, stayDurationMinutes, firstInGroup.numericId, firstInGroup.geoNodeId)
+        createItineraryPlace(
+            uniqueEntryId, 
+            placeToUseForCreation, // Use the merged/store object
+            firstInGroup.item.time_block, 
+            arriveTime, 
+            departTime, 
+            stayDurationMinutes, 
+            firstInGroup.numericId, // ensure this is the matched/correct numeric ID
+            firstInGroup.geoNodeId // from processed item
+        )
       );
     }
 

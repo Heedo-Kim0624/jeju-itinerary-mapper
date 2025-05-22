@@ -1,55 +1,91 @@
 
-import { ItineraryDay, NewServerScheduleResponse, SelectedPlace, SchedulePayload, ServerScheduleItem } from '@/types/core';
-import { formatDate } from './timeUtils';
-import { buildGroupedItineraryPlaces } from './groupedPlacesProcessor';
-import { processRouteData } from './routeSummaryProcessor';
-import { organizeAndSortScheduleByDay } from './scheduleOrganizer';
+import { NewServerScheduleResponse, ServerScheduleItem, SchedulePayload, SelectedPlace as CoreSelectedPlace, ItineraryPlaceWithTime } from '@/types/core';
+import { ItineraryDay, Place } from '@/types/core'; // Assuming Place is the detailed type from Supabase
+import { organizeScheduleByDay } from './scheduleOrganizer';
 import { organizeRouteByDay } from './routeOrganizer';
+import { buildGroupedItineraryPlaces } from './groupedPlacesProcessor';
+import { getDateStringMMDD, getDayOfWeekString } from './timeUtils';
+import { extractAllNodesFromRoute, extractAllLinksFromRoute } from '@/utils/routeParser'; // Corrected import path
 
-/**
- * Main function to build itinerary days from server response
- */
+interface DayMapping {
+  [key: string]: number; // e.g., "Mon": 1, "Tue": 2
+}
+
 export const buildItineraryDays = (
   serverResponse: NewServerScheduleResponse,
-  currentSelectedPlaces: SelectedPlace[] = [],
-  tripStartDate: Date | null = null,
-  lastPayload: SchedulePayload | null = null,
-  dayMapping: Record<string, number>
+  getPlaceById: (id: number | string | null | undefined) => Place | undefined, // Added
+  getPlaceByName: (name: string) => Place | undefined, // Added
+  tripStartDate: Date | null,
+  lastPayload: SchedulePayload | null,
+  dayMapping: DayMapping,
+  currentSelectedPlacesOriginal: CoreSelectedPlace[] // Added for ID hints from payload
 ): ItineraryDay[] => {
-  // Organize schedule and route data using new utilities
-  const scheduleByDay = organizeAndSortScheduleByDay(serverResponse.schedule);
+  const scheduleByDay = organizeScheduleByDay(serverResponse.schedule);
   const routeByDay = organizeRouteByDay(serverResponse.route_summary);
+  const itineraryDays: ItineraryDay[] = [];
 
-  // Build itinerary for each day
-  const sortedDayKeys = [...scheduleByDay.keys()].sort();
+  console.log('[buildItineraryDays] Day mapping used:', dayMapping);
+  console.log('[buildItineraryDays] Schedule by day keys:', Array.from(scheduleByDay.keys()));
+  console.log('[buildItineraryDays] Route by day keys:', Array.from(routeByDay.keys()));
+  
+  if (!tripStartDate) {
+    console.error("[buildItineraryDays] Trip start date is null, cannot calculate dates for itinerary days.");
+    // Return empty or handle as an error state
+    return [];
+  }
 
-  const result = sortedDayKeys.map((dayOfWeekKey) => {
-    const dayItemsOriginal = scheduleByDay.get(dayOfWeekKey) || [];
-    const routeInfo = routeByDay.get(dayOfWeekKey); // This can be undefined if no route for the day
-    const dayNumber = dayMapping[dayOfWeekKey];
+  // Iterate over days present in the schedule or route summary, ensuring mapping exists
+  const allDayKeys = new Set([...scheduleByDay.keys(), ...routeByDay.keys()]);
 
-    const groupedPlaces = buildGroupedItineraryPlaces(
-      dayItemsOriginal, lastPayload, currentSelectedPlaces, dayNumber
+  for (const dayKey of allDayKeys) {
+    const dayNumber = dayMapping[dayKey];
+    if (dayNumber === undefined) {
+      console.warn(`[buildItineraryDays] No mapping found for dayKey: ${dayKey}. Skipping this day.`);
+      continue;
+    }
+
+    const dayItemsOriginal = scheduleByDay.get(dayKey) || [];
+    const routeInfoForDay = routeByDay.get(dayKey);
+
+    // Here, pass getPlaceById, getPlaceByName, lastPayload, and currentSelectedPlacesOriginal down to groupedPlacesProcessor
+    const placesForDay: ItineraryPlaceWithTime[] = buildGroupedItineraryPlaces(
+      dayItemsOriginal,
+      lastPayload,
+      getPlaceById, 
+      getPlaceByName,
+      currentSelectedPlacesOriginal,
+      dayNumber
     );
 
-    // Process route data using the routeSummaryProcessor utility
-    // processRouteData can handle undefined routeInfo gracefully
-    const { nodeIds, linkIds, interleaved_route, totalDistance, segmentRoutes } = processRouteData(routeInfo);
+    const currentDayDate = new Date(tripStartDate);
+    currentDayDate.setDate(tripStartDate.getDate() + dayNumber - 1);
 
-    return {
+    const dayOfWeek = getDayOfWeekString(currentDayDate.getDay());
+    const dateStr = getDateStringMMDD(currentDayDate);
+    
+    let totalDistanceKm = 0;
+    if (routeInfoForDay && typeof routeInfoForDay.total_distance_km === 'number') {
+        totalDistanceKm = routeInfoForDay.total_distance_km;
+    } else if (routeInfoForDay && typeof routeInfoForDay.total_distance_m === 'number') {
+        totalDistanceKm = routeInfoForDay.total_distance_m / 1000;
+    }
+
+
+    itineraryDays.push({
       day: dayNumber,
-      dayOfWeek: dayOfWeekKey,
-      date: formatDate(tripStartDate, dayNumber - 1),
-      places: groupedPlaces,
-      totalDistance: totalDistance,
-      routeData: {
-        nodeIds: nodeIds,
-        linkIds: linkIds,
-        segmentRoutes: segmentRoutes
+      dayOfWeek: dayOfWeek, // Use actual day of week based on date
+      date: dateStr, // Format MM/DD
+      places: placesForDay,
+      totalDistance: totalDistanceKm,
+      routeData: { // This might need more specific parsing if routeInfoForDay has complex structure
+        nodeIds: routeInfoForDay?.node_ids?.map(String) || [],
+        linkIds: routeInfoForDay?.link_ids?.map(String) || [],
+        segmentRoutes: routeInfoForDay?.segment_routes || [], // Ensure this matches type
       },
-      interleaved_route: interleaved_route
-    };
-  });
+      interleaved_route: routeInfoForDay?.interleaved_route || [],
+    });
+  }
 
-  return result;
+  itineraryDays.sort((a, b) => a.day - b.day);
+  return itineraryDays;
 };
