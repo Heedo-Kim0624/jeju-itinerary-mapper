@@ -1,10 +1,10 @@
 
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { toast } from 'sonner';
-import useGeoJsonState from './geojson/useGeoJsonState'; // This is src/components/rightpanel/geojson/useGeoJsonState
+import useGeoJsonState from './geojson/useGeoJsonState';
 import GeoJsonLoader from './geojson/GeoJsonLoader';
-import GeoJsonRenderer from './geojson/GeoJsonRenderer';
-import { GeoJsonLayerProps } from './geojson/GeoJsonTypes';
+// GeoJsonRenderer import removed
+import { GeoJsonLayerProps, GeoNode, GeoLink } from './geojson/GeoJsonTypes'; // Added GeoNode, GeoLink for onGeoJsonLoaded
 
 const GeoJsonLayer: React.FC<GeoJsonLayerProps> = ({
   map,
@@ -13,62 +13,58 @@ const GeoJsonLayer: React.FC<GeoJsonLayerProps> = ({
   isNaverLoaded,
   onGeoJsonLoaded
 }) => {
-  // GeoJSON 상태 관리 훅 사용 (from ./geojson/useGeoJsonState)
   const {
     isLoading,
     error,
     isLoaded,
     nodes,
     links,
-    handleLoadSuccess, // This is passed to GeoJsonLoader
-    handleLoadError,   // This is passed to GeoJsonLoader
-    // handleDisplayedFeaturesChange, // Removed
-    // registerGlobalInterface // Removed, handled internally by the hook
+    handleLoadSuccess,
+    handleLoadError,
+    clearDisplayedFeatures, // Destructure from useGeoJsonState
   } = useGeoJsonState(map);
 
-  // 데이터 로드 성공 시 콜백 호출
   useEffect(() => {
     if (isLoaded && onGeoJsonLoaded) {
       onGeoJsonLoaded(nodes, links);
     }
   }, [isLoaded, nodes, links, onGeoJsonLoaded]);
-  
-  // 전역 인터페이스 등록은 useGeoJsonState 내부의 useEffect에서 처리됩니다.
-  // useEffect(() => {
-  //   if (isMapInitialized && isNaverLoaded && isLoaded) {
-  //     return registerGlobalInterface(); // Removed
-  //   }
-  // }, [isMapInitialized, isNaverLoaded, isLoaded, registerGlobalInterface]);
+
+  // Effect to handle the 'visible' prop for the layer
+  useEffect(() => {
+    // Only act if GeoJSON data is loaded and hooks are initialized
+    if (!isLoaded || !clearDisplayedFeatures) return;
+
+    if (!visible) {
+      console.log('[GeoJsonLayer] Layer is now hidden. Clearing displayed GeoJSON features.');
+      clearDisplayedFeatures();
+    }
+    // If 'visible' becomes true, features are not automatically re-rendered here.
+    // Routes are expected to be rendered on-demand via window.geoJsonLayer.renderRoute()
+    // or other map interaction logic.
+  }, [visible, isLoaded, clearDisplayedFeatures]);
 
   return (
     <>
-      {/* 데이터 로더 컴포넌트 */}
+      {/* Data loader component */}
       {(!isLoaded && !error) && (
         <GeoJsonLoader
           isMapInitialized={isMapInitialized}
           isNaverLoaded={isNaverLoaded}
-          onLoadSuccess={(loadedNodes, loadedLinks) => { // Renamed for clarity from original context
-            handleLoadSuccess(loadedNodes, loadedLinks); // Call the function from the hook
-            if (visible) {
+          onLoadSuccess={(loadedNodes: GeoNode[], loadedLinks: GeoLink[]) => { // Ensure types are explicit
+            handleLoadSuccess(loadedNodes, loadedLinks);
+            // Check current visibility before showing toast for initial load
+            if (visible && !isLoading) { 
               toast.success('경로 데이터가 로드되었습니다.');
             }
           }}
-          onLoadError={handleLoadError} // Call the function from the hook
+          onLoadError={handleLoadError}
         />
       )}
       
-      {/* 데이터 렌더러 컴포넌트 */}
-      {isLoaded && map && ( // Ensure map is also available for renderer
-        <GeoJsonRenderer
-          map={map}
-          visible={visible}
-          nodes={nodes}
-          links={links}
-          // onDisplayedFeaturesChange={handleDisplayedFeaturesChange} // Removed
-        />
-      )}
+      {/* GeoJsonRenderer component usage removed */}
       
-      {/* 로딩 상태 표시 */}
+      {/* Loading state 표시 */}
       {isLoading && (
         <div className="absolute bottom-16 left-4 bg-background/80 backdrop-blur-sm p-2 rounded-md text-sm">
           경로 데이터 로드 중...
@@ -78,7 +74,7 @@ const GeoJsonLayer: React.FC<GeoJsonLayerProps> = ({
       {/* 오류 상태 표시 */}
       {error && (
         <div className="absolute bottom-16 left-4 bg-red-500/80 text-white backdrop-blur-sm p-2 rounded-md text-sm">
-          경로 데이터 로드 실패
+          경로 데이터 로드 실패: {error.message}
         </div>
       )}
     </>
@@ -86,4 +82,3 @@ const GeoJsonLayer: React.FC<GeoJsonLayerProps> = ({
 };
 
 export default GeoJsonLayer;
-
