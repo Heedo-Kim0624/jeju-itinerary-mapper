@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef } from 'react';
 import { useMapContext } from './MapContext';
 import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/core';
@@ -24,10 +23,9 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
   highlightPlaceId,
 }) => {
   const { map, isMapInitialized, isNaverLoaded } = useMapContext();
-  const markersRef = useRef<naver.maps.Marker[]>([]); // Keep Naver type if declared globally via vite-env.d.ts
+  const markersRef = useRef<window.naver.maps.Marker[]>([]); // 타입 수정
   const prevSelectedDayRef = useRef<number | null>(null);
   const prevItineraryRef = useRef<ItineraryDay[] | null>(null);
-
 
   // 모든 마커 제거 함수
   const clearAllMarkers = () => {
@@ -73,7 +71,6 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
         (markersRef as any)._prevPlacesList = places;
       }
 
-
       let placesToDisplay: (Place | ItineraryPlaceWithTime)[] = [];
       let isDisplayingItineraryDay = false;
 
@@ -103,7 +100,7 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
             console.log("[MapMarkers] 유효한 좌표를 가진 표시할 장소가 없습니다.");
         } else {
             console.log(`[MapMarkers] 유효한 장소 ${validPlacesToDisplay.length}개에 대해 마커 생성 중`);
-            const newMarkers: naver.maps.Marker[] = []; // Keep Naver type
+            const newMarkers: window.naver.maps.Marker[] = []; // 타입 수정
             validPlacesToDisplay.forEach((place, index) => {
               const position = createNaverLatLng(place.y!, place.x!); 
               
@@ -115,7 +112,7 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
               if (isDisplayingItineraryDay) {
                 iconOptions = {
                   content: `<div style="width:28px;height:28px;background-color:${(place as ItineraryPlaceWithTime).isFallback ? '#757575' : '#FF5A5F'};border-radius:50%;border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.3);color:white;font-weight:bold;font-size:12px;display:flex;align-items:center;justify-content:center;">${index + 1}</div>`,
-                  anchor: new window.naver.maps.Point(14, 14)
+                  anchor: new window.naver.maps.Point(14, 14) // window.naver.maps 사용
                 };
               } else {
                 const placeForIcon = place as Place; 
@@ -124,8 +121,8 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
               
               const marker = createNaverMarker(map, position, iconOptions, place.name);
               
-              if (onPlaceClick && window.naver && window.naver.maps) { // Check window.naver.maps
-                window.naver.maps.Event.addListener(marker, 'click', () => {
+              if (onPlaceClick && window.naver && window.naver.maps) { 
+                window.naver.maps.Event.addListener(marker, 'click', () => { // window.naver.maps 사용
                   console.log(`[MapMarkers] 마커 클릭: ${place.name} (인덱스: ${index})`);
                   onPlaceClick(place, index);
                 });
@@ -166,4 +163,3 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
 };
 
 export default MapMarkers;
-

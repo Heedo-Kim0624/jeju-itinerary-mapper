@@ -78,6 +78,7 @@ export interface GeoJsonLayerRef {
   clearDisplayedFeatures: () => void;
   getNodeById: (id: string) => any;
   getLinkById: (id: string) => any;
+  isLoaded: () => boolean; // isLoaded 속성 추가
 }
 
 // GeoJSON 레이어 속성

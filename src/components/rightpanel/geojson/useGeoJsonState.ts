@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Feature, Point, LineString, Position } from 'geojson'; // Import specific GeoJSON types
-import type { GeoNode, GeoLink, RouteStyle, GeoJsonLayerRef } from './GeoJsonTypes';
+import type { GeoNode, GeoLink, RouteStyle, GeoJsonLayerRef, GeoCoordinates } from './GeoJsonTypes'; // GeoCoordinates 추가
 
 
 // 기본 경로 스타일 정의
@@ -18,7 +18,7 @@ const defaultRouteStyle: RouteStyle = {
 // The GeoJsonLoader component will call onGeoJsonLoaded from context,
 // which in turn would call handleLoadSuccess here.
 
-const useGeoJsonState = (map: naver.maps.Map | null) => { // map can be null initially
+const useGeoJsonState = (map: window.naver.maps.Map | null) => { // map 타입 수정
   const [isLoading, setIsLoading] = useState(false); // For data fetching state
   const [error, setError] = useState<Error | null>(null);
   const [isLoaded, setIsLoaded] = useState(false); // Indicates if data is processed and ready
@@ -27,8 +27,8 @@ const useGeoJsonState = (map: naver.maps.Map | null) => { // map can be null ini
   const [nodes, setNodes] = useState<GeoNode[]>([]);
   const [links, setLinks] = useState<GeoLink[]>([]);
   
-  const activeMarkersRef = useRef<naver.maps.Marker[]>([]);
-  const activePolylinesRef = useRef<naver.maps.Polyline[]>([]);
+  const activeMarkersRef = useRef<window.naver.maps.Marker[]>([]); // 타입 수정
+  const activePolylinesRef = useRef<window.naver.maps.Polyline[]>([]); // 타입 수정
   
   const nodeMapRef = useRef<Map<string, GeoNode>>(new Map());
   const linkMapRef = useRef<Map<string, GeoLink>>(new Map());
@@ -81,17 +81,17 @@ const useGeoJsonState = (map: naver.maps.Map | null) => { // map can be null ini
     return link;
   }, []);
   
-  const renderRoute = useCallback((nodeIds: string[], linkIds: string[], style: RouteStyle = defaultRouteStyle): (naver.maps.Marker | naver.maps.Polyline)[] => {
+  const renderRoute = useCallback((nodeIds: string[], linkIds: string[], style: RouteStyle = defaultRouteStyle): (window.naver.maps.Marker | window.naver.maps.Polyline)[] => { // 반환 타입 수정
     if (!map || !isLoaded || !window.naver || !window.naver.maps) {
       console.warn('[useGeoJsonState] renderRoute: 지도 미초기화, GeoJSON 미로드, 또는 Naver API 미준비.');
       return [];
     }
     
-    clearDisplayedFeatures(); // Clear previous route first
+    clearDisplayedFeatures(); 
     
-    const newRenderedFeatures: (naver.maps.Marker | naver.maps.Polyline)[] = [];
-    const newPolylines: naver.maps.Polyline[] = [];
-    const newMarkers: naver.maps.Marker[] = [];
+    const newRenderedFeatures: (window.naver.maps.Marker | window.naver.maps.Polyline)[] = []; // 타입 수정
+    const newPolylines: window.naver.maps.Polyline[] = []; // 타입 수정
+    const newMarkers: window.naver.maps.Marker[] = []; // 타입 수정
 
     linkIds.forEach(linkId => {
       const link = getLinkById(String(linkId)); // Ensure linkId is string
@@ -102,11 +102,11 @@ const useGeoJsonState = (map: naver.maps.Map | null) => { // map can be null ini
       }
       
       try {
-        const path = link.coordinates.map((coord: number[]) =>  // coord is [lng, lat]
+        const path = link.coordinates.map((coord: GeoCoordinates) =>  // coord 타입 GeoCoordinates로 수정
           new window.naver.maps.LatLng(coord[1], coord[0]) 
         );
         
-        const polyline = new window.naver.maps.Polyline({
+        const polyline = new window.naver.maps.Polyline({ // window.naver.maps 사용
           map,
           path,
           strokeColor: style.strokeColor || defaultRouteStyle.strokeColor,
@@ -131,17 +131,17 @@ const useGeoJsonState = (map: naver.maps.Map | null) => { // map can be null ini
       }
       
       try {
-        const position = new window.naver.maps.LatLng(
+        const position = new window.naver.maps.LatLng( // window.naver.maps 사용
           node.coordinates[1], // GeoJSON is [lng, lat], so node.coordinates[1] is lat
           node.coordinates[0]  // node.coordinates[0] is lng
         );
         
-        const marker = new window.naver.maps.Marker({
+        const marker = new window.naver.maps.Marker({ // window.naver.maps 사용
           map,
           position,
           icon: {
             content: `<div style="width: 8px; height: 8px; background-color: ${style.fillColor || defaultRouteStyle.fillColor}; border-radius: 50%; border: 1px solid white; box-shadow: 0 0 2px rgba(0,0,0,0.5);"></div>`,
-            anchor: new window.naver.maps.Point(4, 4)
+            anchor: new window.naver.maps.Point(4, 4) // window.naver.maps 사용
           },
           zIndex: (style.zIndex || defaultRouteStyle.zIndex || 100) + 1 
         });
