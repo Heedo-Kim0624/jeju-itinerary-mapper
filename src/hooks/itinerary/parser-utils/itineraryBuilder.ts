@@ -1,8 +1,10 @@
 
-import { ItineraryDay, ServerScheduleItem, NewServerScheduleResponse, SelectedPlace, SchedulePayload } from '@/types/core';
+import { ItineraryDay, NewServerScheduleResponse, SelectedPlace, SchedulePayload, ServerScheduleItem } from '@/types/core';
 import { formatDate } from './timeUtils';
 import { buildGroupedItineraryPlaces } from './groupedPlacesProcessor';
 import { processRouteData } from './routeSummaryProcessor';
+import { organizeAndSortScheduleByDay } from './scheduleOrganizer';
+import { organizeRouteByDay } from './routeOrganizer';
 
 /**
  * Main function to build itinerary days from server response
@@ -14,42 +16,24 @@ export const buildItineraryDays = (
   lastPayload: SchedulePayload | null = null,
   dayMapping: Record<string, number>
 ): ItineraryDay[] => {
-  const scheduleByDay = new Map<string, ServerScheduleItem[]>();
-  const routeByDay = new Map<string, any>();
-
-  // Organize schedule items by day
-  serverResponse.schedule.forEach(item => {
-    const dayKey = item.time_block.split('_')[0];
-    if (!scheduleByDay.has(dayKey)) {
-      scheduleByDay.set(dayKey, []);
-    }
-    scheduleByDay.get(dayKey)?.push(item);
-  });
-
-  // Sort items within each day by time_block
-  scheduleByDay.forEach((items, dayKey) => {
-    items.sort((a, b) => a.time_block.localeCompare(b.time_block));
-    scheduleByDay.set(dayKey, items);
-  });
-
-  // Organize route data by day
-  serverResponse.route_summary.forEach(route => {
-    routeByDay.set(route.day, route);
-  });
+  // Organize schedule and route data using new utilities
+  const scheduleByDay = organizeAndSortScheduleByDay(serverResponse.schedule);
+  const routeByDay = organizeRouteByDay(serverResponse.route_summary);
 
   // Build itinerary for each day
   const sortedDayKeys = [...scheduleByDay.keys()].sort();
 
   const result = sortedDayKeys.map((dayOfWeekKey) => {
     const dayItemsOriginal = scheduleByDay.get(dayOfWeekKey) || [];
-    const routeInfo = routeByDay.get(dayOfWeekKey);
+    const routeInfo = routeByDay.get(dayOfWeekKey); // This can be undefined if no route for the day
     const dayNumber = dayMapping[dayOfWeekKey];
 
     const groupedPlaces = buildGroupedItineraryPlaces(
       dayItemsOriginal, lastPayload, currentSelectedPlaces, dayNumber
     );
 
-    // Process route data using the new utility
+    // Process route data using the routeSummaryProcessor utility
+    // processRouteData can handle undefined routeInfo gracefully
     const { nodeIds, linkIds, interleaved_route, totalDistance, segmentRoutes } = processRouteData(routeInfo);
 
     return {
@@ -57,11 +41,11 @@ export const buildItineraryDays = (
       dayOfWeek: dayOfWeekKey,
       date: formatDate(tripStartDate, dayNumber - 1),
       places: groupedPlaces,
-      totalDistance: totalDistance, // This is from processRouteData
+      totalDistance: totalDistance,
       routeData: {
         nodeIds: nodeIds,
         linkIds: linkIds,
-        segmentRoutes: segmentRoutes // Ensure segmentRoutes is passed through
+        segmentRoutes: segmentRoutes
       },
       interleaved_route: interleaved_route
     };
