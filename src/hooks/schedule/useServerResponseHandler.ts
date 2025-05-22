@@ -1,6 +1,6 @@
 
 import { useCallback, useEffect, useRef } from 'react';
-import { NewServerScheduleResponse, ItineraryDay, ServerScheduleItem, ItineraryPlaceWithTime, RouteData } from '@/types/core';
+import { NewServerScheduleResponse, ItineraryDay, ServerScheduleItem, ItineraryPlaceWithTime, RouteData, ServerRouteSummaryItem } from '@/types/core'; // ServerRouteSummaryItem 추가
 import { getDateStringMMDD, getDayOfWeekString } from '../itinerary/parser-utils/timeUtils'; // 경로 수정 및 임포트 추가
 
 interface ServerResponseHandlerProps {
@@ -76,37 +76,57 @@ export const parseServerResponse = (
         return [];
     }
     
-    return serverResponse.route_summary.map((summaryItem, index) => {
+    // 요일별로 schedule 항목 그룹화
+    const scheduleByDay = serverResponse.schedule.reduce((acc, item) => {
+      const dayKey = item.time_block.split('_')[0]; // 'Tue_0900' -> 'Tue'
+      if (!acc[dayKey]) {
+        acc[dayKey] = [];
+      }
+      acc[dayKey].push(item);
+      return acc;
+    }, {} as Record<string, ServerScheduleItem[]>);
+    
+    // route_summary를 요일별로 매핑
+    const routeSummaryByDay = serverResponse.route_summary.reduce((acc, item) => {
+      acc[item.day] = item; // item.day is like "Tue", "Wed"
+      return acc;
+    }, {} as Record<string, ServerRouteSummaryItem>);
+    
+    // 요일 목록 (route_summary의 day 필드 기준, 순서 유지)
+    const daysOfWeekFromSummary = serverResponse.route_summary.map(item => item.day);
+    
+    // 각 요일에 대한 ItineraryDay 객체 생성
+    return daysOfWeekFromSummary.map((dayOfWeekKey, index) => {
+      const dayScheduleItems = scheduleByDay[dayOfWeekKey] || [];
+      const dayRouteSummary = routeSummaryByDay[dayOfWeekKey];
+      
       const currentDayDate = new Date(startDate.getTime() + index * 24 * 60 * 60 * 1000);
-      const dayOfWeek = getDayOfWeekString(currentDayDate);
-      const dateStr = getDateStringMMDD(currentDayDate);
-
-      const dayScheduleItems = serverResponse.schedule.filter(item =>
-        item.time_block.startsWith(summaryItem.day)
-      );
-
+      const dateStr = getDateStringMMDD(currentDayDate); // MM/DD 형식
+      // getDayOfWeekString(currentDayDate)를 사용할 수도 있으나, route_summary의 dayKey를 사용
+      
       const placesForDay: ItineraryPlaceWithTime[] = dayScheduleItems.map((scheduleItem: ServerScheduleItem) => {
-        const placeId = scheduleItem.id?.toString() || scheduleItem.place_name;
+        const placeId = scheduleItem.id?.toString() || scheduleItem.place_name; // Fallback to place_name if id is missing
         return {
           id: placeId,
           name: scheduleItem.place_name,
-          category: scheduleItem.place_type,
+          category: scheduleItem.place_type, // Ensure this aligns with CategoryName if strict typing needed
           timeBlock: scheduleItem.time_block,
-          x: 0, // 기본값 또는 플레이스홀더 값
-          y: 0, // 기본값 또는 플레이스홀더 값
-          address: '', // 기본값 또는 플레이스홀더 값
-          road_address: '', // 기본값 또는 플레이스홀더 값
-          phone: '', // 기본값 또는 플레이스홀더 값
-          description: '', // 기본값 또는 플레이스홀더 값
-          rating: 0, // 기본값 또는 플레이스홀더 값
-          image_url: '', // 기본값 또는 플레이스홀더 값
-          homepage: '', // 기본값 또는 플레이스홀더 값
+          // Default values, to be populated later with actual data
+          x: 0, 
+          y: 0, 
+          address: '', 
+          road_address: '', 
+          phone: '', 
+          description: '', 
+          rating: 0, 
+          image_url: '', 
+          homepage: '', 
           // Optional fields
           arriveTime: undefined,
           departTime: undefined,
           stayDuration: undefined,
           travelTimeToNext: undefined,
-          geoNodeId: placeId, // geoNodeId는 string | undefined 이므로, placeId 사용
+          geoNodeId: placeId,
           isFallback: true,
           isSelected: false,
           isCandidate: false,
@@ -114,30 +134,34 @@ export const parseServerResponse = (
         };
       });
 
-      const nodeIds: string[] = [];
-      const linkIds: string[] = [];
-      summaryItem.interleaved_route.forEach((id, i) => {
-        if (i % 2 === 0) {
-          nodeIds.push(String(id));
-        } else {
-          linkIds.push(String(id));
-        }
-      });
+      const currentInterleavedRoute = dayRouteSummary?.interleaved_route || [];
+      const nodeIds = currentInterleavedRoute
+        .filter((_id, idx) => idx % 2 === 0)
+        .map(id => String(id));
+      const linkIds = currentInterleavedRoute
+        .filter((_id, idx) => idx % 2 === 1)
+        .map(id => String(id));
+      
+      // For consistency with other parsers, map all to string.
+      // The type ItineraryDay.interleaved_route allows (string | number)[]
+      // but other parts like formatServerItinerary.ts use string[].
+      const finalInterleavedRoute = currentInterleavedRoute.map(id => String(id));
+
 
       const routeData: RouteData = {
         nodeIds,
         linkIds,
-        segmentRoutes: [], // 기본값
+        segmentRoutes: [], // Initialize segmentRoutes
       };
 
       return {
         day: index + 1,
         date: dateStr,
-        dayOfWeek: dayOfWeek,
+        dayOfWeek: dayOfWeekKey, // Use the day string from route_summary (e.g., "Tue")
         places: placesForDay,
-        totalDistance: summaryItem.total_distance_m / 1000, // km 단위
+        totalDistance: dayRouteSummary?.total_distance_m ? dayRouteSummary.total_distance_m / 1000 : 0, // km
         routeData: routeData,
-        interleaved_route: summaryItem.interleaved_route.map(String),
+        interleaved_route: finalInterleavedRoute,
       };
     });
   } catch (error) {
