@@ -6,11 +6,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import PlaceList from '@/components/middlepanel/PlaceList';
 import PlaceDetailDialog from '@/components/places/PlaceDetailDialog';
-import { Place } from '@/types/supabase';
+import { Place } from '@/types/core'; // Updated to use Place from @/types/core
 import { 
   parsePrompt, 
   fetchWeightedResults, 
-  convertToPlace,
+  // convertToPlace, // convertToPlace is not directly used here, ensure it's used correctly elsewhere or remove if not needed.
 } from '@/lib/jeju/travelPromptUtils';
 
 interface TravelPromptSearchProps {
@@ -32,6 +32,8 @@ interface PlaceResult {
   naverLink?: string;
   instaLink?: string;
   operatingHours?: string;
+  // ItineraryPlaceWithTime specific properties are not expected here,
+  // as PlaceResult is for search results before becoming ItineraryPlaceWithTime
 }
 
 const TravelPromptSearch: React.FC<TravelPromptSearchProps> = ({ onPlacesFound }) => {
@@ -40,7 +42,7 @@ const TravelPromptSearch: React.FC<TravelPromptSearchProps> = ({ onPlacesFound }
   const [places, setPlaces] = useState<Place[]>([]);
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [sortOption, setSortOption] = useState("recommendation");
+  // const [sortOption, setSortOption] = useState("recommendation"); // sortOption is not used
   const mapCtx = useMapContext();
   
   const totalPages = Math.ceil(places.length / 10); // 10 items per page
@@ -75,47 +77,56 @@ const TravelPromptSearch: React.FC<TravelPromptSearchProps> = ({ onPlacesFound }
       );
       
       // 4. Convert to Place type with all required fields
-      const convertedPlaces = placeResults.map((result: PlaceResult) => ({
+      const convertedPlaces: Place[] = placeResults.map((result: PlaceResult) => ({
         id: String(result.id),
         name: result.name || '',
         address: result.address || '',
-        phone: '',  // Set default values for required fields
+        phone: '', 
         category: result.category || '',
-        description: '',  // Set default values for required fields
+        description: '',  
         rating: result.rating || 0,
         x: result.x || 0,
         y: result.y || 0,
-        image_url: '',  // Set default values for required fields
-        road_address: '',  // Set default values for required fields
-        homepage: '',  // Set default values for required fields
+        image_url: '', 
+        road_address: result.address || '', // Assuming road_address can default to address if not present
+        homepage: '',  
         categoryDetail: result.categoryDetail || '',
         reviewCount: result.reviewCount || 0,
-        weight: result.weight || 0,
+        // weight: result.weight || 0, // weight is not part of Place type
         naverLink: result.naverLink || '',
         instaLink: result.instaLink || '',
-        operatingHours: result.operatingHours || ''
+        operatingHours: result.operatingHours || '',
+        // ItineraryPlaceWithTime specific props like timeBlock, arriveTime are not added here
+        // They are added when Place becomes an ItineraryPlaceWithTime
       }));
       
-      setPlaces(convertedPlaces as Place[]);
+      setPlaces(convertedPlaces);
       setCurrentPage(1);
       
       // 5. Add markers to map
       if (convertedPlaces.length && mapCtx) {
-        const recommended = convertedPlaces.slice(0, 4) as Place[];
-        const others = convertedPlaces.slice(4) as Place[];
+        const recommended = convertedPlaces.slice(0, 4);
+        const others = convertedPlaces.slice(4);
         mapCtx.addMarkers(recommended, { highlight: true });
         mapCtx.addMarkers(others, { highlight: false });
         
         if (convertedPlaces[0]) {
           mapCtx.panTo({ lat: convertedPlaces[0].y, lng: convertedPlaces[0].x });
         } else if (parsed.locations.length > 0) {
-          mapCtx.panTo(parsed.locations[0]);
+           // If locations are available from prompt, pan to the first one
+          const firstLocation = parsed.locations[0];
+          if (typeof firstLocation === 'object' && 'lat' in firstLocation && 'lng' in firstLocation) {
+            mapCtx.panTo(firstLocation);
+          } else if (typeof firstLocation === 'string') {
+            // Handle string location if applicable, e.g., geocode it
+            // For now, this branch assumes it's already a LatLngLiteral or similar
+          }
         }
       }
       
       // 6. Call callback if provided
       if (onPlacesFound && convertedPlaces.length > 0) {
-        onPlacesFound(convertedPlaces as Place[], parsed.category);
+        onPlacesFound(convertedPlaces, parsed.category);
       }
       
       if (placeResults.length === 0) {
@@ -131,10 +142,10 @@ const TravelPromptSearch: React.FC<TravelPromptSearchProps> = ({ onPlacesFound }
     }
   };
 
-  const handleSortChange = (value: string) => {
-    setSortOption(value);
-    // Sort logic would be implemented here
-  };
+  // const handleSortChange = (value: string) => { // sortOption and handleSortChange are not used
+  //   setSortOption(value);
+  //   // Sort logic would be implemented here
+  // };
 
   const handleViewDetails = (place: Place) => {
     setSelectedPlace(place);
@@ -178,7 +189,11 @@ const TravelPromptSearch: React.FC<TravelPromptSearchProps> = ({ onPlacesFound }
       </div>
       
       {selectedPlace && (
-        <PlaceDetailDialog place={selectedPlace} onClose={() => setSelectedPlace(null)} />
+        <PlaceDetailDialog 
+          place={selectedPlace} 
+          open={!!selectedPlace} // open state managed by selectedPlace
+          onOpenChange={(open) => !open && setSelectedPlace(null)} // Changed from onClose
+        />
       )}
     </div>
   );

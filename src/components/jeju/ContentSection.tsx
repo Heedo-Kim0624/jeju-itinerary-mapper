@@ -1,9 +1,8 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import PlaceList from '@/components/middlepanel/PlaceList';
 import ItineraryView from '@/components/leftpanel/ItineraryView';
-import type { Place, ItineraryDay } from '@/types/supabase';
+import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/core'; // ItineraryPlaceWithTime 추가
 import TravelPromptSearch from '@/components/jeju/TravelPromptSearch';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,15 +12,15 @@ interface ContentSectionProps {
   showItinerary: boolean;
   filteredPlaces: Place[];
   loading: boolean;
-  selectedPlace: (Place | ItineraryPlaceWithTime) | null; // 타입 변경
+  selectedPlace: (Place | ItineraryPlaceWithTime) | null; // 타입 변경 유지
   currentPage: number;
   totalPages: number;
   itinerary: ItineraryDay[] | null;
-  dateRange: { startDate: Date | null, endDate: Date | null };
+  // dateRange: { startDate: Date | null, endDate: Date | null }; // 이미 제거됨
   selectedItineraryDay: number | null;
   isPlaceListReady: boolean;
   isCategorySelectionComplete: boolean;
-  onSelectPlace: (place: (Place | ItineraryPlaceWithTime)) => void; // 타입 변경
+  onSelectPlace: (place: (Place | ItineraryPlaceWithTime)) => void; // 타입 변경 유지
   onPageChange: (page: number) => void;
   onCreateItinerary: () => void;
   onSelectItineraryDay: (day: number) => void;
@@ -211,7 +210,7 @@ const ContentSection: React.FC<ContentSectionProps> = ({
   currentPage,
   totalPages,
   itinerary,
-  dateRange, // This is used for ItineraryView's startDate, but ItineraryView no longer takes it.
+  // dateRange, // 이미 제거됨
   selectedItineraryDay,
   isPlaceListReady,
   isCategorySelectionComplete,
@@ -316,13 +315,11 @@ const ContentSection: React.FC<ContentSectionProps> = ({
               장소 목록으로 돌아가기
             </Button>
           </div>
-          {itinerary && selectedItineraryDay !== null && ( // Removed dateRange.startDate check as ItineraryView doesn't need it
+          {itinerary && selectedItineraryDay !== null && ( 
             <ItineraryView
               itinerary={itinerary}
-              // startDate={dateRange.startDate} // startDate 제거
               onSelectDay={onSelectItineraryDay}
               selectedDay={selectedItineraryDay}
-              // onClose prop is optional in ItineraryView, not passing it here is fine
             />
           )}
         </>

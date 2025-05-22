@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Place } from '@/types/supabase';
+import { Place } from '@/types/core'; // Updated to use Place from @/types/core
 import { useMapContext } from '../rightpanel/MapContext';
 import PlaceDetailDialog from '../places/PlaceDetailDialog';
 import { useCategoryResults } from '@/hooks/use-category-results';
@@ -28,7 +28,7 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
   onClose,
   onSelectPlace,
   isPlaceSelected,
-  isOpen,
+  // isOpen, // isOpen is not directly used in the component logic, panel visibility is controlled by parent
   onConfirm
 }) => {
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
@@ -50,8 +50,10 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
       // 첫번째 장소가 있으면 지도 중앙을 해당 위치로 이동
       if (recommendedPlaces[0] && recommendedPlaces[0].x && recommendedPlaces[0].y) {
         panTo({ lat: recommendedPlaces[0].y, lng: recommendedPlaces[0].x });
-      } else if (safeRegions.length > 0) {
-        // 장소가 없으면 선택된 지역으로 이동
+      } else if (safeRegions.length > 0 && typeof safeRegions[0] === 'string') {
+        // 장소가 없으면 선택된 지역으로 이동 (첫번째 지역 이름으로 panTo 시도)
+        // mapContext의 panTo는 LatLngLiteral 또는 지역 이름을 받을 수 있어야 함
+        // 현재 panTo는 LatLngLiteral | string을 받으므로 string도 가능
         panTo(safeRegions[0]);
       }
       
@@ -155,7 +157,8 @@ const CategoryResultPanel: React.FC<CategoryResultPanelProps> = ({
       {selectedPlace && (
         <PlaceDetailDialog
           place={selectedPlace}
-          onClose={() => setSelectedPlace(null)}
+          open={!!selectedPlace} // open state managed by selectedPlace
+          onOpenChange={(open) => !open && setSelectedPlace(null)} // Changed from onClose
         />
       )}
     </div>
