@@ -29,7 +29,7 @@ const DaySelector: React.FC<DaySelectorProps> = ({
 
   return (
     <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur-sm p-3 rounded-lg shadow-xl z-[1000] w-auto max-w-[calc(100vw-2rem)]">
-      <h3 className="text-sm font-semibold mb-2 text-gray-700 text-center">생성된 여행 일정</h3>
+      {/* <h3 className="text-sm font-semibold mb-2 text-gray-700 text-center">생성된 여행 일정</h3> REMOVED */}
       <ScrollArea className="w-full whitespace-nowrap">
         <div className="flex space-x-2 pb-2">
           {itinerary.map((day) => (
