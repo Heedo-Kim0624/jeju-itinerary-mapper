@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useMapContext } from '@/components/rightpanel/MapContext';
 import { Button } from '@/components/ui/button';
@@ -110,16 +109,18 @@ const TravelPromptSearch: React.FC<TravelPromptSearchProps> = ({ onPlacesFound }
         mapCtx.addMarkers(recommended, { highlight: true });
         mapCtx.addMarkers(others, { highlight: false });
         
-        if (convertedPlaces[0]) {
+        if (convertedPlaces.length > 0 && convertedPlaces[0]) {
           mapCtx.panTo({ lat: convertedPlaces[0].y, lng: convertedPlaces[0].x });
         } else if (parsed.locations.length > 0) {
            // If locations are available from prompt, pan to the first one
           const firstLocation = parsed.locations[0];
-          if (typeof firstLocation === 'object' && 'lat' in firstLocation && 'lng' in firstLocation) {
+          // Check if firstLocation is a non-empty string before panning
+          if (typeof firstLocation === 'string' && firstLocation.trim() !== '') {
             mapCtx.panTo(firstLocation);
-          } else if (typeof firstLocation === 'string') {
-            // Handle string location if applicable, e.g., geocode it
-            // For now, this branch assumes it's already a LatLngLiteral or similar
+          } else if (typeof firstLocation === 'object' && firstLocation && 'lat' in firstLocation && 'lng' in firstLocation) {
+            // This case should ideally not happen if parsed.locations is string[]
+            // but keeping it for robustness or future changes in parsePrompt
+            mapCtx.panTo(firstLocation as { lat: number; lng: number });
           }
         }
       }
