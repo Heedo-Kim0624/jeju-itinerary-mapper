@@ -14,7 +14,7 @@ export const useLeftPanelOrchestrator = () => {
   
   const {
     regionSelection,
-    categorySelection, // 이 categorySelection의 handlePanelBack 시그니처가 문제의 원인 중 하나
+    categorySelection,
     keywordsAndInputs,
     placesManagement,
     tripDetails,
@@ -33,10 +33,8 @@ export const useLeftPanelOrchestrator = () => {
     isCreatingItinerary: isCreatingFromCustomHook,
   } = useCreateItineraryHandler({
     placesManagement,
-    tripDetails: { // 여기서 handleDateChange 제거
+    tripDetails: {
       dates: tripDetails.dates,
-      startTime: tripDetails.startTime,
-      endTime: tripDetails.endTime,
     },
     runScheduleGeneration,
   });
@@ -55,7 +53,7 @@ export const useLeftPanelOrchestrator = () => {
 
   const callbacks = useLeftPanelCallbacks({
     handleConfirmCategory: keywordsAndInputs.handleConfirmCategory,
-    handlePanelBack: categorySelection.handlePanelBack, // 여기 전달되는 handlePanelBack 시그니처가 () => void 여야 함
+    handlePanelBack: categorySelection.handlePanelBack,
     handleCloseItinerary,
     setRegionSlidePanelOpen: regionSelection.setRegionSlidePanelOpen,
     selectedRegions: regionSelection.selectedRegions,
@@ -77,13 +75,13 @@ export const useLeftPanelOrchestrator = () => {
     devDebugInfoProps,
   } = useLeftPanelProps({
     uiVisibility,
-    currentPanel: typedCurrentPanel, // Pass typed version
+    currentPanel: typedCurrentPanel,
     isGeneratingItinerary: isActuallyGenerating,
     itineraryReceived: !!itineraryManagement.itinerary && itineraryManagement.itinerary.length > 0,
     itineraryManagement: itineraryManagement,
     tripDetails,
-    placesManagement: adaptedPlacesManagement, // Pass adapted version
-    categorySelection, // 이 categorySelection의 handlePanelBack 시그니처가 () => void 여야 함
+    placesManagement: adaptedPlacesManagement,
+    categorySelection,
     keywordsAndInputs,
     categoryResultHandlers,
     handleCloseItinerary,

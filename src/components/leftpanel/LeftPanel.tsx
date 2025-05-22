@@ -22,13 +22,25 @@ const LeftPanel: React.FC = () => {
     categoryResultHandlers, 
   } = useLeftPanelOrchestrator();
 
+  // enhancedMainPanelProps가 null이 아닐 때만 TypeScript 타입을 수정하여 사용
+  const typedMainPanelProps = enhancedMainPanelProps 
+    ? {
+        ...enhancedMainPanelProps,
+        leftPanelContentProps: {
+          ...enhancedMainPanelProps.leftPanelContentProps,
+          // activeMiddlePanelCategory를 CategoryName 타입으로 타입 변환
+          activeMiddlePanelCategory: enhancedMainPanelProps.leftPanelContentProps.activeMiddlePanelCategory as CategoryName | null
+        }
+      }
+    : null;
+
   return (
     <div className="relative h-full">
       <LeftPanelDisplayLogic
         isGenerating={isActuallyGenerating}
         shouldShowItineraryView={shouldShowItineraryView}
         itineraryDisplayProps={enhancedItineraryDisplayProps}
-        mainPanelProps={enhancedMainPanelProps}
+        mainPanelProps={typedMainPanelProps}
       />
 
       <RegionPanelHandler

@@ -1,121 +1,100 @@
 
 import { useState, useCallback } from 'react';
+import { ItineraryDay, Place, SchedulePayload } from '@/types';
 import { toast } from 'sonner';
-import type { SchedulePayload, Place, SelectedPlace as CoreSelectedPlace, ItineraryDay } from '@/types';
-import { summarizeItineraryData } from '@/utils/debugUtils'; // For logging consistency
-import type { CategoryName } from '@/utils/categoryUtils'; // Added CategoryName import
+import { summarizeItineraryData } from '@/utils/debugUtils';
 
-interface UseCreateItineraryHandlerProps {
+interface CreateItineraryHandlerDeps {
   placesManagement: {
     selectedPlaces: Place[];
     candidatePlaces: Place[];
+    prepareSchedulePayload: (places: Place[], startTime?: string, endTime?: string) => SchedulePayload;
+    handleAutoCompletePlaces?: (category: string, placesFromApi: any[], travelDays: number | null) => void;
   };
+  // tripDetails 타입을 수정하여 필요한 속성만 명시적으로 받도록 함
   tripDetails: {
     dates?: {
       startDate: Date | null;
       endDate: Date | null;
+      startTime?: string;
+      endTime?: string;
     };
-    startDatetime?: string | null;
-    endDatetime?: string | null;
+    // 필요한 경우 startTime과 endTime을 직접 추가
+    startTime?: string;
+    endTime?: string;
   };
-  runScheduleGeneration: (
-    payload: SchedulePayload,
-    selectedPlaces: CoreSelectedPlace[],
-    tripStartDate: Date
-  ) => Promise<ItineraryDay[] | null>;
+  runScheduleGeneration: (payload: SchedulePayload) => Promise<ItineraryDay[] | null>;
 }
 
 export const useCreateItineraryHandler = ({
   placesManagement,
   tripDetails,
   runScheduleGeneration,
-}: UseCreateItineraryHandlerProps) => {
-  const [isCreatingItineraryUiLock, setIsCreatingItineraryUiLock] = useState(false);
+}: CreateItineraryHandlerDeps) => {
+  const [isCreatingItinerary, setIsCreatingItinerary] = useState(false);
 
   const createItinerary = useCallback(async () => {
-    if (placesManagement.selectedPlaces.length === 0) {
-      toast.error("선택된 장소가 없습니다. 장소를 선택해주세요.");
-      return null;
-    }
-
-    if (!tripDetails.dates?.startDate || !tripDetails.dates?.endDate || !tripDetails.startDatetime || !tripDetails.endDatetime) {
-      toast.error("여행 날짜와 시간을 먼저 설정해주세요.");
-      return null;
-    }
-    
-    setIsCreatingItineraryUiLock(true);
-    let result: ItineraryDay[] | null = null;
     try {
-      const selectedCorePlaces: CoreSelectedPlace[] = placesManagement.selectedPlaces.map(p => ({
-        id: String(p.id),
-        name: p.name,
-        category: p.category as CategoryName, // Cast to CategoryName
-        x: p.x,
-        y: p.y,
-        address: p.address,
-        road_address: p.road_address,
-        phone: p.phone,
-        description: p.description,
-        rating: p.rating,
-        image_url: p.image_url,
-        homepage: p.homepage,
-        geoNodeId: p.geoNodeId,
-        isSelected: p.isSelected !== undefined ? p.isSelected : true,
-        isCandidate: p.isCandidate !== undefined ? p.isCandidate : false,
-      }));
-
-      const selectedPlaceIds = new Set(selectedCorePlaces.map(p => String(p.id))); // Ensure string IDs
-      const candidateSchedulePlaces = placesManagement.candidatePlaces
-        .filter(p => !selectedPlaceIds.has(String(p.id)))
-        .map(p => ({ 
-          id: String(p.id),
-          name: p.name 
-        }));
-
-      const payload: SchedulePayload = {
-        selected_places: selectedCorePlaces.map(p => ({ id: String(p.id), name: p.name })),
-        candidate_places: candidateSchedulePlaces,
-        start_datetime: tripDetails.startDatetime!,
-        end_datetime: tripDetails.endDatetime!,
-      };
+      setIsCreatingItinerary(true);
       
-      console.log("[CreateItineraryHook] 일정 생성 시작, 페이로드:", {
-        선택된장소수: payload.selected_places.length,
-        후보장소수: payload.candidate_places.length,
-        시작일시: payload.start_datetime,
-        종료일시: payload.end_datetime,
-        여행시작일_파서전달용: tripDetails.dates.startDate.toISOString()
-      });
+      // 여행 날짜가 없으면 중단
+      if (!tripDetails.dates?.startDate || !tripDetails.dates?.endDate) {
+        toast.error("여행 시작일과 종료일을 설정해주세요.");
+        setIsCreatingItinerary(false);
+        return null;
+      }
       
-      result = await runScheduleGeneration(
-        payload, 
-        selectedCorePlaces, 
-        tripDetails.dates.startDate
+      const allPlaces = [
+        ...placesManagement.selectedPlaces,
+        ...placesManagement.candidatePlaces
+      ];
+      
+      if (allPlaces.length === 0) {
+        toast.error("여행지 장소를 선택해주세요.");
+        setIsCreatingItinerary(false);
+        return null;
+      }
+      
+      // startTime과 endTime을 먼저 dates에서 찾고, 없으면 tripDetails에서 직접 찾음
+      const startTime = tripDetails.dates?.startTime || tripDetails.startTime || "09:00";
+      const endTime = tripDetails.dates?.endTime || tripDetails.endTime || "21:00";
+      
+      const payload = placesManagement.prepareSchedulePayload(
+        allPlaces,
+        startTime,
+        endTime
       );
       
-      if (result) {
-        console.log("[CreateItineraryHook] createItinerary 완료. 결과 요약:", summarizeItineraryData(result));
+      console.log("[CreateItineraryHandler] 일정 생성 요청:", {
+        places: allPlaces.length,
+        startDate: tripDetails.dates?.startDate?.toISOString(),
+        endDate: tripDetails.dates?.endDate?.toISOString(),
+        startTime,
+        endTime,
+      });
+      
+      // 일정 생성 실행
+      const itinerary = await runScheduleGeneration(payload);
+      
+      if (itinerary) {
+        console.log("[CreateItineraryHandler] 일정 생성 결과:", summarizeItineraryData(itinerary));
+        return itinerary;
       } else {
-        console.warn("[CreateItineraryHook] createItinerary: runScheduleGeneration returned null or empty.");
+        console.error("[CreateItineraryHandler] 일정 생성 실패: 결과가 null입니다.");
+        toast.error("일정 생성에 실패했습니다.");
+        return null;
       }
     } catch (error) {
-      console.error("[CreateItineraryHook] 일정 생성 중 오류:", error);
-      toast.error(`일정 생성 중 오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없음'}`);
+      console.error("[CreateItineraryHandler] 일정 생성 중 오류:", error);
+      toast.error(`일정 생성 중 오류가 발생했습니다: ${error instanceof Error ? error.message : String(error)}`);
+      return null;
     } finally {
-      setIsCreatingItineraryUiLock(false);
+      setIsCreatingItinerary(false);
     }
-    return result;
-  }, [
-    placesManagement.selectedPlaces, 
-    placesManagement.candidatePlaces,
-    tripDetails.dates, 
-    tripDetails.startDatetime, 
-    tripDetails.endDatetime,
-    runScheduleGeneration
-  ]);
+  }, [placesManagement, tripDetails, runScheduleGeneration]);
 
   return {
     createItinerary,
-    isCreatingItinerary: isCreatingItineraryUiLock,
+    isCreatingItinerary
   };
 };

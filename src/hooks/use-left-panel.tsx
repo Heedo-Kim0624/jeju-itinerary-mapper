@@ -50,13 +50,14 @@ export const useLeftPanel = () => {
   const categorySelection = { // Renamed from enhancedCategorySelection
     ...categorySelectionHookResult,
     setActiveMiddlePanelCategory: (category: CategoryName | null) => {
-      // Use individual setter from useLeftPanelState
-      leftPanelState.setActiveMiddlePanelCategory(category);
+      // useLeftPanelState 훅에서는 setActiveMiddlePanelCategory가 아닌 
+      // setSelectedCategory 프로퍼티를 사용해야 합니다.
+      leftPanelState.setSelectedCategory(category as string);
     },
     // Make sure handlePanelBack is correctly implemented with () => void signature
     handlePanelBack: () => { // Removed 'category: string' parameter
-      // Use individual setter from useLeftPanelState
-      leftPanelState.setActiveMiddlePanelCategory(null);
+      // setActiveMiddlePanelCategory가 아닌 setSelectedCategory로 수정
+      leftPanelState.setSelectedCategory(null);
     }
   };
   
