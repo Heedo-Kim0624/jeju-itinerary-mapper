@@ -1,7 +1,8 @@
 
 import { useCallback } from 'react';
 import type { Place, ItineraryDay } from '@/types/supabase';
-import { createNaverLatLng } from '@/utils/map/mapDrawing';
+// Updated import path
+import { createNaverLatLng } from '@/utils/map/mapSetup'; 
 import { getCategoryColor, mapCategoryNameToKey } from '@/utils/categoryColors';
 
 interface UseMapInteractionManagerProps {
@@ -15,7 +16,7 @@ export const useMapInteractionManager = ({ map, isNaverLoadedParam }: UseMapInte
     options: {
       highlightPlaceId?: string;
       isItinerary?: boolean;
-      useRecommendedStyle?: boolean; // This option seems unused in the original addMarkers body, but kept for signature consistency
+      useRecommendedStyle?: boolean;
       useColorByCategory?: boolean;
       onMarkerClick?: (place: Place, index: number) => void;
       itineraryOrder?: boolean;
@@ -138,7 +139,7 @@ export const useMapInteractionManager = ({ map, isNaverLoadedParam }: UseMapInte
     return createdMarkers;
   }, [map, isNaverLoadedParam]);
 
-  const showRouteForPlaceIndex = useCallback( // Renamed from showRouteForPlace to showRouteForPlaceIndex for consistency
+  const showRouteForPlaceIndex = useCallback( 
     (placeIndex: number, itineraryDay: ItineraryDay, onComplete?: () => void) => {
       if (!map || !isNaverLoadedParam || !itineraryDay || !itineraryDay.places) {
         if (onComplete) onComplete();

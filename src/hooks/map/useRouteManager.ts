@@ -1,12 +1,13 @@
+
 import { useCallback, useRef } from 'react';
 import type { Place, ItineraryDay } from '@/types/supabase';
 import type { GeoJsonFeature, GeoJsonLinkProperties, GeoJsonNodeProperties, GeoCoordinates } from '@/components/rightpanel/geojson/GeoJsonTypes';
 import type { ServerRouteResponse, SegmentRoute } from '@/types/schedule';
-import {
-  createNaverPolyline,
-  createNaverLatLng,
-  fitBoundsToCoordinates
-} from '@/utils/map/mapDrawing';
+// Updated import paths
+import { createNaverLatLng } from '@/utils/map/mapSetup';
+import { createNaverPolyline } from '@/utils/map/polylineUtils';
+import { fitBoundsToCoordinates } from '@/utils/map/mapViewControls';
+
 
 const DEFAULT_ROUTE_COLOR = '#007bff';
 const USER_ROUTE_COLOR = '#2563EB';
