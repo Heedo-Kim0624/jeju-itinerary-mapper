@@ -1,4 +1,3 @@
-
 type CategoryColors = {
   [key: string]: {
     bg: string; // Background color
@@ -11,22 +10,22 @@ export const categoryColors: CategoryColors = {
   restaurant: {
     bg: 'bg-jeju-orange',
     text: 'text-white',
-    marker: '#FF5252', // 빨강 - 음식점
+    marker: '#007BFF', // 파란색 - 음식점 (요청사항 반영)
   },
   cafe: {
     bg: 'bg-jeju-green',
     text: 'text-white',
-    marker: '#9C27B0', // 보라 - 카페
+    marker: '#FF5A5F', // 빨간색 - 카페 (요청사항 반영)
   },
   attraction: {
     bg: 'bg-jeju-blue',
     text: 'text-white',
-    marker: '#4CAF50', // 초록 - 관광지
+    marker: '#FFA500', // 주황색 - 관광지 (요청사항 반영)
   },
   accommodation: {
     bg: 'bg-purple-500',
     text: 'text-white',
-    marker: '#2196F3', // 파랑 - 숙소
+    marker: '#4CD964', // 초록색 - 숙소 (요청사항 반영, #4CD964 사용)
   },
 };
 
@@ -62,5 +61,5 @@ export const mapCategoryNameToKey = (categoryName: string): string => {
 };
 
 export const getCategoryColor = (category: string): string => {
-  return categoryColors[category]?.marker || '#1F1F1F';
+  return categoryColors[category]?.marker || '#1F1F1F'; // 기본 폴백 색상 유지
 };

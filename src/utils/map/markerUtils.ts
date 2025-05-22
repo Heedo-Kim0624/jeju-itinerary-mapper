@@ -1,7 +1,7 @@
-
 import type { Place } from '@/types/supabase';
 import type { ItineraryPlaceWithTime } from '@/types/core';
-import { createNaverLatLng } from './mapSetup'; // Assuming it's in the same directory level
+import { createNaverLatLng } from './mapSetup';
+import { getCategoryColor, mapCategoryNameToKey } from '@/utils/categoryColors';
 
 // Helper function to create SVG string for a map pin
 const createPinSvg = (
@@ -44,7 +44,7 @@ export const getMarkerIconOptions = (
   isItineraryDayPlace: boolean,
   itineraryOrder?: number
 ): { content: string; anchor: { x: number; y: number }; size?: {width: number; height: number} } => {
-  let pinColor = '#28A745'; // Default Green
+  let pinColor: string;
   let pinSize = 28;
   let label: string | number | undefined = undefined;
 
@@ -57,6 +57,16 @@ export const getMarkerIconOptions = (
     pinSize = 32; // Larger for selected
   } else if (isCandidate) {
     pinColor = '#FFA500'; // Orange for candidate
+    // Note: pinSize for candidate wasn't explicitly larger, keeping default 28 or 32 if selected also.
+    // If a larger size is desired for candidates, it can be set here.
+    // For consistency with 'selected', let's make it 32.
+    pinSize = 32;
+  } else if (place.category) {
+    const categoryKey = mapCategoryNameToKey(place.category);
+    pinColor = getCategoryColor(categoryKey);
+    // Default pinSize for category-colored markers remains 28 unless specified otherwise.
+  } else {
+    pinColor = '#28A745'; // Fallback Default Green if no category or other state matches
   }
 
   return {
@@ -142,4 +152,3 @@ export const addMarkersToMap = (
   });
   return markers;
 };
-
