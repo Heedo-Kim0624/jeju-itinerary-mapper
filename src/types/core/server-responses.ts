@@ -1,4 +1,3 @@
-
 /**
  * Server response type definitions
  */
@@ -9,6 +8,13 @@ export interface ServerScheduleItem {
   time_block: string;
   place_name: string;
   place_type: string;
+  stay_duration_minutes?: number; // 추가된 필드
+  route_info_to_next?: {
+    duration_str?: string;
+    distance_m?: number;
+  }; // 추가된 필드
+  x?: number; // 좌표 정보 추가
+  y?: number; // 좌표 정보 추가
 }
 
 // Server route summary item
@@ -19,6 +25,7 @@ export interface ServerRouteSummaryItem {
   places_routed?: string[];      // Array of place names included in route (optional)
   places_scheduled?: string[];   // Array of place names included in schedule (optional)
   interleaved_route: (string | number)[]; // NODE_ID and LINK_ID alternately
+  segment_routes?: any[];        // 세그먼트 별 경로 정보 (추가됨)
 }
 
 // Server response interface

@@ -7,7 +7,7 @@ import type {
   SelectedPlace,
   SchedulePayload, // Added for createPlaceWithTimeFromSchedule
 } from '@/types/core';
-import { getDateStringMMDD, getDayOfWeekString } from '@/utils/scheduleUtils'; // Assuming these exist and are correct
+import { getDateStringMMDD, getDayOfWeekString } from '@/utils/date-utils'; // 경로 수정
 import { extractAllNodesFromRoute, extractAllLinksFromRoute } from './coordinateUtils';
 // Corrected import: createPlaceWithTimeFromSchedule is now in itineraryPlaceUtils
 import { createPlaceWithTimeFromSchedule } from './itineraryPlaceUtils'; 
@@ -80,4 +80,3 @@ export const parseSingleRouteSummary = (
     date: getDateStringMMDD(currentDate),
   };
 };
-

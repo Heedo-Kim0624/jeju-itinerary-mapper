@@ -55,12 +55,12 @@ export const useLeftPanel = () => {
   const keywordsAndInputs = {
     directInputValues,
     onDirectInputChange,
-    handleConfirmCategory: (category: CategoryName, finalKeywords: string[], clearSelection: boolean = false) => {
+    handleConfirmCategory: (category: string, finalKeywords: string[], clearSelection: boolean = false) => {
       // categorySelectionHook.handleConfirmCategory expects its own CategoryName, might need adjustment if different
       // For now, assuming it can handle the core CategoryName or casting is appropriate.
       categorySelectionHook.handleConfirmCategory(category as any, finalKeywords, clearSelection);
       if (clearSelection) {
-        leftPanelState.setShowCategoryResult(category); // This is fine, expects core CategoryName
+        leftPanelState.setShowCategoryResult(category as any); // 타입 캐스팅으로 처리
       }
     }
   };
@@ -185,8 +185,8 @@ export const useLeftPanel = () => {
     categoryError,
     categoryResults,
     categoryResultHandlers, 
-    // Ensure handleCategorySelect from categoryHandlers can accept core CategoryName
-    handleCategorySelect: (category: CategoryName) => 
+    // Ensure handleCategorySelect from categoryHandlers can accept the right type
+    handleCategorySelect: (category: string) => 
       categoryHandlers.handleCategorySelect(category as any, refetch),
     isGeneratingItinerary: leftPanelState.isGenerating,
     itineraryReceived: leftPanelState.itineraryReceived,

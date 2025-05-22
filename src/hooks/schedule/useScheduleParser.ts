@@ -51,4 +51,3 @@ export const useScheduleParser = ({ currentSelectedPlaces, lastPayload }: UseSch
 
   return { parseServerResponse };
 };
-

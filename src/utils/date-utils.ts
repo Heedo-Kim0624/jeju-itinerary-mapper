@@ -38,3 +38,34 @@ export const getDayOfWeekString = (date: Date | string | null | undefined): stri
   }
 };
 
+/**
+ * 시간 문자열을 포맷팅합니다 (예: "09:30").
+ * @param timeString - 포맷팅할 시간 문자열 
+ * @returns 포맷팅된 시간 문자열
+ */
+export const formatTimeString = (timeString: string | null | undefined): string => {
+  if (!timeString) {
+    return 'N/A';
+  }
+  
+  // 이미 HH:MM 형식인 경우
+  if (timeString.includes(':')) {
+    return timeString;
+  }
+  
+  // HHMM 형식인 경우 (예: "0900" -> "09:00")
+  if (timeString.length === 4) {
+    return `${timeString.substring(0, 2)}:${timeString.substring(2, 4)}`;
+  }
+  
+  return timeString;
+};
+
+/**
+ * 날짜를 MM/DD 형식으로 변환합니다.
+ * @param date - 변환할 날짜
+ * @returns MM/DD 형식의 문자열
+ */
+export const getDateStringMMDD = (date: Date | string | null | undefined): string => {
+  return formatDateToMMDD(date);
+};

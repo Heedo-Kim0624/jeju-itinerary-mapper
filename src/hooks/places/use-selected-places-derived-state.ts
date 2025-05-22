@@ -1,48 +1,43 @@
-
 import { useMemo } from 'react';
-import { SelectedPlace } from '@/types/supabase';
-import { CategoryName, CATEGORIES } from '@/utils/categoryUtils';
+import { SelectedPlace } from '@/types/core';
+import { useSelectedPlaces } from '../use-selected-places';
+import type { CategoryName } from '@/types/core/base-types';
 
-interface UseSelectedPlacesDerivedStateProps {
-  selectedPlaces: SelectedPlace[];
-  tripDuration: number | null;
-}
+/**
+ * 選択された場所の状態を管理するカスタムフック
+ *
+ * @returns {object} 選択された場所の状態と操作関数
+ */
+export const useSelectedPlacesDerivedState = () => {
+  const { selectedPlaces } = useSelectedPlaces();
 
-export const useSelectedPlacesDerivedState = ({
-  selectedPlaces,
-  tripDuration,
-}: UseSelectedPlacesDerivedStateProps) => {
-  const selectedPlacesByCategory = useMemo(() => {
-    const grouped: Record<CategoryName, SelectedPlace[]> = {
+  // 初期状態を生成する関数
+  // CategoryName タイプがアップデートされたので、すべてのカテゴリを含むように修正
+  const getInitialSelectedPlacesByCategory = (): Record<CategoryName, SelectedPlace[]> => {
+    return {
       '숙소': [],
       '관광지': [],
       '음식점': [],
       '카페': [],
+      '교통': [],
+      '기타': []
     };
-    selectedPlaces.forEach(place => {
-      if (place.category && CATEGORIES.includes(place.category as CategoryName)) {
-        grouped[place.category as CategoryName].push(place);
+  };
+
+  // カテゴリ別に選択された場所を管理する状態
+  const selectedPlacesByCategory = useMemo(() => {
+    // 初期状態を生成
+    const initialSelectedPlacesByCategory = getInitialSelectedPlacesByCategory();
+
+    // 選択された場所をカテゴリ別に分類
+    selectedPlaces.forEach((place) => {
+      if (place.category && initialSelectedPlacesByCategory[place.category as CategoryName]) {
+        initialSelectedPlacesByCategory[place.category as CategoryName].push(place);
       }
     });
-    return grouped;
+
+    return initialSelectedPlacesByCategory;
   }, [selectedPlaces]);
 
-  const allCategoriesSelected = useMemo(() => {
-    return CATEGORIES.every(category => {
-      const placesInCat = selectedPlacesByCategory[category] || [];
-      return placesInCat.length > 0;
-    });
-  }, [selectedPlacesByCategory]);
-
-  const isAccommodationLimitReached = useMemo(() => {
-    // n박 -> n개 숙소. 0박 (당일치기) -> 1개 숙소
-    const maxAccommodations = tripDuration !== null && tripDuration >= 0 ? Math.max(tripDuration, 1) : 1;
-    return (selectedPlacesByCategory['숙소']?.length || 0) >= maxAccommodations;
-  }, [selectedPlacesByCategory, tripDuration]);
-
-  return {
-    selectedPlacesByCategory,
-    allCategoriesSelected,
-    isAccommodationLimitReached,
-  };
+  return { selectedPlacesByCategory };
 };

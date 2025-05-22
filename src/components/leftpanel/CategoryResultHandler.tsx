@@ -2,7 +2,7 @@
 import React from 'react';
 import CategoryResultPanel from '../middlepanel/CategoryResultPanel';
 import { Place } from '@/types/supabase';
-import type { CategoryName } from '@/utils/categoryUtils';
+import type { CategoryName } from '@/types/core/base-types';
 
 interface CategoryResultHandlerProps {
   showCategoryResult: CategoryName | null;

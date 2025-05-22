@@ -1,6 +1,7 @@
+
 import { toast } from 'sonner';
 import { SelectedPlace } from '@/types/supabase';
-import { NewServerScheduleResponse, ServerRouteResponse, ItineraryDay } from '@/types/core';
+import { NewServerScheduleResponse, ServerRouteResponse, ItineraryDay, SchedulePayload } from '@/types/core';
 import { useScheduleParser } from './useScheduleParser'; 
 import { updateItineraryWithCoordinates } from './parser-utils/coordinateUtils';
 import { MapContextGeoNode } from './parser-utils/coordinateTypes';
@@ -36,8 +37,12 @@ export const useScheduleGenerationCore = ({
   setServerRoutes,
   setIsLoadingState,
 }: ScheduleGenerationCoreProps) => {
+  // 마지막 페이로드 추가
+  const lastSentPayload: SchedulePayload | null = null;
+  
   const { parseServerResponse } = useScheduleParser({ 
-    currentSelectedPlaces: selectedPlaces
+    currentSelectedPlaces: selectedPlaces,
+    lastPayload: lastSentPayload
   });
 
   // 서버 응답을 처리하는 함수

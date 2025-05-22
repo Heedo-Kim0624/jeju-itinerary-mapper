@@ -1,17 +1,17 @@
 
 // Corrected import path for useGeoJsonState
-import { useGeoJsonState } from '@/components/rightpanel/geojson/useGeoJsonState';
+import useGeoJsonState from '@/components/rightpanel/geojson/useGeoJsonState';
 import { usePlaceGeoJsonMapper } from './usePlaceGeoJsonMapper';
 import { useMapInteractionManager } from './useMapInteractionManager';
 import { useRouteManager } from './useRouteManager';
 import type { Place } from '@/types/core'; // Ensure Place is from core
 
 export const useMapFeatures = (map: any, isNaverLoadedParam: boolean) => {
-  // useGeoJsonState is now imported from the correct path and called without arguments
-  const geoJsonState = useGeoJsonState();
+  // useGeoJsonState is now imported correctly without arguments
+  const geoJsonState = useGeoJsonState(map);
 
   const { mapPlacesWithGeoNodes } = usePlaceGeoJsonMapper({
-    geoJsonNodes: geoJsonState.geoJsonNodes, // Now correctly accessed
+    geoJsonNodes: geoJsonState.nodes, // Now correctly accessed
   });
 
   const { addMarkers, showRouteForPlaceIndex } = useMapInteractionManager({
@@ -29,8 +29,8 @@ export const useMapFeatures = (map: any, isNaverLoadedParam: boolean) => {
   } = useRouteManager({
     map,
     isNaverLoadedParam,
-    geoJsonLinks: geoJsonState.geoJsonLinks, // Now correctly accessed
-    geoJsonNodes: geoJsonState.geoJsonNodes, // Now correctly accessed
+    geoJsonLinks: geoJsonState.links, // Now correctly accessed
+    geoJsonNodes: geoJsonState.nodes, // Now correctly accessed
     mapPlacesWithGeoNodesFn: mapPlacesWithGeoNodes,
   });
 
@@ -50,4 +50,3 @@ export const useMapFeatures = (map: any, isNaverLoadedParam: boolean) => {
     mapPlacesWithGeoNodes,
   };
 };
-

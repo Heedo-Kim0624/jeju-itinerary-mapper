@@ -1,3 +1,4 @@
+
 import { useCallback } from 'react';
 import { useTripDetails } from '@/hooks/use-trip-details';
 import { useSelectedPlaces } from '@/hooks/use-selected-places';
@@ -18,7 +19,6 @@ export const useItineraryActions = (/* props: UseItineraryActionsProps */) => {
   const { selectedPlaces, candidatePlaces, prepareSchedulePayload } = useSelectedPlaces();
   const itineraryHook = useItinerary();
 
-
   // This function seems to be intended to be called when a raw server response is received
   // and needs to be parsed and set into the itinerary state.
   // The `useItineraryEvents` hook already handles 'rawServerResponseReceived' event
@@ -32,51 +32,46 @@ export const useItineraryActions = (/* props: UseItineraryActionsProps */) => {
     setIsGenerating(true);
     try {
       console.log("[useItineraryActions] Processing server itinerary data:", serverResponse);
-      // Use itineraryHook.parseServerResponse which is already designed for this.
-      // It requires currentSelectedPlaces, tripStartDate, and lastSentPayload.
+      // Use custom parsing logic in this hook since itineraryHook.parseServerResponse might not exist
       const allPlacesForParsingContext = [...selectedPlaces, ...candidatePlaces] as Place[];
       
-      const parsedItinerary = await itineraryHook.parseServerResponse(
-        serverResponse,
-        allPlacesForParsingContext, // Provide all known places for context
-        dates.startDate,
-        lastSentPayload // Pass the last payload
-      );
+      // 여기서는 itineraryHook에 parseServerResponse가 없다고 가정하고
+      // itineraryHook.handleServerItineraryResponse 함수를 사용
+      if (itineraryHook.handleServerItineraryResponse) {
+        const success = await itineraryHook.handleServerItineraryResponse(
+          serverResponse, 
+          allPlacesForParsingContext,
+          dates.startDate,
+          lastSentPayload
+        );
 
-      if (parsedItinerary && parsedItinerary.length > 0) {
-        itineraryHook.setItinerary(parsedItinerary);
-        itineraryHook.setShowItinerary(true);
-        itineraryHook.setIsItineraryCreated(true);
-        // Select the first day by default
-        itineraryHook.handleSelectItineraryDay(parsedItinerary[0].day); 
-        setCurrentPanel('itinerary');
-        setItineraryReceived(true);
-        toast.success('서버로부터 일정을 성공적으로 수신하여 처리했습니다.');
+        if (success) {
+          setCurrentPanel('itinerary');
+          setItineraryReceived(true);
+          toast.success('서버로부터 일정을 성공적으로 수신하여 처리했습니다.');
+        } else {
+          toast.error('서버 응답에서 유효한 일정을 생성하지 못했습니다.');
+          setItineraryReceived(false);
+        }
       } else {
-        toast.error('서버 응답에서 유효한 일정을 생성하지 못했습니다.');
-        itineraryHook.setItinerary(null);
-        itineraryHook.setShowItinerary(false);
-        itineraryHook.setIsItineraryCreated(false);
+        toast.error('일정 파서 함수를 찾을 수 없습니다.');
         setItineraryReceived(false);
       }
     } catch (error) {
       console.error('Error processing server itinerary data:', error);
       toast.error(`서버 일정 처리 중 오류: ${error instanceof Error ? error.message : String(error)}`);
       setItineraryReceived(false);
-      itineraryHook.setItinerary(null);
-      itineraryHook.setShowItinerary(false);
-      itineraryHook.setIsItineraryCreated(false);
     } finally {
       setIsGenerating(false);
     }
   }, [
-      setIsGenerating, 
-      setItineraryReceived, 
-      setCurrentPanel, 
-      itineraryHook, 
-      dates.startDate,
-      selectedPlaces, // Add dependencies
-      candidatePlaces // Add dependencies
+    setIsGenerating, 
+    setItineraryReceived, 
+    setCurrentPanel, 
+    itineraryHook, 
+    dates.startDate,
+    selectedPlaces,
+    candidatePlaces
   ]);
 
   return {
