@@ -13,6 +13,7 @@ import { useCategoryResultHandlers } from './left-panel/use-category-result-hand
 import { useEventListeners } from './left-panel/use-event-listeners';
 import type { SchedulePayload, Place, ItineraryDay, CategoryName } from '@/types/core';
 import { toast } from 'sonner';
+import { useItineraryGenerationAdapter } from './left-panel/useItineraryGenerationAdapter';
 
 /**
  * 왼쪽 패널 기능 통합 훅
@@ -22,7 +23,7 @@ export const useLeftPanel = () => {
   // Core state management
   const leftPanelState = useLeftPanelState();
   const regionSelection = useRegionSelection();
-  const categorySelectionHookResult = useCategorySelection(); // Renamed to avoid conflict
+  const categorySelectionHookResult = useCategorySelection();
   const tripDetailsHookResult = useTripDetails();
   const { directInputValues, onDirectInputChange } = useInputState();
   
@@ -46,7 +47,7 @@ export const useLeftPanel = () => {
     setShowCategoryResult: leftPanelState.setShowCategoryResult
   };
 
-  // Add missing setActiveMiddlePanelCategory to categorySelection
+  // Category selection
   const categorySelection = { // Renamed from enhancedCategorySelection
     ...categorySelectionHookResult,
     setActiveMiddlePanelCategory: (category: CategoryName | null) => {
@@ -84,38 +85,12 @@ export const useLeftPanel = () => {
     leftPanelState.setShowCategoryResult
   );
 
-  // Adapter function for generateItinerary
-  const generateItineraryAdapter = useCallback(async (payload: SchedulePayload): Promise<ItineraryDay[] | null> => {
-    if (!tripDetailsHookResult.dates.startDate || !tripDetailsHookResult.dates.endDate) {
-      console.error("[Adapter] Trip start or end date is missing in tripDetails.dates.");
-      toast.error("여행 시작일 또는 종료일이 설정되지 않았습니다.");
-      return null;
-    }
-
-    const placesForClientGenerator: Place[] = [
-      ...(placesManagement.selectedPlaces as Place[]),
-      ...(placesManagement.candidatePlaces as Place[]),
-    ];
-
-    if (placesForClientGenerator.length === 0) {
-        toast.info("일정을 생성할 장소가 선택되지 않았습니다. (Adapter)");
-        return null;
-    }
-
-    try {
-      return await itineraryManagementHook.generateItinerary(
-        placesForClientGenerator,
-        tripDetailsHookResult.dates.startDate,
-        tripDetailsHookResult.dates.endDate,
-        tripDetailsHookResult.startTime,
-        tripDetailsHookResult.endTime
-      );
-    } catch (error) {
-      console.error("일정 생성 어댑터에서 오류:", error);
-      toast.error(`어댑터에서 일정 생성 중 오류: ${error instanceof Error ? error.message : String(error)}`);
-      return null;
-    }
-  }, [itineraryManagementHook, placesManagement, tripDetailsHookResult]);
+  // Use the new hook for the itinerary generation adapter
+  const { generateItineraryAdapter } = useItineraryGenerationAdapter({
+    itineraryManagementHook,
+    placesManagement,
+    tripDetailsHookResult,
+  });
 
   // Fix the handleServerItineraryResponse implementation
   const enhancedItineraryManagementHook = {
@@ -140,8 +115,8 @@ export const useLeftPanel = () => {
     tripDetails: tripDetailsHookResult,
     userDirectlySelectedPlaces: placesManagement.selectedPlaces,
     autoCompleteCandidatePlaces: placesManagement.candidatePlaces,
-    prepareSchedulePayload: placesManagement.prepareSchedulePayload,
-    generateItinerary: generateItineraryAdapter,
+    prepareSchedulePayload: placesManagement.prepareSchedulePayload, // This comes from use-selected-places -> use-schedule-payload-builder
+    generateItinerary: generateItineraryAdapter, // Use the adapter from the new hook
     setShowItinerary: itineraryManagementHook.setShowItinerary,
     setCurrentPanel: leftPanelState.setCurrentPanel,
     setIsGenerating: leftPanelState.setIsGenerating,
