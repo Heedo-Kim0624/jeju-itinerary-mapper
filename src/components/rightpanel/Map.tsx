@@ -90,15 +90,7 @@ const Map: React.FC<MapProps> = ({
         />
       )}
       
-      {isMapInitialized && visualizedItinerary.length > 0 && (
-        <DaySelectorMapOverlay
-          itinerary={visualizedItinerary}
-          currentDay={visualizedCurrentDay}
-          onDaySelect={visualizeDayRoute}
-          totalDistance={visualizedTotalDistance}
-        />
-      )}
-      
+
       <MapControls
         showGeoJson={showGeoJson}
         onToggleGeoJson={toggleGeoJsonVisibility}
