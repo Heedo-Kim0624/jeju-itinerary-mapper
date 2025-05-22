@@ -1,4 +1,3 @@
-
 import { useCallback } from 'react';
 import { toast } from 'sonner';
 import type { SelectedPlace as CoreSelectedPlace } from '@/types/core';
@@ -9,7 +8,7 @@ import { useItinerary } from '@/hooks/use-itinerary';
 import { summarizeServerResponse, summarizeItineraryData } from '@/utils/debugUtils';
 
 export const useScheduleGenerationRunner = () => {
-  const { generateSchedule, isGenerating: isLoadingScheduleGenerator, getLastSentPayload } = useScheduleGenerator(); // Added getLastSentPayload
+  const { generateSchedule, isGenerating: isLoadingScheduleGenerator, getLastSentPayload } = useScheduleGenerator();
   const { parseServerResponse } = useItineraryParser();
   const { handleServerItineraryResponse } = useItinerary();
 
@@ -33,6 +32,7 @@ export const useScheduleGenerationRunner = () => {
       }
       
       const lastSentPayload = getLastSentPayload(); // Get the payload that was just sent
+      console.log('[useScheduleGenerationRunner] 파서에 전달할 lastSentPayload:', lastSentPayload);
       
       // Pass lastSentPayload to the parser
       const parsedItinerary = parseServerResponse(serverResponse, selectedPlaces, tripStartDate, lastSentPayload); 
@@ -41,17 +41,18 @@ export const useScheduleGenerationRunner = () => {
       
       if (parsedItinerary.length === 0 || parsedItinerary.every(day => day.places.length === 0)) {
         console.warn('[useScheduleGenerationRunner] 파싱된 일정에 유의미한 장소가 없습니다.');
-        toast.info('생성된 일정에 포함할 장소가 부족하거나 없습니다.');
+        // toast.info('생성된 일정에 포함할 장소가 부족하거나 없습니다.'); // Toast might be too much here, handled by handleServerItineraryResponse
       }
       
       console.log(`[useScheduleGenerationRunner] 생성기로부터 결과 받음: ${parsedItinerary.length}일치 일정. UI 업데이트 호출.`);
-      const finalItinerary = handleServerItineraryResponse(parsedItinerary);
+      const finalItinerary = handleServerItineraryResponse(parsedItinerary); // This will set itinerary state
       
-      if (finalItinerary && finalItinerary.length > 0 && finalItinerary.some(day => day.places.length > 0)) {
-        toast.success('일정이 성공적으로 생성되었습니다!');
-      }
+      // Toast for success is now inside useScheduleGenerator or handleServerItineraryResponse
+      // if (finalItinerary && finalItinerary.length > 0 && finalItinerary.some(day => day.places.length > 0)) {
+      //   toast.success('일정이 성공적으로 생성되었습니다!');
+      // }
       console.log('[useScheduleGenerationRunner] 일정 생성 및 처리 완료.');
-      return finalItinerary;
+      return finalItinerary; // Return the result from handleServerItineraryResponse
 
     } catch (error) {
       console.error('[useScheduleGenerationRunner] 일정 생성 중 오류 발생:', error);
@@ -59,7 +60,7 @@ export const useScheduleGenerationRunner = () => {
       handleServerItineraryResponse([]);
       return null;
     }
-  }, [generateSchedule, getLastSentPayload, parseServerResponse, handleServerItineraryResponse]); // Added getLastSentPayload
+  }, [generateSchedule, getLastSentPayload, parseServerResponse, handleServerItineraryResponse]);
 
   return { runScheduleGeneration, isGenerating: isLoadingScheduleGenerator };
 };

@@ -1,3 +1,4 @@
+
 import { useCallback, useState, useRef } from 'react';
 import type { SchedulePayload, NewServerScheduleResponse } from '@/types/schedule';
 import { isNewServerScheduleResponse } from '@/types/core';
@@ -10,9 +11,38 @@ export const useScheduleGenerator = () => {
   const lastSentPayloadRef = useRef<SchedulePayload | null>(null);
 
   const generateSchedule = useCallback(async (payload: SchedulePayload): Promise<NewServerScheduleResponse | null> => {
-    console.log('[use-schedule-generator] Initial payload for server:', payload);
+    // 서버로 보내는 Payload 상세 로깅
+    console.group('[SERVER_PAYLOAD] 서버로 보내는 데이터');
+    console.log('전체 Payload:', JSON.stringify(payload, null, 2));
+    console.log('선택된 장소 수:', payload.selected_places?.length || 0);
+    console.log('후보 장소 수:', payload.candidate_places?.length || 0);
+    console.log('시작 일시:', payload.start_datetime);
+    console.log('종료 일시:', payload.end_datetime);
+    
+    // 선택된 장소 ID-이름 매핑 테이블 출력
+    if (payload.selected_places && payload.selected_places.length > 0) {
+      console.log('선택된 장소 ID-이름 매핑:');
+      const selectedMapping: Record<string | number, string> = {};
+      payload.selected_places.forEach(p => {
+        selectedMapping[p.id] = p.name;
+      });
+      console.table(selectedMapping);
+    }
+    
+    // 후보 장소 ID-이름 매핑 테이블 출력
+    if (payload.candidate_places && payload.candidate_places.length > 0) {
+      console.log('후보 장소 ID-이름 매핑:');
+      const candidateMapping: Record<string | number, string> = {};
+      payload.candidate_places.forEach(p => {
+        candidateMapping[p.id] = p.name;
+      });
+      console.table(candidateMapping);
+    }
+    console.groupEnd();
+    
     setIsGenerating(true);
     
+    // 서버로 보내는 데이터를 메모리에 저장
     lastSentPayloadRef.current = payload;
 
     try {
@@ -26,16 +56,7 @@ export const useScheduleGenerator = () => {
       
       const API_URL = `${baseApiUrl}/generate_schedule`;
       console.log(`[use-schedule-generator] Full API URL: ${API_URL}`);
-      
-      console.log(`[use-schedule-generator] Payload details:`, {
-        selected_places_count: payload.selected_places.length,
-        candidate_places_count: payload.candidate_places.length,
-        start_datetime: payload.start_datetime,
-        end_datetime: payload.end_datetime,
-        sample_selected_place_name: payload.selected_places?.[0]?.name, 
-        sample_candidate_place_name: payload.candidate_places?.[0]?.name
-      });
-      
+            
       const formattedPayload = {
         ...payload,
         selected_places: payload.selected_places.map(place => ({
@@ -47,7 +68,7 @@ export const useScheduleGenerator = () => {
           id: typeof place.id === 'string' && !isNaN(parseInt(place.id, 10)) ? parseInt(place.id, 10) : place.id,
         })),
       };
-      console.log('[use-schedule-generator] Formatted payload for server:', formattedPayload);
+      console.log('[use-schedule-generator] Formatted payload for server (IDs to int if possible):', formattedPayload);
       
       const requestStartTime = Date.now();
       console.log(`[use-schedule-generator] Request started at: ${new Date(requestStartTime).toISOString()}`);
@@ -57,7 +78,7 @@ export const useScheduleGenerator = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formattedPayload),
+        body: JSON.stringify(formattedPayload), // Send formatted payload
       });
       
       const requestEndTime = Date.now();
@@ -83,9 +104,13 @@ export const useScheduleGenerator = () => {
       }
 
       const rawData = await response.json();
-      console.log('[use-schedule-generator] Raw data from server:', rawData);
+      
+      // 서버 응답 데이터 상세 로깅
+      console.group('[SERVER_RESPONSE] 서버 응답 데이터');
+      console.log('전체 원본 응답 데이터:', JSON.stringify(rawData, null, 2));
 
       let data: NewServerScheduleResponse;
+      // Nested result processing (copied from existing logic)
       if (rawData && typeof rawData === 'object' && 'schedule' in rawData && 'route_summary' in rawData) {
          data = rawData as NewServerScheduleResponse;
       } else if (rawData && typeof rawData === 'object' && 'result' in rawData && (rawData.result as any)?.schedule && (rawData.result as any)?.route_summary) {
@@ -97,8 +122,35 @@ export const useScheduleGenerator = () => {
         };
       } else {
          console.error('[use-schedule-generator] Unexpected server response format. Trying to use as is.', rawData);
-         data = rawData as NewServerScheduleResponse;
+         data = rawData as NewServerScheduleResponse; // Potentially problematic, but keep existing behavior
       }
+      
+      if (data.schedule) {
+        console.log('일정 항목 수:', data.schedule.length);
+        console.table(data.schedule.map(item => ({
+          id: item.id ?? 'N/A', // Use nullish coalescing for potentially undefined id
+          place_name: item.place_name,
+          place_type: item.place_type,
+          time_block: item.time_block
+        })));
+      }
+      
+      if (data.route_summary) {
+        console.log('경로 요약 정보:', data.route_summary.length, '일차');
+        data.route_summary.forEach((day, idx) => {
+          console.log(`${idx + 1}일차 경로:`, {
+            day: day.day,
+            status: day.status,
+            total_distance_m: day.total_distance_m,
+            interleaved_route_length: day.interleaved_route?.length || 0
+          });
+          
+          if (day.interleaved_route && day.interleaved_route.length > 0) {
+            console.log(`${idx + 1}일차 interleaved_route:`, day.interleaved_route);
+          }
+        });
+      }
+      console.groupEnd();
 
       if (!isNewServerScheduleResponse(data)) {
         console.error('[use-schedule-generator] Invalid server response format after processing:', data);
@@ -129,3 +181,4 @@ export const useScheduleGenerator = () => {
 
   return { generateSchedule, isGenerating, getLastSentPayload };
 };
+
