@@ -1,4 +1,3 @@
-
 import { ServerScheduleItem } from '@/types/core';
 // SelectedPlace and SchedulePayload might not be needed here if all details come from global store
 // import { SelectedPlace } from '@/types/core';
@@ -87,9 +86,9 @@ export const getProcessedItemDetails = (
     isFallback: true,
     name: serverItem.place_name || '정보 없음',
     category: fallbackCategory,
-    // Use longitude/latitude from ServerScheduleItem if available for fallback coordinates
-    x: serverItem.longitude !== undefined ? (typeof serverItem.longitude === 'string' ? parseFloat(serverItem.longitude) : serverItem.longitude) : 126.57, // Default to Jeju City Hall approx.
-    y: serverItem.latitude !== undefined ? (typeof serverItem.latitude === 'string' ? parseFloat(serverItem.latitude) : serverItem.latitude) : 33.49, // Default to Jeju City Hall approx.
+    // Corrected: Use default coordinates directly as ServerScheduleItem lacks longitude/latitude properties.
+    x: 126.57, // Default to Jeju City Hall approx. longitude
+    y: 33.49,  // Default to Jeju City Hall approx. latitude
     address: '주소 정보 없음 (상세 정보 누락)',
     road_address: '도로명 주소 정보 없음 (상세 정보 누락)',
     phone: 'N/A',
@@ -124,4 +123,3 @@ const mapServerTypeToCategory = (serverType: string): CategoryName => {
   // console.warn(`[mapServerTypeToCategory] Unknown server place type: "${serverType}". Defaulting to "기타", which will be processed by toCategoryName.`);
   return toCategoryName(serverType, '관광지'); // Pass original serverType, toCategoryName will handle unknown/English. Default to '관광지'.
 };
-
