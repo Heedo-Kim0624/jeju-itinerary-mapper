@@ -284,7 +284,6 @@ declare global {
         setPaths(paths: LatLng[] | LatLng[][] | LatLng[][][]): void;
         getAreaSize(): number;
         addListener(eventName: string, listener: (...args: any[]) => void): MapEventListener;
-
     }
 
 
@@ -318,7 +317,6 @@ declare global {
       // ...
       setOptions(options: Partial<InfoWindowOptions>): void;
       addListener(eventName: string, listener: (...args: any[]) => void): MapEventListener;
-
     }
 
     class LatLngBounds {
@@ -373,38 +371,33 @@ declare global {
         | "LEFT_CENTER" | "CENTER" | "RIGHT_CENTER"
         | "BOTTOM_LEFT" | "BOTTOM_CENTER" | "BOTTOM_RIGHT"
         | "LEFT_TOP" | "LEFT_BOTTOM" | "RIGHT_TOP" | "RIGHT_BOTTOM";
-
-
-    // END of user guide based detailed types
   } // End of namespace naver.maps
 
   interface Window {
     naver?: {
       maps: {
-        Map: new (element: string | HTMLElement, options?: naver.maps.MapOptions) => naver.maps.Map;
-        LatLng: new (lat: number, lng: number) => naver.maps.LatLng;
-        Marker: new (options?: naver.maps.MarkerOptions) => naver.maps.Marker;
-        Polyline: new (options?: naver.maps.PolylineOptions) => naver.maps.Polyline;
-        Polygon: new (options: naver.maps.PolygonOptions) => naver.maps.Polygon;
-        Point: new (x: number, y: number) => naver.maps.Point;
-        InfoWindow: new (options?: naver.maps.InfoWindowOptions) => naver.maps.InfoWindow;
-        LatLngBounds: new (sw?: naver.maps.LatLng, ne?: naver.maps.LatLng) => naver.maps.LatLngBounds;
-        Size: new (width: number, height: number) => naver.maps.Size;
-        Position: typeof naver.maps.Position; // Refers to the naver.maps.Position enum
-        Event: naver.maps.Event; // Refers to the naver.maps.Event interface/static object
+        Map: typeof naver.maps.Map;
+        LatLng: typeof naver.maps.LatLng;
+        Marker: typeof naver.maps.Marker;
+        Polyline: typeof naver.maps.Polyline;
+        Polygon: typeof naver.maps.Polygon;
+        Point: typeof naver.maps.Point;
+        InfoWindow: typeof naver.maps.InfoWindow;
+        LatLngBounds: typeof naver.maps.LatLngBounds;
+        Size: typeof naver.maps.Size;
+        Position: typeof naver.maps.Position;
+        Event: naver.maps.Event;
         
-        drawing?: { // Optional drawing module
-            DrawingManager: new (options: any) => naver.maps.drawing.DrawingManager;
+        drawing?: {
+            DrawingManager: typeof naver.maps.drawing.DrawingManager;
         };
-        // MapTypeId should refer to the enum for use with map.setMapTypeId()
-        MapTypeId: typeof naver.maps.MapTypeId; 
-        // Animation enum for marker animations
+        MapTypeId: typeof naver.maps.MapTypeId;
         Animation: typeof naver.maps.Animation;
       };
     };
     initMap?: () => void; // Keep this if used by HTML script
     geoJsonLayer?: {
-      renderRoute: (nodeIds: string[], linkIds: string[], style?: GeoJsonInternalRouteStyle) => (naver.maps.Marker | naver.maps.Polyline)[]; // Use imported RouteStyle
+      renderRoute: (nodeIds: string[], linkIds: string[], style?: GeoJsonInternalRouteStyle) => (naver.maps.Marker | naver.maps.Polyline)[]; 
       clearDisplayedFeatures: () => void;
       getNodeById: (id:string) => any; // Consider defining GeoNode type here or importing
       getLinkById: (id: string) => any; // Consider defining GeoLink type here or importing
@@ -412,5 +405,3 @@ declare global {
     };
   }
 }
-
-</edits_to_apply>
