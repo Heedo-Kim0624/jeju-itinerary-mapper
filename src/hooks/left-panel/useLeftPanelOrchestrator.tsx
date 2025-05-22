@@ -1,5 +1,4 @@
-
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useMemo } from 'react';
 import { useLeftPanel } from '@/hooks/use-left-panel';
 import { useScheduleGenerationRunner } from '@/hooks/schedule/useScheduleGenerationRunner';
 import { useCreateItineraryHandler } from '@/hooks/left-panel/useCreateItineraryHandler';
@@ -7,7 +6,16 @@ import { useLeftPanelCallbacks } from '@/hooks/left-panel/use-left-panel-callbac
 import { useLeftPanelProps } from '@/hooks/left-panel/use-left-panel-props';
 import { toast } from 'sonner';
 import { summarizeItineraryData } from '@/utils/debugUtils';
-import type { ItineraryDay } from '@/types';
+import type { ItineraryDay, CategoryName } from '@/types';
+import type { 
+  LeftPanelPropsData, 
+  ItineraryManagementState, 
+  LeftPanelProps, 
+  LeftPanelDisplayLogicProps, 
+  LeftPanelContentProps, 
+  DevDebugInfoProps, 
+  CategoryResultHandlerProps 
+} from '@/types/left-panel';
 
 export const useLeftPanelOrchestrator = () => {
   const {
@@ -18,7 +26,8 @@ export const useLeftPanelOrchestrator = () => {
     tripDetails,
     uiVisibility,
     itineraryManagement,
-    handleCloseItinerary,
+    handleCreateItinerary: initiateItineraryCreation,
+    handleCloseItinerary: closeItineraryPanel,
     categoryResultHandlers,
     currentPanel,
     isGeneratingItinerary: isGeneratingFromCoreHook,
@@ -40,33 +49,35 @@ export const useLeftPanelOrchestrator = () => {
   const callbacks = useLeftPanelCallbacks({
     handleConfirmCategory: keywordsAndInputs.handleConfirmCategory,
     handlePanelBack: categorySelection.handlePanelBack,
-    handleCloseItinerary,
+    handleCloseItinerary: closeItineraryPanel,
     setRegionSlidePanelOpen: regionSelection.setRegionSlidePanelOpen,
     selectedRegions: regionSelection.selectedRegions,
     setRegionConfirmed: regionSelection.setRegionConfirmed,
-    handleCreateItinerary: createItinerary, // Pass the actual createItinerary function
+    handleCreateItinerary: initiateItineraryCreation,
   });
 
-  const {
-    itineraryDisplayProps,
-    mainPanelProps,
-    devDebugInfoProps,
-  } = useLeftPanelProps({
+  const leftPanelPropsData: LeftPanelPropsData = {
     uiVisibility,
     currentPanel,
     isGeneratingItinerary: isActuallyGenerating,
     itineraryReceived: !!itineraryManagement.itinerary && itineraryManagement.itinerary.length > 0,
-    itineraryManagement: itineraryManagement,
+    itineraryManagement,
     tripDetails,
     placesManagement,
     categorySelection,
     keywordsAndInputs,
     categoryResultHandlers,
-    handleCloseItinerary,
+    handleCloseItinerary: closeItineraryPanel,
     regionSelection,
     onConfirmCategoryCallbacks: callbacks.onConfirmCategoryCallbacks,
     handlePanelBackCallbacks: callbacks.handlePanelBackCallbacks,
-  });
+  };
+
+  const {
+    itineraryDisplayProps,
+    mainPanelProps,
+    devDebugInfoProps,
+  } = useLeftPanelProps(leftPanelPropsData);
 
   useEffect(() => {
     console.log("LeftPanelOrchestrator - 일정 관련 상태 변화 감지:", {
@@ -88,15 +99,16 @@ export const useLeftPanelOrchestrator = () => {
     itineraryManagement.isItineraryCreated,
   ]);
 
-  const shouldShowItineraryView =
-    itineraryManagement.showItinerary &&
+  const shouldShowItineraryView = useMemo(() => 
+    uiVisibility.showItinerary &&
     itineraryManagement.isItineraryCreated &&
     itineraryManagement.itinerary &&
-    itineraryManagement.itinerary.length > 0;
+    itineraryManagement.itinerary.length > 0,
+  [uiVisibility.showItinerary, itineraryManagement.isItineraryCreated, itineraryManagement.itinerary]);
 
   useEffect(() => {
     console.log("LeftPanelOrchestrator - ItineraryView 표시 결정 로직:", {
-      showItineraryFromItineraryMgmt: itineraryManagement.showItinerary,
+      showItineraryFromUiVisibility: uiVisibility.showItinerary,
       isItineraryCreatedFromItineraryMgmt: itineraryManagement.isItineraryCreated,
       isCreatingItineraryPanelState: isCreatingFromCustomHook,
       isRunnerGeneratingState: isRunnerGenerating,
@@ -109,7 +121,7 @@ export const useLeftPanelOrchestrator = () => {
       console.warn("LeftPanelOrchestrator - 일정은 있지만 모든 일자에 장소가 없습니다:", summarizeItineraryData(itineraryManagement.itinerary));
     }
   }, [
-    itineraryManagement.showItinerary,
+    uiVisibility.showItinerary,
     itineraryManagement.isItineraryCreated,
     itineraryManagement.itinerary,
     isCreatingFromCustomHook,
@@ -122,13 +134,13 @@ export const useLeftPanelOrchestrator = () => {
       toast.info("일정 생성 중입니다. 잠시만 기다려주세요.");
       return;
     }
-    const result = await createItinerary();
-    if (result) {
-      console.log("[LeftPanelOrchestrator] Itinerary creation process finished via custom hook.");
+    const success = await initiateItineraryCreation();
+    if (success) {
+      console.log("[LeftPanelOrchestrator] Itinerary creation process initiated successfully.");
     } else {
-      console.log("[LeftPanelOrchestrator] Itinerary creation process did not produce a result or was aborted.");
+      console.log("[LeftPanelOrchestrator] Itinerary creation process failed to initiate or was aborted.");
     }
-  }, [isActuallyGenerating, createItinerary]);
+  }, [isActuallyGenerating, initiateItineraryCreation]);
 
   const enhancedItineraryDisplayProps = itineraryDisplayProps
     ? {
@@ -158,6 +170,6 @@ export const useLeftPanelOrchestrator = () => {
     enhancedItineraryDisplayProps,
     enhancedMainPanelProps,
     devDebugInfoProps,
-    categoryResultHandlers, // Added this for CategoryResultHandler
+    categoryResultHandlers,
   };
 };

@@ -1,8 +1,9 @@
+
 import React from 'react';
 import { ScheduleLoadingIndicator } from './ScheduleLoadingIndicator';
 import ItineraryDisplayWrapper from './ItineraryDisplayWrapper';
 import MainPanelWrapper from './MainPanelWrapper';
-import type { Place, ItineraryDay, CategoryName } from '@/types'; // Assuming types are in @/types
+import type { Place, ItineraryDay, CategoryName } from '@/types'; 
 
 // Props for ItineraryDisplayWrapper
 interface ItineraryDisplayWrapperPassedProps {
@@ -12,7 +13,7 @@ interface ItineraryDisplayWrapperPassedProps {
   selectedDay: number | null;
   onCloseItinerary: () => void;
   handleClosePanelWithBackButton: () => void;
-  debug: {
+  debug?: { // Optional debug prop
     itineraryLength: number;
     selectedDay: number | null;
     showItinerary: boolean;
@@ -34,7 +35,7 @@ interface MainPanelWrapperPassedProps {
       startTime: string;
       endTime: string;
     } | null;
-    onCreateItinerary: () => void; // 반환 타입을 boolean에서 void로 변경
+    onCreateItinerary: () => void; 
     itinerary: ItineraryDay[] | null;
     selectedItineraryDay: number | null;
     onSelectDay: (day: number) => void;
@@ -44,38 +45,18 @@ interface MainPanelWrapperPassedProps {
     onDateSelect: (dates: { startDate: Date; endDate: Date; startTime: string; endTime: string }) => void;
     onOpenRegionPanel: () => void;
     hasSelectedDates: boolean;
-    onCategoryClick: (category: string) => void;
+    onCategoryClick: (category: CategoryName) => void; // Use CategoryName
     regionConfirmed: boolean;
     categoryStepIndex: number;
-    activeMiddlePanelCategory: string | null;
-    confirmedCategories: string[];
-    selectedKeywordsByCategory: Record<string, string[]>;
-    toggleKeyword: (category: string, keyword: string) => void;
-    directInputValues: {
-      accomodation: string;
-      landmark: string;
-      restaurant: string;
-      cafe: string;
-    };
-    onDirectInputChange: {
-      accomodation: (value: string) => void;
-      landmark: (value: string) => void;
-      restaurant: (value: string) => void;
-      cafe: (value: string) => void;
-    };
-    onConfirmCategoryCallbacks: { // 이전에 onConfirmCategory 였던 것
-      accomodation: (finalKeywords: string[]) => void;
-      landmark: (finalKeywords: string[]) => void;
-      restaurant: (finalKeywords: string[]) => void;
-      cafe: (finalKeywords: string[]) => void;
-    };
-    handlePanelBackCallbacks: { // 이전에 handlePanelBack 이었던 것
-      accomodation: () => void;
-      landmark: () => void;
-      restaurant: () => void;
-      cafe: () => void;
-    };
-    isCategoryButtonEnabled: (category: string) => boolean;
+    activeMiddlePanelCategory: CategoryName | null; // Use CategoryName
+    confirmedCategories: CategoryName[]; // Use CategoryName
+    selectedKeywordsByCategory: Record<CategoryName, string[]>; // Use CategoryName
+    toggleKeyword: (category: CategoryName, keyword: string) => void; // Use CategoryName
+    directInputValues: Record<CategoryName, string>; // Use CategoryName
+    onDirectInputChange: Record<CategoryName, (value: string) => void>; // Use CategoryName
+    onConfirmCategoryCallbacks: Record<CategoryName, (finalKeywords: string[]) => void>; // Use CategoryName
+    handlePanelBackCallbacks: Record<CategoryName, () => void>; // Use CategoryName
+    isCategoryButtonEnabled: (category: CategoryName) => boolean; // Use CategoryName
     isGenerating?: boolean;
   };
 }
@@ -84,8 +65,9 @@ interface MainPanelWrapperPassedProps {
 interface LeftPanelDisplayLogicProps {
   isGenerating: boolean;
   shouldShowItineraryView: boolean;
-  itineraryDisplayProps: ItineraryDisplayWrapperPassedProps | null; // Nullable if not showing itinerary
-  mainPanelProps: MainPanelWrapperPassedProps | null; // Nullable if showing itinerary or loading
+  itineraryDisplayProps: ItineraryDisplayWrapperPassedProps | null;
+  mainPanelProps: MainPanelWrapperPassedProps | null;
+  // currentPanel prop is removed as it's not directly used for display logic here
 }
 
 const LeftPanelDisplayLogic: React.FC<LeftPanelDisplayLogicProps> = ({
@@ -109,11 +91,16 @@ const LeftPanelDisplayLogic: React.FC<LeftPanelDisplayLogicProps> = ({
     return <ItineraryDisplayWrapper {...itineraryDisplayProps} />;
   }
 
+  // Render MainPanelWrapper if not generating and not showing itinerary, and mainPanelProps exist
   if (mainPanelProps) {
     return <MainPanelWrapper {...mainPanelProps} />;
   }
-
-  return null; // Should not happen if logic is correct
+  
+  // Fallback or initial state before mainPanelProps are ready (e.g. loading config)
+  // Could show a generic loading or be null if parent handles initial loading state
+  console.log("LeftPanelDisplayLogic: No panel to display (isGenerating: false, shouldShowItineraryView: false, mainPanelProps missing)");
+  return null; 
 };
 
 export default LeftPanelDisplayLogic;
+

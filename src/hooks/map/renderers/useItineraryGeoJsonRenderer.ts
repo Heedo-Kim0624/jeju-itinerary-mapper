@@ -1,6 +1,8 @@
 
 import { useCallback } from 'react';
-import type { Place, ItineraryDay } from '@/types/supabase';
+// Ensure Place type is correctly imported if it's distinct from ItineraryPlaceWithTime
+// For this file, we mainly deal with ItineraryDay which contains ItineraryPlaceWithTime
+import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/core'; 
 import type { GeoJsonFeature, GeoJsonLinkProperties, GeoCoordinates } from '@/components/rightpanel/geojson/GeoJsonTypes';
 import type { ServerRouteResponse } from '@/types/schedule';
 import { createNaverLatLng } from '@/utils/map/mapSetup';
@@ -15,7 +17,9 @@ interface UseItineraryGeoJsonRendererProps {
   map: any;
   isNaverLoadedParam: boolean;
   geoJsonLinks: GeoJsonFeature[];
-  mapPlacesWithGeoNodesFn: (places: Place[]) => Place[];
+  // mapPlacesWithGeoNodesFn expects Place[] but receives ItineraryPlaceWithTime[]
+  // The function itself should handle the conversion or its signature should be ItineraryPlaceWithTime[]
+  mapPlacesWithGeoNodesFn: (places: Place[]) => Place[]; // This signature might need to change based on usage
   addPolyline: (
     pathCoordinates: { lat: number; lng: number }[],
     color: string,
@@ -37,7 +41,7 @@ export const useItineraryGeoJsonRenderer = ({
   const renderItineraryRoute = useCallback(
     (
       itineraryDay: ItineraryDay | null,
-      _allServerRoutesInput?: Record<number, ServerRouteResponse>, // Kept for signature consistency
+      _allServerRoutesInput?: Record<number, ServerRouteResponse>, 
       onComplete?: () => void
     ) => {
       if (!map || !isNaverLoadedParam) {
@@ -51,7 +55,13 @@ export const useItineraryGeoJsonRenderer = ({
       if (!itineraryDay || !itineraryDay.routeData || !itineraryDay.routeData.linkIds || itineraryDay.routeData.linkIds.length === 0) {
         console.warn('[ItineraryGeoJsonRenderer] No itinerary day or linkIds to render route.');
         if (itineraryDay && itineraryDay.places && itineraryDay.places.length > 1) {
-            const mappedPlaces = mapPlacesWithGeoNodesFn(itineraryDay.places);
+            // Convert ItineraryPlaceWithTime[] to Place[] before calling mapPlacesWithGeoNodesFn
+            const placesWithStringIds: Place[] = itineraryDay.places.map(p => ({
+              ...p,
+              id: String(p.id), // Ensure id is string
+            }));
+            const mappedPlaces = mapPlacesWithGeoNodesFn(placesWithStringIds);
+            
             const validPlaces = mappedPlaces.filter(p =>
                 typeof p.x === 'number' && typeof p.y === 'number' &&
                 !isNaN(p.x) && !isNaN(p.y)
@@ -119,7 +129,13 @@ export const useItineraryGeoJsonRenderer = ({
             if (naverCoords.length > 0) fitBoundsToCoordinates(map, naverCoords);
           }
         } else if (itineraryDay.places && itineraryDay.places.length > 0) {
-            const mappedPlaces = mapPlacesWithGeoNodesFn(itineraryDay.places);
+            // Convert ItineraryPlaceWithTime[] to Place[] for mapPlacesWithGeoNodesFn
+            const placesWithStringIds: Place[] = itineraryDay.places.map(p => ({
+              ...p,
+              id: String(p.id), // Ensure id is string
+            }));
+            const mappedPlaces = mapPlacesWithGeoNodesFn(placesWithStringIds);
+
             const validPlacesCoords = mappedPlaces
                 .filter(p => typeof p.y === 'number' && typeof p.x === 'number' && !isNaN(p.y) && !isNaN(p.x))
                 .map(p => ({ lat: p.y as number, lng: p.x as number }));
@@ -138,3 +154,4 @@ export const useItineraryGeoJsonRenderer = ({
 
   return { renderItineraryRoute };
 };
+
