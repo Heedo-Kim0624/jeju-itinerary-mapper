@@ -1,13 +1,11 @@
 
-import { useCallback, useRef } from 'react';
+import { useCallback } from 'react';
 import type { Place, ItineraryDay } from '@/types/supabase';
 import type { GeoJsonFeature, GeoJsonLinkProperties, GeoJsonNodeProperties, GeoCoordinates } from '@/components/rightpanel/geojson/GeoJsonTypes';
 import type { ServerRouteResponse, SegmentRoute } from '@/types/schedule';
-// Updated import paths
 import { createNaverLatLng } from '@/utils/map/mapSetup';
-import { createNaverPolyline } from '@/utils/map/polylineUtils';
 import { fitBoundsToCoordinates } from '@/utils/map/mapViewControls';
-
+import { useRoutePolylines } from './useRoutePolylines'; // New hook
 
 const DEFAULT_ROUTE_COLOR = '#007bff';
 const USER_ROUTE_COLOR = '#2563EB';
@@ -30,67 +28,22 @@ export const useRouteManager = ({
   geoJsonNodes,
   mapPlacesWithGeoNodesFn,
 }: UseRouteManagerProps) => {
-  const activePolylines = useRef<any[]>([]);
-  const highlightedPathRef = useRef<any>(null);
-
-  const drawRoutePathInternal = useCallback((
-    currentMap: any,
-    pathCoordinates: { lat: number; lng: number }[],
-    color: string,
-    weight: number = 5,
-    opacity: number = 0.7,
-    zIndex: number = 1
-  ) => {
-    if (!currentMap || !isNaverLoadedParam || pathCoordinates.length < 2) return null;
-
-    const validCoords = pathCoordinates.filter(coord =>
-      coord && typeof coord.lat === 'number' && typeof coord.lng === 'number' &&
-      !isNaN(coord.lat) && !isNaN(coord.lng)
-    );
-
-    if (validCoords.length < 2) {
-      console.warn('[RouteManager] drawRoutePathInternal: Not enough valid coordinates for path.');
-      return null;
-    }
-    
-    const naverPath = validCoords.map(coord => createNaverLatLng(coord.lat, coord.lng)).filter(p => p !== null);
-     if (naverPath.length < 2) { // Check after filtering nulls from createNaverLatLng
-      console.warn('[RouteManager] drawRoutePathInternal: Not enough valid Naver LatLng objects for path.');
-      return null;
-    }
-
-
-    try {
-      const polyline = createNaverPolyline(currentMap, naverPath as any[], { // Cast as any[] because filter(p => p !== null) ensures non-null
-        strokeColor: color,
-        strokeWeight: weight,
-        strokeOpacity: opacity,
-        zIndex: zIndex,
-      });
-      return polyline;
-    } catch (error) {
-      console.error('[RouteManager] Error creating polyline:', error);
-      return null;
-    }
-  }, [isNaverLoadedParam]);
+  const {
+    addPolyline,
+    setHighlightedPolyline,
+    clearAllMapPolylines,
+    clearHighlightedPolyline: clearPreviousHighlight, // Alias for clarity
+  } = useRoutePolylines({ map, isNaverLoadedParam });
 
   const clearAllDrawnRoutes = useCallback(() => {
-    console.log('[RouteManager] Clearing all routes and UI elements.');
-    activePolylines.current.forEach(p => {
-      if (p && typeof p.setMap === 'function') p.setMap(null);
-    });
-    activePolylines.current = [];
-
-    if (highlightedPathRef.current && typeof highlightedPathRef.current.setMap === 'function') {
-      highlightedPathRef.current.setMap(null);
-    }
-    highlightedPathRef.current = null;
-  }, []);
+    console.log('[RouteManager] Clearing all routes via useRoutePolylines.');
+    clearAllMapPolylines();
+  }, [clearAllMapPolylines]);
 
   const renderItineraryRoute = useCallback(
     (
       itineraryDay: ItineraryDay | null,
-      _allServerRoutesInput?: Record<number, ServerRouteResponse>,
+      _allServerRoutesInput?: Record<number, ServerRouteResponse>, // Kept for signature consistency, though unused locally
       onComplete?: () => void
     ) => {
       if (!map || !isNaverLoadedParam) {
@@ -112,8 +65,7 @@ export const useRouteManager = ({
             if (validPlaces.length > 1) {
                 console.log("[RouteManager] No linkIds, drawing direct lines between mapped places.");
                 const pathCoordinates = validPlaces.map(p => ({ lat: p.y as number, lng: p.x as number }));
-                const polyline = drawRoutePathInternal(map, pathCoordinates, USER_ROUTE_COLOR, 3, USER_ROUTE_OPACITY, USER_ROUTE_ZINDEX -10);
-                if (polyline) activePolylines.current.push(polyline);
+                addPolyline(pathCoordinates, USER_ROUTE_COLOR, 3, USER_ROUTE_OPACITY, USER_ROUTE_ZINDEX -10);
 
                 const naverCoords = pathCoordinates.map(c => createNaverLatLng(c.lat, c.lng)).filter(p => p !== null) as any[];
                 if (naverCoords.length > 0) fitBoundsToCoordinates(map, naverCoords);
@@ -129,32 +81,30 @@ export const useRouteManager = ({
 
         const allRouteCoordinatesForBounds: { lat: number; lng: number }[][] = [];
         let missingLinkCount = 0;
+        let drawnPolylinesCount = 0;
 
         linkIds.forEach(linkId => {
           const linkFeature = geoJsonLinks.find(
-            (feature: GeoJsonFeature) => { // feature 타입을 GeoJsonFeature로 명시
-              // feature.properties를 GeoJsonLinkProperties로 타입 변환하여 LINK_ID에 접근합니다.
+            (feature: GeoJsonFeature) => {
               const props = feature.properties as GeoJsonLinkProperties;
               return String(props.LINK_ID) === String(linkId);
             }
           );
 
           if (linkFeature && linkFeature.geometry && linkFeature.geometry.type === 'LineString' && Array.isArray(linkFeature.geometry.coordinates)) {
-            const coords = linkFeature.geometry.coordinates as GeoCoordinates[]; // coords는 GeoCoordinates의 배열입니다.
-            
-            // coordPair 타입을 GeoCoordinates로 수정하고, 객체 속성으로 접근합니다.
+            const coords = linkFeature.geometry.coordinates as GeoCoordinates[];
             const pathCoordsForPolyline = coords.map((coordPair: GeoCoordinates) => {
               if (coordPair && typeof coordPair[0] === 'number' && typeof coordPair[1] === 'number') {
-                return { lat: coordPair[1], lng: coordPair[0] }; // lat: coordPair[1], lng: coordPair[0]
+                return { lat: coordPair[1], lng: coordPair[0] };
               }
               console.warn('[RouteManager] Invalid coordinate pair encountered in linkFeature geometry:', coordPair);
               return null;
             }).filter(c => c !== null) as { lat: number; lng: number }[];
 
             if (pathCoordsForPolyline.length >= 2) {
-              const polyline = drawRoutePathInternal(map, pathCoordsForPolyline, USER_ROUTE_COLOR, USER_ROUTE_WEIGHT, USER_ROUTE_OPACITY, USER_ROUTE_ZINDEX);
+              const polyline = addPolyline(pathCoordsForPolyline, USER_ROUTE_COLOR, USER_ROUTE_WEIGHT, USER_ROUTE_OPACITY, USER_ROUTE_ZINDEX);
               if (polyline) {
-                activePolylines.current.push(polyline);
+                drawnPolylinesCount++;
                 allRouteCoordinatesForBounds.push(pathCoordsForPolyline);
               }
             } else {
@@ -166,7 +116,7 @@ export const useRouteManager = ({
           }
         });
 
-        console.log(`[RouteManager] 경로 좌표 추출 및 폴리라인 생성 결과: ${activePolylines.current.length}개 폴리라인 (누락된 LINK_ID: ${missingLinkCount}개)`);
+        console.log(`[RouteManager] 경로 좌표 추출 및 폴리라인 생성 결과: ${drawnPolylinesCount}개 폴리라인 (누락된 LINK_ID: ${missingLinkCount}개)`);
 
         if (allRouteCoordinatesForBounds.length > 0) {
           const flatCoordsForBounds = allRouteCoordinatesForBounds.flat();
@@ -189,7 +139,7 @@ export const useRouteManager = ({
       }
       if (onComplete) onComplete();
     },
-    [map, isNaverLoadedParam, geoJsonLinks, drawRoutePathInternal, mapPlacesWithGeoNodesFn, clearAllDrawnRoutes]
+    [map, isNaverLoadedParam, geoJsonLinks, addPolyline, mapPlacesWithGeoNodesFn, clearAllDrawnRoutes]
   );
 
   const renderGeoJsonRoute = useCallback((route: SegmentRoute) => {
@@ -201,12 +151,11 @@ export const useRouteManager = ({
     clearAllDrawnRoutes();
 
     const routeNodes = route.nodeIds.map(nodeId => {
-      return geoJsonNodes.find(node => { // node 타입을 GeoJsonFeature로 가정
-        // node.properties를 GeoJsonNodeProperties로 타입 변환하여 NODE_ID에 접근합니다.
+      return geoJsonNodes.find(node => {
         const props = node.properties as GeoJsonNodeProperties;
         return String(props.NODE_ID) === String(nodeId);
       });
-    }).filter(Boolean) as GeoJsonFeature[]; // filter(Boolean) 후 GeoJsonFeature[]로 타입 명시
+    }).filter(Boolean) as GeoJsonFeature[];
 
     if (routeNodes.length < 2) {
       console.warn('[RouteManager] Not enough valid nodes to render GeoJSON route');
@@ -215,7 +164,6 @@ export const useRouteManager = ({
 
     const coordinates = routeNodes.map(node => {
       if (node && node.geometry.type === 'Point') {
-        // node.geometry.coordinates를 GeoCoordinates로 타입 변환하고, 객체 속성으로 접근합니다.
         const geoCoords = node.geometry.coordinates as GeoCoordinates;
         if (geoCoords && typeof geoCoords[0] === 'number' && typeof geoCoords[1] === 'number') {
           return { lat: geoCoords[1], lng: geoCoords[0] };
@@ -229,34 +177,27 @@ export const useRouteManager = ({
       return;
     }
 
-    const polyline = drawRoutePathInternal(map, coordinates, DEFAULT_ROUTE_COLOR);
-    if (polyline) {
-      activePolylines.current.push(polyline);
-    }
+    addPolyline(coordinates, DEFAULT_ROUTE_COLOR);
 
     const naverCoords = coordinates.map(c => createNaverLatLng(c.lat, c.lng)).filter(c => c !== null) as any[];
     if (naverCoords.length > 0) {
       fitBoundsToCoordinates(map, naverCoords);
     }
-  }, [map, isNaverLoadedParam, geoJsonNodes, drawRoutePathInternal, clearAllDrawnRoutes]);
+  }, [map, isNaverLoadedParam, geoJsonNodes, addPolyline, clearAllDrawnRoutes]);
 
   const highlightSegment = useCallback((segment: SegmentRoute | null) => {
-    if (highlightedPathRef.current) {
-      highlightedPathRef.current.setMap(null);
-      highlightedPathRef.current = null;
-    }
+    clearPreviousHighlight();
 
     if (!map || !isNaverLoadedParam || !segment || !segment.nodeIds || segment.nodeIds.length < 2) {
       return;
     }
 
     const segmentNodes = segment.nodeIds.map(nodeId => {
-      return geoJsonNodes.find(node => { // node 타입을 GeoJsonFeature로 가정
-        // node.properties를 GeoJsonNodeProperties로 타입 변환하여 NODE_ID에 접근합니다.
+      return geoJsonNodes.find(node => {
         const props = node.properties as GeoJsonNodeProperties;
         return String(props.NODE_ID) === String(nodeId);
       });
-    }).filter(Boolean) as GeoJsonFeature[]; // filter(Boolean) 후 GeoJsonFeature[]로 타입 명시
+    }).filter(Boolean) as GeoJsonFeature[];
 
     if (segmentNodes.length < 2) {
       console.warn('[RouteManager] Not enough valid nodes to highlight segment');
@@ -265,7 +206,6 @@ export const useRouteManager = ({
 
     const coordinates = segmentNodes.map(node => {
       if (node && node.geometry.type === 'Point') {
-         // node.geometry.coordinates를 GeoCoordinates로 타입 변환하고, 객체 속성으로 접근합니다.
         const geoCoords = node.geometry.coordinates as GeoCoordinates;
         if (geoCoords && typeof geoCoords[0] === 'number' && typeof geoCoords[1] === 'number') {
           return { lat: geoCoords[1], lng: geoCoords[0] };
@@ -279,27 +219,21 @@ export const useRouteManager = ({
       return;
     }
 
-    const highlightColor = '#ffc107';
-    const polyline = drawRoutePathInternal(map, coordinates, highlightColor, 6, 0.8, 200);
-    if (polyline) {
-      highlightedPathRef.current = polyline;
-    }
+    const highlightColor = '#ffc107'; // Standard highlight color
+    setHighlightedPolyline(coordinates, highlightColor, 6, 0.8, 200);
 
     const naverCoords = coordinates.map(c => createNaverLatLng(c.lat, c.lng)).filter(c => c !== null) as any[];
     if (naverCoords.length > 0) {
       fitBoundsToCoordinates(map, naverCoords);
     }
-  }, [map, isNaverLoadedParam, geoJsonNodes, drawRoutePathInternal]);
+  }, [map, isNaverLoadedParam, geoJsonNodes, setHighlightedPolyline, clearPreviousHighlight]);
 
   const clearPreviousHighlightedPath = useCallback(() => {
-    if (highlightedPathRef.current) {
-      highlightedPathRef.current.setMap(null);
-      highlightedPathRef.current = null;
-    }
-  }, []);
+    clearPreviousHighlight();
+  }, [clearPreviousHighlight]);
   
   const calculateAndDrawDirectRoutes = useCallback((placesToRoute: Place[]) => {
-    if (!map || !isNaverLoadedParam || placesToRoute.length < 2) return; // Return void as per context
+    if (!map || !isNaverLoadedParam || placesToRoute.length < 2) return;
 
     const pathCoordinates = placesToRoute
         .filter(p => typeof p.x === 'number' && typeof p.y === 'number' && !isNaN(p.x) && !isNaN(p.y))
@@ -307,12 +241,8 @@ export const useRouteManager = ({
 
     if (pathCoordinates.length < 2) return;
 
-    const polyline = drawRoutePathInternal(map, pathCoordinates, '#22c55e', 4);
-    if (polyline) {
-      activePolylines.current.push(polyline);
-    }
-    // No return value, polylines managed internally
-  }, [map, isNaverLoadedParam, drawRoutePathInternal]);
+    addPolyline(pathCoordinates, '#22c55e', 4); // Green color for direct routes, weight 4
+  }, [map, isNaverLoadedParam, addPolyline]);
 
 
   return {
