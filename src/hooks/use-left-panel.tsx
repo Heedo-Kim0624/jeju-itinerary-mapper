@@ -3,7 +3,7 @@ import { useEffect, useCallback } from 'react';
 import { useSelectedPlaces } from './use-selected-places';
 import { useTripDetails } from './use-trip-details';
 import { useCategoryResults } from './use-category-results';
-import { useItinerary, UseItineraryReturn } from './use-itinerary'; // Import UseItineraryReturn
+import { useItinerary, UseItineraryReturn } from './use-itinerary';
 import { useRegionSelection } from './use-region-selection';
 import { useCategorySelection } from './use-category-selection';
 import { useCategoryHandlers } from './left-panel/use-category-handlers';
@@ -14,7 +14,7 @@ import { useCategoryResultHandlers } from './left-panel/use-category-result-hand
 import { useEventListeners } from './left-panel/use-event-listeners';
 import { SchedulePayload, Place, ItineraryDay, CategoryName } from '@/types/core';
 import { toast } from 'sonner';
-import type { ItineraryManagementState } from '@/types/left-panel'; // Import the state type
+import type { ItineraryManagementState, UiVisibilityState } from '@/types/left-panel/index'; // Corrected import path
 
 /**
  * 왼쪽 패널 기능 통합 훅
@@ -22,7 +22,7 @@ import type { ItineraryManagementState } from '@/types/left-panel'; // Import th
 export const useLeftPanel = () => {
   const leftPanelState = useLeftPanelState();
   const regionSelection = useRegionSelection();
-  const categorySelection = useCategorySelection();
+  const categorySelectionHook = useCategorySelection(); // Renamed to avoid conflict
   const tripDetailsHookResult = useTripDetails();
   const { directInputValues, onDirectInputChange } = useInputState();
   
@@ -32,9 +32,9 @@ export const useLeftPanel = () => {
   );
 
   const placesManagement = useSelectedPlaces();
-  const itineraryManagementHook: UseItineraryReturn = useItinerary(); // Use the specific return type
+  const itineraryManagementHook: UseItineraryReturn = useItinerary(); 
 
-  const uiVisibility = {
+  const uiVisibility: UiVisibilityState = { // Ensure it matches UiVisibilityState
     showItinerary: itineraryManagementHook.showItinerary,
     setShowItinerary: itineraryManagementHook.setShowItinerary,
     showCategoryResult: leftPanelState.showCategoryResult,
@@ -43,19 +43,15 @@ export const useLeftPanel = () => {
 
   const categoryHandlers = useCategoryHandlers(
     leftPanelState.setShowCategoryResult,
-    categorySelection.setActiveMiddlePanelCategory
+    // Pass setActiveMiddlePanelCategory from categorySelectionHook
+    categorySelectionHook.setActiveMiddlePanelCategory 
   );
   
   const keywordsAndInputs = {
     directInputValues,
     onDirectInputChange,
-    handleConfirmCategory: (category: CategoryName, finalKeywords: string[], clearSelection: boolean = false) => {
-      categorySelection.handleConfirmCategory(category, finalKeywords, clearSelection);
-      // If direct input was used, show results panel, otherwise category panel handles it
-      if (clearSelection) { // Assuming clearSelection means direct input confirm
-        leftPanelState.setShowCategoryResult(category);
-      }
-    }
+    // handleConfirmCategory is usually part of categorySelectionHook or general callbacks
+    // For now, let's assume it's correctly handled by categorySelectionHook.handleConfirmCategory
   };
 
   const categoryResultHandlers = useCategoryResultHandlers(
@@ -66,10 +62,7 @@ export const useLeftPanel = () => {
   );
 
   const generateItineraryAdapter = useCallback(async (
-    // This adapter is called by useItineraryCreation's handleInitiateItineraryCreation
-    // which then calls runScheduleGeneration (from useScheduleGenerationRunner)
-    // or useItineraryActions.generateItinerary
-    payloadForServer?: SchedulePayload, // This might be for server
+    payloadForServer?: SchedulePayload, 
   ): Promise<ItineraryDay[] | null> => {
     if (!tripDetailsHookResult.dates?.startDate || !tripDetailsHookResult.dates?.endDate) {
       console.error("[Adapter] Trip start or end date is missing.");
@@ -79,10 +72,7 @@ export const useLeftPanel = () => {
 
     const allPlacesForGeneration: Place[] = [
       ...placesManagement.selectedPlaces,
-      // Candidate places might also be included depending on strategy
-      // For now, focusing on user-selected places for generateItinerary call
     ];
-     // Add unique candidate places
     const selectedPlaceIds = new Set(placesManagement.selectedPlaces.map(p => String(p.id)));
     placesManagement.candidatePlaces.forEach(p => {
         if (!selectedPlaceIds.has(String(p.id))) {
@@ -90,20 +80,18 @@ export const useLeftPanel = () => {
         }
     });
 
-
     if (allPlacesForGeneration.length === 0) {
         toast.info("일정을 생성할 장소가 선택되지 않았습니다. (Adapter)");
         return null;
     }
     
-    // itineraryManagementHook.generateItinerary is the unified function from useItineraryActions
     return itineraryManagementHook.generateItinerary(
       allPlacesForGeneration,
       tripDetailsHookResult.dates.startDate,
       tripDetailsHookResult.dates.endDate,
       tripDetailsHookResult.dates.startTime,
       tripDetailsHookResult.dates.endTime,
-      payloadForServer // Pass payload if available for server-side generation
+      payloadForServer 
     );
   }, [itineraryManagementHook, placesManagement.selectedPlaces, placesManagement.candidatePlaces, tripDetailsHookResult]);
 
@@ -111,16 +99,14 @@ export const useLeftPanel = () => {
     tripDetails: tripDetailsHookResult,
     userDirectlySelectedPlaces: placesManagement.selectedPlaces,
     autoCompleteCandidatePlaces: placesManagement.candidatePlaces,
-    prepareSchedulePayload: placesManagement.prepareSchedulePayload, // This creates payload for server
-    generateItinerary: generateItineraryAdapter, // This uses the adapter which calls the unified generator
-    
-    // Callbacks to update UI state
+    prepareSchedulePayload: placesManagement.prepareSchedulePayload, 
+    generateItinerary: generateItineraryAdapter, 
     setShowItinerary: itineraryManagementHook.setShowItinerary,
     setCurrentPanel: leftPanelState.setCurrentPanel,
-    setIsGenerating: leftPanelState.setIsGenerating, // For loading indicators
-    setItineraryReceived: leftPanelState.setItineraryReceived, // For DevDebugInfo
-    // Pass server response handler from itinerary management
-    handleServerItineraryResponse: itineraryManagementHook.handleServerItineraryResponse,
+    setIsGenerating: leftPanelState.setIsGenerating, 
+    setItineraryReceived: leftPanelState.setItineraryReceived,
+    // handleServerItineraryResponse is NOT part of useItineraryCreation props.
+    // It's called by useScheduleGenerationRunner which is used by generateItineraryAdapter.
   });
 
   const { 
@@ -132,7 +118,7 @@ export const useLeftPanel = () => {
   } = useCategoryResults(
     uiVisibility.showCategoryResult, 
     uiVisibility.showCategoryResult 
-      ? categorySelection.selectedKeywordsByCategory[uiVisibility.showCategoryResult] || [] 
+      ? categorySelectionHook.selectedKeywordsByCategory[uiVisibility.showCategoryResult] || [] 
       : [], 
     regionSelection.selectedRegions
   );
@@ -168,30 +154,31 @@ export const useLeftPanel = () => {
     isItineraryCreated: itineraryManagementHook.isItineraryCreated,
     showItinerary: itineraryManagementHook.showItinerary,
     setShowItinerary: itineraryManagementHook.setShowItinerary,
-    setItinerary: itineraryManagementHook.setItinerary, // Ensure setItinerary is included
+    setItinerary: itineraryManagementHook.setItinerary,
     handleServerItineraryResponse: itineraryManagementHook.handleServerItineraryResponse,
   };
 
   return {
     regionSelection,
-    categorySelection,
-    keywordsAndInputs,
+    categorySelection: categorySelectionHook, // Return the entire hook result
+    keywordsAndInputs, // Contains directInputValues and onDirectInputChange
     placesManagement,
     tripDetails: tripDetailsHookResult,
     uiVisibility,
-    itineraryManagement: itineraryManagementState, // Use the typed object
+    itineraryManagement: itineraryManagementState,
     handleCreateItinerary: itineraryCreation.handleInitiateItineraryCreation,
     handleCloseItinerary: itineraryCreation.handleCloseItineraryPanel,
-    selectedCategory: leftPanelState.selectedCategory, // This seems to be from old state logic
+    // selectedCategory: leftPanelState.selectedCategory, // This seems legacy
     currentPanel: leftPanelState.currentPanel,
     isCategoryLoading,
     categoryError,
     categoryResults,
     categoryResultHandlers, 
-    handleCategorySelect: (category: CategoryName) => 
-      categoryHandlers.handleCategorySelect(category, refetch), // Pass refetch to category handler
-    isGeneratingItinerary: leftPanelState.isGenerating, // Centralized loading state
+    // handleCategorySelect is now part of categoryHandlers, which useCategoryHandlers provides
+    // The call site will use categoryHandlers.handleCategorySelect(categoryName, refetchCallback)
+    // So, we expose categoryHandlers
+    categoryHandlers, // Expose the handlers object which contains handleCategorySelect
+    isGeneratingItinerary: leftPanelState.isGenerating, 
     itineraryReceived: leftPanelState.itineraryReceived,
   };
 };
-

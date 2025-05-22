@@ -1,3 +1,4 @@
+
 import { useMapInitialization } from '@/hooks/map/useMapInitialization';
 import { useMapNavigation } from '@/hooks/map/useMapNavigation';
 import { useGeoJsonState as useAppGeoJsonState } from '@/hooks/map/useGeoJsonState'; // Named import
@@ -18,8 +19,21 @@ const useMapCore = () => {
     isNaverLoaded,
     isMapError
   } = useMapInitialization();
+
+  // Destructure geoJsonNodes and geoJsonLinks before calling useMapFeatures
+  const appGeoJsonHookState = useAppGeoJsonState();
+  const { 
+    showGeoJson, 
+    toggleGeoJsonVisibility, 
+    handleGeoJsonLoaded: appHandleGeoJsonLoaded,
+    geoJsonNodes: हानिकारकGeoJsonNodesFromState, // Renamed to avoid conflict with features if any
+    geoJsonLinks: हानिकारकGeoJsonLinksFromState,   // Renamed to avoid conflict
+    isGeoJsonLoaded,
+    checkGeoJsonMapping
+  } = appGeoJsonHookState;
   
-  const features = useMapFeatures(map, isNaverLoaded, हानिकारकGeoJsonNodes, हानिकारकGeoJsonLinks); // Pass geoJsonNodes and geoJsonLinks
+  // useMapFeatures now gets geoJson internally via its own useGeoJsonState
+  const features = useMapFeatures(map, isNaverLoaded); 
 
   const { 
     clearMarkersAndUiElements, 
@@ -28,20 +42,9 @@ const useMapCore = () => {
   const { 
     panTo 
   } = useMapNavigation(map);
-
-  const appGeoJsonHookState = useAppGeoJsonState();
-  const { 
-    showGeoJson, 
-    toggleGeoJsonVisibility, 
-    handleGeoJsonLoaded: appHandleGeoJsonLoaded,
-    geoJsonNodes: हानिकारकGeoJsonNodes, // rename to avoid conflict if features also returns them
-    geoJsonLinks: हानिकारकGeoJsonLinks,   // rename to avoid conflict
-    isGeoJsonLoaded,
-    checkGeoJsonMapping
-  } = appGeoJsonHookState;
   
   const setShowGeoJson = useCallback((show: boolean) => {
-    if (appGeoJsonHookState.showGeoJson !== show) {
+    if (appGeoJsonHookState.showGeoJson !== show) { // Use the state from appGeoJsonHookState
       toggleGeoJsonVisibility();
     }
   }, [appGeoJsonHookState.showGeoJson, toggleGeoJsonVisibility]);
@@ -105,16 +108,16 @@ const useMapCore = () => {
     isNaverLoaded,
     isMapError,
     addMarkers: features.addMarkers,
-    calculateRoutes: features.calculateRoutes,
+    calculateRoutes: features.calculateRoutes, // Corrected: calculateRoutes is calculateAndDrawDirectRoutes in features
     clearMarkersAndUiElements,
     panTo,
-    showGeoJson, // from appGeoJsonHookState
-    toggleGeoJsonVisibility, // from appGeoJsonHookState
-    isGeoJsonLoaded, // from appGeoJsonHookState
-    geoJsonNodes: हानिकारकGeoJsonNodes, // from appGeoJsonHookState
-    geoJsonLinks: हानिकारकGeoJsonLinks,   // from appGeoJsonHookState
+    showGeoJson, 
+    toggleGeoJsonVisibility, 
+    isGeoJsonLoaded, 
+    geoJsonNodes: हानिकारकGeoJsonNodesFromState, // Use the ones from appGeoJsonHookState
+    geoJsonLinks: हानिकारकGeoJsonLinksFromState,   // Use the ones from appGeoJsonHookState
     handleGeoJsonLoaded: appHandleGeoJsonLoaded,
-    checkGeoJsonMapping, // from appGeoJsonHookState
+    checkGeoJsonMapping, 
     mapPlacesWithGeoNodes: features.mapPlacesWithGeoNodes,
     renderItineraryRoute: renderItineraryRouteWrapper, 
     clearAllRoutes: features.clearAllRoutes,

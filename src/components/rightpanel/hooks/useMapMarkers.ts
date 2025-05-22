@@ -1,14 +1,14 @@
 
 import { useRef, useEffect } from 'react';
 import { useMapContext } from '../MapContext';
-import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/core';
+import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/core'; // ItineraryPlaceWithTime.id is string
 import { clearMarkers } from '@/utils/map/mapCleanup';
 import { getMarkerIconOptions, createNaverMarker } from '@/utils/map/markerUtils';
 import { createNaverLatLng } from '@/utils/map/mapSetup';
 import { fitBoundsToPlaces, panToPosition } from '@/utils/map/mapViewControls';
 
 interface UseMapMarkersProps {
-  places: Place[]; // Expects Place[] where id is string
+  places: Place[]; 
   selectedPlace: Place | null;
   itinerary: ItineraryDay[] | null;
   selectedDay: number | null;
@@ -18,9 +18,9 @@ interface UseMapMarkersProps {
 }
 
 export const useMapMarkers = ({
-  places, // General places (e.g., from search results), id is string
+  places, 
   selectedPlace,
-  itinerary, // Contains ItineraryPlaceWithTime where id can be string | number
+  itinerary, 
   selectedDay,
   selectedPlaces = [],
   onPlaceClick,
@@ -30,8 +30,6 @@ export const useMapMarkers = ({
   const markersRef = useRef<naver.maps.Marker[]>([]);
   const prevSelectedDayRef = useRef<number | null>(null);
   const prevItineraryRef = useRef<ItineraryDay[] | null>(null);
-  // prevPlacesRef should reflect the type of places primarily used for marker rendering logic.
-  // If itinerary is the main source, this might need adjustment or a different way to track changes.
   const prevPlacesRef = useRef<(Place | ItineraryPlaceWithTime)[] | null>(null);
 
   const clearAllMarkers = () => {
@@ -47,44 +45,25 @@ export const useMapMarkers = ({
       return;
     }
     
-    // For comparing 'places', we stringify it or use a deep comparison if needed.
-    // For simplicity, direct comparison might be okay if immutability is maintained.
-    const placesPropChanged = prevPlacesRef.current !== places; // This comparison is for the 'places' prop specifically.
-                                                              // Marker rendering logic below uses 'placesToDisplay'.
-                                                              // We need to decide what `prevPlacesRef` tracks if `places` prop itself isn't directly rendered.
-
+    const placesPropChanged = prevPlacesRef.current !== places; 
     const itineraryChanged = prevItineraryRef.current !== itinerary;
     const dayChanged = selectedDay !== prevSelectedDayRef.current;
-    
-    // A more robust check for selectedPlaces list change
     const selectedPlacesListChanged = JSON.stringify(selectedPlaces) !== JSON.stringify((markersRef.current as any)._prevSelectedPlacesList);
-
-    const selectedPlaceChanged = selectedPlace?.id !== (markersRef.current as any)._prevSelectedPlaceId; // Compare by ID
+    const selectedPlaceChanged = selectedPlace?.id !== (markersRef.current as any)._prevSelectedPlaceId;
     const highlightChanged = highlightPlaceId !== (markersRef.current as any)._prevHighlightPlaceId;
-
 
     if (itineraryChanged || dayChanged || placesPropChanged || selectedPlaceChanged || highlightChanged || selectedPlacesListChanged) {
       console.log("[useMapMarkers] Change detected, regenerating markers:", {
-        itineraryChanged,
-        dayChanged,
-        placesPropChanged,
-        selectedPlaceChanged,
-        highlightChanged,
-        selectedPlacesListChanged,
-        selectedDay,
-        itineraryLength: itinerary?.length,
-        placesLength: places?.length, // Length of the 'places' prop
+        itineraryChanged, dayChanged, placesPropChanged, selectedPlaceChanged, highlightChanged, selectedPlacesListChanged,
+        selectedDay, itineraryLength: itinerary?.length, placesLength: places?.length,
       });
 
       clearAllMarkers();
-
       prevItineraryRef.current = itinerary;
       prevSelectedDayRef.current = selectedDay;
-      // prevPlacesRef should track the actual data source that was last rendered
-      // This will be set after placesToDisplay is determined
       (markersRef.current as any)._prevSelectedPlaceId = selectedPlace?.id;
       (markersRef.current as any)._prevHighlightPlaceId = highlightPlaceId;
-      (markersRef.current as any)._prevSelectedPlacesList = [...selectedPlaces]; // Store a copy
+      (markersRef.current as any)._prevSelectedPlacesList = [...selectedPlaces];
 
       renderMarkers();
     }
@@ -95,16 +74,16 @@ export const useMapMarkers = ({
   ]);
 
   const renderMarkers = () => {
-    let placesToDisplay: ItineraryPlaceWithTime[] = []; // Raw places from itinerary
+    let placesToDisplay: ItineraryPlaceWithTime[] = [];
     let isDisplayingItineraryDay = false;
-    const placeIdSet = new Set<string | number>(); // Handles both string and number IDs initially
+    const placeIdSet = new Set<string>(); // ID is now always string
 
     if (itinerary && itinerary.length > 0) {
       if (selectedDay !== null) {
         const currentDayData = itinerary.find(day => day.day === selectedDay);
         if (currentDayData && currentDayData.places && currentDayData.places.length > 0) {
           const uniquePlaces: ItineraryPlaceWithTime[] = [];
-          currentDayData.places.forEach(place => {
+          currentDayData.places.forEach(place => { // place.id is string
             if (!placeIdSet.has(place.id)) {
               placeIdSet.add(place.id);
               uniquePlaces.push(place);
@@ -114,11 +93,11 @@ export const useMapMarkers = ({
           isDisplayingItineraryDay = true;
           console.log(`[useMapMarkers] Displaying itinerary day ${selectedDay}: ${placesToDisplay.length} unique places.`);
         } else {
-          console.log(`[useMapMarkers] Itinerary active for day ${selectedDay}, but no places found. No itinerary markers shown.`);
+          console.log(`[useMapMarkers] Itinerary active for day ${selectedDay}, but no places found.`);
         }
       } else {
         itinerary.forEach(day => {
-          day.places.forEach(place => {
+          day.places.forEach(place => { // place.id is string
             if (!placeIdSet.has(place.id)) {
               placeIdSet.add(place.id);
               placesToDisplay.push(place);
@@ -127,20 +106,23 @@ export const useMapMarkers = ({
         });
         console.log(`[useMapMarkers] No specific day selected. Displaying ${placesToDisplay.length} unique places from all days.`);
       }
-    } else if (places && places.length > 0) { // Fallback to 'places' prop if no itinerary
-        // Assuming 'places' prop contains Place objects with string IDs
-        // We need to adapt them slightly if `getMarkerIconOptions` expects ItineraryPlaceWithTime structure
-        // or ensure `getMarkerIconOptions` can handle `Place` as well.
-        // For now, let's assume they can be used if coordinates are present.
-        placesToDisplay = places.map(p => ({...p, id: String(p.id)})); // Ensure ID is string | number, adapting Place to ItineraryPlaceWithTime-like
-        console.log(`[useMapMarkers] No active itinerary. Displaying ${placesToDisplay.length} places from 'places' prop.`);
+    } else if (places && places.length > 0) {
+        // Transform Place[] to ItineraryPlaceWithTime[]
+        placesToDisplay = places.map(p => ({
+          ...p, // Spread existing Place properties
+          id: String(p.id), // Ensure id is string (already is for Place)
+          timeBlock: "N/A", // Add default timeBlock for compatibility
+          // Ensure all required fields of ItineraryPlaceWithTime are present
+          // If Place is missing some, add defaults or ensure they are optional in ItineraryPlaceWithTime
+          // For now, assuming Place structure + timeBlock is enough for markers if not full itinerary.
+        }));
+        console.log(`[useMapMarkers] No active itinerary. Displaying ${placesToDisplay.length} places from 'places' prop (transformed).`);
     } else {
       console.log(`[useMapMarkers] No active itinerary and no 'places' prop. No markers will be shown.`);
     }
     
-    prevPlacesRef.current = placesToDisplay; // Track what was actually prepared for display
+    prevPlacesRef.current = placesToDisplay; 
 
-    // This is where validPlacesToDisplay was missing its definition scope
     const validPlacesToDisplay = placesToDisplay.filter(p => {
       if (p.x != null && p.y != null && !isNaN(Number(p.x)) && !isNaN(Number(p.y))) return true;
       console.warn(`[useMapMarkers] Place '${p.name}' has invalid coordinates: x=${p.x}, y=${p.y}`);
@@ -151,20 +133,19 @@ export const useMapMarkers = ({
       console.log(`[useMapMarkers] Creating markers for ${validPlacesToDisplay.length} valid places.`);
       const newMarkers: naver.maps.Marker[] = [];
 
-      validPlacesToDisplay.forEach((place, index) => {
+      validPlacesToDisplay.forEach((place, index) => { // place.id is string
         if (!window.naver || !window.naver.maps) return;
 
         const position = createNaverLatLng(place.y!, place.x!);
         if (!position) return;
         
-        // Ensure place.id is string for comparison with selectedPlace.id (string) and highlightPlaceId (string)
-        const placeIdStr = String(place.id); 
+        const placeIdStr = place.id; // Already string
         const isGloballySelectedCandidate = selectedPlaces.some(sp => String(sp.id) === placeIdStr);
         const isInfoWindowTarget = selectedPlace?.id === placeIdStr;
         const isGeneralHighlightTarget = highlightPlaceId === placeIdStr;
         
         const iconOptions = getMarkerIconOptions(
-          place, // ItineraryPlaceWithTime (id can be string | number)
+          place, 
           isInfoWindowTarget || isGeneralHighlightTarget,
           isGloballySelectedCandidate && !isInfoWindowTarget && !isGeneralHighlightTarget,
           isDisplayingItineraryDay,
@@ -176,17 +157,16 @@ export const useMapMarkers = ({
         if (marker && onPlaceClick && window.naver && window.naver.maps && window.naver.maps.Event) {
           window.naver.maps.Event.addListener(marker, 'click', () => {
             console.log(`[useMapMarkers] Marker clicked: ${place.name} (ID: ${placeIdStr}, Index: ${index}, ItineraryDayPlace: ${isDisplayingItineraryDay})`);
-            onPlaceClick(place, index); // place is ItineraryPlaceWithTime
+            onPlaceClick(place, index); 
           });
         }
         if (marker) newMarkers.push(marker);
       });
       markersRef.current = newMarkers;
 
-      // Adapt validPlacesToDisplay (ItineraryPlaceWithTime[]) to Place[] for fitBoundsToPlaces
       const placesForBounds: Place[] = validPlacesToDisplay.map(p => ({
-        ...p,
-        id: String(p.id), // Ensure id is string
+        ...p, // ItineraryPlaceWithTime has all Place fields, plus timeBlock
+        id: String(p.id), 
       }));
 
       if (placesForBounds.length > 0) {
@@ -199,14 +179,14 @@ export const useMapMarkers = ({
       console.log("[useMapMarkers] No places to display after filtering.");
     }
     
-    const placeToFocusObj = selectedPlace || (highlightPlaceId ? validPlacesToDisplay.find(p => String(p.id) === highlightPlaceId) : null);
+    const placeToFocus = selectedPlace || (highlightPlaceId ? validPlacesToDisplay.find(p => p.id === highlightPlaceId) : null);
 
-    if (placeToFocusObj && placeToFocusObj.y != null && placeToFocusObj.x != null) {
-      console.log(`[useMapMarkers] Panning to focused place: ${placeToFocusObj.name}`);
-      if (map.getZoom() < 15) map.setZoom(15, true); // Ensure map is zoomed in enough
-      panToPosition(map, placeToFocusObj.y, placeToFocusObj.x);
-    } else if (placeToFocusObj) {
-      console.warn(`[useMapMarkers] Target focus place '${placeToFocusObj.name}' has no valid coordinates.`);
+    if (placeToFocus && placeToFocus.y != null && placeToFocus.x != null) {
+      console.log(`[useMapMarkers] Panning to focused place: ${placeToFocus.name}`);
+      if (map.getZoom() < 15) map.setZoom(15, true);
+      panToPosition(map, placeToFocus.y, placeToFocus.x);
+    } else if (placeToFocus) {
+      console.warn(`[useMapMarkers] Target focus place '${placeToFocus.name}' has no valid coordinates.`);
     }
   };
   
@@ -215,4 +195,3 @@ export const useMapMarkers = ({
     clearAllMarkers
   };
 };
-

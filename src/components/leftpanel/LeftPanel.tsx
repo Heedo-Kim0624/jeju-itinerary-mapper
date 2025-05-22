@@ -5,34 +5,29 @@ import CategoryResultHandler from './CategoryResultHandler';
 import LeftPanelDisplayLogic from './LeftPanelDisplayLogic';
 import DevDebugInfo from './DevDebugInfo';
 import { useLeftPanelOrchestrator } from '@/hooks/left-panel/useLeftPanelOrchestrator';
-// Removed LeftPanelProps as it's complex and better handled by orchestrator's return type
+// Types for props are now inferred from useLeftPanelOrchestrator's return and sub-prop hooks
 
 const LeftPanel: React.FC = () => {
   const {
-    // Direct states/handlers from orchestrator for specific sub-components
-    regionSelection,
-    // uiVisibility, // uiVisibility content is used within orchestrator or passed via props objects
-    // categorySelection, // categorySelection content is used within orchestrator or passed via props objects
-    placesManagement,
-    callbacks, // General callbacks for actions like region confirm
-    categoryResultHandlers, // For CategoryResultHandler
+    regionSelection, // Used for RegionPanelHandler
+    placesManagement, // Used for CategoryResultHandler
+    categoryResultHandlers, // Used for CategoryResultHandler
+    callbacks, // General callbacks, e.g. for RegionPanelHandler confirm
 
-    // Overall control and display props
+    // Overall control and display props from orchestrator
     isActuallyGenerating,
     shouldShowItineraryView,
-    enhancedItineraryDisplayProps, // Contains all props for ItineraryDisplayWrapper
-    enhancedMainPanelProps,       // Contains all props for MainPanelWrapper
-    devDebugInfoProps,            // Contains all props for DevDebugInfo
+    enhancedItineraryDisplayProps, // Fully typed from orchestrator
+    enhancedMainPanelProps,       // Fully typed from orchestrator
+    devDebugInfoProps,            // Fully typed from orchestrator
   } = useLeftPanelOrchestrator();
 
-  // enhancedMainPanelProps contains:
-  // - leftPanelContainerProps (for LeftPanelContainer)
-  //   - Including onCreateItinerary, selectedPlaces, onRemovePlace, etc.
-  // - leftPanelContentProps (for LeftPanelContent)
-  //   - Including onDateSelect, onOpenRegionPanel, category navigation props, category panel props, etc.
+  // Debugging to ensure props are correctly formed
+  useEffect(() => {
+    console.log("LeftPanel - enhancedMainPanelProps:", enhancedMainPanelProps);
+    console.log("LeftPanel - enhancedItineraryDisplayProps:", enhancedItineraryDisplayProps);
+  }, [enhancedMainPanelProps, enhancedItineraryDisplayProps]);
 
-  // enhancedItineraryDisplayProps contains:
-  // - itinerary, startDate, onSelectDay, selectedDay, onCloseItinerary, etc.
 
   return (
     <div className="relative h-full w-[300px]"> {/* Ensure width is set */}
@@ -48,19 +43,28 @@ const LeftPanel: React.FC = () => {
         onClose={() => regionSelection.setRegionSlidePanelOpen(false)}
         selectedRegions={regionSelection.selectedRegions}
         onToggle={regionSelection.handleRegionToggle}
-        onConfirm={callbacks.handleRegionConfirm} // from useLeftPanelCallbacks
+        onConfirm={callbacks.handleRegionConfirm} 
       />
 
       <CategoryResultHandler
-        // Props for CategoryResultHandler are taken from categoryResultHandlers object
-        // and other relevant states from orchestrator if needed.
-        showCategoryResult={useLeftPanelOrchestrator().uiVisibility.showCategoryResult} // Example, better to pass from orchestrator if directly needed
+        // Pass necessary props; showCategoryResult is part of uiVisibility, managed internally by orchestrator/props hooks
+        // The component itself will get category from orchestrator via devDebugInfoProps or similar if needed, or its own logic
+        showCategoryResult={useLeftPanelOrchestrator().devDebugInfoProps?.showCategoryResult} // This is a bit of a hack, showCategoryResult is tricky
+                                                                                            // Better: orchestrator should provide showCategoryResult if needed by direct children
+                                                                                            // For now, CategoryResultHandler will use its own 'showCategoryResult' prop
+                                                                                            // which it gets from the orchestrator's state.
+        // The props for CategoryResultHandler should be explicitly passed if they are not coming from a context
+        // Or, the `categoryResultHandlers` object from orchestrator contains the handlers.
+        // The `showCategoryResult` state itself might be better managed by `useLeftPanel().uiVisibility.showCategoryResult`
+        // Let's assume `uiVisibility.showCategoryResult` is the source of truth
+        showCategoryResult={useLeftPanelOrchestrator().uiVisibility.showCategoryResult}
         selectedRegions={regionSelection.selectedRegions}
-        selectedKeywordsByCategory={useLeftPanelOrchestrator().categorySelection.selectedKeywordsByCategory} // Example
-        onClose={categoryResultHandlers.handleResultClose}
-        onSelectPlace={placesManagement.handleSelectPlace}
+        // selectedKeywordsByCategory is part of categorySelection, which placesManagement might access or orchestrator provides
+        selectedKeywordsByCategory={useLeftPanelOrchestrator().categorySelection.selectedKeywordsByCategory}
+        onClose={categoryResultHandlers.handleResultClose} // This now expects (category: CategoryName) => void
+        onSelectPlace={placesManagement.handleSelectPlace} // This expects (place: Place, categoryName: CategoryName) => void
         selectedPlaces={placesManagement.selectedPlaces}
-        onConfirmCategory={categoryResultHandlers.handleConfirmCategoryWithAutoComplete}
+        onConfirmCategory={categoryResultHandlers.handleConfirmCategoryWithAutoComplete} // This is (category, keywords)
       />
       
       {devDebugInfoProps && <DevDebugInfo {...devDebugInfoProps} />}
@@ -69,4 +73,3 @@ const LeftPanel: React.FC = () => {
 };
 
 export default LeftPanel;
-

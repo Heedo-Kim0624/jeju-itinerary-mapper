@@ -1,4 +1,3 @@
-
 /**
  * Types related to itinerary structure and places with time
  */
@@ -8,44 +7,33 @@ import { RouteData } from './route-data';
 
 // Place with time information
 export interface ItineraryPlaceWithTime {
-  id: string;                   // Unique identifier for this itinerary entry (can be original place ID or generated)
-  name: string;                 // Name of the place
-  category: string;             // Category of the place (e.g., 'restaurant', 'attraction')
+  id: string; // Changed from string | number to string
+  name: string;
+  category: string;
   
-  timeBlock: string;            // Original time block string from server, or formatted start time. e.g., "Tue_0900" or "09:00"
-  arriveTime?: string;          // Formatted arrival time, e.g., "09:00"
-  departTime?: string;          // Formatted departure time, e.g., "10:30"
-  stayDuration?: number;        // Duration of stay in minutes
-  travelTimeToNext?: string;    // Estimated travel time to the next place, e.g., "15분"
+  timeBlock: string;
+  arriveTime?: string;
+  departTime?: string;
+  stayDuration?: number;
+  travelTimeToNext?: string;
 
-  // Geographic and Detailed Information (aligned with Place to ensure assignability)
-  x: number;                   // Longitude (required)
-  y: number;                   // Latitude (required)
-  address: string;             // Full address (required)
-  road_address: string;        // Road address (required)
-  phone: string;               // Phone number (required)
-  description: string;         // Place description (required)
-  rating: number;              // Place rating (required)
-  image_url: string;           // URL for an image of the place (required)
-  homepage: string;            // URL for the place's homepage (required)
+  // Geographic and Detailed Information
+  x: number;
+  y: number;
+  address: string;
+  road_address: string;
+  phone: string;
+  description: string;
+  rating: number;
+  image_url: string;
+  homepage: string;
 
-  // For GeoJSON based routing if applicable
-  geoNodeId?: string;  // ID of the corresponding node in GeoJSON data - CHANGED to string | undefined
+  geoNodeId?: string;
+  isFallback?: boolean;
   
-  isFallback?: boolean;         // True if detailed information could not be found and default/server values are used
-  
-  // Properties for compatibility with Place selection logic
   isSelected?: boolean;
   isCandidate?: boolean;
-  // Potentially other fields from Place if needed for itinerary specific logic:
-  // reviewCount?: number;
-  // operationTimeData?: { [key: string]: number };
-  // weight?: number;
-  // raw?: any;
-  // categoryDetail?: string;
-  // naverLink?: string;
-  // instaLink?: string;
-  // operatingHours?: string;
+  // Potentially other fields from Place if needed
 }
 
 // Day itinerary interface
@@ -64,4 +52,3 @@ export interface ServerResponseParsingResult {
   itineraryDays: ItineraryDay[];
   error?: string;
 }
-
