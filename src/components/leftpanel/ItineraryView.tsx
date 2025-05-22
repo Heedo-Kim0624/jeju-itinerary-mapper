@@ -5,22 +5,21 @@ import { usePopup } from '@/hooks/ui/usePopup';
 import PlaceDetailDialog from '@/components/places/PlaceDetailDialog';
 import { Button } from '@/components/ui/button';
 import { Info } from 'lucide-react';
-import { ItineraryDay } from '@/types/core';
+import { ItineraryDay, ItineraryPlaceWithTime } from '@/types/core'; // ItineraryPlaceWithTime 추가
 
 interface ItineraryViewProps {
   itinerary: ItineraryDay[] | null;
   selectedDay: number | null;
   onSelectDay: (day: number) => void;
-  onClose: () => void;
+  onClose?: () => void; // onClose를 선택적으로 변경
 }
 
 const ItineraryView: React.FC<ItineraryViewProps> = ({
   itinerary,
   selectedDay,
   onSelectDay,
-  onClose,
+  // onClose, // onClose는 이제 선택적
 }) => {
-  // 상세 정보 팝업을 위한 훅 사용
   const { isPopupOpen, selectedPlace, openPopup, handleOpenChange } = usePopup();
 
   if (!itinerary || itinerary.length === 0 || selectedDay === null) {
@@ -31,7 +30,6 @@ const ItineraryView: React.FC<ItineraryViewProps> = ({
     );
   }
 
-  // 현재 선택된 일정 데이터 찾기
   const currentDayData = itinerary.find((day) => day.day === selectedDay);
   if (!currentDayData) {
     return (
@@ -68,7 +66,7 @@ const ItineraryView: React.FC<ItineraryViewProps> = ({
                 
                 <div className="flex flex-col items-end">
                   <span className="text-sm font-medium">
-                    {place.arriveTime || (place.timeBlock && place.timeBlock.split('_')[1])}
+                    {place.arriveTime || (place.timeBlock && typeof place.timeBlock === 'string' && place.timeBlock.includes('_') ? place.timeBlock.split('_')[1] : place.timeBlock)}
                   </span>
                   {place.travelTimeToNext && (
                     <span className="text-xs text-muted-foreground">
@@ -79,7 +77,6 @@ const ItineraryView: React.FC<ItineraryViewProps> = ({
               </div>
               
               <div className="mt-2">
-                {/* 상세 정보 버튼 추가 */}
                 <Button 
                   variant="outline" 
                   size="sm" 
@@ -95,7 +92,6 @@ const ItineraryView: React.FC<ItineraryViewProps> = ({
         </div>
       </div>
       
-      {/* 상세 정보 팝업 다이얼로그 */}
       <PlaceDetailDialog 
         place={selectedPlace} 
         open={isPopupOpen}

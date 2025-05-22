@@ -13,7 +13,7 @@ interface ContentSectionProps {
   showItinerary: boolean;
   filteredPlaces: Place[];
   loading: boolean;
-  selectedPlace: Place | null;
+  selectedPlace: (Place | ItineraryPlaceWithTime) | null; // 타입 변경
   currentPage: number;
   totalPages: number;
   itinerary: ItineraryDay[] | null;
@@ -21,7 +21,7 @@ interface ContentSectionProps {
   selectedItineraryDay: number | null;
   isPlaceListReady: boolean;
   isCategorySelectionComplete: boolean;
-  onSelectPlace: (place: Place) => void;
+  onSelectPlace: (place: (Place | ItineraryPlaceWithTime)) => void; // 타입 변경
   onPageChange: (page: number) => void;
   onCreateItinerary: () => void;
   onSelectItineraryDay: (day: number) => void;
@@ -211,7 +211,7 @@ const ContentSection: React.FC<ContentSectionProps> = ({
   currentPage,
   totalPages,
   itinerary,
-  dateRange,
+  dateRange, // This is used for ItineraryView's startDate, but ItineraryView no longer takes it.
   selectedItineraryDay,
   isPlaceListReady,
   isCategorySelectionComplete,
@@ -226,35 +226,50 @@ const ContentSection: React.FC<ContentSectionProps> = ({
 
   const handlePlacesFound = (places: Place[]) => {
     console.log("Places found:", places);
+    // setFilteredPlaces(places); // This should be handled by the parent component that manages filteredPlaces
   };
 
   // ✨ 수정된 handleViewDetails
-  const handleViewDetails = async (place: Place) => {
+  const handleViewDetails = async (place: Place | ItineraryPlaceWithTime) => {
     console.log("View details for place:", place);
-    try {
-      const category = place.category as '숙소' | '관광지' | '음식점' | '카페' | 'accommodation' | 'landmark' | 'restaurant' | 'cafe';
-      const id = typeof place.id === 'string' ? parseInt(place.id) : Number(place.id);
+    // If it's already an ItineraryPlaceWithTime with sufficient details, or if it's a simple Place from search
+    // We might not need to fetch again if all data is present.
+    // However, the original logic fetches to ensure latest/complete data from Supabase.
+    
+    // Assuming place.id is always string from PlaceList, but could be number from elsewhere
+    const idToFetch = typeof place.id === 'string' ? parseInt(place.id, 10) : Number(place.id);
+    // Category might not be precise if it's a generic Place object.
+    // Prefer `place.category` if available and specific.
+    const categoryToFetch = place.category;
 
-      if (!category || isNaN(id)) {
-        console.error("잘못된 장소 정보:", { category, id });
-        toast.error("장소 정보가 올바르지 않습니다.");
+    if (isNaN(idToFetch)) {
+        console.error("잘못된 장소 ID:", place.id);
+        toast.error("장소 ID가 올바르지 않습니다.");
+        onSelectPlace(place); // Show what we have
         return;
-      }
+    }
+    if (!categoryToFetch) {
+        console.error("장소 카테고리 정보 없음:", place);
+        toast.error("장소 카테고리 정보가 없습니다.");
+        onSelectPlace(place); // Show what we have
+        return;
+    }
 
-      console.log(`🔍 Supabase 직접 fetch 시작: category=${category}, id=${id}`);
-      const detailedPlace = await fetchPlaceDetails(category, id);
+    console.log(`🔍 Supabase 직접 fetch 시작: category=${categoryToFetch}, id=${idToFetch}`);
+    try {
+      const detailedPlace = await fetchPlaceDetails(categoryToFetch, idToFetch);
 
       if (detailedPlace) {
         console.log("✅ Supabase 직접 fetch 성공:", detailedPlace);
         onSelectPlace(detailedPlace);
       } else {
-        console.warn("⚠️ Supabase fetch 실패. 기본 데이터 사용.");
-        onSelectPlace(place);
+        console.warn("⚠️ Supabase fetch 실패. 기존 데이터 사용.");
+        onSelectPlace(place); // Fallback to the initially passed place object
       }
     } catch (error) {
       console.error("❌ Supabase fetch 에러:", error);
       toast.error("장소 정보를 가져오는 중 오류가 발생했습니다.");
-      onSelectPlace(place);
+      onSelectPlace(place); // Fallback
     }
   };
 
@@ -275,12 +290,12 @@ const ContentSection: React.FC<ContentSectionProps> = ({
             <PlaceList
               places={filteredPlaces}
               loading={loading}
-              onSelectPlace={onSelectPlace}
-              selectedPlace={selectedPlace}
+              onSelectPlace={onSelectPlace as (place: Place) => void} // Cast for PlaceList expectation
+              selectedPlace={selectedPlace as Place | null} // Cast for PlaceList expectation
               page={currentPage}
               onPageChange={onPageChange}
               totalPages={totalPages}
-              onViewDetails={handleViewDetails}
+              onViewDetails={handleViewDetails as (place: Place) => void} // Cast for PlaceList expectation
             />
           ) : (
             <TravelPromptSearch onPlacesFound={handlePlacesFound} />
@@ -301,16 +316,19 @@ const ContentSection: React.FC<ContentSectionProps> = ({
               장소 목록으로 돌아가기
             </Button>
           </div>
-          {itinerary && dateRange.startDate && (
+          {itinerary && selectedItineraryDay !== null && ( // Removed dateRange.startDate check as ItineraryView doesn't need it
             <ItineraryView
               itinerary={itinerary}
-              startDate={dateRange.startDate}
+              // startDate={dateRange.startDate} // startDate 제거
               onSelectDay={onSelectItineraryDay}
               selectedDay={selectedItineraryDay}
+              // onClose prop is optional in ItineraryView, not passing it here is fine
             />
           )}
         </>
       )}
+      {/* PlaceDetailDialog is opened from ItineraryView's internal usePopup hook, or if ContentSection manages its own dialog */}
+      {/* Assuming selectedPlace from props is for PlaceList's selection, not directly for a dialog here unless explicitly handled */}
     </div>
   );
 };

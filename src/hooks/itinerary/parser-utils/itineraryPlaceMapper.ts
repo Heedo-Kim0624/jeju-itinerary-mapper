@@ -78,6 +78,8 @@ export const mapToItineraryPlace = (
     rating: selectedPlaceDetails?.rating ?? 0, // Default to 0
     image_url: selectedPlaceDetails?.image_url ?? '', // Default to empty string
     homepage: selectedPlaceDetails?.homepage ?? '', // Default to empty string
+    naverLink: selectedPlaceDetails?.naverLink ?? '', // Add naverLink
+    instaLink: selectedPlaceDetails?.instaLink ?? '', // Add instaLink
     
     geoNodeId: selectedPlaceDetails?.geoNodeId || itineraryPlaceId,
     isFallback: isFallback,

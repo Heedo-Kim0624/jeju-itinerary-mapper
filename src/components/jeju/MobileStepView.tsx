@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { ArrowLeft, ArrowRight, ChevronDown, ChevronUp, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -8,7 +7,7 @@ import DatePicker from '@/components/leftpanel/DatePicker';
 import PlaceList from '@/components/middlepanel/PlaceList';
 import ItineraryView from '@/components/leftpanel/ItineraryView';
 import DaySelector from '@/components/leftpanel/DaySelector';
-import type { Place, ItineraryDay } from '@/types/supabase';
+import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/core';
 import Map from '@/components/rightpanel/Map';
 import { categoryColors, getCategoryName } from '@/utils/categoryColors';
 import PlaceDetailDialog from '@/components/places/PlaceDetailDialog';
@@ -75,10 +74,10 @@ const MobileStepView: React.FC<MobileStepViewProps> = ({
   goToPrevStep,
   togglePanel
 }) => {
-  const [viewingPlace, setViewingPlace] = React.useState<Place | null>(null);
+  const [viewingPlaceForDialog, setViewingPlaceForDialog] = React.useState<(Place | ItineraryPlaceWithTime) | null>(null);
 
   const handleViewDetails = (place: Place) => {
-    setViewingPlace(place);
+    setViewingPlaceForDialog(place);
   };
 
   const getMobileStepContent = () => {
@@ -219,12 +218,11 @@ const MobileStepView: React.FC<MobileStepViewProps> = ({
               <div className="w-10"></div>
             </div>
             
-            {itinerary && dateRange.startDate && (
+            {itinerary && selectedItineraryDay !== null && (
               <div className="flex-1 overflow-auto">
                 <ScrollArea className="h-full">
                   <ItineraryView
                     itinerary={itinerary}
-                    startDate={dateRange.startDate}
                     onSelectDay={onSelectItineraryDay}
                     selectedDay={selectedItineraryDay}
                   />
@@ -247,7 +245,7 @@ const MobileStepView: React.FC<MobileStepViewProps> = ({
           selectedPlace={selectedPlace}
           itinerary={itinerary}
           selectedDay={selectedItineraryDay}
-          selectedPlaces={[]}
+          selectedPlaces={filteredPlaces.filter(p => p.isSelected)} 
         />
       </div>
       
@@ -262,7 +260,7 @@ const MobileStepView: React.FC<MobileStepViewProps> = ({
         )}
       </div>
       
-      {isPanelHidden && itinerary && (
+      {isPanelHidden && itinerary && selectedItineraryDay !== null && (
         <DaySelector 
           itinerary={itinerary}
           selectedDay={selectedItineraryDay}
@@ -279,12 +277,14 @@ const MobileStepView: React.FC<MobileStepViewProps> = ({
         {getMobileStepContent()}
       </div>
 
-      {viewingPlace && (
-        <PlaceDetailDialog
-          place={viewingPlace}
-          onClose={() => setViewingPlace(null)}
-        />
-      )}
+      {/* Dialog for place details, triggered by PlaceList's onViewDetails */}
+      <PlaceDetailDialog
+        place={viewingPlaceForDialog}
+        open={!!viewingPlaceForDialog}
+        onOpenChange={(open) => {
+          if (!open) setViewingPlaceForDialog(null);
+        }}
+      />
     </div>
   );
 };

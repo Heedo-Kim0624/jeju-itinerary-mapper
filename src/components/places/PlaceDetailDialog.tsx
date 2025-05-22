@@ -5,10 +5,11 @@ import { Button } from '@/components/ui/button';
 import { ExternalLink, MapPin, Phone, Info, Calendar, Clock, Home, Instagram } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import type { ItineraryPlaceWithTime } from '@/types/core';
+import type { Place } from '@/types/core'; // Place 타입 추가
 import { formatPhoneNumber } from '@/utils/stringUtils';
 
 interface PlaceDetailDialogProps {
-  place: ItineraryPlaceWithTime | null;
+  place: (ItineraryPlaceWithTime | Place) | null; // 타입을 유니온으로 변경
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -16,15 +17,16 @@ interface PlaceDetailDialogProps {
 const PlaceDetailDialog: React.FC<PlaceDetailDialogProps> = ({ place, open, onOpenChange }) => {
   if (!place) return null;
 
-  // Function to format time block (e.g., "Tue_0900" -> "09:00")
-  const formatTimeBlock = (timeBlock: string): string => {
+  const isItineraryPlace = (p: any): p is ItineraryPlaceWithTime => 
+    typeof p.timeBlock === 'string';
+
+  const formatTimeBlock = (timeBlock?: string): string => {
     if (!timeBlock) return '';
     const timePart = timeBlock.split('_')[1];
     if (!timePart || timePart === '시작' || timePart === '끝') {
       return timePart || '';
     }
     
-    // If it's just digits (e.g., "0900")
     if (/^\d+$/.test(timePart)) {
       const hours = timePart.substring(0, 2);
       const minutes = timePart.length > 2 ? timePart.substring(2, 4) : '00';
@@ -33,6 +35,11 @@ const PlaceDetailDialog: React.FC<PlaceDetailDialogProps> = ({ place, open, onOp
     
     return timePart;
   };
+  
+  const arriveTime = isItineraryPlace(place) ? place.arriveTime : undefined;
+  const departTime = isItineraryPlace(place) ? place.departTime : undefined;
+  const stayDuration = isItineraryPlace(place) ? place.stayDuration : undefined;
+  const timeBlockDisplay = isItineraryPlace(place) ? formatTimeBlock(place.timeBlock) : undefined;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -43,10 +50,10 @@ const PlaceDetailDialog: React.FC<PlaceDetailDialogProps> = ({ place, open, onOp
             <span className="inline-flex items-center px-2 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
               {place.category}
             </span>
-            {place.timeBlock && (
+            {timeBlockDisplay && (
               <span className="ml-2 inline-flex items-center text-xs">
                 <Clock className="h-3 w-3 mr-1 text-muted-foreground" />
-                {formatTimeBlock(place.timeBlock)}
+                {timeBlockDisplay}
               </span>
             )}
           </DialogDescription>
@@ -82,21 +89,21 @@ const PlaceDetailDialog: React.FC<PlaceDetailDialogProps> = ({ place, open, onOp
               </div>
             )}
 
-            {(place.arriveTime || place.departTime) && (
+            {(arriveTime || departTime) && (
               <div className="flex items-center">
                 <Calendar className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
                 <span className="text-sm">
-                  {place.arriveTime && `도착: ${place.arriveTime}`}
-                  {place.arriveTime && place.departTime && ' / '}
-                  {place.departTime && `출발: ${place.departTime}`}
+                  {arriveTime && `도착: ${arriveTime}`}
+                  {arriveTime && departTime && ' / '}
+                  {departTime && `출발: ${departTime}`}
                 </span>
               </div>
             )}
 
-            {place.stayDuration && (
+            {stayDuration !== undefined && (
               <div className="flex items-center">
                 <Clock className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
-                <span className="text-sm">체류 시간: {Math.floor(place.stayDuration / 60)}시간 {place.stayDuration % 60}분</span>
+                <span className="text-sm">체류 시간: {Math.floor(stayDuration / 60)}시간 {stayDuration % 60}분</span>
               </div>
             )}
           </div>
@@ -128,7 +135,7 @@ const PlaceDetailDialog: React.FC<PlaceDetailDialogProps> = ({ place, open, onOp
             </Button>
           )}
 
-          {place.instaLink && (
+          {'instaLink' in place && place.instaLink && (
             <Button 
               variant="outline" 
               size="sm"
@@ -140,7 +147,7 @@ const PlaceDetailDialog: React.FC<PlaceDetailDialogProps> = ({ place, open, onOp
             </Button>
           )}
 
-          {place.naverLink && (
+          {'naverLink' in place && place.naverLink && (
             <Button 
               variant="outline" 
               size="sm"

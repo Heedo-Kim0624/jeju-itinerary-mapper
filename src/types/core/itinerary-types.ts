@@ -27,6 +27,8 @@ export interface ItineraryPlaceWithTime {
   rating: number;              // Place rating (required)
   image_url: string;           // URL for an image of the place (required)
   homepage: string;            // URL for the place's homepage (required)
+  naverLink?: string;           // Naver Maps link for the place (optional)
+  instaLink?: string;           // Instagram link for the place (optional)
 
   // For GeoJSON based routing if applicable
   geoNodeId?: string;
@@ -44,8 +46,6 @@ export interface ItineraryPlaceWithTime {
   // weight?: number;
   // raw?: any;
   // categoryDetail?: string;
-  // naverLink?: string;
-  // instaLink?: string;
   // operatingHours?: string;
 }
 

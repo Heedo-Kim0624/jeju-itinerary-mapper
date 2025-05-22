@@ -23,8 +23,6 @@ const createAccommodationItineraryPlace = (
   getTimeBlock: (day: number, hour: number) => string
 ): ItineraryPlaceWithTime => ({
   ...accommodation,
-  arriveTime: format(arriveTime, 'HH:mm'),
-  timeBlock: getTimeBlock(dayNumber, arriveTime.getHours()),
   id: accommodation.id,
   name: accommodation.name,
   address: accommodation.address,
@@ -37,7 +35,11 @@ const createAccommodationItineraryPlace = (
   image_url: accommodation.image_url,
   road_address: accommodation.road_address,
   homepage: accommodation.homepage,
+  naverLink: accommodation.naverLink,
+  instaLink: accommodation.instaLink,
   geoNodeId: accommodation.id,
+  arriveTime: format(arriveTime, 'HH:mm'),
+  timeBlock: getTimeBlock(dayNumber, arriveTime.getHours()),
 });
 
 export const assignPlacesToDays = ({
