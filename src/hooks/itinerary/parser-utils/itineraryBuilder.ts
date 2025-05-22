@@ -1,20 +1,22 @@
 
-import { ItineraryDay, NewServerScheduleResponse, SelectedPlace, SchedulePayload, ServerScheduleItem } from '@/types/core';
+import { ItineraryDay, NewServerScheduleResponse, ServerScheduleItem } from '@/types/core';
 import { formatDate } from './timeUtils';
 import { buildGroupedItineraryPlaces } from './groupedPlacesProcessor';
 import { processRouteData } from './routeSummaryProcessor';
 import { organizeAndSortScheduleByDay } from './scheduleOrganizer';
 import { organizeRouteByDay } from './routeOrganizer';
+import type { DetailedPlace } from '@/types/detailedPlace';
+import type { PlaceData } from '@/hooks/data/useSupabaseDataFetcher'; // Added for callback type
 
 /**
  * Main function to build itinerary days from server response
  */
 export const buildItineraryDays = (
   serverResponse: NewServerScheduleResponse,
-  // currentSelectedPlaces: SelectedPlace[] = [], // Removed if only used for place details
   tripStartDate: Date | null = null,
-  // lastPayload: SchedulePayload | null = null, // Removed if only used for place details
-  dayMapping: Record<string, number>
+  dayMapping: Record<string, number>,
+  // Added callback function as a parameter
+  getPlaceDetailsByIdCallback: (id: number) => DetailedPlace | PlaceData | undefined
 ): ItineraryDay[] => {
   // Organize schedule and route data using new utilities
   const scheduleByDay = organizeAndSortScheduleByDay(serverResponse.schedule);
@@ -29,10 +31,10 @@ export const buildItineraryDays = (
     const dayNumber = dayMapping[dayOfWeekKey];
 
     // Parameters to buildGroupedItineraryPlaces updated
+    // Pass the callback function here
     const groupedPlaces = buildGroupedItineraryPlaces(
       dayItemsOriginal,
-      // lastPayload, // Removed
-      // currentSelectedPlaces, // Removed
+      getPlaceDetailsByIdCallback, 
       dayNumber
     );
 
