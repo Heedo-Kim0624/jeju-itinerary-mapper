@@ -1,4 +1,41 @@
 /**
+ * String utility functions
+ */
+
+/**
+ * Format a raw phone number into a readable format
+ * @param phone Raw phone number string
+ * @returns Formatted phone number
+ */
+export const formatPhoneNumber = (phone: string): string => {
+  if (!phone) return '';
+  
+  // Remove all non-digit characters
+  const digits = phone.replace(/\D/g, '');
+  
+  // Format based on the length
+  if (digits.length === 8) {
+    // Local number: 1234-5678
+    return `${digits.substring(0, 4)}-${digits.substring(4)}`;
+  } else if (digits.length === 10) {
+    // National format: 02-1234-5678 or 010-123-4567
+    if (digits.startsWith('02')) {
+      // Seoul format
+      return `${digits.substring(0, 2)}-${digits.substring(2, 6)}-${digits.substring(6)}`;
+    }
+    // Mobile format
+    return `${digits.substring(0, 3)}-${digits.substring(3, 6)}-${digits.substring(6)}`;
+  } else if (digits.length === 11) {
+    // Standard mobile format: 010-1234-5678
+    return `${digits.substring(0, 3)}-${digits.substring(3, 7)}-${digits.substring(7)}`;
+  }
+  
+  // If format is unknown or different, return as is with dashes every 4 digits
+  // This is a safe default for various number formats
+  return phone;
+};
+
+/**
  * 장소 이름을 정규화하는 함수.
  * 소문자 변환, 양끝 공백 제거, 연속 공백 단일화, 특정 특수문자 제거, 특정 접미사 제거.
  */

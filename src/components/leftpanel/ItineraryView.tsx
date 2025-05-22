@@ -1,116 +1,108 @@
 
-import React, { useEffect } from 'react';
-import { Calendar, Clock, MapPin, Navigation } from 'lucide-react';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import React from 'react';
+import DaySelector from './DaySelector';
+import { usePopup } from '@/hooks/ui/usePopup'; 
+import PlaceDetailDialog from '@/components/places/PlaceDetailDialog';
 import { Button } from '@/components/ui/button';
-import { format, addDays } from 'date-fns';
-import { ko } from 'date-fns/locale';
-import { categoryColors, getCategoryName } from '@/utils/categoryColors';
-import type { ItineraryDay, ItineraryPlaceWithTime } from '@/types'; // @/types에서 가져오도록 변경
-import ScheduleViewer from './ScheduleViewer';
+import { Info } from 'lucide-react';
+import { ItineraryDay } from '@/types/core';
 
 interface ItineraryViewProps {
-  itinerary: ItineraryDay[];
-  startDate: Date; // This is the overall trip start date
-  onSelectDay: (dayNumber: number) => void; // Expects day number
-  selectedDay: number | null; // Currently selected day number
-  onClose?: () => void;
-  debug?: {
-    itineraryLength: number;
-    selectedDay: number | null;
-    showItinerary: boolean;
-  };
+  itinerary: ItineraryDay[] | null;
+  selectedDay: number | null;
+  onSelectDay: (day: number) => void;
+  onClose: () => void;
 }
 
 const ItineraryView: React.FC<ItineraryViewProps> = ({
   itinerary,
-  startDate,
-  onSelectDay,
   selectedDay,
-  onClose, 
-  debug 
+  onSelectDay,
+  onClose,
 }) => {
-  useEffect(() => {
-    console.log("ItineraryView 마운트/업데이트:", {
-      itineraryLength: itinerary?.length || 0,
-      selectedDay,
-      startDate: startDate?.toISOString(),
-      debugInfo: debug
-    });
-    
-    if (itinerary?.length > 0 && selectedDay === null && onSelectDay) {
-      if (itinerary[0] && typeof itinerary[0].day === 'number') {
-        console.log("ItineraryView: 첫 번째 날짜 자동 선택:", itinerary[0].day);
-        onSelectDay(itinerary[0].day);
-      } else {
-        console.warn("ItineraryView: 첫 번째 날짜 자동 선택 불가 - itinerary[0] 또는 day가 유효하지 않음");
-      }
-    }
-  }, [itinerary, selectedDay, onSelectDay, startDate, debug]);
+  // 상세 정보 팝업을 위한 훅 사용
+  const { isPopupOpen, selectedPlace, openPopup, handleOpenChange } = usePopup();
 
-  const handleDayClick = (dayNumber: number) => {
-    console.log(`ItineraryView: 일자 선택: ${dayNumber}일차`);
-    onSelectDay(dayNumber);
-  };
-
-  if (!itinerary || itinerary.length === 0) {
-    console.warn("ItineraryView: 일정 데이터가 없습니다.");
+  if (!itinerary || itinerary.length === 0 || selectedDay === null) {
     return (
-      <div className="flex flex-col items-center justify-center h-full p-6 text-center">
-        <Calendar size={48} className="text-muted-foreground mb-4" />
-        <p className="text-lg font-medium text-muted-foreground">생성된 일정이 없습니다.</p>
-        <p className="text-sm text-muted-foreground mt-1">다른 조건으로 다시 시도해보세요.</p>
-        {/* onClose 버튼을 사용하는 뒤로가기 버튼이 있었으나, ItineraryDisplayWrapper의 뒤로가기 버튼으로 통일하기 위해 삭제 */}
+      <div className="flex flex-col h-full items-center justify-center text-muted-foreground">
+        <p>일정이 비어있습니다</p>
       </div>
     );
   }
-  
-  const selectedDayData = selectedDay !== null ? itinerary.find(d => d.day === selectedDay) : null;
+
+  // 현재 선택된 일정 데이터 찾기
+  const currentDayData = itinerary.find((day) => day.day === selectedDay);
+  if (!currentDayData) {
+    return (
+      <div className="flex flex-col h-full items-center justify-center text-muted-foreground">
+        <p>선택된 일정을 찾을 수 없습니다</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="w-full h-full flex flex-col bg-card text-card-foreground">
-      <div className="flex items-center justify-between p-4 border-b">
-        <h2 className="text-xl font-semibold tracking-tight">생성된 여행 일정</h2>
-        {/* 
-          기존에 여기에 있던 "← 뒤로" 버튼을 제거합니다.
-          ItineraryDisplayWrapper 컴포넌트에 있는 "뒤로" 버튼으로 기능을 일원화합니다.
-        */}
-      </div>
+    <div className="h-full flex flex-col pb-16">
+      <DaySelector
+        itinerary={itinerary}
+        selectedDay={selectedDay}
+        onSelectDay={onSelectDay}
+      />
       
-      <div className="p-4 border-b">
-        <div className="flex overflow-x-auto whitespace-nowrap pb-2 scrollbar-thin scrollbar-thumb-muted-foreground/50 scrollbar-track-transparent scrollbar-thumb-rounded-full">
-          {itinerary.map((dayItem) => {
-            // dayItem.date and dayItem.dayOfWeek should be directly available from ItineraryDay type
-            const formattedDate = `${dayItem.date} (${dayItem.dayOfWeek})`;
-            return (
-              <Button
-                key={dayItem.day}
-                variant={selectedDay === dayItem.day ? "default" : "outline"}
-                className="flex flex-col h-16 min-w-[4.5rem] mr-2 flex-shrink-0 px-3 py-2 text-left"
-                onClick={() => handleDayClick(dayItem.day)}
-              >
-                <span className="font-bold text-sm">{dayItem.day}일차</span>
-                <span className="text-xs text-muted-foreground">{formattedDate}</span>
-              </Button>
-            );
-          })}
+      <div className="overflow-auto flex-1 px-4 pt-4 mt-16">
+        <h2 className="text-lg font-semibold mb-4">
+          {selectedDay}일차 ({currentDayData.date}, {currentDayData.dayOfWeek})
+        </h2>
+        
+        <div className="space-y-4">
+          {currentDayData.places.map((place, index) => (
+            <div
+              key={`place-${place.id}-${index}`}
+              className="bg-white rounded-lg p-4 shadow-sm border"
+            >
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="font-medium text-base">{place.name}</h3>
+                  <p className="text-sm text-muted-foreground">{place.category}</p>
+                </div>
+                
+                <div className="flex flex-col items-end">
+                  <span className="text-sm font-medium">
+                    {place.arriveTime || (place.timeBlock && place.timeBlock.split('_')[1])}
+                  </span>
+                  {place.travelTimeToNext && (
+                    <span className="text-xs text-muted-foreground">
+                      다음 장소까지 {place.travelTimeToNext}
+                    </span>
+                  )}
+                </div>
+              </div>
+              
+              <div className="mt-2">
+                {/* 상세 정보 버튼 추가 */}
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="mt-2"
+                  onClick={() => openPopup(place)}
+                >
+                  <Info className="h-4 w-4 mr-1" />
+                  상세 정보
+                </Button>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
       
-      {/* Max height for scrollable area: full viewport height - approx height of header, day buttons, and some padding */}
-      {/* Adjust calc(100vh - YYYpx) based on actual surrounding layout if ItineraryView is not full screen itself */}
-      <ScrollArea className="flex-grow h-[calc(100%-160px)]"> {/* Approximate height, adjust as needed */}
-        <div className="p-4">
-          <ScheduleViewer
-            schedule={itinerary} 
-            selectedDay={selectedDay} // Pass the number
-            onDaySelect={onSelectDay} // Pass the handler
-            startDate={startDate} // Pass trip start date
-            itineraryDay={selectedDayData} // Pass the data for the selected day
-          />
-        </div>
-      </ScrollArea>
+      {/* 상세 정보 팝업 다이얼로그 */}
+      <PlaceDetailDialog 
+        place={selectedPlace} 
+        open={isPopupOpen}
+        onOpenChange={handleOpenChange}
+      />
     </div>
   );
 };
+
 export default ItineraryView;
