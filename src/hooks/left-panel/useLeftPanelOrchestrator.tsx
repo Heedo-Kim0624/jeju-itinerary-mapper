@@ -6,7 +6,7 @@ import { useLeftPanelCallbacks } from '@/hooks/left-panel/use-left-panel-callbac
 import { useLeftPanelProps } from '@/hooks/left-panel/use-left-panel-props';
 import { toast } from 'sonner';
 import { summarizeItineraryData } from '@/utils/debugUtils';
-import type { ItineraryDay } from '@/types';
+import type { ItineraryDay, Place, SchedulePayload } from '@/types';
 import type { CategoryName } from '@/utils/categoryUtils';
 
 export const useLeftPanelOrchestrator = () => {
@@ -16,7 +16,7 @@ export const useLeftPanelOrchestrator = () => {
     regionSelection,
     categorySelection,
     keywordsAndInputs,
-    placesManagement,
+    placesManagement, // placesManagement from useLeftPanel returns SelectedPlace[] for selectedPlaces/candidatePlaces
     tripDetails,
     uiVisibility,
     itineraryManagement,
@@ -26,25 +26,47 @@ export const useLeftPanelOrchestrator = () => {
     isGeneratingItinerary: isGeneratingFromCoreHook,
   } = leftPanelCore;
 
-  const { runScheduleGeneration, isGenerating: isRunnerGenerating } = useScheduleGenerationRunner();
+  // runScheduleGenerationFromRunner로 이름 변경하여 원래 함수 참조
+  const { runScheduleGeneration: runScheduleGenerationFromRunner, isGenerating: isRunnerGenerating } = useScheduleGenerationRunner();
+
+  // runScheduleGenerationFromRunner를 위한 어댑터 함수
+  const adaptedRunScheduleGeneration = useCallback(async (payload: SchedulePayload): Promise<ItineraryDay[] | null> => {
+    const allPlacesForRunner = [
+      ...placesManagement.selectedPlaces, // SelectedPlace[]
+      ...placesManagement.candidatePlaces // SelectedPlace[]
+    ];
+    // CoreSelectedPlace (실제로는 Place 타입) 와 SelectedPlace[] 는 호환 가능 (SelectedPlace extends Place)
+    return runScheduleGenerationFromRunner(
+      payload,
+      allPlacesForRunner as Place[], // 명시적 타입 캐스팅 (CoreSelectedPlace[]는 Place[]로 해석될 수 있음)
+      tripDetails.dates?.startDate || null
+    );
+  }, [runScheduleGenerationFromRunner, placesManagement.selectedPlaces, placesManagement.candidatePlaces, tripDetails.dates]);
 
   const {
     createItinerary,
     isCreatingItinerary: isCreatingFromCustomHook,
   } = useCreateItineraryHandler({
-    placesManagement,
-    tripDetails: {
-      dates: tripDetails.dates,
+    placesManagement: { // placesManagement 객체를 전달, 타입은 useCreateItineraryHandler의 Deps와 일치해야 함
+        selectedPlaces: placesManagement.selectedPlaces,
+        candidatePlaces: placesManagement.candidatePlaces,
+        prepareSchedulePayload: placesManagement.prepareSchedulePayload, // 이 시그니처는 이미 (start, end) => Payload | null
+        // handleAutoCompletePlaces는 optional이므로 없어도 됨. 필요시 추가
     },
-    runScheduleGeneration,
+    tripDetails: { // tripDetails 객체 전달
+      dates: tripDetails.dates,
+      startTime: tripDetails.startTime, // startTime, endTime 추가
+      endTime: tripDetails.endTime,
+    },
+    runScheduleGeneration: adaptedRunScheduleGeneration, // 어댑터 함수 전달
   });
 
-  // Create adapter for placesManagement to match expected types
-  const adaptedPlacesManagement = {
+  // Create adapter for placesManagement to match expected types in useLeftPanelProps
+  // This adaptedPlacesManagement is for useLeftPanelProps, not for useCreateItineraryHandler
+  const adaptedPlacesManagementForProps = {
     ...placesManagement,
     handleAutoCompletePlaces: (category: CategoryName, placesFromApi: any[], keywords: string[]) => {
-      // Adapter function - convert parameters as needed
-      const travelDays = keywords ? keywords.length : null; // Adapting keywords to travelDays
+      const travelDays = keywords ? keywords.length : null; 
       placesManagement.handleAutoCompletePlaces(category, placesFromApi, travelDays);
     }
   };
@@ -80,7 +102,7 @@ export const useLeftPanelOrchestrator = () => {
     itineraryReceived: !!itineraryManagement.itinerary && itineraryManagement.itinerary.length > 0,
     itineraryManagement: itineraryManagement,
     tripDetails,
-    placesManagement: adaptedPlacesManagement,
+    placesManagement: adaptedPlacesManagementForProps, // Props용으로 어댑팅된 placesManagement 사용
     categorySelection,
     keywordsAndInputs,
     categoryResultHandlers,
@@ -173,7 +195,7 @@ export const useLeftPanelOrchestrator = () => {
     regionSelection,
     uiVisibility,
     categorySelection,
-    placesManagement,
+    placesManagement, // 원본 placesManagement 반환
     callbacks,
     isActuallyGenerating,
     shouldShowItineraryView,

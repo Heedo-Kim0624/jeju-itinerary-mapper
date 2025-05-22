@@ -6,12 +6,12 @@ import { summarizeItineraryData } from '@/utils/debugUtils';
 
 interface CreateItineraryHandlerDeps {
   placesManagement: {
-    selectedPlaces: Place[];
-    candidatePlaces: Place[];
-    prepareSchedulePayload: (places: Place[], startTime?: string, endTime?: string) => SchedulePayload;
+    selectedPlaces: Place[]; // Place[]는 SelectedPlace[] 할당 가능
+    candidatePlaces: Place[]; // Place[]는 SelectedPlace[] 할당 가능
+    // prepareSchedulePayload 시그니처를 useSelectedPlaces에서 제공하는 것과 일치시킴
+    prepareSchedulePayload: (startDatetimeISO: string | null, endDatetimeISO: string | null) => SchedulePayload | null;
     handleAutoCompletePlaces?: (category: string, placesFromApi: any[], travelDays: number | null) => void;
   };
-  // tripDetails 타입을 수정하여 필요한 속성만 명시적으로 받도록 함
   tripDetails: {
     dates?: {
       startDate: Date | null;
@@ -19,10 +19,10 @@ interface CreateItineraryHandlerDeps {
       startTime?: string;
       endTime?: string;
     };
-    // 필요한 경우 startTime과 endTime을 직접 추가
     startTime?: string;
     endTime?: string;
   };
+  // runScheduleGeneration 시그니처는 payload만 받도록 유지 (어댑터가 외부에서 제공)
   runScheduleGeneration: (payload: SchedulePayload) => Promise<ItineraryDay[] | null>;
 }
 
@@ -37,7 +37,6 @@ export const useCreateItineraryHandler = ({
     try {
       setIsCreatingItinerary(true);
       
-      // 여행 날짜가 없으면 중단
       if (!tripDetails.dates?.startDate || !tripDetails.dates?.endDate) {
         toast.error("여행 시작일과 종료일을 설정해주세요.");
         setIsCreatingItinerary(false);
@@ -55,25 +54,32 @@ export const useCreateItineraryHandler = ({
         return null;
       }
       
-      // startTime과 endTime을 먼저 dates에서 찾고, 없으면 tripDetails에서 직접 찾음
       const startTime = tripDetails.dates?.startTime || tripDetails.startTime || "09:00";
       const endTime = tripDetails.dates?.endTime || tripDetails.endTime || "21:00";
+
+      // ISO 8601 형식의 datetime 문자열 생성
+      const startDatetimeISO = `${tripDetails.dates.startDate.toISOString().split('T')[0]}T${startTime}:00`;
+      const endDatetimeISO = `${tripDetails.dates.endDate.toISOString().split('T')[0]}T${endTime}:00`;
       
+      // 변경된 prepareSchedulePayload 호출 방식
       const payload = placesManagement.prepareSchedulePayload(
-        allPlaces,
-        startTime,
-        endTime
+        startDatetimeISO,
+        endDatetimeISO
       );
+
+      if (!payload) {
+        console.error("[CreateItineraryHandler] Payload 생성 실패.");
+        toast.error("일정 생성에 필요한 정보를 준비하지 못했습니다.");
+        setIsCreatingItinerary(false);
+        return null;
+      }
       
       console.log("[CreateItineraryHandler] 일정 생성 요청:", {
-        places: allPlaces.length,
-        startDate: tripDetails.dates?.startDate?.toISOString(),
-        endDate: tripDetails.dates?.endDate?.toISOString(),
-        startTime,
-        endTime,
+        placesCount: allPlaces.length, // Log purposes
+        startDatetime: startDatetimeISO,
+        endDatetime: endDatetimeISO,
       });
       
-      // 일정 생성 실행
       const itinerary = await runScheduleGeneration(payload);
       
       if (itinerary) {
