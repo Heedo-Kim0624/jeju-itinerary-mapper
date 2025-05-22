@@ -15,7 +15,7 @@ export const useScheduleGenerationRunner = () => {
 
   const runScheduleGeneration = useCallback(async (
     payload: SchedulePayload,
-    selectedPlaces: SelectedPlace[],
+    selectedPlaces: SelectedPlace[], // This is still passed for now, but parseServerResponse won't use it directly for place details
     tripStartDate: Date | null = null
   ): Promise<ItineraryDay[] | null> => {
     console.log('[useScheduleGenerationRunner] 생성기 호출 직전, Payload:', payload, '여행 시작일:', tripStartDate?.toISOString());
@@ -35,11 +35,12 @@ export const useScheduleGenerationRunner = () => {
         return null;
       }
       
-      const lastSentPayload = getLastSentPayload(); // Get the payload that was just sent
-      console.log('[useScheduleGenerationRunner] 파서에 전달할 lastSentPayload:', lastSentPayload);
+      // const lastSentPayload = getLastSentPayload(); // getLastSentPayload might not be needed if not used by parser
+      // console.log('[useScheduleGenerationRunner] 파서에 전달할 lastSentPayload:', lastSentPayload);
       
-      // Pass lastSentPayload to the parser
-      const parsedItinerary = parseServerResponse(serverResponse, selectedPlaces, tripStartDate, lastSentPayload); 
+      // Pass only serverResponse and tripStartDate to the parser
+      // selectedPlaces and lastSentPayload removed as per parser's new signature for place data handling
+      const parsedItinerary = parseServerResponse(serverResponse, tripStartDate); 
       
       console.log('[useScheduleGenerationRunner] 파싱된 일정 데이터 요약:', summarizeItineraryData(parsedItinerary));
       
@@ -61,7 +62,8 @@ export const useScheduleGenerationRunner = () => {
       handleServerItineraryResponse([]);
       return null;
     }
-  }, [generateSchedule, getLastSentPayload, parseServerResponse, handleServerItineraryResponse]);
+  }, [generateSchedule, /*getLastSentPayload,*/ parseServerResponse, handleServerItineraryResponse]); // Removed getLastSentPayload if not used
 
   return { runScheduleGeneration, isGenerating: isLoadingScheduleGenerator };
 };
+

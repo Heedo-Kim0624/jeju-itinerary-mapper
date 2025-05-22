@@ -38,8 +38,9 @@ export const useItinerary = () => {
     setSelectedItineraryDay,
     setShowItinerary,
     setIsItineraryCreated,
-    parseServerResponse: (serverResponse: any, selectedPlaces?: CoreSelectedPlace[], tripStartDate?: Date | null) => { // 함수 시그니처 변경
-      return itineraryParserHook.parseServerResponse(serverResponse, selectedPlaces || [], tripStartDate || null);
+    parseServerResponse: (serverResponse: NewServerScheduleResponse, _selectedPlaces?: CoreSelectedPlace[], tripStartDate?: Date | null) => { // _selectedPlaces is unused
+      // Pass only serverResponse and tripStartDate as per the updated signature
+      return itineraryParserHook.parseServerResponse(serverResponse, tripStartDate || null);
     },
   });
   

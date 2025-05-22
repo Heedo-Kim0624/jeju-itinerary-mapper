@@ -86,8 +86,10 @@ export const getProcessedItemDetails = (
     isFallback: true,
     name: serverItem.place_name || '정보 없음',
     category: fallbackCategory,
-    x: serverItem.longitude !== undefined ? (typeof serverItem.longitude === 'string' ? parseFloat(serverItem.longitude) : serverItem.longitude) : 126.57, // Default to Jeju City Hall approx.
-    y: serverItem.latitude !== undefined ? (typeof serverItem.latitude === 'string' ? parseFloat(serverItem.latitude) : serverItem.latitude) : 33.49, // Default to Jeju City Hall approx.
+    // Assuming ServerScheduleItem might have x, y like other place types.
+    // If not, these will be undefined and use the default.
+    x: serverItem.x !== undefined ? (typeof serverItem.x === 'string' ? parseFloat(serverItem.x) : serverItem.x) : 126.57, // Default to Jeju City Hall approx.
+    y: serverItem.y !== undefined ? (typeof serverItem.y === 'string' ? parseFloat(serverItem.y) : serverItem.y) : 33.49, // Default to Jeju City Hall approx.
     address: '주소 정보 없음 (상세 정보 누락)',
     road_address: '도로명 주소 정보 없음 (상세 정보 누락)',
     phone: 'N/A',
