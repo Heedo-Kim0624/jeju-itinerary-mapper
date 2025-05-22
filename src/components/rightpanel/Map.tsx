@@ -8,7 +8,7 @@ import MapControls from './MapControls';
 import type { Place, ItineraryDay } from '@/types/supabase';
 // Removed toast import as it's handled in the new hook
 import { useMapItineraryVisualization } from '@/hooks/map/useMapItineraryVisualization';
-import DaySelectorMapOverlay from '@/components/map/DaySelector';
+// Removed import for DaySelectorMapOverlay since we're no longer using it
 import { useMapDataEffects } from '@/hooks/map/useMapDataEffects'; // Import the new hook
 
 interface MapProps {
@@ -67,15 +67,13 @@ const Map: React.FC<MapProps> = ({
 
   // All useEffect blocks and handlePlaceClick function have been moved to useMapDataEffects
 
-  const isNewVisualizationActive = visualizedItinerary && visualizedItinerary.length > 0;
-
   return (
     <div ref={mapContainer} className="w-full h-full relative flex-grow">
       <MapMarkers
         places={places}
         selectedPlace={selectedPlace}
-        itinerary={isNewVisualizationActive ? null : itinerary}
-        selectedDay={isNewVisualizationActive ? null : selectedDay}
+        itinerary={itinerary}
+        selectedDay={selectedDay}
         selectedPlaces={selectedPlaces}
         onPlaceClick={handlePlaceClick} // Use the handler from the hook
       />
@@ -90,7 +88,6 @@ const Map: React.FC<MapProps> = ({
         />
       )}
       
-
       <MapControls
         showGeoJson={showGeoJson}
         onToggleGeoJson={toggleGeoJsonVisibility}

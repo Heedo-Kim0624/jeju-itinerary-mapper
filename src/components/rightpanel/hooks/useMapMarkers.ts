@@ -1,3 +1,4 @@
+
 import { useRef, useEffect } from 'react';
 import { useMapContext } from '../MapContext';
 import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/core';
@@ -82,23 +83,35 @@ export const useMapMarkers = ({
     let placesToDisplay: (Place | ItineraryPlaceWithTime)[] = [];
     let isDisplayingItineraryDay = false;
 
-    if (itinerary && itinerary.length > 0 && selectedDay !== null) {
-      const currentDayData = itinerary.find(day => day.day === selectedDay);
-      if (currentDayData && currentDayData.places && currentDayData.places.length > 0) {
-        placesToDisplay = currentDayData.places;
-        isDisplayingItineraryDay = true;
-        console.log(`[useMapMarkers] Displaying itinerary day ${selectedDay}: ${placesToDisplay.length} places.`);
+    // Modified logic to only display places that are in the itinerary
+    if (itinerary && itinerary.length > 0) {
+      // Get all place IDs from the itinerary
+      const itineraryPlaceIds = new Set<string>();
+      
+      // If there's a selected day, show only that day's places
+      if (selectedDay !== null) {
+        const currentDayData = itinerary.find(day => day.day === selectedDay);
+        if (currentDayData && currentDayData.places && currentDayData.places.length > 0) {
+          placesToDisplay = currentDayData.places;
+          isDisplayingItineraryDay = true;
+          console.log(`[useMapMarkers] Displaying itinerary day ${selectedDay}: ${placesToDisplay.length} places.`);
+        } else {
+          console.log(`[useMapMarkers] Itinerary active for day ${selectedDay}, but no places found for this day. No itinerary markers shown.`);
+        }
       } else {
-        console.log(`[useMapMarkers] Itinerary active for day ${selectedDay}, but no places found for this day. No itinerary markers shown.`);
-        placesToDisplay = [];
+        // No specific day selected but itinerary exists - collect all place IDs from all days
+        itinerary.forEach(day => {
+          day.places.forEach(place => itineraryPlaceIds.add(place.id));
+        });
+        
+        // Filter places to only include those in the itinerary
+        placesToDisplay = places.filter(place => itineraryPlaceIds.has(place.id));
+        console.log(`[useMapMarkers] No specific day selected. Displaying ${placesToDisplay.length} places from all days.`);
       }
-    } 
-    else if (!itinerary || itinerary.length === 0) {
-        placesToDisplay = places || [];
-        console.log(`[useMapMarkers] No active itinerary. Displaying general places: ${placesToDisplay.length}`);
     } else {
-        console.log(`[useMapMarkers] Itinerary active, but no specific day selected. No markers shown.`);
-        placesToDisplay = [];
+      // No itinerary, display empty map
+      console.log(`[useMapMarkers] No active itinerary. No markers will be shown.`);
+      placesToDisplay = [];
     }
     
     if (placesToDisplay.length > 0) {
