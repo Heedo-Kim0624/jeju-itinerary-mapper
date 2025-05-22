@@ -1,5 +1,4 @@
-
-import { ItineraryDay, ItineraryPlaceWithTime, ServerScheduleItem, NewServerScheduleResponse, CoreSelectedPlace, SchedulePayload } from '@/types/core';
+import { ItineraryDay, ItineraryPlaceWithTime, ServerScheduleItem, NewServerScheduleResponse, SelectedPlace, SchedulePayload } from '@/types/core';
 import { getProcessedItemDetails } from './scheduleItemProcessor';
 import { extractTimeFromTimeBlock, calculateDepartTime, formatDate, formatTravelTime, estimateTravelTimeFromDistance } from './timeUtils';
 
@@ -81,7 +80,7 @@ const createItineraryPlace = (
 export const buildGroupedItineraryPlaces = (
   dayItemsOriginal: ServerScheduleItem[],
   lastPayload: SchedulePayload | null,
-  currentSelectedPlaces: CoreSelectedPlace[],
+  currentSelectedPlaces: SelectedPlace[],
   dayNumber: number
 ): ItineraryPlaceWithTime[] => {
   const processedDayItems = dayItemsOriginal.map(serverItem => 
@@ -207,7 +206,7 @@ export const processRouteData = (routeInfo: any) => {
  */
 export const buildItineraryDays = (
   serverResponse: NewServerScheduleResponse,
-  currentSelectedPlaces: CoreSelectedPlace[] = [],
+  currentSelectedPlaces: SelectedPlace[] = [],
   tripStartDate: Date | null = null,
   lastPayload: SchedulePayload | null = null,
   dayMapping: Record<string, number>

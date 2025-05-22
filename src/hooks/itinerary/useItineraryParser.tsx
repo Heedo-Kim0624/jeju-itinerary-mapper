@@ -1,7 +1,6 @@
-
 import { useCallback } from 'react';
 import { NewServerScheduleResponse, ServerScheduleItem, SchedulePayload } from '@/types/core';
-import { ItineraryDay, ItineraryPlaceWithTime, CoreSelectedPlace } from '@/types/core';
+import { ItineraryDay, ItineraryPlaceWithTime, SelectedPlace } from '@/types/core';
 import { createDayMapping } from './parser-utils/dayMapping';
 import { buildItineraryDays } from './parser-utils/itineraryBuilder';
 import { logParseResults } from './parser-utils/debugUtils';
@@ -13,7 +12,7 @@ export const useItineraryParser = () => {
    */
   const parseServerResponse = useCallback((
     serverResponse: NewServerScheduleResponse,
-    currentSelectedPlaces: CoreSelectedPlace[] = [],
+    currentSelectedPlaces: SelectedPlace[] = [],
     tripStartDate: Date | null = null,
     lastPayload: SchedulePayload | null = null
   ): ItineraryDay[] => {

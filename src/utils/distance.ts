@@ -1,4 +1,3 @@
-
 /**
  * Calculates the distance between two geographic coordinates using the Haversine formula
  * @param lon1 Longitude of the first point
@@ -63,4 +62,28 @@ export const calculateMidpoint = (lon1: number, lat1: number, lon2: number, lat2
  */
 export const rad2deg = (rad: number): number => {
   return rad * (180/Math.PI);
+};
+
+/**
+ * Calculates the total distance for a sequence of places.
+ * @param places An array of places, each with x (longitude) and y (latitude) properties.
+ * @returns Total distance in kilometers.
+ */
+export const calculateTotalDistance = (places: { x: number; y: number }[]): number => {
+  let totalDistance = 0;
+  if (places.length < 2) {
+    return 0;
+  }
+
+  for (let i = 0; i < places.length - 1; i++) {
+    const place1 = places[i];
+    const place2 = places[i + 1];
+    // Ensure place1 and place2, and their coordinates are valid
+    if (place1 && place2 && typeof place1.x === 'number' && typeof place1.y === 'number' && typeof place2.x === 'number' && typeof place2.y === 'number') {
+      totalDistance += calculateDistance(place1.x, place1.y, place2.x, place2.y);
+    } else {
+      console.warn('[calculateTotalDistance] Invalid place data encountered:', place1, place2);
+    }
+  }
+  return Math.round(totalDistance * 10) / 10; // Round to 1 decimal place
 };

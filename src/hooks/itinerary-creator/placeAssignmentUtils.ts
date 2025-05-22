@@ -1,10 +1,7 @@
-
-import { Place, ItineraryPlaceWithTime, ItineraryDay } from '@/types/core'; // ItineraryDay 임포트 경로 수정
+import { Place, ItineraryPlaceWithTime, ItineraryDay } from '@/types/core';
 import { format, addMinutes } from 'date-fns';
 import { PlaceWithUsedFlag } from '../../utils/schedule';
-import { calculateTotalDistance } from '../../utils/distance';
-// ItineraryDay 임포트를 위에서 이미 했으므로 아래 라인 제거
-// import { ItineraryDay } from './useItineraryCreatorCore'; 
+import { calculateTotalDistance, calculateDistance } from '../../utils/distance';
 import { categorizePlaces, calculateDailyQuotas } from './placeCategorizer';
 import { scheduleDayActivities } from './dayActivityScheduler';
 
@@ -49,7 +46,7 @@ export const assignPlacesToDays = ({
   startDate,
   startHour,
   startMinute,
-  calculateDistance,
+  calculateDistance: calculateDistanceParam,
   estimateTravelTime,
   getTimeBlock
 }: AssignPlacesToDaysParams): ItineraryDay[] => {
@@ -83,7 +80,7 @@ export const assignPlacesToDays = ({
           getTimeBlock
         );
         dayPlacesWithTime.push(accommodationItineraryPlace);
-        dayPlacesRaw.push(accommodation);
+        dayPlacesRaw.push(accommodation); // Add to raw places for distance calculation
         currentPlaceForDayStart = accommodation;
         
         // Assume 30 minutes at accommodation before starting activities
@@ -99,7 +96,7 @@ export const assignPlacesToDays = ({
       availableRestaurants: restaurants,
       availableCafes: cafes,
       quotas,
-      calculateDistance,
+      calculateDistance: calculateDistanceParam, // Use the param here
       estimateTravelTime,
       getTimeBlock,
     });
@@ -109,20 +106,22 @@ export const assignPlacesToDays = ({
         const accommodationPlace = dayPlacesWithTime[0];
         const firstActivity = activityResult.rawActivities[0];
         if (accommodationPlace && firstActivity && firstActivity.y && firstActivity.x && currentPlaceForDayStart.y && currentPlaceForDayStart.x) {
-            const distanceToFirstActivity = calculateDistance(currentPlaceForDayStart.y, currentPlaceForDayStart.x, firstActivity.y, firstActivity.x);
+            // Use the calculateDistance function passed as a parameter (or the imported one if preferred, but stick to one)
+            const distanceToFirstActivity = calculateDistanceParam(currentPlaceForDayStart.y, currentPlaceForDayStart.x, firstActivity.y, firstActivity.x);
             const travelTimeToFirstActivity = estimateTravelTime(distanceToFirstActivity);
             accommodationPlace.travelTimeToNext = `${travelTimeToFirstActivity}분`;
         }
     }
 
     dayPlacesWithTime.push(...activityResult.scheduledActivities);
-    dayPlacesRaw.push(...activityResult.rawActivities);
+    dayPlacesRaw.push(...activityResult.rawActivities); // Add scheduled raw activities
 
     if (dayPlacesWithTime.length > 0) {
       dayPlacesWithTime[dayPlacesWithTime.length - 1].travelTimeToNext = "-";
     }
 
-    const totalDistanceForDay = calculateTotalDistance(dayPlacesRaw);
+    // Use the new calculateTotalDistance function from utils/distance.ts
+    const totalDistanceForDay = calculateTotalDistance(dayPlacesRaw); 
     
     const scheduledPlacesCount = dayPlacesWithTime.length - (currentPlaceForDayStart ? 1 : 0);
     console.log(`${day}일차 일정: 총 ${dayPlacesWithTime.length}개 장소 (숙소 포함), 활동 ${scheduledPlacesCount}개, 총 거리 ${totalDistanceForDay.toFixed(2)}km`);
@@ -137,9 +136,8 @@ export const assignPlacesToDays = ({
       day,
       places: dayPlacesWithTime,
       totalDistance: totalDistanceForDay,
-      // ItineraryDay 타입에 필요한 나머지 필드 추가 (기본값 또는 계산된 값)
-      routeData: { nodeIds: [], linkIds: [], segmentRoutes: [] }, // 기본값
-      interleaved_route: [], // 기본값
+      routeData: { nodeIds: [], linkIds: [], segmentRoutes: [] }, 
+      interleaved_route: [], 
       dayOfWeek: dayOfWeek, 
       date: dateStr, 
     });
@@ -147,4 +145,3 @@ export const assignPlacesToDays = ({
 
   return itinerary;
 };
-

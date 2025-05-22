@@ -1,6 +1,5 @@
-
 import { ServerScheduleItem } from '@/types/core';
-import { CoreSelectedPlace } from '@/types/core';
+import { SelectedPlace } from '@/types/core';
 import { SchedulePayload } from '@/types/core';
 import { parseIntId, isSameId } from '@/utils/id-utils';
 
@@ -10,10 +9,10 @@ import { parseIntId, isSameId } from '@/utils/id-utils';
 export const getProcessedItemDetails = (
   serverItem: ServerScheduleItem,
   lastPayload: SchedulePayload | null,
-  currentSelectedPlaces: CoreSelectedPlace[]
+  currentSelectedPlaces: SelectedPlace[]
 ): {
   item: ServerScheduleItem;
-  details: CoreSelectedPlace | undefined;
+  details: SelectedPlace | undefined;
   numericId: number | null;
   isFallback: boolean;
   name: string;
