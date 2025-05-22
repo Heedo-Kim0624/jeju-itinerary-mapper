@@ -2,66 +2,86 @@
 import React from 'react';
 import LeftPanelContainer from './LeftPanelContainer';
 import LeftPanelContent from './LeftPanelContent';
-import type { MainPanelWrapperPassedProps } from '@/types/left-panel/index';
-import type { CategoryName } from '@/types/core';
+import type { Place, ItineraryDay, CategoryName } from '@/types'; 
 
-const MainPanelWrapper: React.FC<MainPanelWrapperPassedProps> = ({
+// Props for LeftPanelContainer
+interface LeftPanelContainerPassedProps {
+  showItinerary: boolean;
+  onSetShowItinerary: (show: boolean) => void;
+  selectedPlaces: Place[];
+  onRemovePlace: (id: string) => void;
+  onViewOnMap: (place: Place) => void;
+  allCategoriesSelected: boolean;
+  dates: {
+    startDate: Date | null;
+    endDate: Date | null;
+    startTime: string;
+    endTime: string;
+  } | null;
+  onCreateItinerary: () => void; // boolean 대신 void로 변경
+  itinerary: ItineraryDay[] | null;
+  selectedItineraryDay: number | null;
+  onSelectDay: (day: number) => void;
+  isGenerating?: boolean;
+}
+
+// Props for LeftPanelContent
+interface LeftPanelContentPassedProps {
+  onDateSelect: (dates: { startDate: Date; endDate: Date; startTime: string; endTime: string }) => void;
+  onOpenRegionPanel: () => void;
+  hasSelectedDates: boolean;
+  onCategoryClick: (category: string) => void;
+  regionConfirmed: boolean;
+  categoryStepIndex: number;
+  activeMiddlePanelCategory: string | null;
+  confirmedCategories: string[];
+  selectedKeywordsByCategory: Record<string, string[]>;
+  toggleKeyword: (category: string, keyword: string) => void;
+  directInputValues: {
+    accomodation: string;
+    landmark: string;
+    restaurant: string;
+    cafe: string;
+  };
+  onDirectInputChange: {
+    accomodation: (value: string) => void;
+    landmark: (value: string) => void;
+    restaurant: (value: string) => void;
+    cafe: (value: string) => void;
+  };
+  onConfirmCategoryCallbacks: { // Renamed to avoid conflict and clarify these are callbacks
+    accomodation: (finalKeywords: string[]) => void;
+    landmark: (finalKeywords: string[]) => void;
+    restaurant: (finalKeywords: string[]) => void;
+    cafe: (finalKeywords: string[]) => void;
+  };
+  handlePanelBackCallbacks: { // Renamed for clarity
+    accomodation: () => void;
+    landmark: () => void;
+    restaurant: () => void;
+    cafe: () => void;
+  };
+  isCategoryButtonEnabled: (category: string) => boolean;
+  isGenerating?: boolean;
+}
+
+interface MainPanelWrapperProps {
+  leftPanelContainerProps: LeftPanelContainerPassedProps;
+  leftPanelContentProps: LeftPanelContentPassedProps;
+}
+
+const MainPanelWrapper: React.FC<MainPanelWrapperProps> = ({
   leftPanelContainerProps,
   leftPanelContentProps,
 }) => {
-  // Convert Records to the expected object structure for LeftPanelContent props
-  const categoryNameToEnglish = {
-    '숙소': 'accomodation',
-    '관광지': 'landmark',
-    '음식점': 'restaurant',
-    '카페': 'cafe'
-  };
-  
-  // Create objects with expected properties for the component props
-  const onConfirmCategoryMapping = {
-    accomodation: (finalKeywords: string[]) => 
-      leftPanelContentProps.onConfirmCategoryCallbacks['숙소'](finalKeywords),
-    landmark: (finalKeywords: string[]) => 
-      leftPanelContentProps.onConfirmCategoryCallbacks['관광지'](finalKeywords),
-    restaurant: (finalKeywords: string[]) => 
-      leftPanelContentProps.onConfirmCategoryCallbacks['음식점'](finalKeywords),
-    cafe: (finalKeywords: string[]) => 
-      leftPanelContentProps.onConfirmCategoryCallbacks['카페'](finalKeywords),
-  };
-
-  const handlePanelBackMapping = {
-    accomodation: () => leftPanelContentProps.handlePanelBackCallbacks['숙소'](),
-    landmark: () => leftPanelContentProps.handlePanelBackCallbacks['관광지'](),
-    restaurant: () => leftPanelContentProps.handlePanelBackCallbacks['음식점'](),
-    cafe: () => leftPanelContentProps.handlePanelBackCallbacks['카페'](),
-  };
-
-  // Convert the directInputValues from Record<CategoryName, string> to the expected structure
-  const directInputValues = {
-    accomodation: leftPanelContentProps.directInputValues['숙소'] || '',
-    landmark: leftPanelContentProps.directInputValues['관광지'] || '',
-    restaurant: leftPanelContentProps.directInputValues['음식점'] || '',
-    cafe: leftPanelContentProps.directInputValues['카페'] || '',
-  };
-
-  // Create onDirectInputChange handlers for each category
-  const onDirectInputChangeHandlers = {
-    accomodation: (value: string) => leftPanelContentProps.onDirectInputChange('숙소', value),
-    landmark: (value: string) => leftPanelContentProps.onDirectInputChange('관광지', value),
-    restaurant: (value: string) => leftPanelContentProps.onDirectInputChange('음식점', value),
-    cafe: (value: string) => leftPanelContentProps.onDirectInputChange('카페', value),
-  };
-  
   return (
     <LeftPanelContainer
       {...leftPanelContainerProps}
       children={
         <LeftPanelContent
           {...leftPanelContentProps}
-          directInputValues={directInputValues}
-          onDirectInputChange={onDirectInputChangeHandlers}
-          onConfirmCategory={onConfirmCategoryMapping}
-          handlePanelBack={handlePanelBackMapping}
+          onConfirmCategory={leftPanelContentProps.onConfirmCategoryCallbacks} // Pass renamed prop
+          handlePanelBack={leftPanelContentProps.handlePanelBackCallbacks} // Pass renamed prop
         />
       }
     />

@@ -1,83 +1,68 @@
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback } from 'react'; // useCallback 추가
 import { useSelectedPlaces } from './use-selected-places';
 import { useTripDetails } from './use-trip-details';
 import { useCategoryResults } from './use-category-results';
-import { useItinerary, UseItineraryReturn } from './use-itinerary';
+import { useItinerary } from './use-itinerary';
 import { useRegionSelection } from './use-region-selection';
 import { useCategorySelection } from './use-category-selection';
 import { useCategoryHandlers } from './left-panel/use-category-handlers';
 import { useInputState } from './left-panel/use-input-state';
 import { useLeftPanelState } from './left-panel/use-left-panel-state';
-import { useItineraryCreation } from './left-panel/use-itinerary-creation'; 
+import { useItineraryCreation } from './left-panel/use-itinerary-creation';
 import { useCategoryResultHandlers } from './left-panel/use-category-result-handlers';
 import { useEventListeners } from './left-panel/use-event-listeners';
-import { SchedulePayload, Place, ItineraryDay, CategoryName } from '@/types/core';
-import { toast } from 'sonner';
-import type { ItineraryManagementState, UiVisibilityState } from '@/types/left-panel/index';
+import { SchedulePayload, Place, ItineraryDay } from '@/types/core'; // Place, ItineraryDay 임포트 추가
+import { toast } from 'sonner'; // toast 임포트 추가
 
 /**
  * 왼쪽 패널 기능 통합 훅
+ * Main hook that composes all left panel functionality
  */
 export const useLeftPanel = () => {
+  // Core state management
   const leftPanelState = useLeftPanelState();
   const regionSelection = useRegionSelection();
-  const categorySelectionHook = useCategorySelection(); 
+  const categorySelection = useCategorySelection();
   const tripDetailsHookResult = useTripDetails();
   const { directInputValues, onDirectInputChange } = useInputState();
   
+  // Set up event listeners
   useEventListeners(
     leftPanelState.setIsGenerating,
     leftPanelState.setItineraryReceived
   );
 
+  // Place management
   const placesManagement = useSelectedPlaces();
-  const itineraryManagementHook: UseItineraryReturn = useItinerary(); 
 
-  const uiVisibility: UiVisibilityState = {
+  // Itinerary management
+  const itineraryManagementHook = useItinerary(); // Renamed for clarity
+
+  // UI visibility
+  const uiVisibility = {
     showItinerary: itineraryManagementHook.showItinerary,
     setShowItinerary: itineraryManagementHook.setShowItinerary,
     showCategoryResult: leftPanelState.showCategoryResult,
     setShowCategoryResult: leftPanelState.setShowCategoryResult
   };
 
-  // Extend categorySelectionHook with setActiveMiddlePanelCategory if needed
-  const extendedCategorySelectionHook = {
-    ...categorySelectionHook,
-    // Add setActiveMiddlePanelCategory if it doesn't exist
-    setActiveMiddlePanelCategory: (category: CategoryName | null) => {
-      console.log(`[useLeftPanel] Setting active middle panel category: ${category}`);
-      // If the hook doesn't have setActiveMiddlePanelCategory, provide a fallback implementation
-      if (categorySelectionHook.setActiveMiddlePanelCategory) {
-        categorySelectionHook.setActiveMiddlePanelCategory(category);
-      } else {
-        // Fallback implementation using the existing hook properties
-        if (category === null) {
-          // Handle category deselection logic here
-          // This likely needs custom implementation
-          console.log("[useLeftPanel] Category deselected");
-        } else {
-          // Handle category selection logic here
-          // This can use existing methods if available
-          if (categorySelectionHook.handleCategoryClick) {
-            categorySelectionHook.handleCategoryClick(category);
-          }
-        }
+  // Category handlers
+  const categoryHandlers = useCategoryHandlers();
+  
+  // Keyword and input management
+  const keywordsAndInputs = {
+    directInputValues,
+    onDirectInputChange,
+    handleConfirmCategory: (category: string, finalKeywords: string[], clearSelection: boolean = false) => {
+      categorySelection.handleConfirmCategory(category as any, finalKeywords, clearSelection);
+      if (clearSelection) {
+        leftPanelState.setShowCategoryResult(category as any);
       }
     }
   };
 
-  const categoryHandlers = useCategoryHandlers(
-    leftPanelState.setShowCategoryResult,
-    // Use the extended hook with setActiveMiddlePanelCategory
-    extendedCategorySelectionHook.setActiveMiddlePanelCategory
-  );
-  
-  const keywordsAndInputs = {
-    directInputValues,
-    onDirectInputChange,
-  };
-
+  // Category result handlers
   const categoryResultHandlers = useCategoryResultHandlers(
     regionSelection.selectedRegions,
     tripDetailsHookResult,
@@ -85,52 +70,53 @@ export const useLeftPanel = () => {
     leftPanelState.setShowCategoryResult
   );
 
-  const generateItineraryAdapter = useCallback(async (
-    payloadForServer?: SchedulePayload, 
-  ): Promise<ItineraryDay[] | null> => {
-    if (!tripDetailsHookResult.dates?.startDate || !tripDetailsHookResult.dates?.endDate) {
-      console.error("[Adapter] Trip start or end date is missing.");
+  // Adapter function for generateItinerary
+  const generateItineraryAdapter = useCallback(async (payload: SchedulePayload): Promise<ItineraryDay[] | null> => {
+    if (!tripDetailsHookResult.dates.startDate || !tripDetailsHookResult.dates.endDate) {
+      console.error("[Adapter] Trip start or end date is missing in tripDetails.dates.");
       toast.error("여행 시작일 또는 종료일이 설정되지 않았습니다.");
       return null;
     }
 
-    const allPlacesForGeneration: Place[] = [
-      ...placesManagement.selectedPlaces,
+    const placesForClientGenerator: Place[] = [
+      ...(placesManagement.selectedPlaces as Place[]),
+      ...(placesManagement.candidatePlaces as Place[]),
     ];
-    const selectedPlaceIds = new Set(placesManagement.selectedPlaces.map(p => String(p.id)));
-    placesManagement.candidatePlaces.forEach(p => {
-        if (!selectedPlaceIds.has(String(p.id))) {
-            allPlacesForGeneration.push(p);
-        }
-    });
 
-    if (allPlacesForGeneration.length === 0) {
+    if (placesForClientGenerator.length === 0) {
         toast.info("일정을 생성할 장소가 선택되지 않았습니다. (Adapter)");
         return null;
     }
-    
-    return itineraryManagementHook.generateItinerary(
-      allPlacesForGeneration,
-      tripDetailsHookResult.dates.startDate,
-      tripDetailsHookResult.dates.endDate,
-      tripDetailsHookResult.dates.startTime,
-      tripDetailsHookResult.dates.endTime,
-      payloadForServer 
-    );
-  }, [itineraryManagementHook, placesManagement.selectedPlaces, placesManagement.candidatePlaces, tripDetailsHookResult]);
 
+    try {
+      return await itineraryManagementHook.generateItinerary(
+        placesForClientGenerator,
+        tripDetailsHookResult.dates.startDate,
+        tripDetailsHookResult.dates.endDate,
+        tripDetailsHookResult.startTime,
+        tripDetailsHookResult.endTime
+      );
+    } catch (error) {
+      console.error("일정 생성 어댑터에서 오류:", error);
+      toast.error(`어댑터에서 일정 생성 중 오류: ${error instanceof Error ? error.message : String(error)}`);
+      return null;
+    }
+  }, [itineraryManagementHook, placesManagement, tripDetailsHookResult]);
+
+  // Itinerary creation logic
   const itineraryCreation = useItineraryCreation({
     tripDetails: tripDetailsHookResult,
     userDirectlySelectedPlaces: placesManagement.selectedPlaces,
     autoCompleteCandidatePlaces: placesManagement.candidatePlaces,
-    prepareSchedulePayload: placesManagement.prepareSchedulePayload, 
-    generateItinerary: generateItineraryAdapter, 
+    prepareSchedulePayload: placesManagement.prepareSchedulePayload,
+    generateItinerary: generateItineraryAdapter,
     setShowItinerary: itineraryManagementHook.setShowItinerary,
     setCurrentPanel: leftPanelState.setCurrentPanel,
-    setIsGenerating: leftPanelState.setIsGenerating, 
+    setIsGenerating: leftPanelState.setIsGenerating,
     setItineraryReceived: leftPanelState.setItineraryReceived,
   });
 
+  // Category results from API
   const { 
     isLoading: isCategoryLoading,
     error: categoryError,
@@ -138,9 +124,9 @@ export const useLeftPanel = () => {
     normalPlaces,
     refetch
   } = useCategoryResults(
-    uiVisibility.showCategoryResult, 
-    uiVisibility.showCategoryResult 
-      ? categorySelectionHook.selectedKeywordsByCategory[uiVisibility.showCategoryResult] || [] 
+    leftPanelState.showCategoryResult, 
+    leftPanelState.showCategoryResult 
+      ? categorySelection.selectedKeywordsByCategory[leftPanelState.showCategoryResult] || [] 
       : [], 
     regionSelection.selectedRegions
   );
@@ -150,6 +136,7 @@ export const useLeftPanel = () => {
     normalPlaces: normalPlaces || []
   };
 
+  // Handle panel navigation and view changes based on itinerary state
   useEffect(() => {
     if (itineraryManagementHook.isItineraryCreated && itineraryManagementHook.itinerary && itineraryManagementHook.itinerary.length > 0) {
       if (!uiVisibility.showItinerary) {
@@ -168,46 +155,36 @@ export const useLeftPanel = () => {
     leftPanelState.setCurrentPanel,
     uiVisibility.setShowItinerary
   ]);
-  
-  // Create an adapter for handleServerItineraryResponse that matches the expected signature
-  const adaptedHandleServerItineraryResponse = (parsedItinerary: ItineraryDay[]) => {
-    // Call the original function with the parsed itinerary
-    // The original function expects more parameters, but we'll ignore them
-    if (itineraryManagementHook.handleServerItineraryResponse) {
-      itineraryManagementHook.handleServerItineraryResponse(
-        parsedItinerary
-      );
-    }
-  };
-  
-  const itineraryManagementState: ItineraryManagementState = {
-    itinerary: itineraryManagementHook.itinerary,
-    selectedItineraryDay: itineraryManagementHook.selectedItineraryDay,
-    handleSelectItineraryDay: itineraryManagementHook.handleSelectItineraryDay,
-    isItineraryCreated: itineraryManagementHook.isItineraryCreated,
-    showItinerary: itineraryManagementHook.showItinerary,
-    setShowItinerary: itineraryManagementHook.setShowItinerary,
-    setItinerary: itineraryManagementHook.setItinerary,
-    handleServerItineraryResponse: adaptedHandleServerItineraryResponse,
-  };
 
+  // Combine and return all necessary functionality
   return {
     regionSelection,
-    categorySelection: extendedCategorySelectionHook,
+    categorySelection,
     keywordsAndInputs,
     placesManagement,
     tripDetails: tripDetailsHookResult,
     uiVisibility,
-    itineraryManagement: itineraryManagementState,
+    itineraryManagement: { // Ensure this object has all needed properties
+      itinerary: itineraryManagementHook.itinerary,
+      selectedItineraryDay: itineraryManagementHook.selectedItineraryDay,
+      handleSelectItineraryDay: itineraryManagementHook.handleSelectItineraryDay,
+      isItineraryCreated: itineraryManagementHook.isItineraryCreated,
+      handleServerItineraryResponse: itineraryManagementHook.handleServerItineraryResponse,
+      showItinerary: itineraryManagementHook.showItinerary,
+      setShowItinerary: itineraryManagementHook.setShowItinerary,
+    },
     handleCreateItinerary: itineraryCreation.handleInitiateItineraryCreation,
     handleCloseItinerary: itineraryCreation.handleCloseItineraryPanel,
+    selectedCategory: leftPanelState.selectedCategory,
     currentPanel: leftPanelState.currentPanel,
     isCategoryLoading,
     categoryError,
     categoryResults,
-    categoryResultHandlers,
-    categoryHandlers,
-    isGeneratingItinerary: leftPanelState.isGenerating, 
+    categoryResultHandlers, 
+    handleCategorySelect: (category: string) => 
+      categoryHandlers.handleCategorySelect(category, refetch),
+    isGeneratingItinerary: leftPanelState.isGenerating,
     itineraryReceived: leftPanelState.itineraryReceived,
   };
 };
+

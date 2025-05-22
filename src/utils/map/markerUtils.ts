@@ -1,4 +1,3 @@
-
 import type { Place } from '@/types/supabase';
 import type { ItineraryPlaceWithTime } from '@/types/core';
 import { createNaverLatLng } from './mapSetup';
@@ -58,6 +57,9 @@ export const getMarkerIconOptions = (
     pinSize = 32; // Larger for selected
   } else if (isCandidate) {
     pinColor = '#FFA500'; // Orange for candidate
+    // Note: pinSize for candidate wasn't explicitly larger, keeping default 28 or 32 if selected also.
+    // If a larger size is desired for candidates, it can be set here.
+    // For consistency with 'selected', let's make it 32.
     pinSize = 32;
   } else if (place.category) {
     const categoryKey = mapCategoryNameToKey(place.category);
@@ -86,7 +88,6 @@ export const createNaverMarker = (
     console.error("Naver Maps API not initialized when creating marker.");
     return null;
   }
-  
   let iconObject: any = null;
   if (iconConfig) {
     if (iconConfig.url) {
@@ -119,6 +120,7 @@ export const addMarkersToMap = (
   places: Place[],
   selectedPlace: Place | null,
   candidatePlaces: Place[] = [],
+  // itineraryPlaces: Place[] = [], // This parameter seems unused in the original function
   onMarkerClick: (place: Place, index: number) => void
 ) => {
   const markers: any[] = [];

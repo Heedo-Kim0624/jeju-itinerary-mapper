@@ -1,201 +1,119 @@
 
-import { useEffect, useCallback, useMemo } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useLeftPanel } from '@/hooks/use-left-panel';
+import { useScheduleGenerationRunner } from '@/hooks/schedule/useScheduleGenerationRunner';
+import { useCreateItineraryHandler } from '@/hooks/left-panel/useCreateItineraryHandler';
 import { useLeftPanelCallbacks } from '@/hooks/left-panel/use-left-panel-callbacks';
 import { useLeftPanelProps } from '@/hooks/left-panel/use-left-panel-props';
 import { toast } from 'sonner';
 import { summarizeItineraryData } from '@/utils/debugUtils';
-import type { 
-  LeftPanelPropsData,
-  CategorySelectionState,
-  PlacesManagementState,
-  TripDetailsState,
-  KeywordsAndInputsState,
-  CategoryResultHandlersState
-} from '@/types/left-panel/index';
-import type { CategoryName } from '@/types/core';
+import type { ItineraryDay } from '@/types';
 
 export const useLeftPanelOrchestrator = () => {
-  const leftPanelCore = useLeftPanel();
-  
   const {
     regionSelection,
-    categorySelection: categorySelectionFromCore,
-    keywordsAndInputs: keywordsAndInputsFromCore,
-    placesManagement: placesManagementFromCore,
-    tripDetails: tripDetailsFromCore,
-    uiVisibility: uiVisibilityFromCore,
-    itineraryManagement: itineraryManagementFromCore,
-    handleCreateItinerary: initiateItineraryCreation,
-    handleCloseItinerary: closeItineraryPanel,
-    categoryResultHandlers: categoryResultHandlersFromCore,
+    categorySelection,
+    keywordsAndInputs,
+    placesManagement,
+    tripDetails,
+    uiVisibility,
+    itineraryManagement,
+    handleCloseItinerary,
+    categoryResultHandlers,
     currentPanel,
     isGeneratingItinerary: isGeneratingFromCoreHook,
-    categoryHandlers
-  } = leftPanelCore;
+  } = useLeftPanel();
 
-  // Adapt the interfaces to match the required types
-  const tripDetails: TripDetailsState = {
-    ...tripDetailsFromCore,
-    handleDateChange: tripDetailsFromCore.handleDateChange || ((dates) => {
-      if (dates) {
-        tripDetailsFromCore.setDates(dates);
-      }
-    }),
-    isDateSet: !!tripDetailsFromCore.dates?.startDate && !!tripDetailsFromCore.dates?.endDate
-  };
+  const { runScheduleGeneration, isGenerating: isRunnerGenerating } = useScheduleGenerationRunner();
 
-  const placesManagement: PlacesManagementState = {
-    ...placesManagementFromCore,
-    // Type-safe adapter for handleSelectPlace
-    handleSelectPlace: (place, categoryName: CategoryName) => {
-      placesManagementFromCore.handleSelectPlace(place, true, categoryName);
-    }
-  };
+  const {
+    createItinerary,
+    isCreatingItinerary: isCreatingFromCustomHook,
+  } = useCreateItineraryHandler({
+    placesManagement,
+    tripDetails,
+    runScheduleGeneration,
+  });
 
-  const categorySelection: CategorySelectionState = {
-    ...categorySelectionFromCore,
-    categoryStepIndex: categorySelectionFromCore.categoryOrder.findIndex(
-      category => category === categorySelectionFromCore.activeMiddlePanelCategory
-    ) || 0,
-    resetCategorySelection: () => {
-      // Implementation for required method
-      console.log("Reset category selection");
-    },
-    setActiveMiddlePanelCategory: (category) => {
-      // Use categoryHandlers to change activeMiddlePanelCategory
-      if (category === null) {
-        categoryHandlers.handleCloseCategoryPanel(categorySelectionFromCore.activeMiddlePanelCategory as CategoryName);
-      } else {
-        categoryHandlers.handleCategorySelect(category);
-      }
-    }
-  };
-
-  const keywordsAndInputs: KeywordsAndInputsState = {
-    directInputValues: {
-      '숙소': keywordsAndInputsFromCore.directInputValues.accommodation || '',
-      '관광지': keywordsAndInputsFromCore.directInputValues.landmark || '',
-      '음식점': keywordsAndInputsFromCore.directInputValues.restaurant || '',
-      '카페': keywordsAndInputsFromCore.directInputValues.cafe || ''
-    },
-    onDirectInputChange: (category, value) => {
-      keywordsAndInputsFromCore.onDirectInputChange(category, value);
-    }
-  };
-
-  const categoryResultHandlers: CategoryResultHandlersState = {
-    handleResultClose: categoryResultHandlersFromCore.handleResultClose,
-    handleConfirmCategoryWithAutoComplete: async (category: CategoryName, keywords: string[]) => {
-      // Adapt to match the expected signature
-      await Promise.resolve(categoryResultHandlersFromCore.handleConfirmCategoryWithAutoComplete(
-        category, 
-        [], // Empty array for placesFromApi
-        [] // Empty array for recommendedPlaces
-      ));
-    }
-  };
-
-  const isActuallyGenerating = isGeneratingFromCoreHook;
+  const isActuallyGenerating = isGeneratingFromCoreHook || isRunnerGenerating || isCreatingFromCustomHook;
 
   const callbacks = useLeftPanelCallbacks({
-    handleConfirmCategory: categorySelectionFromCore.handleConfirmCategory,
-    handlePanelBack: categorySelectionFromCore.handlePanelBack,
-    handleCloseItinerary: closeItineraryPanel,
+    handleConfirmCategory: keywordsAndInputs.handleConfirmCategory,
+    handlePanelBack: categorySelection.handlePanelBack,
+    handleCloseItinerary,
     setRegionSlidePanelOpen: regionSelection.setRegionSlidePanelOpen,
     selectedRegions: regionSelection.selectedRegions,
     setRegionConfirmed: regionSelection.setRegionConfirmed,
-    handleCreateItinerary: initiateItineraryCreation,
+    handleCreateItinerary: createItinerary, // Pass the actual createItinerary function
   });
-
-  // Map callbacks for Korean category names
-  const onConfirmCategoryCallbacks: Record<CategoryName, (keywords: string[]) => void> = {
-    '숙소': callbacks.onConfirmCategoryCallbacks.accomodation,
-    '관광지': callbacks.onConfirmCategoryCallbacks.landmark,
-    '음식점': callbacks.onConfirmCategoryCallbacks.restaurant,
-    '카페': callbacks.onConfirmCategoryCallbacks.cafe
-  };
-
-  const handlePanelBackCallbacks: Record<CategoryName, () => void> = {
-    '숙소': callbacks.handlePanelBackCallbacks.accomodation,
-    '관광지': callbacks.handlePanelBackCallbacks.landmark,
-    '음식점': callbacks.handlePanelBackCallbacks.restaurant,
-    '카페': callbacks.handlePanelBackCallbacks.cafe
-  };
-
-  // Create properly typed leftPanelPropsData
-  const leftPanelPropsData: LeftPanelPropsData = {
-    uiVisibility: uiVisibilityFromCore,
-    currentPanel: currentPanel as 'region' | 'date' | 'category' | 'itinerary',
-    isGeneratingItinerary: isActuallyGenerating,
-    itineraryReceived: !!itineraryManagementFromCore.itinerary && 
-                        itineraryManagementFromCore.itinerary.length > 0,
-    itineraryManagement: itineraryManagementFromCore,
-    tripDetails,
-    placesManagement,
-    categorySelection,
-    keywordsAndInputs,
-    categoryResultHandlers,
-    handleCloseItinerary: closeItineraryPanel,
-    regionSelection,
-    onConfirmCategoryCallbacks,
-    handlePanelBackCallbacks,
-  };
 
   const {
     itineraryDisplayProps,
     mainPanelProps,
     devDebugInfoProps,
-  } = useLeftPanelProps(leftPanelPropsData);
+  } = useLeftPanelProps({
+    uiVisibility,
+    currentPanel,
+    isGeneratingItinerary: isActuallyGenerating,
+    itineraryReceived: !!itineraryManagement.itinerary && itineraryManagement.itinerary.length > 0,
+    itineraryManagement: itineraryManagement,
+    tripDetails,
+    placesManagement,
+    categorySelection,
+    keywordsAndInputs,
+    categoryResultHandlers,
+    handleCloseItinerary,
+    regionSelection,
+    onConfirmCategoryCallbacks: callbacks.onConfirmCategoryCallbacks,
+    handlePanelBackCallbacks: callbacks.handlePanelBackCallbacks,
+  });
 
   useEffect(() => {
     console.log("LeftPanelOrchestrator - 일정 관련 상태 변화 감지:", {
-      showItineraryFromHook: uiVisibilityFromCore.showItinerary,
-      selectedItineraryDayFromHook: itineraryManagementFromCore.selectedItineraryDay,
-      itineraryFromHookSummary: summarizeItineraryData(itineraryManagementFromCore.itinerary),
-      isGeneratingState: isActuallyGenerating,
-      isItineraryCreatedFromHook: itineraryManagementFromCore.isItineraryCreated,
+      showItineraryFromHook: uiVisibility.showItinerary,
+      selectedItineraryDayFromHook: itineraryManagement.selectedItineraryDay,
+      itineraryFromHookSummary: summarizeItineraryData(itineraryManagement.itinerary),
+      isCreatingItineraryPanelState: isCreatingFromCustomHook,
+      isRunnerGeneratingState: isRunnerGenerating,
+      isGeneratingFromCoreHook: isGeneratingFromCoreHook,
+      isItineraryCreatedFromHook: itineraryManagement.isItineraryCreated,
     });
   }, [
-    uiVisibilityFromCore.showItinerary,
-    itineraryManagementFromCore.selectedItineraryDay,
-    itineraryManagementFromCore.itinerary,
-    isActuallyGenerating,
-    itineraryManagementFromCore.isItineraryCreated,
+    uiVisibility.showItinerary,
+    itineraryManagement.selectedItineraryDay,
+    itineraryManagement.itinerary,
+    isCreatingFromCustomHook,
+    isRunnerGenerating,
+    isGeneratingFromCoreHook,
+    itineraryManagement.isItineraryCreated,
   ]);
 
-  const shouldShowItineraryView = useMemo(() => 
-    uiVisibilityFromCore.showItinerary &&
-    itineraryManagementFromCore.isItineraryCreated &&
-    itineraryManagementFromCore.itinerary &&
-    itineraryManagementFromCore.itinerary.length > 0,
-  [
-    uiVisibilityFromCore.showItinerary, 
-    itineraryManagementFromCore.isItineraryCreated, 
-    itineraryManagementFromCore.itinerary
-  ]);
+  const shouldShowItineraryView =
+    itineraryManagement.showItinerary &&
+    itineraryManagement.isItineraryCreated &&
+    itineraryManagement.itinerary &&
+    itineraryManagement.itinerary.length > 0;
 
   useEffect(() => {
     console.log("LeftPanelOrchestrator - ItineraryView 표시 결정 로직:", {
-      showItineraryFromUiVisibility: uiVisibilityFromCore.showItinerary,
-      isItineraryCreatedFromItineraryMgmt: itineraryManagementFromCore.isItineraryCreated,
-      isGeneratingState: isActuallyGenerating,
-      itineraryExists: !!itineraryManagementFromCore.itinerary,
-      itineraryLength: itineraryManagementFromCore.itinerary?.length || 0,
+      showItineraryFromItineraryMgmt: itineraryManagement.showItinerary,
+      isItineraryCreatedFromItineraryMgmt: itineraryManagement.isItineraryCreated,
+      isCreatingItineraryPanelState: isCreatingFromCustomHook,
+      isRunnerGeneratingState: isRunnerGenerating,
+      itineraryExists: !!itineraryManagement.itinerary,
+      itineraryLength: itineraryManagement.itinerary?.length || 0,
       최종결과_shouldShowItineraryView: shouldShowItineraryView,
     });
 
-    if (itineraryManagementFromCore.itinerary && 
-        itineraryManagementFromCore.itinerary.length > 0 && 
-        itineraryManagementFromCore.itinerary.every(day => day.places.length === 0)) {
-      console.warn("LeftPanelOrchestrator - 일정은 있지만 모든 일자에 장소가 없습니다:", 
-        summarizeItineraryData(itineraryManagementFromCore.itinerary));
+    if (itineraryManagement.itinerary && itineraryManagement.itinerary.length > 0 && itineraryManagement.itinerary.every(day => day.places.length === 0)) {
+      console.warn("LeftPanelOrchestrator - 일정은 있지만 모든 일자에 장소가 없습니다:", summarizeItineraryData(itineraryManagement.itinerary));
     }
   }, [
-    uiVisibilityFromCore.showItinerary,
-    itineraryManagementFromCore.isItineraryCreated,
-    itineraryManagementFromCore.itinerary,
-    isActuallyGenerating,
+    itineraryManagement.showItinerary,
+    itineraryManagement.isItineraryCreated,
+    itineraryManagement.itinerary,
+    isCreatingFromCustomHook,
+    isRunnerGenerating,
     shouldShowItineraryView,
   ]);
 
@@ -204,13 +122,13 @@ export const useLeftPanelOrchestrator = () => {
       toast.info("일정 생성 중입니다. 잠시만 기다려주세요.");
       return;
     }
-    const success = await initiateItineraryCreation();
-    if (success) {
-      console.log("[LeftPanelOrchestrator] Itinerary creation process initiated successfully.");
+    const result = await createItinerary();
+    if (result) {
+      console.log("[LeftPanelOrchestrator] Itinerary creation process finished via custom hook.");
     } else {
-      console.log("[LeftPanelOrchestrator] Itinerary creation process failed to initiate or was aborted.");
+      console.log("[LeftPanelOrchestrator] Itinerary creation process did not produce a result or was aborted.");
     }
-  }, [isActuallyGenerating, initiateItineraryCreation]);
+  }, [isActuallyGenerating, createItinerary]);
 
   const enhancedItineraryDisplayProps = itineraryDisplayProps
     ? {
@@ -221,29 +139,25 @@ export const useLeftPanelOrchestrator = () => {
 
   const enhancedMainPanelProps = mainPanelProps
     ? {
-        ...mainPanelProps,
         leftPanelContainerProps: {
           ...mainPanelProps.leftPanelContainerProps,
           onCreateItinerary: handleTriggerCreateItinerary,
         },
+        leftPanelContentProps: mainPanelProps.leftPanelContentProps,
       }
     : null;
 
   return {
     regionSelection,
+    uiVisibility,
+    categorySelection,
     placesManagement,
     callbacks,
-    categoryResultHandlers,
-    categoryHandlers,
-    
-    // Overall control and display props
     isActuallyGenerating,
     shouldShowItineraryView,
     enhancedItineraryDisplayProps,
     enhancedMainPanelProps,
     devDebugInfoProps,
-    
-    // Direct access for child components
-    uiVisibility: uiVisibilityFromCore,
+    categoryResultHandlers, // Added this for CategoryResultHandler
   };
 };

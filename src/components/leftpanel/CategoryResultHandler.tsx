@@ -1,55 +1,55 @@
 
 import React from 'react';
 import CategoryResultPanel from '../middlepanel/CategoryResultPanel';
-import type { Place } from '@/types/core'; // Using core Place
+import { Place } from '@/types/supabase';
 import type { CategoryName } from '@/utils/categoryUtils';
-// Import the specific prop type from the consolidated types file
-import type { CategoryResultHandlerProps } from '@/types/left-panel/index';
+
+interface CategoryResultHandlerProps {
+  showCategoryResult: CategoryName | null;
+  selectedRegions: string[];
+  selectedKeywordsByCategory: Record<string, string[]>;
+  onClose: () => void;
+  onSelectPlace: (place: Place, checked: boolean, category: string | null) => void;
+  selectedPlaces: Place[];
+  onConfirmCategory?: (category: string, selectedPlaces: Place[], recommendedPlaces: Place[]) => void;
+}
 
 const CategoryResultHandler: React.FC<CategoryResultHandlerProps> = ({
-  showCategoryResult, // This is CategoryName | null
+  showCategoryResult,
   selectedRegions,
-  selectedKeywordsByCategory, // Record<CategoryName, string[]>
-  onClose, // (category: CategoryName) => void
-  onSelectPlace, // (place: Place, categoryName: CategoryName) => void
+  selectedKeywordsByCategory,
+  onClose,
+  onSelectPlace,
   selectedPlaces,
-  onConfirmCategory // (category, selectedFromPanel, recommendedFromPanel) => void; optional
+  onConfirmCategory
 }) => {
   if (!showCategoryResult) return null;
   
-  const currentCategory: CategoryName = showCategoryResult; // Explicitly CategoryName
+  const currentCategory = showCategoryResult;
   const selectedKeywords = selectedKeywordsByCategory[currentCategory] || [];
-  
-  // isPlaceSelected needs to handle string IDs from Place
-  const isPlaceSelected = (placeId: string) => 
-    selectedPlaces.some(p => String(p.id) === String(placeId));
+  const isPlaceSelected = (id: string | number) => 
+    selectedPlaces.some(p => p.id === id);
 
   const handlePlaceSelection = (place: Place, checked: boolean) => {
-    // onSelectPlace from props already expects (place: Place, categoryName: CategoryName)
-    // The 'checked' parameter is internal to CategoryResultPanel's onSelectPlace.
-    // Here, we just call the prop with the category.
-    // Assuming `checked` determines if it's a select or deselect,
-    // which should be handled inside `placesManagement.handleSelectPlace`.
-    // For now, we adapt by always calling onSelectPlace, the handler itself should know what to do.
-    onSelectPlace(place, currentCategory); 
+    // 카테고리 정보를 함께 전달하여 장소 선택 처리
+    onSelectPlace(place, checked, currentCategory);
   };
 
-  const handleConfirm = (categoryFromPanel: string, placesFromPanel: Place[], recommendedFromPanel: Place[]) => {
-    // Ensure categoryFromPanel is CategoryName if needed, though onConfirmCategory might expect string
-    console.log(`[CategoryResultHandler] ${categoryFromPanel} 카테고리 확인됨, 선택된 장소: ${placesFromPanel.length}개`);
+  const handleConfirm = (category: string, selectedPlaces: Place[], recommendedPlaces: Place[]) => {
+    console.log(`[CategoryResultHandler] ${category} 카테고리 확인됨 및 자동 보완 시작, 선택된 장소: ${selectedPlaces.length}개`);
     if (onConfirmCategory) {
-      onConfirmCategory(categoryFromPanel as CategoryName, placesFromPanel, recommendedFromPanel);
+      onConfirmCategory(category, selectedPlaces, recommendedPlaces);
     }
   };
 
   return (
     <CategoryResultPanel
       isOpen={!!showCategoryResult}
-      onClose={() => onClose(currentCategory)} // Pass currentCategory to onClose
+      onClose={onClose}
       category={currentCategory}
       regions={selectedRegions}
       keywords={selectedKeywords}
-      onSelectPlace={handlePlaceSelection} // Passes (place: Place, checked: boolean)
+      onSelectPlace={handlePlaceSelection}
       isPlaceSelected={isPlaceSelected}
       onConfirm={handleConfirm}
     />

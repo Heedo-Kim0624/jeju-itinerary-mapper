@@ -1,14 +1,14 @@
 
 import { useRef, useEffect } from 'react';
 import { useMapContext } from '../MapContext';
-import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/core'; // ItineraryPlaceWithTime.id is string
+import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/core';
 import { clearMarkers } from '@/utils/map/mapCleanup';
 import { getMarkerIconOptions, createNaverMarker } from '@/utils/map/markerUtils';
 import { createNaverLatLng } from '@/utils/map/mapSetup';
 import { fitBoundsToPlaces, panToPosition } from '@/utils/map/mapViewControls';
 
 interface UseMapMarkersProps {
-  places: Place[]; 
+  places: Place[];
   selectedPlace: Place | null;
   itinerary: ItineraryDay[] | null;
   selectedDay: number | null;
@@ -18,9 +18,9 @@ interface UseMapMarkersProps {
 }
 
 export const useMapMarkers = ({
-  places, 
+  places,
   selectedPlace,
-  itinerary, 
+  itinerary,
   selectedDay,
   selectedPlaces = [],
   onPlaceClick,
@@ -30,7 +30,7 @@ export const useMapMarkers = ({
   const markersRef = useRef<naver.maps.Marker[]>([]);
   const prevSelectedDayRef = useRef<number | null>(null);
   const prevItineraryRef = useRef<ItineraryDay[] | null>(null);
-  const prevPlacesRef = useRef<(Place | ItineraryPlaceWithTime)[] | null>(null);
+  const prevPlacesRef = useRef<Place[] | null>(null);
 
   const clearAllMarkers = () => {
     if (markersRef.current.length > 0) {
@@ -44,26 +44,32 @@ export const useMapMarkers = ({
       console.log("[useMapMarkers] Map not ready or Naver API not loaded. Skipping marker update.");
       return;
     }
-    
-    const placesPropChanged = prevPlacesRef.current !== places; 
+
     const itineraryChanged = prevItineraryRef.current !== itinerary;
     const dayChanged = selectedDay !== prevSelectedDayRef.current;
-    const selectedPlacesListChanged = JSON.stringify(selectedPlaces) !== JSON.stringify((markersRef.current as any)._prevSelectedPlacesList);
-    const selectedPlaceChanged = selectedPlace?.id !== (markersRef.current as any)._prevSelectedPlaceId;
+    const placesPropChanged = prevPlacesRef.current !== places;
+    const selectedPlaceChanged = selectedPlace !== (markersRef.current as any)._prevSelectedPlace;
     const highlightChanged = highlightPlaceId !== (markersRef.current as any)._prevHighlightPlaceId;
+    const selectedPlacesListChanged = JSON.stringify(selectedPlaces) !== JSON.stringify((markersRef.current as any)._prevSelectedPlacesList);
 
     if (itineraryChanged || dayChanged || placesPropChanged || selectedPlaceChanged || highlightChanged || selectedPlacesListChanged) {
       console.log("[useMapMarkers] Change detected, regenerating markers:", {
-        itineraryChanged, dayChanged, placesPropChanged, selectedPlaceChanged, highlightChanged, selectedPlacesListChanged,
-        selectedDay, itineraryLength: itinerary?.length, placesLength: places?.length,
+        itineraryChanged,
+        dayChanged,
+        placesPropChanged,
+        selectedDay,
+        itineraryLength: itinerary?.length,
+        placesLength: places?.length,
       });
 
       clearAllMarkers();
+
       prevItineraryRef.current = itinerary;
       prevSelectedDayRef.current = selectedDay;
-      (markersRef.current as any)._prevSelectedPlaceId = selectedPlace?.id;
+      prevPlacesRef.current = places;
+      (markersRef.current as any)._prevSelectedPlace = selectedPlace;
       (markersRef.current as any)._prevHighlightPlaceId = highlightPlaceId;
-      (markersRef.current as any)._prevSelectedPlacesList = [...selectedPlaces];
+      (markersRef.current as any)._prevSelectedPlacesList = selectedPlaces;
 
       renderMarkers();
     }
@@ -74,113 +80,95 @@ export const useMapMarkers = ({
   ]);
 
   const renderMarkers = () => {
-    let placesToDisplay: ItineraryPlaceWithTime[] = [];
+    let placesToDisplay: (Place | ItineraryPlaceWithTime)[] = [];
     let isDisplayingItineraryDay = false;
-    const placeIdSet = new Set<string>(); // ID is now always string
 
+    // Modified logic to only display places that are in the itinerary
     if (itinerary && itinerary.length > 0) {
+      // Get all place IDs from the itinerary
+      const itineraryPlaceIds = new Set<string>();
+      
+      // If there's a selected day, show only that day's places
       if (selectedDay !== null) {
         const currentDayData = itinerary.find(day => day.day === selectedDay);
         if (currentDayData && currentDayData.places && currentDayData.places.length > 0) {
-          const uniquePlaces: ItineraryPlaceWithTime[] = [];
-          currentDayData.places.forEach(place => { // place.id is string
-            if (!placeIdSet.has(place.id)) {
-              placeIdSet.add(place.id);
-              uniquePlaces.push(place);
-            }
-          });
-          placesToDisplay = uniquePlaces;
+          placesToDisplay = currentDayData.places;
           isDisplayingItineraryDay = true;
-          console.log(`[useMapMarkers] Displaying itinerary day ${selectedDay}: ${placesToDisplay.length} unique places.`);
+          console.log(`[useMapMarkers] Displaying itinerary day ${selectedDay}: ${placesToDisplay.length} places.`);
         } else {
-          console.log(`[useMapMarkers] Itinerary active for day ${selectedDay}, but no places found.`);
+          console.log(`[useMapMarkers] Itinerary active for day ${selectedDay}, but no places found for this day. No itinerary markers shown.`);
         }
       } else {
+        // No specific day selected but itinerary exists - collect all place IDs from all days
         itinerary.forEach(day => {
-          day.places.forEach(place => { // place.id is string
-            if (!placeIdSet.has(place.id)) {
-              placeIdSet.add(place.id);
-              placesToDisplay.push(place);
-            }
-          });
+          day.places.forEach(place => itineraryPlaceIds.add(place.id));
         });
-        console.log(`[useMapMarkers] No specific day selected. Displaying ${placesToDisplay.length} unique places from all days.`);
+        
+        // Filter places to only include those in the itinerary
+        placesToDisplay = places.filter(place => itineraryPlaceIds.has(place.id));
+        console.log(`[useMapMarkers] No specific day selected. Displaying ${placesToDisplay.length} places from all days.`);
       }
-    } else if (places && places.length > 0) {
-        // Transform Place[] to ItineraryPlaceWithTime[]
-        placesToDisplay = places.map(p => ({
-          ...p, // Spread existing Place properties
-          id: String(p.id), // Ensure id is string (already is for Place)
-          timeBlock: "N/A", // Add default timeBlock for compatibility
-          // Ensure all required fields of ItineraryPlaceWithTime are present
-          // If Place is missing some, add defaults or ensure they are optional in ItineraryPlaceWithTime
-          // For now, assuming Place structure + timeBlock is enough for markers if not full itinerary.
-        }));
-        console.log(`[useMapMarkers] No active itinerary. Displaying ${placesToDisplay.length} places from 'places' prop (transformed).`);
     } else {
-      console.log(`[useMapMarkers] No active itinerary and no 'places' prop. No markers will be shown.`);
+      // No itinerary, display empty map
+      console.log(`[useMapMarkers] No active itinerary. No markers will be shown.`);
+      placesToDisplay = [];
     }
     
-    prevPlacesRef.current = placesToDisplay; 
-
-    const validPlacesToDisplay = placesToDisplay.filter(p => {
-      if (p.x != null && p.y != null && !isNaN(Number(p.x)) && !isNaN(Number(p.y))) return true;
-      console.warn(`[useMapMarkers] Place '${p.name}' has invalid coordinates: x=${p.x}, y=${p.y}`);
-      return false;
-    });
-
-    if (validPlacesToDisplay.length > 0) {
-      console.log(`[useMapMarkers] Creating markers for ${validPlacesToDisplay.length} valid places.`);
-      const newMarkers: naver.maps.Marker[] = [];
-
-      validPlacesToDisplay.forEach((place, index) => { // place.id is string
-        if (!window.naver || !window.naver.maps) return;
-
-        const position = createNaverLatLng(place.y!, place.x!);
-        if (!position) return;
-        
-        const placeIdStr = place.id; // Already string
-        const isGloballySelectedCandidate = selectedPlaces.some(sp => String(sp.id) === placeIdStr);
-        const isInfoWindowTarget = selectedPlace?.id === placeIdStr;
-        const isGeneralHighlightTarget = highlightPlaceId === placeIdStr;
-        
-        const iconOptions = getMarkerIconOptions(
-          place, 
-          isInfoWindowTarget || isGeneralHighlightTarget,
-          isGloballySelectedCandidate && !isInfoWindowTarget && !isGeneralHighlightTarget,
-          isDisplayingItineraryDay,
-          isDisplayingItineraryDay ? index + 1 : undefined
-        );
-        
-        const marker = createNaverMarker(map, position, iconOptions, place.name);
-        
-        if (marker && onPlaceClick && window.naver && window.naver.maps && window.naver.maps.Event) {
-          window.naver.maps.Event.addListener(marker, 'click', () => {
-            console.log(`[useMapMarkers] Marker clicked: ${place.name} (ID: ${placeIdStr}, Index: ${index}, ItineraryDayPlace: ${isDisplayingItineraryDay})`);
-            onPlaceClick(place, index); 
-          });
-        }
-        if (marker) newMarkers.push(marker);
+    if (placesToDisplay.length > 0) {
+      const validPlacesToDisplay = placesToDisplay.filter(p => {
+        if (p.x != null && p.y != null && !isNaN(Number(p.x)) && !isNaN(Number(p.y))) return true;
+        console.warn(`[useMapMarkers] Place '${p.name}' has invalid coordinates: x=${p.x}, y=${p.y}`);
+        return false;
       });
-      markersRef.current = newMarkers;
 
-      const placesForBounds: Place[] = validPlacesToDisplay.map(p => ({
-        ...p, // ItineraryPlaceWithTime has all Place fields, plus timeBlock
-        id: String(p.id), 
-      }));
+      if (validPlacesToDisplay.length === 0) {
+        console.log("[useMapMarkers] No valid places to display markers for.");
+      } else {
+        console.log(`[useMapMarkers] Creating markers for ${validPlacesToDisplay.length} valid places.`);
+        const newMarkers: naver.maps.Marker[] = [];
 
-      if (placesForBounds.length > 0) {
-          if (!(selectedPlace || highlightPlaceId)) {
-              console.log("[useMapMarkers] Fitting map bounds to displayed markers.");
-              fitBoundsToPlaces(map, placesForBounds);
+        validPlacesToDisplay.forEach((place, index) => {
+          if (!window.naver || !window.naver.maps) return;
+
+          const position = createNaverLatLng(place.y!, place.x!);
+          if (!position) return;
+          
+          const isGloballySelectedCandidate = selectedPlaces.some(sp => sp.id === place.id);
+          const isInfoWindowTarget = selectedPlace?.id === place.id;
+          const isGeneralHighlightTarget = highlightPlaceId === place.id;
+          
+          const iconOptions = getMarkerIconOptions(
+            place,
+            isInfoWindowTarget || isGeneralHighlightTarget,
+            isGloballySelectedCandidate && !isInfoWindowTarget && !isGeneralHighlightTarget,
+            isDisplayingItineraryDay,
+            isDisplayingItineraryDay ? index + 1 : undefined
+          );
+          
+          const marker = createNaverMarker(map, position, iconOptions, place.name);
+          
+          if (marker && onPlaceClick && window.naver && window.naver.maps && window.naver.maps.Event) {
+            window.naver.maps.Event.addListener(marker, 'click', () => {
+              console.log(`[useMapMarkers] Marker clicked: ${place.name} (Index: ${index}, ItineraryDayPlace: ${isDisplayingItineraryDay})`);
+              onPlaceClick(place, index);
+            });
           }
+          if (marker) newMarkers.push(marker);
+        });
+        markersRef.current = newMarkers;
+
+        if (validPlacesToDisplay.length > 0) {
+            if (!(selectedPlace || highlightPlaceId)) {
+                console.log("[useMapMarkers] Fitting map bounds to displayed markers.");
+                fitBoundsToPlaces(map, validPlacesToDisplay as Place[]);
+            }
+        }
       }
     } else {
       console.log("[useMapMarkers] No places to display after filtering.");
     }
     
-    const placeToFocus = selectedPlace || (highlightPlaceId ? validPlacesToDisplay.find(p => p.id === highlightPlaceId) : null);
-
+    const placeToFocus = selectedPlace || (highlightPlaceId ? placesToDisplay.find(p => p.id === highlightPlaceId) : null);
     if (placeToFocus && placeToFocus.y != null && placeToFocus.x != null) {
       console.log(`[useMapMarkers] Panning to focused place: ${placeToFocus.name}`);
       if (map.getZoom() < 15) map.setZoom(15, true);

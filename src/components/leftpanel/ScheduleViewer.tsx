@@ -1,173 +1,118 @@
-
-import React from 'react';
-import { format } from 'date-fns';
-import { Calendar, Clock, MapPin, Navigation, X } from 'lucide-react'; // X 아이콘 추가
-import { ItineraryDay, ItineraryPlaceWithTime } from '@/types/core';
+import React, { useEffect } from 'react';
+import { ItineraryDay, ItineraryPlaceWithTime } from '@/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Badge } from '@/components/ui/badge';
-import { getCategoryName, mapCategoryNameToKey, getCategoryColor } from '@/utils/categoryColors';
+import { Clock, Navigation } from 'lucide-react';
 
 interface ScheduleViewerProps {
-  schedule: ItineraryDay[];
-  selectedDay: number | null;
-  onDaySelect: (day: number) => void;
-  startDate: Date;
+  schedule?: ItineraryDay[];
+  selectedDay?: number | null;
+  onDaySelect?: (day: number) => void;
+  onClose?: () => void;
+  startDate?: Date;
   itineraryDay?: ItineraryDay | null;
-  onClose?: () => void; // onClose 속성 추가
 }
 
-const ScheduleViewer: React.FC<ScheduleViewerProps> = ({ 
-  schedule, 
-  selectedDay, 
-  onDaySelect, 
-  startDate, 
-  itineraryDay,
-  onClose // onClose prop 추가
+const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
+  schedule,
+  selectedDay,
+  onDaySelect,
+  onClose,
+  startDate = new Date(),
+  itineraryDay
 }) => {
-  if (!schedule || schedule.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-8 text-center">
-        {onClose && (
-          <div className="absolute top-2 right-2">
-            <button 
-              onClick={onClose} 
-              className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
-              aria-label="Close"
-            >
-              <X className="h-5 w-5 text-muted-foreground" />
-            </button>
-          </div>
-        )}
-        <Calendar className="mb-2 h-6 w-6 text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">생성된 일정이 없습니다.</p>
-      </div>
-    );
+  useEffect(() => {
+    console.log("ScheduleViewer 마운트/업데이트:", {
+      scheduleLength: schedule?.length || 0,
+      selectedDay,
+      itineraryDayPresent: !!itineraryDay,
+      startDate: startDate.toISOString()
+    });
+  }, [schedule, selectedDay, itineraryDay, startDate]);
+
+  const categoryToKorean = (category: string): string => {
+    const categoryMap: Record<string, string> = {
+      'accommodation': '숙소',
+      'attraction': '관광지',
+      'restaurant': '음식점',
+      'cafe': '카페',
+      'unknown': '기타'
+    };
+    return categoryMap[category.toLowerCase()] || category;
+  };
+
+  const currentDayToDisplay = itineraryDay || 
+    (selectedDay !== null && schedule && schedule.length > 0 ? 
+      schedule.find(d => d.day === selectedDay) : null);
+
+  if (!currentDayToDisplay && selectedDay !== null) {
+    console.warn(`ScheduleViewer: 선택된 날짜(${selectedDay})에 해당하는 일정 데이터가 없습니다.`, {
+      scheduleAvailable: !!schedule,
+      scheduleDays: schedule?.map(d => d.day)
+    });
   }
-
-  // Use the specific day data if available
-  const dayToDisplay = itineraryDay || 
-    (selectedDay !== null ? schedule.find(d => d.day === selectedDay) : null) ||
-    schedule[0];
-
-  if (!dayToDisplay) {
-    return (
-      <div className="flex flex-col items-center justify-center py-8 text-center">
-         {onClose && (
-          <div className="absolute top-2 right-2">
-            <button 
-              onClick={onClose} 
-              className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
-              aria-label="Close"
-            >
-              <X className="h-5 w-5 text-muted-foreground" />
-            </button>
-          </div>
-        )}
-        <Calendar className="mb-2 h-6 w-6 text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">선택된 날짜의 일정이 없습니다.</p>
-      </div>
-    );
-  }
-
-  // Get unique places by ID for the selected day
-  const uniquePlaces: ItineraryPlaceWithTime[] = [];
-  const seenPlaceIds = new Set<string>();
   
-  dayToDisplay.places.forEach(place => {
-    if (!seenPlaceIds.has(place.id)) {
-      seenPlaceIds.add(place.id);
-      uniquePlaces.push(place);
-    }
-  });
-
-  const dayDate = new Date(startDate);
-  dayDate.setDate(startDate.getDate() + dayToDisplay.day - 1);
-  const formattedDate = format(dayDate, 'yyyy-MM-dd');
-
   return (
-    <div className="space-y-4 p-4 relative">
-      {onClose && (
-        <div className="absolute top-3 right-3">
-          <button 
-            onClick={onClose} 
-            className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
-            aria-label="Close schedule viewer"
-          >
-            <X className="h-5 w-5 text-muted-foreground" />
-          </button>
-        </div>
-      )}
-      <div className="space-y-2">
-        <h3 className="text-lg font-medium tracking-tight">{dayToDisplay.day}일차 ({dayToDisplay.dayOfWeek}) - {formattedDate}</h3>
-        <div className="flex items-center text-sm text-muted-foreground">
-          <Navigation className="mr-1 h-4 w-4" />
-          <span>총 이동 거리: {dayToDisplay.totalDistance?.toFixed(2) || '0'} km</span>
-        </div>
-      </div>
-
-      <ScrollArea className="h-full max-h-[calc(100vh-280px)]">
-        <div className="space-y-4">
-          {uniquePlaces.map((place, index) => {
-            const categoryKey = mapCategoryNameToKey(place.category);
-            const categoryColor = getCategoryColor(categoryKey);
+    <div className="h-full flex flex-col">
+      <ScrollArea className="flex-1">
+        {currentDayToDisplay ? (
+          <div className="p-4">
+            <div className="mb-4">
+              <h3 className="text-md font-medium mb-2">
+                {currentDayToDisplay.day}일차 ({currentDayToDisplay.date} {currentDayToDisplay.dayOfWeek})
+              </h3>
+              <div className="text-sm text-muted-foreground mb-4">
+                총 이동 거리: {currentDayToDisplay.totalDistance ? currentDayToDisplay.totalDistance.toFixed(2) : 'N/A'} km
+              </div>
+            </div>
             
-            return (
-              <div key={`${place.id}-${index}`} className="relative pl-8 border-l border-muted pb-6 last:pb-0">
-                <div className="absolute top-0 left-[-16px] bg-background rounded-full border border-muted flex items-center justify-center h-8 w-8 text-primary font-bold">
-                  {index + 1}
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-medium text-base">{place.name}</h4>
-                    <Badge 
-                      variant="outline" 
-                      style={{ 
-                        borderColor: categoryColor,
-                        color: categoryColor
-                      }}
-                    >
-                      {place.category || '기타'}
-                    </Badge>
+            <div className="space-y-4 relative">
+              {currentDayToDisplay.places.length > 1 && (
+                 <div className="absolute top-6 bottom-6 left-[23px] w-0.5 bg-gray-300 z-0"></div>
+              )}
+              
+              {currentDayToDisplay.places.map((place, idx) => (
+                <div key={place.id || `place-${idx}`} className="flex items-start relative z-10">
+                  <div className="h-12 w-12 rounded-full bg-blue-500 text-white font-bold flex items-center justify-center border-4 border-white shadow-md shrink-0">
+                    {idx + 1}
                   </div>
                   
-                  <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-                    {place.address && (
-                      <div className="flex items-center">
-                        <MapPin className="mr-1 h-3 w-3" />
-                        <span>{place.address}</span>
+                  <div className="ml-4 flex-1 border rounded-lg p-3 bg-white shadow">
+                    <div className="font-medium">{place.name}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {categoryToKorean(place.category)} 
+                    </div>
+                    
+                    {place.timeBlock && (
+                      <div className="flex items-center mt-2 text-xs text-gray-600">
+                        <Clock className="w-3 h-3 mr-1.5" />
+                        <span>{place.timeBlock}</span>
                       </div>
                     )}
                     
-                    {place.arriveTime && (
-                      <div className="flex items-center">
-                        <Clock className="mr-1 h-3 w-3" />
-                        <span>방문 예정: {place.arriveTime}</span>
-                      </div>
-                    )}
-                    
-                    {place.stayDuration && (
-                      <div className="flex items-center">
-                        <Clock className="mr-1 h-3 w-3" />
-                        <span>머무는 시간: {place.stayDuration}분</span>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {place.travelTimeToNext && index < uniquePlaces.length - 1 && (
-                    <div className="text-xs text-muted-foreground mt-2 border-t border-dashed border-muted pt-2">
-                      <div className="flex items-center">
-                        <Navigation className="mr-1 h-3 w-3" />
+                    {place.travelTimeToNext && place.travelTimeToNext !== "-" && (
+                      <div className="flex items-center mt-1 text-xs text-gray-600">
+                        <Navigation className="w-3 h-3 mr-1.5" />
                         <span>다음 장소까지: {place.travelTimeToNext}</span>
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="h-full flex items-center justify-center text-muted-foreground p-4 text-center">
+            {selectedDay ? `선택된 ${selectedDay}일차의 일정을 불러오는 중이거나 데이터가 없습니다.` : '표시할 일정이 없습니다. 날짜를 선택해주세요.'}
+          </div>
+        )}
       </ScrollArea>
+      {process.env.NODE_ENV === 'development' && !currentDayToDisplay && selectedDay !== null && (
+        <div className="p-4 bg-yellow-100 text-yellow-800 text-sm">
+          디버깅 (ScheduleViewer): 선택된 날짜({selectedDay})에 해당하는 일정 데이터가 없습니다.<br />
+          schedule prop: {schedule ? `${schedule.length}일 (${schedule.map(d=>d.day).join(',')})` : 'undefined'}<br />
+          itineraryDay prop: {itineraryDay ? '제공됨' : '제공되지 않음'}
+        </div>
+      )}
     </div>
   );
 };

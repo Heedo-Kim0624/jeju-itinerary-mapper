@@ -2,18 +2,30 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import ItineraryView from './ItineraryView';
-// Import the specific prop type from the consolidated types file
-import type { ItineraryDisplayWrapperPassedProps } from '@/types/left-panel/index';
+import type { ItineraryDay } from '@/types'; // Assuming ItineraryDay is in @/types
 
-// Props are now directly from the imported interface
-const ItineraryDisplayWrapper: React.FC<ItineraryDisplayWrapperPassedProps> = ({
+interface ItineraryDisplayWrapperProps {
+  itinerary: ItineraryDay[];
+  startDate: Date;
+  onSelectDay: (day: number) => void;
+  selectedDay: number | null;
+  onCloseItinerary: () => void;
+  handleClosePanelWithBackButton: () => void;
+  debug: {
+    itineraryLength: number;
+    selectedDay: number | null;
+    showItinerary: boolean;
+  };
+}
+
+const ItineraryDisplayWrapper: React.FC<ItineraryDisplayWrapperProps> = ({
   itinerary,
   startDate,
   onSelectDay,
   selectedDay,
   onCloseItinerary,
   handleClosePanelWithBackButton,
-  debug, // This is now optional due to ItineraryDisplayWrapperPassedProps definition
+  debug,
 }) => {
   return (
     <div className="fixed top-0 left-0 w-[300px] h-full bg-white border-r border-gray-200 z-[60] shadow-lg">
@@ -32,9 +44,7 @@ const ItineraryDisplayWrapper: React.FC<ItineraryDisplayWrapperPassedProps> = ({
         onSelectDay={onSelectDay}
         selectedDay={selectedDay}
         onClose={onCloseItinerary}
-        // Debug prop for ItineraryView might need to be adjusted or made optional there too
-        // For now, passing it if ItineraryDisplayWrapperProps.debug exists.
-        debug={debug ? { ...debug } : undefined} 
+        debug={debug}
       />
     </div>
   );
