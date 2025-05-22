@@ -1,21 +1,19 @@
 
 import { useCallback } from 'react';
 import { toast } from 'sonner';
-import { CategoryName } from '@/utils/categoryUtils'; // Removed CATEGORY_MAPPING_KO_TO_EN
+// Removed unused CategoryName and CATEGORY_MAPPING_KO_TO_EN
+// import { CategoryName } from '@/utils/categoryUtils';
 
 interface LeftPanelCallbacksProps {
   handleConfirmCategory: (category: string, finalKeywords: string[], clearSelection: boolean) => void;
   handlePanelBack: (category: string) => void;
   handleCloseItinerary: () => void;
-  handleCreateItinerary?: () => Promise<any | null>; // Updated to match useCreateItineraryHandler return
+  handleCreateItinerary?: () => Promise<any | null>;
   setRegionSlidePanelOpen: (open: boolean) => void;
   selectedRegions: string[];
   setRegionConfirmed: (confirmed: boolean) => void;
 }
 
-/**
- * Custom hook to manage callback functions for the LeftPanel
- */
 export const useLeftPanelCallbacks = ({
   handleConfirmCategory,
   handlePanelBack,
@@ -25,25 +23,15 @@ export const useLeftPanelCallbacks = ({
   selectedRegions,
   setRegionConfirmed,
 }: LeftPanelCallbacksProps) => {
-  // Handler for closing panel with back button
   const handleClosePanelWithBackButton = useCallback(() => {
-    console.log("[LeftPanel] '뒤로' 버튼으로 패널 닫기 실행");
+    // console.log("[LeftPanel] '뒤로' 버튼으로 패널 닫기 실행"); // Debug log removed
     handleCloseItinerary();
   }, [handleCloseItinerary]);
 
-  // General handler for category panel back button (kept for other potential uses)
-  const handlePanelBackByCategory = useCallback((category: string) => {
-    console.log(`${category} 카테고리 패널 뒤로가기`);
-    handlePanelBack(category);
-  }, [handlePanelBack]);
+  // Removed handlePanelBackByCategory as handlePanelBackCallbacks is used
 
-  // General handler for category keyword selection confirmation (kept for other potential uses)
-  const handleConfirmCategoryKeywordSelection = useCallback((category: CategoryName, finalKeywords: string[]) => {
-    console.log(`[LeftPanel] 카테고리 '${category}' 키워드 확인: ${finalKeywords.join(', ')}`);
-    handleConfirmCategory(category, finalKeywords, true);
-    return true; 
-  }, [handleConfirmCategory]);
-  
+  // Removed handleConfirmCategoryKeywordSelection as onConfirmCategoryCallbacks is used
+
   const onConfirmCategoryCallbacks = {
     accomodation: (finalKeywords: string[]) => handleConfirmCategory('숙소', finalKeywords, true),
     landmark: (finalKeywords: string[]) => handleConfirmCategory('관광지', finalKeywords, true),
@@ -58,26 +46,25 @@ export const useLeftPanelCallbacks = ({
     cafe: () => handlePanelBack('카페'),
   };
 
-  // Handler for initiating itinerary creation with loading state
   const handleCreateItineraryWithLoading = useCallback(() => {
-    console.log("[LeftPanel] 일정 생성 시작 (Hook call)");
+    // console.log("[LeftPanel] 일정 생성 시작 (Hook call)"); // Debug log removed
     
     if (handleCreateItinerary) {
       handleCreateItinerary()
-        .then((result) => { // Added result parameter to match Promise<any | null>
-          console.log("[LeftPanel] handleCreateItinerary Promise 성공. 이벤트 및 hook state 변경 대기 중...", result);
+        .then((result) => {
+          // console.log("[LeftPanel] handleCreateItinerary Promise 성공. 이벤트 및 hook state 변경 대기 중...", result); // Debug log removed
         })
         .catch(error => {
-          console.error("[LeftPanel] 일정 생성 중 오류 (handleCreateItineraryWithLoading의 catch):", error);
+          console.error("[LeftPanel] 일정 생성 중 오류 (handleCreateItineraryWithLoading의 catch):", error); // Kept error log
         });
     } else {
-      console.warn("[LeftPanel] handleCreateItinerary 함수가 제공되지 않았습니다.");
+      // console.warn("[LeftPanel] handleCreateItinerary 함수가 제공되지 않았습니다."); // Debug log removed
+      toast.warn("[LeftPanel] handleCreateItinerary 함수가 제공되지 않았습니다."); // Replaced with toast for user visibility if needed
     }
 
-    return true; 
+    return true;
   }, [handleCreateItinerary]);
 
-  // Handler for region panel confirmation
   const handleRegionConfirm = useCallback(() => {
     setRegionSlidePanelOpen(false);
     if (selectedRegions.length > 0) {
@@ -89,11 +76,11 @@ export const useLeftPanelCallbacks = ({
 
   return {
     handleClosePanelWithBackButton,
-    handlePanelBackByCategory, // Still available if needed elsewhere directly
-    handleConfirmCategoryKeywordSelection, // Still available if needed elsewhere directly
+    // handlePanelBackByCategory, // Removed export
+    // handleConfirmCategoryKeywordSelection, // Removed export
     handleCreateItineraryWithLoading,
     handleRegionConfirm,
-    onConfirmCategoryCallbacks, // Added for LeftPanelProps
-    handlePanelBackCallbacks,   // Added for LeftPanelProps
+    onConfirmCategoryCallbacks,
+    handlePanelBackCallbacks,
   };
 };

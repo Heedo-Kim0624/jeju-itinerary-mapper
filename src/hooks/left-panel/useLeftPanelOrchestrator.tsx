@@ -1,3 +1,4 @@
+
 import { useEffect, useCallback } from 'react';
 import { useLeftPanel } from '@/hooks/use-left-panel';
 import { useScheduleGenerationRunner } from '@/hooks/schedule/useScheduleGenerationRunner';
@@ -8,7 +9,7 @@ import { useAdaptedScheduleGenerator } from '@/hooks/left-panel/useAdaptedSchedu
 import { useItineraryViewDecider } from '@/hooks/left-panel/useItineraryViewDecider';
 import { useEnhancedPanelProps } from '@/hooks/left-panel/useEnhancedPanelProps';
 import { toast } from 'sonner';
-import { summarizeItineraryData } from '@/utils/debugUtils';
+// import { summarizeItineraryData } from '@/utils/debugUtils'; // Removed as logs using it are removed
 import type { ItineraryDay, Place, SchedulePayload } from '@/types';
 import type { CategoryName } from '@/utils/categoryUtils';
 
@@ -112,15 +113,15 @@ export const useLeftPanelOrchestrator = () => {
   });
 
   useEffect(() => {
-    console.log("LeftPanelOrchestrator - 일정 관련 상태 변화 감지:", {
-      showItineraryFromHook: uiVisibility.showItinerary,
-      selectedItineraryDayFromHook: itineraryManagement.selectedItineraryDay,
-      itineraryFromHookSummary: summarizeItineraryData(itineraryManagement.itinerary),
-      isCreatingItineraryPanelState: isCreatingFromCustomHook,
-      isRunnerGeneratingState: isRunnerGenerating,
-      isGeneratingFromCoreHook: isGeneratingFromCoreHook,
-      isItineraryCreatedFromHook: itineraryManagement.isItineraryCreated,
-    });
+    // console.log("LeftPanelOrchestrator - 일정 관련 상태 변화 감지:", { // Debug log removed
+    //   showItineraryFromHook: uiVisibility.showItinerary,
+    //   selectedItineraryDayFromHook: itineraryManagement.selectedItineraryDay,
+    //   itineraryFromHookSummary: summarizeItineraryData(itineraryManagement.itinerary),
+    //   isCreatingItineraryPanelState: isCreatingFromCustomHook,
+    //   isRunnerGeneratingState: isRunnerGenerating,
+    //   isGeneratingFromCoreHook: isGeneratingFromCoreHook,
+    //   isItineraryCreatedFromHook: itineraryManagement.isItineraryCreated,
+    // });
   }, [
     uiVisibility.showItinerary,
     itineraryManagement.selectedItineraryDay,
@@ -132,19 +133,19 @@ export const useLeftPanelOrchestrator = () => {
   ]);
 
   useEffect(() => {
-    console.log("LeftPanelOrchestrator - ItineraryView 표시 결정 로직 (from useItineraryViewDecider):", {
-      showItineraryFromItineraryMgmt: itineraryManagement.showItinerary,
-      isItineraryCreatedFromItineraryMgmt: itineraryManagement.isItineraryCreated,
-      isCreatingItineraryPanelState: isCreatingFromCustomHook,
-      isRunnerGeneratingState: isRunnerGenerating,
-      itineraryExists: !!itineraryManagement.itinerary,
-      itineraryLength: itineraryManagement.itinerary?.length || 0,
-      최종결과_shouldShowItineraryView: shouldShowItineraryView,
-    });
+    // console.log("LeftPanelOrchestrator - ItineraryView 표시 결정 로직 (from useItineraryViewDecider):", { // Debug log removed
+    //   showItineraryFromItineraryMgmt: itineraryManagement.showItinerary,
+    //   isItineraryCreatedFromItineraryMgmt: itineraryManagement.isItineraryCreated,
+    //   isCreatingItineraryPanelState: isCreatingFromCustomHook,
+    //   isRunnerGeneratingState: isRunnerGenerating,
+    //   itineraryExists: !!itineraryManagement.itinerary,
+    //   itineraryLength: itineraryManagement.itinerary?.length || 0,
+    //   최종결과_shouldShowItineraryView: shouldShowItineraryView,
+    // });
 
-    if (itineraryManagement.itinerary && itineraryManagement.itinerary.length > 0 && itineraryManagement.itinerary.every(day => day.places.length === 0)) {
-      console.warn("LeftPanelOrchestrator - 일정은 있지만 모든 일자에 장소가 없습니다:", summarizeItineraryData(itineraryManagement.itinerary));
-    }
+    // if (itineraryManagement.itinerary && itineraryManagement.itinerary.length > 0 && itineraryManagement.itinerary.every(day => day.places.length === 0)) { // Debug log removed
+    //   console.warn("LeftPanelOrchestrator - 일정은 있지만 모든 일자에 장소가 없습니다:", summarizeItineraryData(itineraryManagement.itinerary));
+    // }
   }, [
     itineraryManagement.showItinerary,
     itineraryManagement.isItineraryCreated,
@@ -160,14 +161,13 @@ export const useLeftPanelOrchestrator = () => {
       return;
     }
     const result = await createItinerary();
-    if (result) {
-      console.log("[LeftPanelOrchestrator] Itinerary creation process finished via custom hook.");
-    } else {
-      console.log("[LeftPanelOrchestrator] Itinerary creation process did not produce a result or was aborted.");
-    }
+    // if (result) { // Debug log removed
+    //   console.log("[LeftPanelOrchestrator] Itinerary creation process finished via custom hook.");
+    // } else {
+    //   console.log("[LeftPanelOrchestrator] Itinerary creation process did not produce a result or was aborted.");
+    // }
   }, [isActuallyGenerating, createItinerary]);
 
-  // 새로운 훅을 사용하여 향상된 props 생성
   const {
     enhancedItineraryDisplayProps,
     enhancedMainPanelProps,

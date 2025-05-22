@@ -3,91 +3,15 @@ import React from 'react';
 import { ScheduleLoadingIndicator } from './ScheduleLoadingIndicator';
 import ItineraryDisplayWrapper from './ItineraryDisplayWrapper';
 import MainPanelWrapper from './MainPanelWrapper';
-import type { Place, ItineraryDay } from '@/types'; // CategoryName 제거
-import type { CategoryName } from '@/utils/categoryUtils'; // CategoryName 명시적 임포트
-
-// Props for ItineraryDisplayWrapper
-interface ItineraryDisplayWrapperPassedProps {
-  itinerary: ItineraryDay[];
-  startDate: Date;
-  onSelectDay: (day: number) => void;
-  selectedDay: number | null;
-  onCloseItinerary: () => void;
-  handleClosePanelWithBackButton: () => void;
-  debug: {
-    itineraryLength: number;
-    selectedDay: number | null;
-    showItinerary: boolean;
-  };
-}
-
-// Props for MainPanelWrapper
-interface MainPanelWrapperPassedProps {
-  leftPanelContainerProps: {
-    showItinerary: boolean;
-    onSetShowItinerary: (show: boolean) => void;
-    selectedPlaces: Place[];
-    onRemovePlace: (id: string) => void;
-    onViewOnMap: (place: Place) => void;
-    allCategoriesSelected: boolean;
-    dates: {
-      startDate: Date | null;
-      endDate: Date | null;
-      startTime: string;
-      endTime: string;
-    } | null;
-    onCreateItinerary: () => void; 
-    itinerary: ItineraryDay[] | null;
-    selectedItineraryDay: number | null;
-    onSelectDay: (day: number) => void;
-    isGenerating?: boolean;
-  };
-  leftPanelContentProps: {
-    onDateSelect: (dates: { startDate: Date; endDate: Date; startTime: string; endTime: string }) => void;
-    onOpenRegionPanel: () => void;
-    hasSelectedDates: boolean;
-    onCategoryClick: (category: string) => void;
-    regionConfirmed: boolean;
-    categoryStepIndex: number;
-    activeMiddlePanelCategory: CategoryName | null; // 타입을 CategoryName | null로 수정
-    confirmedCategories: string[];
-    selectedKeywordsByCategory: Record<string, string[]>;
-    toggleKeyword: (category: string, keyword: string) => void;
-    directInputValues: {
-      accomodation: string;
-      landmark: string;
-      restaurant: string;
-      cafe: string;
-    };
-    onDirectInputChange: {
-      accomodation: (value: string) => void;
-      landmark: (value: string) => void;
-      restaurant: (value: string) => void;
-      cafe: (value: string) => void;
-    };
-    onConfirmCategoryCallbacks: { 
-      accomodation: (finalKeywords: string[]) => void;
-      landmark: (finalKeywords: string[]) => void;
-      restaurant: (finalKeywords: string[]) => void;
-      cafe: (finalKeywords: string[]) => void;
-    };
-    handlePanelBackCallbacks: { 
-      accomodation: () => void;
-      landmark: () => void;
-      restaurant: () => void;
-      cafe: () => void;
-    };
-    isCategoryButtonEnabled: (category: string) => boolean;
-    isGenerating?: boolean;
-  };
-}
+// Removed local Place, ItineraryDay, CategoryName imports as they are handled in types.ts or indirectly via imported types
+import type { ItineraryDisplayWrapperPassedProps, MainPanelWrapperProps } from './types'; // Import centralized types
 
 
 interface LeftPanelDisplayLogicProps {
   isGenerating: boolean;
   shouldShowItineraryView: boolean;
-  itineraryDisplayProps: ItineraryDisplayWrapperPassedProps | null; 
-  mainPanelProps: MainPanelWrapperPassedProps | null; 
+  itineraryDisplayProps: ItineraryDisplayWrapperPassedProps | null;
+  mainPanelProps: MainPanelWrapperProps | null;
 }
 
 const LeftPanelDisplayLogic: React.FC<LeftPanelDisplayLogicProps> = ({
@@ -115,7 +39,7 @@ const LeftPanelDisplayLogic: React.FC<LeftPanelDisplayLogicProps> = ({
     return <MainPanelWrapper {...mainPanelProps} />;
   }
 
-  return null; 
+  return null;
 };
 
 export default LeftPanelDisplayLogic;
