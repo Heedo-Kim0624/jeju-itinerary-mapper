@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
-import { Place, ItineraryDay } from '@/types'; // @/types에서 가져오도록 변경
+import { Place, ItineraryDay } from '@/types'; 
 import PlaceCart from './PlaceCart';
-import ContainedScheduleViewer from './ContainedScheduleViewer'; // Added
+import ContainedScheduleViewer from './ContainedScheduleViewer'; 
 
 interface LeftPanelContainerProps {
   showItinerary: boolean;
@@ -18,7 +18,7 @@ interface LeftPanelContainerProps {
     startTime: string;
     endTime: string;
   } | null;
-  onCreateItinerary: () => void; // boolean 대신 void로 변경
+  onCreateItinerary: () => void;
   itinerary: ItineraryDay[] | null;
   selectedItineraryDay: number | null;
   onSelectDay: (day: number) => void;
@@ -49,9 +49,10 @@ const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
   
   useEffect(() => {
     const handleForceRerender = () => {
-      console.log("[LeftPanelContainer] forceRerender event received, checking and clearing loading state");
+      console.log("[LeftPanelContainer] forceRerender event received, checking loading state");
       if (localIsGenerating) {
-        // setLocalIsGenerating(false); // Let runner manage its state
+        // 이 부분은 rerender를 강제하는 이벤트이므로 로컬 상태만 업데이트
+        setLocalIsGenerating(false);
       }
     };
     
@@ -66,28 +67,30 @@ const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
     onSetShowItinerary(false);
   };
 
-  useEffect(() => {
-    console.log("[LeftPanelContainer] Itinerary State:", {
-      showItinerary,
-      itineraryLength: itinerary?.length,
-      selectedItineraryDay,
-      isGenerating: localIsGenerating
-    });
-  }, [showItinerary, itinerary, selectedItineraryDay, localIsGenerating]);
+  console.log("[LeftPanelContainer] Rendering with state:", {
+    showItinerary,
+    itineraryLength: itinerary?.length,
+    selectedItineraryDay,
+    isGenerating: localIsGenerating
+  });
 
+  // 일정이 보여지는 상태일 때만 ContainedScheduleViewer를 렌더링
   if (showItinerary && itinerary && itinerary.length > 0) {
     console.log("LeftPanelContainer: Rendering ContainedScheduleViewer");
     return (
-      <ContainedScheduleViewer
-        itinerary={itinerary}
-        selectedItineraryDay={selectedItineraryDay}
-        onSelectDay={onSelectDay}
-        onClose={handleCloseItinerary}
-        startDate={dates?.startDate || new Date()}
-      />
+      <div className="fixed top-0 left-0 w-[300px] h-full bg-white border-r border-gray-200 z-[60] shadow-lg">
+        <ContainedScheduleViewer
+          itinerary={itinerary}
+          selectedItineraryDay={selectedItineraryDay}
+          onSelectDay={onSelectDay}
+          onClose={handleCloseItinerary}
+          startDate={dates?.startDate || new Date()}
+        />
+      </div>
     );
   }
 
+  // 일정이 없거나 보여지지 않는 상태에서는 기본 패널 렌더링
   return (
     <div className="fixed top-0 left-0 w-[300px] h-full bg-white border-l border-r border-gray-200 z-40 shadow-md flex flex-col">
       <div className="flex-1 overflow-auto">

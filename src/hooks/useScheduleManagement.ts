@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { useServerResponseHandler } from '@/hooks/schedule/useServerResponseHandler';
 import { useScheduleStateAndEffects } from '@/hooks/schedule/useScheduleStateAndEffects';
 import { useScheduleGenerationCore } from '@/hooks/schedule/useScheduleGenerationCore';
-import { useMapContext } from '@/components/rightpanel/MapContext'; // 추가: MapContext import
+import { useMapContext } from '@/components/rightpanel/MapContext';
 import { type ItineraryDay, type SelectedPlace } from '@/types/core';
 
 interface ScheduleManagementProps {
@@ -26,7 +26,7 @@ export const useScheduleManagement = ({
   endDatetime
 }: ScheduleManagementProps) => {
   const [isManuallyGenerating, setIsManuallyGenerating] = useState(false);
-  const { clearMarkersAndUiElements } = useMapContext(); // 추가: MapContext에서 clearMarkersAndUiElements 가져오기
+  const { clearMarkersAndUiElements } = useMapContext();
   
   const {
     itinerary,
@@ -65,6 +65,18 @@ export const useScheduleManagement = ({
       return;
     }
 
+    // 선택된 장소가 없는 경우 에러 처리
+    if (selectedPlaces.length === 0) {
+      toast.error("선택된 장소가 없습니다. 장소를 선택해주세요.");
+      return;
+    }
+
+    // 날짜 정보가 없는 경우 에러 처리
+    if (!startDatetime || !endDatetime) {
+      toast.error("여행 날짜와 시간 정보가 올바르지 않습니다.");
+      return;
+    }
+
     // 일정 생성 전에 마커 초기화
     if (clearMarkersAndUiElements) {
       console.log("[useScheduleManagement] 일정 생성 전 지도 마커 초기화");
@@ -99,15 +111,15 @@ export const useScheduleManagement = ({
       
       window.dispatchEvent(event);
       
-      // 10초 후에 자동으로 로딩 상태 해제 (타임아웃 처리)
+      // 30초 후에 자동으로 로딩 상태 해제 (타임아웃 처리)
       setTimeout(() => {
         if (combinedIsLoading) {
-          console.log("[useScheduleManagement] 일정 생성 타임아웃 (10초)");
+          console.log("[useScheduleManagement] 일정 생성 타임아웃 (30초)");
           setIsManuallyGenerating(false);
           setIsLoadingState(false);
           toast.error("일정 생성 시간이 초과되었습니다. 다시 시도해주세요.");
         }
-      }, 10000);
+      }, 30000);
       
     } catch (error) {
       console.error("[useScheduleManagement] 일정 생성 이벤트 발생 중 오류:", error);

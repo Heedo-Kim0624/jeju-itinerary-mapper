@@ -2,7 +2,7 @@
 import { toast } from 'sonner';
 import { SelectedPlace } from '@/types/supabase';
 import { NewServerScheduleResponse, ServerRouteResponse, ItineraryDay } from '@/types/core';
-import { parseServerResponse } from './useScheduleParser'; 
+import { parseServerResponse } from './useServerResponseHandler'; 
 import { updateItineraryWithCoordinates } from './parser-utils/coordinateUtils';
 import { MapContextGeoNode } from './parser-utils/coordinateTypes';
 
@@ -18,7 +18,7 @@ interface ScheduleGenerationCoreProps {
   selectedPlaces: SelectedPlace[];
   startDate: Date;
   geoJsonNodes: MapContextGeoNode[]; 
-  setItinerary: (itinerary: ItineraryDay[]) => void; // ItineraryDay[] 사용
+  setItinerary: (itinerary: ItineraryDay[]) => void;
   setSelectedDay: (day: number | null) => void;
   setServerRoutes: (routes: Record<number, ServerRouteResponse>) => void;
   setIsLoadingState: (loading: boolean) => void;
@@ -40,6 +40,16 @@ export const useScheduleGenerationCore = ({
   // 서버 응답을 처리하는 함수
   const processServerResponse = (serverResponse: NewServerScheduleResponse) => {
     try {
+      // 서버 응답 구조 검증
+      if (!serverResponse || !serverResponse.schedule || !serverResponse.route_summary) {
+        console.error("[useScheduleGenerationCore] 서버 응답에 필수 데이터가 없습니다:", serverResponse);
+        toast.error("서버 응답이 유효하지 않습니다. 다시 시도해 주세요.");
+        triggerItineraryCreatedEvent([], null);
+        return false;
+      }
+      
+      console.log("[useScheduleGenerationCore] 서버 응답 파싱 시작:", serverResponse);
+      
       const parsedItinerary = parseServerResponse(serverResponse, startDate);
       console.log("[useScheduleGenerationCore] 파싱된 일정:", parsedItinerary);
       
@@ -97,6 +107,17 @@ export const useScheduleGenerationCore = ({
     });
     console.log("[useScheduleGenerationCore] 'itineraryCreated' 이벤트 발생");
     window.dispatchEvent(event);
+    
+    // 상태 업데이트가 지연된 경우를 대비한 추가 확인
+    if (itinerary.length > 0) {
+      // 생성에 성공했을 경우 로딩 상태 해제
+      setTimeout(() => {
+        setIsLoadingState(false);
+      }, 100);
+    } else {
+      // 일정이 비어있는 경우 즉시 로딩 상태 해제
+      setIsLoadingState(false);
+    }
     
     // 500ms 후에 강제 렌더링 이벤트 발생
     setTimeout(() => {

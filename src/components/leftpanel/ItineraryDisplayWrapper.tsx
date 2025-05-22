@@ -2,7 +2,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import ItineraryView from './ItineraryView';
-import type { ItineraryDay } from '@/types'; // Assuming ItineraryDay is in @/types
+import type { ItineraryDay } from '@/types'; 
 
 interface ItineraryDisplayWrapperProps {
   itinerary: ItineraryDay[];

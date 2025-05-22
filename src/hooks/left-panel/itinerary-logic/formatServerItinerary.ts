@@ -5,7 +5,7 @@ import {
   ItineraryDay,
   ItineraryPlaceWithTime,
   CategoryName,
-  Place, // Place 타입을 import 합니다.
+  Place,
 } from '@/types/core';
 import { getDateStringMMDD, getDayOfWeekString } from '@/hooks/itinerary/itineraryUtils';
 
@@ -19,7 +19,7 @@ import { getDateStringMMDD, getDayOfWeekString } from '@/hooks/itinerary/itinera
 export const formatServerItinerary = (
   serverResponse: NewServerScheduleResponse,
   tripStartDate: Date,
-  originalSelectedPlaces: Place[] // 추가된 파라미터
+  originalSelectedPlaces: Place[] 
 ): ItineraryDay[] => {
   if (
     !serverResponse ||
@@ -32,13 +32,13 @@ export const formatServerItinerary = (
     return [];
   }
 
-  const dayOfWeekMap: { [key: string]: number } = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
-
   return serverResponse.route_summary.map((summary, index) => {
     const routeDayAbbrev = summary.day.substring(0, 3);
 
     const actualDayDate = new Date(tripStartDate);
     actualDayDate.setDate(tripStartDate.getDate() + index);
+    const dayOfWeek = getDayOfWeekString(actualDayDate);
+    const dateStr = getDateStringMMDD(actualDayDate);
 
     const placeNodeIdsInRoute = summary.interleaved_route
       .filter((_id, idx) => idx % 2 === 0)
@@ -57,41 +57,53 @@ export const formatServerItinerary = (
         );
 
         return {
-          id: item.id?.toString() || originalPlace?.id?.toString() || item.place_name, // ID 우선순위: item.id -> originalPlace.id -> item.place_name
+          id: item.id?.toString() || originalPlace?.id?.toString() || item.place_name,
           name: item.place_name || originalPlace?.name || 'Unknown Place',
           category: (item.place_type || originalPlace?.category || 'unknown') as CategoryName,
-          timeBlock: item.time_block, // 서버 응답의 time_block 사용
-          x: originalPlace?.x ?? 0, // originalPlace에서 x 좌표 가져오기
-          y: originalPlace?.y ?? 0, // originalPlace에서 y 좌표 가져오기
-          address: originalPlace?.address || '', // originalPlace에서 주소 가져오기
-          phone: originalPlace?.phone || '', // originalPlace에서 전화번호 가져오기 (선택적)
-          description: originalPlace?.description || '', // originalPlace에서 설명 가져오기 (선택적)
-          rating: originalPlace?.rating || 0, // originalPlace에서 평점 가져오기 (선택적)
-          image_url: originalPlace?.image_url || '', // originalPlace에서 이미지 URL 가져오기 (선택적)
-          road_address: originalPlace?.road_address || '', // originalPlace에서 도로명 주소 가져오기
-          homepage: originalPlace?.homepage || '', // originalPlace에서 홈페이지 가져오기 (선택적)
-          isSelected: originalPlace?.isSelected || false, // originalPlace에서 선택 상태 가져오기 (선택적)
-          isCandidate: originalPlace?.isCandidate || false, // originalPlace에서 후보 상태 가져오기 (선택적)
-          geoNodeId: originalPlace?.geoNodeId || item.id?.toString() || originalPlace?.id?.toString(), // originalPlace에서 geoNodeId 가져오기
-          // arriveTime, departTime, stayDuration, travelTimeToNext 등은 서버 응답에 없으므로,
-          // 필요하다면 이 단계 또는 후속 단계에서 파생/설정해야 합니다.
+          timeBlock: item.time_block,
+          x: originalPlace?.x ?? 0,
+          y: originalPlace?.y ?? 0,
+          address: originalPlace?.address || '',
+          phone: originalPlace?.phone || '',
+          description: originalPlace?.description || '',
+          rating: originalPlace?.rating || 0,
+          image_url: originalPlace?.image_url || '',
+          road_address: originalPlace?.road_address || '',
+          homepage: originalPlace?.homepage || '',
+          isSelected: originalPlace?.isSelected || false,
+          isCandidate: originalPlace?.isCandidate || false,
+          geoNodeId: originalPlace?.geoNodeId || item.id?.toString() || originalPlace?.id?.toString(),
+          arriveTime: undefined,
+          departTime: undefined,
+          stayDuration: undefined,
+          travelTimeToNext: undefined,
+          isFallback: true,
+          numericDbId: typeof scheduleItem.id === 'number' ? scheduleItem.id : null,
         };
       });
-    
-    const tripDayNumber = index + 1;
+
+    const nodeIds: string[] = [];
+    const linkIds: string[] = [];
+    summary.interleaved_route.forEach((id, i) => {
+      if (i % 2 === 0) {
+        nodeIds.push(String(id));
+      } else {
+        linkIds.push(String(id));
+      }
+    });
 
     return {
-      day: tripDayNumber,
+      day: index + 1,
+      date: dateStr,
+      dayOfWeek: dayOfWeek,
       places: dayPlaces,
-      totalDistance: summary.total_distance_m / 1000,
-      interleaved_route: summary.interleaved_route.map(String),
+      totalDistance: summary.total_distance_m / 1000, // km 단위
       routeData: {
-        nodeIds: placeNodeIdsInRoute,
-        linkIds: summary.interleaved_route.filter((_id, idx) => idx % 2 !== 0).map(String),
+        nodeIds,
+        linkIds,
         segmentRoutes: [],
       },
-      dayOfWeek: getDayOfWeekString(actualDayDate),
-      date: getDateStringMMDD(actualDayDate),
+      interleaved_route: summary.interleaved_route.map(String),
     };
   });
 };
