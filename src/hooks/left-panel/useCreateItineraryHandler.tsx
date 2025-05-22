@@ -1,12 +1,14 @@
+
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
-import type { SchedulePayload, Place, SelectedPlace as CoreSelectedPlace, ItineraryDay, CategoryName } from '@/types/core'; // Use CategoryName from core
-import { summarizeItineraryData } from '@/utils/debugUtils';
+import type { SchedulePayload, Place, SelectedPlace as CoreSelectedPlace, ItineraryDay } from '@/types';
+import { summarizeItineraryData } from '@/utils/debugUtils'; // For logging consistency
+import type { CategoryName } from '@/utils/categoryUtils'; // Added CategoryName import
 
 interface UseCreateItineraryHandlerProps {
   placesManagement: {
-    selectedPlaces: Place[]; // Expect Place[]
-    candidatePlaces: Place[]; // Expect Place[]
+    selectedPlaces: Place[];
+    candidatePlaces: Place[];
   };
   tripDetails: {
     dates?: {
@@ -18,7 +20,7 @@ interface UseCreateItineraryHandlerProps {
   };
   runScheduleGeneration: (
     payload: SchedulePayload,
-    selectedPlaces: CoreSelectedPlace[], // Expects CoreSelectedPlace[]
+    selectedPlaces: CoreSelectedPlace[],
     tripStartDate: Date
   ) => Promise<ItineraryDay[] | null>;
 }
@@ -44,25 +46,34 @@ export const useCreateItineraryHandler = ({
     setIsCreatingItineraryUiLock(true);
     let result: ItineraryDay[] | null = null;
     try {
-      // Convert Place[] to CoreSelectedPlace[] for runScheduleGeneration
       const selectedCorePlaces: CoreSelectedPlace[] = placesManagement.selectedPlaces.map(p => ({
-        ...p, // Spread all properties from Place
-        id: String(p.id), // Ensure ID is string
-        category: p.category as CategoryName, // Cast to CoreCategoryName
-        isSelected: p.isSelected !== undefined ? p.isSelected : true, // Default isSelected
-        isCandidate: p.isCandidate !== undefined ? p.isCandidate : false, // Default isCandidate
+        id: String(p.id),
+        name: p.name,
+        category: p.category as CategoryName, // Cast to CategoryName
+        x: p.x,
+        y: p.y,
+        address: p.address,
+        road_address: p.road_address,
+        phone: p.phone,
+        description: p.description,
+        rating: p.rating,
+        image_url: p.image_url,
+        homepage: p.homepage,
+        geoNodeId: p.geoNodeId,
+        isSelected: p.isSelected !== undefined ? p.isSelected : true,
+        isCandidate: p.isCandidate !== undefined ? p.isCandidate : false,
       }));
 
-      const selectedPlaceIds = new Set(selectedCorePlaces.map(p => String(p.id)));
+      const selectedPlaceIds = new Set(selectedCorePlaces.map(p => String(p.id))); // Ensure string IDs
       const candidateSchedulePlaces = placesManagement.candidatePlaces
         .filter(p => !selectedPlaceIds.has(String(p.id)))
         .map(p => ({ 
-          id: String(p.id), // Ensure ID is string for SchedulePlace
+          id: String(p.id),
           name: p.name 
         }));
 
       const payload: SchedulePayload = {
-        selected_places: selectedCorePlaces.map(p => ({ id: String(p.id), name: p.name })), // Ensure ID is string
+        selected_places: selectedCorePlaces.map(p => ({ id: String(p.id), name: p.name })),
         candidate_places: candidateSchedulePlaces,
         start_datetime: tripDetails.startDatetime!,
         end_datetime: tripDetails.endDatetime!,

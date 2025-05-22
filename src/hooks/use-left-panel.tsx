@@ -1,3 +1,4 @@
+
 import { useEffect, useCallback } from 'react'; // useCallback 추가
 import { useSelectedPlaces } from './use-selected-places';
 import { useTripDetails } from './use-trip-details';
@@ -11,7 +12,7 @@ import { useLeftPanelState } from './left-panel/use-left-panel-state';
 import { useItineraryCreation } from './left-panel/use-itinerary-creation';
 import { useCategoryResultHandlers } from './left-panel/use-category-result-handlers';
 import { useEventListeners } from './left-panel/use-event-listeners';
-import { SchedulePayload, Place, ItineraryDay, CategoryName } from '@/types/core'; // Place, ItineraryDay, CategoryName 임포트 추가
+import { SchedulePayload, Place, ItineraryDay } from '@/types/core'; // Place, ItineraryDay 임포트 추가
 import { toast } from 'sonner'; // toast 임포트 추가
 
 /**
@@ -186,3 +187,4 @@ export const useLeftPanel = () => {
     itineraryReceived: leftPanelState.itineraryReceived,
   };
 };
+

@@ -8,11 +8,11 @@ export type CategoryName = '숙소' | '관광지' | '음식점' | '카페';
 
 // Basic place interface
 export interface Place {
-  id: string; // Ensure id is string
+  id: string;
   name: string;
   address: string;
   phone: string;
-  category: string; // This can be CategoryName or a more general string if places can have other categories
+  category: string;
   description: string;
   rating: number;
   x: number;
@@ -39,15 +39,14 @@ export interface Place {
 
 // Selected place interface
 export interface SelectedPlace extends Place {
-  id: string; // Ensure id is string
-  category: CategoryName; // Use the unified CategoryName
+  category: CategoryName;
   isSelected: boolean;
   isCandidate: boolean;
 }
 
 // Schedule place interface (simplified place data for API requests)
 export interface SchedulePlace {
-  id: string | number; // This can remain as server might send numbers
+  id: number | string;
   name: string;
 }
 
