@@ -1,17 +1,16 @@
 
 import React, { useEffect, useRef } from 'react';
 import { useMapContext } from './MapContext';
-import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/core'; // ItineraryPlaceWithTime for stricter typing if needed
+import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/core';
 import { clearMarkers as clearDrawnMarkers, panToPosition, fitBoundsToPlaces, getMarkerIconOptions, createNaverMarker, createNaverLatLng } from '@/utils/map/mapDrawing';
-// Removed useMapFeatures import as per new logic
 
 interface MapMarkersProps {
   places: Place[];
   selectedPlace: Place | null;
   itinerary: ItineraryDay[] | null;
   selectedDay: number | null;
-  selectedPlaces?: Place[]; // These are "favorited" or "added to cart" places
-  onPlaceClick?: (place: Place | ItineraryPlaceWithTime, index: number) => void; // Allow ItineraryPlaceWithTime
+  selectedPlaces?: Place[]; 
+  onPlaceClick?: (place: Place | ItineraryPlaceWithTime, index: number) => void;
   highlightPlaceId?: string;
 }
 
@@ -25,16 +24,16 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
   highlightPlaceId,
 }) => {
   const { map, isMapInitialized, isNaverLoaded } = useMapContext();
-  const markersRef = useRef<naver.maps.Marker[]>([]); // Be specific with Naver type
+  const markersRef = useRef<naver.maps.Marker[]>([]); // Keep Naver type if declared globally via vite-env.d.ts
   const prevSelectedDayRef = useRef<number | null>(null);
-  const prevItineraryRef = useRef<ItineraryDay[] | null>(null); // Store ref to itinerary itself to detect structural changes
+  const prevItineraryRef = useRef<ItineraryDay[] | null>(null);
 
 
   // 모든 마커 제거 함수
   const clearAllMarkers = () => {
     if (markersRef.current.length > 0) {
       console.log("[MapMarkers] 기존 마커 모두 제거 중:", markersRef.current.length + "개");
-      clearDrawnMarkers(markersRef.current); // Util function expects Marker[]
+      clearDrawnMarkers(markersRef.current); 
       markersRef.current = [];
     }
   };
@@ -45,19 +44,13 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
       return;
     }
 
-    // Determine if a significant change occurred that requires marker regeneration
     const isItineraryStructurallyChanged = prevItineraryRef.current !== itinerary;
     const isDayChanged = selectedDay !== prevSelectedDayRef.current;
-    // Also consider if general places list changed when not in itinerary mode
-    const isPlacesListChanged = !itinerary && places !== (prevItineraryRef.current as any); // A bit hacky way to compare, better to compare length or deep compare if necessary
+    const currentPlacesForComparison = itinerary ? null : places; // Compare general places only if not in itinerary mode
+    const prevPlacesForComparison = prevItineraryRef.current ? null : (markersRef as any)._prevPlacesList;
+    const isPlacesListChanged = !itinerary && currentPlacesForComparison !== prevPlacesForComparison;
 
 
-    // Regenerate markers if:
-    // 1. Itinerary structure changed OR
-    // 2. Selected day changed OR
-    // 3. (Not in itinerary mode) and general places list changed
-    // 4. selectedPlace changed (for highlighting)
-    // 5. highlightPlaceId changed
     if (isItineraryStructurallyChanged || isDayChanged || isPlacesListChanged || selectedPlace !== (markersRef as any)._prevSelectedPlace || highlightPlaceId !== (markersRef as any)._prevHighlightPlaceId ) {
       console.log("[MapMarkers] 변경 감지, 마커 재생성:", {
         isItineraryStructurallyChanged,
@@ -73,9 +66,12 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
       clearAllMarkers();
       
       prevSelectedDayRef.current = selectedDay;
-      prevItineraryRef.current = itinerary; // Store current itinerary for next comparison
+      prevItineraryRef.current = itinerary; 
       (markersRef as any)._prevSelectedPlace = selectedPlace;
       (markersRef as any)._prevHighlightPlaceId = highlightPlaceId;
+      if (!itinerary) {
+        (markersRef as any)._prevPlacesList = places;
+      }
 
 
       let placesToDisplay: (Place | ItineraryPlaceWithTime)[] = [];
@@ -88,7 +84,6 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
           isDisplayingItineraryDay = true;
           console.log(`[MapMarkers] ${selectedDay}일차 일정 장소 ${placesToDisplay.length}개 표시합니다.`);
         } else {
-          // Fallback to general places if day data is empty or not found
            console.log(`[MapMarkers] ${selectedDay}일차 데이터/장소 없음. 일반 장소 표시.`);
           placesToDisplay = places || [];
         }
@@ -108,9 +103,9 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
             console.log("[MapMarkers] 유효한 좌표를 가진 표시할 장소가 없습니다.");
         } else {
             console.log(`[MapMarkers] 유효한 장소 ${validPlacesToDisplay.length}개에 대해 마커 생성 중`);
-            const newMarkers: naver.maps.Marker[] = [];
+            const newMarkers: naver.maps.Marker[] = []; // Keep Naver type
             validPlacesToDisplay.forEach((place, index) => {
-              const position = createNaverLatLng(place.y!, place.x!); // Filtered for non-null
+              const position = createNaverLatLng(place.y!, place.x!); 
               
               const isGloballySelected = selectedPlaces.some(sp => sp.id === place.id);
               const isInfoWindowTarget = selectedPlace?.id === place.id;
@@ -123,15 +118,13 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
                   anchor: new window.naver.maps.Point(14, 14)
                 };
               } else {
-                // Use getMarkerIconOptions for non-itinerary markers
-                // Ensure Place type is passed if getMarkerIconOptions expects it
                 const placeForIcon = place as Place; 
                 iconOptions = getMarkerIconOptions(placeForIcon, isInfoWindowTarget || isGeneralHighlightTarget, isGloballySelected && !isInfoWindowTarget && !isGeneralHighlightTarget, false);
               }
               
               const marker = createNaverMarker(map, position, iconOptions, place.name);
               
-              if (onPlaceClick) {
+              if (onPlaceClick && window.naver && window.naver.maps) { // Check window.naver.maps
                 window.naver.maps.Event.addListener(marker, 'click', () => {
                   console.log(`[MapMarkers] 마커 클릭: ${place.name} (인덱스: ${index})`);
                   onPlaceClick(place, index);
@@ -141,10 +134,9 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
             });
             markersRef.current = newMarkers;
 
-            // Auto-fit bounds logic
             if (isDisplayingItineraryDay && validPlacesToDisplay.length > 0) {
                 console.log("[MapMarkers] 일정 모드: 마커에 맞게 지도 범위 조정");
-                fitBoundsToPlaces(map, validPlacesToDisplay as Place[]); // Cast needed if fitBoundsToPlaces expects Place[]
+                fitBoundsToPlaces(map, validPlacesToDisplay as Place[]);
             } else if (validPlacesToDisplay.length > 0 && !selectedPlace && !highlightPlaceId) {
                 console.log("[MapMarkers] 일반 모드 (선택된 장소/하이라이트 없음): 지도 범위 조정");
                 fitBoundsToPlaces(map, validPlacesToDisplay as Place[]);
@@ -154,7 +146,6 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
         console.log("[MapMarkers] 표시할 장소가 없습니다.");
       }
       
-      // Pan to selectedPlace or highlightedPlace if applicable
       const placeToFocus = selectedPlace || (highlightPlaceId ? placesToDisplay.find(p => p.id === highlightPlaceId) : null);
       if (placeToFocus && placeToFocus.y != null && placeToFocus.x != null) {
         console.log(`[MapMarkers] 특정 장소로 이동: ${placeToFocus.name}`);
@@ -165,7 +156,6 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
       }
     }
 
-    // No cleanup needed on unmount as markers are managed based on props changes
   }, [
     map, isMapInitialized, isNaverLoaded, 
     places, selectedPlace, itinerary, selectedDay, selectedPlaces, 
@@ -176,3 +166,4 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
 };
 
 export default MapMarkers;
+

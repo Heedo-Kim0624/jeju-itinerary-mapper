@@ -3,23 +3,8 @@ import { useState, useCallback } from 'react';
 import type { ServerRouteResponse } from '@/types/schedule'; // Ensure this type is correct
 import type { GeoLink } from '@/components/rightpanel/geojson/GeoJsonTypes'; // Use correct type for GeoLink
 
-
-/**
- * 서버 경로 데이터 관리 훅
- * This hook seems to primarily store raw server route responses.
- * The conversion to GeoJSON features is a utility function that could be part of this hook
- * or a separate utility if it needs access to GeoJSON data context.
- * The user's prompt suggests this hook provides `convertServerRoutesToFeatures`.
- * This function will now depend on `getLinkById` and `isGeoJsonLoaded` from `useGeoJsonState`.
- * However, hooks cannot be called conditionally or inside regular functions.
- * So, `convertServerRoutesToFeatures` needs to be refactored or the `useGeoJsonState`
- * needs to be instantiated at the top level of a component/hook that uses this.
- *
- * For now, I will make `convertServerRoutesToFeatures` accept `getLinkFeatureById` and `isGeoJsonLoaded`
- * as parameters, assuming the calling context (e.g., MapContext or another orchestrator hook)
- * will provide these.
- */
-
+// This interface was defined locally in the original file.
+// It should align with ServerRouteResponse or be used consistently.
 interface ServerRouteDataForDay {
   day: number;
   nodeIds: string[];
@@ -29,10 +14,10 @@ interface ServerRouteDataForDay {
 }
 
 export const useServerRoutes = () => {
-  const [serverRoutesData, setServerRoutesData] = useState<Record<number, ServerRouteDataForDay>>({});
+  const [serverRoutesData, setServerRoutesDataState] = useState<Record<number, ServerRouteDataForDay>>({});
 
   const setDayRouteData = useCallback((day: number, routeData: ServerRouteDataForDay) => {
-    setServerRoutesData(prev => ({
+    setServerRoutesDataState(prev => ({
       ...prev,
       [day]: routeData,
     }));
@@ -40,15 +25,21 @@ export const useServerRoutes = () => {
   }, []);
 
   const clearAllServerRoutes = useCallback(() => {
-    setServerRoutesData({});
+    setServerRoutesDataState({});
     console.log('[useServerRoutes] 모든 서버 경로 데이터가 지워졌습니다.');
   }, []);
+
+  // Function to set all server routes data at once
+  const setAllServerRoutesData = useCallback((
+    newRoutes: Record<number, ServerRouteDataForDay> | ((prevState: Record<number, ServerRouteDataForDay>) => Record<number, ServerRouteDataForDay>)
+  ) => {
+    setServerRoutesDataState(newRoutes);
+    console.log('[useServerRoutes] 모든 서버 경로 데이터가 업데이트 되었습니다.');
+  }, []);
   
-  // This function converts raw link IDs from server data to full GeoLink objects
-  // It needs access to the GeoJSON data (specifically getLinkById).
   const getLinksForRoute = useCallback((
     linkIdsFromRoute: string[],
-    getLinkByIdFunction: (id: string) => GeoLink | undefined,
+    getLinkByIdFunction: (id: string) => GeoLink | undefined, // Ensure GeoLink can be undefined
     geoJsonIsLoaded: boolean
   ): GeoLink[] => {
     if (!geoJsonIsLoaded) {
@@ -80,9 +71,11 @@ export const useServerRoutes = () => {
 
 
   return {
-    serverRoutesData, // Stores Record<dayNumber, ServerRouteDataForDay>
-    setDayRouteData,  // Function to set route data for a specific day
+    serverRoutesData, 
+    setDayRouteData, 
     clearAllServerRoutes,
-    getLinksForRoute, // Utility to get full GeoLink objects for a list of link IDs
+    getLinksForRoute, 
+    setAllServerRoutesData, // Export the new setter
   };
 };
+

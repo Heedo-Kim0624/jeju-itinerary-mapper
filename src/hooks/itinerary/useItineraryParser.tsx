@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { NewServerScheduleResponse, ServerScheduleItem, SchedulePayload } from '@/types/schedule';
+import { NewServerScheduleResponse, ServerScheduleItem, SchedulePayload, SchedulePlace } from '@/types/schedule'; // Added SchedulePlace
 import { ItineraryDay, ItineraryPlaceWithTime, SelectedPlace as CoreSelectedPlace, Place } from '@/types/core';
 import { mergeScheduleItems } from './parser-utils/mergeScheduleItems'; // Keep if used for grouping
 
@@ -36,24 +36,23 @@ const calculateDepartTime = (arriveTime: string, stayDurationMinutes: number): s
 // Adapted from user's prompt
 const processServerScheduleItem = (
   serverItem: ServerScheduleItem,
-  itemIndex: number, // index of the item within its day
-  dayNumber: number, // 1-based day number
-  totalPlacesInDay: number, // total number of places for this day
+  itemIndex: number, 
+  dayNumber: number, 
+  totalPlacesInDay: number,
   lastPayload: SchedulePayload | null,
   currentSelectedPlaces: CoreSelectedPlace[]
 ): ItineraryPlaceWithTime => {
   let placeId: string | number | null = null;
-  let matchedPayloadPlace: Place | CoreSelectedPlace | undefined = undefined;
+  // Correctly type matchedPayloadPlace as SchedulePlace from the payload
+  let matchedPayloadPlace: SchedulePlace | undefined = undefined; 
 
   if (lastPayload) {
     const allPayloadPlaces = [...(lastPayload.selected_places || []), ...(lastPayload.candidate_places || [])];
-    // Server might return just name, or name + ID. We prioritize ID from serverItem if available.
-    // If serverItem.id exists, use that. Otherwise, match by name.
     if (serverItem.id) {
         matchedPayloadPlace = allPayloadPlaces.find(p => String(p.id) === String(serverItem.id));
         if (matchedPayloadPlace) placeId = matchedPayloadPlace.id;
     }
-    if (!matchedPayloadPlace) { // If no match by serverItem.id or serverItem.id is missing
+    if (!matchedPayloadPlace && serverItem.place_name) { 
         matchedPayloadPlace = allPayloadPlaces.find(p => p.name === serverItem.place_name);
         if (matchedPayloadPlace) placeId = matchedPayloadPlace.id;
     }
@@ -64,8 +63,8 @@ const processServerScheduleItem = (
   }
 
   const isAirport = serverItem.place_name === "제주국제공항" ||
-                    serverItem.place_name.includes("제주공항") ||
-                    serverItem.place_name.includes("제주 국제공항");
+                    (serverItem.place_name && serverItem.place_name.includes("제주공항")) || // Check for null place_name
+                    (serverItem.place_name && serverItem.place_name.includes("제주 국제공항"));
 
   if (isAirport) {
     const isFirstOrLastPlace = (itemIndex === 0 || itemIndex === totalPlacesInDay - 1);
@@ -74,36 +73,35 @@ const processServerScheduleItem = (
       return {
         id: String(placeId || `airport_${itemIndex}_${dayNumber}`),
         name: "제주국제공항",
-        category: "교통", // More specific category
+        category: "교통", 
         x: 126.4891647,
         y: 33.510418,
         address: "제주특별자치도 제주시 공항로 2",
         road_address: "제주특별자치도 제주시 공항로 2",
         phone: "064-797-2114",
         description: "제주도의 관문 국제공항",
-        rating: 4.0, // Example rating
-        image_url: "", // Placeholder
+        rating: 4.0, 
+        image_url: "", 
         homepage: "https://www.airport.co.kr/jeju/",
         timeBlock: serverItem.time_block,
         arriveTime: extractTimeFromTimeBlock(serverItem.time_block),
-        departTime: calculateDepartTime(extractTimeFromTimeBlock(serverItem.time_block), 60), // Default 60 min stay
+        // Use default 60 min stay, as stay_time_minutes is not on ServerScheduleItem
+        departTime: calculateDepartTime(extractTimeFromTimeBlock(serverItem.time_block), 60), 
         stayDuration: 60,
-        travelTimeToNext: "N/A", // Usually no travel time from/to airport within scheduler context
-        isFallback: false, // Not a fallback since it's explicitly handled
+        travelTimeToNext: "N/A", 
+        isFallback: false, 
       };
     }
   }
 
   let placeDetails: CoreSelectedPlace | undefined = undefined;
   if (placeId) {
-    // Find full details from currentSelectedPlaces using the ID derived from payload
     placeDetails = currentSelectedPlaces.find(p => String(p.id) === String(placeId));
   }
 
 
   if (placeDetails) {
     return {
-      // Ensure all required fields for ItineraryPlaceWithTime are present
       id: String(placeDetails.id),
       name: placeDetails.name,
       category: placeDetails.category || mapServerTypeToCategory(serverItem.place_type || '기타'),
@@ -118,18 +116,19 @@ const processServerScheduleItem = (
       homepage: placeDetails.homepage || '',
       timeBlock: serverItem.time_block,
       arriveTime: extractTimeFromTimeBlock(serverItem.time_block),
-      departTime: calculateDepartTime(extractTimeFromTimeBlock(serverItem.time_block), serverItem.stay_time_minutes || 60),
-      stayDuration: serverItem.stay_time_minutes || 60,
-      travelTimeToNext: "15분", // Placeholder
+      // Use default 60 min stay
+      departTime: calculateDepartTime(extractTimeFromTimeBlock(serverItem.time_block), 60),
+      stayDuration: 60,
+      travelTimeToNext: "15분", 
       isFallback: false,
-      geoNodeId: placeDetails.geoNodeId, // Retain geoNodeId if present
+      geoNodeId: placeDetails.geoNodeId, 
     };
   }
 
   console.warn(`[useItineraryParser] 장소 "${serverItem.place_name}"에 대한 상세 정보를 찾을 수 없습니다. 기본값을 사용합니다.`);
   return {
-    id: String(serverItem.id || `fallback_${serverItem.place_name.replace(/\s+/g, '_')}_${itemIndex}_${dayNumber}`),
-    name: serverItem.place_name,
+    id: String(serverItem.id || `fallback_${(serverItem.place_name || 'unknown').replace(/\s+/g, '_')}_${itemIndex}_${dayNumber}`),
+    name: serverItem.place_name || '정보 없음',
     category: mapServerTypeToCategory(serverItem.place_type || '기타'),
     x: 126.5, 
     y: 33.4,  
@@ -142,9 +141,10 @@ const processServerScheduleItem = (
     homepage: '',
     timeBlock: serverItem.time_block,
     arriveTime: extractTimeFromTimeBlock(serverItem.time_block),
-    departTime: calculateDepartTime(extractTimeFromTimeBlock(serverItem.time_block), serverItem.stay_time_minutes || 60),
-    stayDuration: serverItem.stay_time_minutes || 60,
-    travelTimeToNext: "15분", // Placeholder
+    // Use default 60 min stay
+    departTime: calculateDepartTime(extractTimeFromTimeBlock(serverItem.time_block), 60),
+    stayDuration: 60,
+    travelTimeToNext: "15분", 
     isFallback: true,
   };
 };
@@ -166,9 +166,9 @@ export const useItineraryParser = () => {
 
   const parseServerResponse = useCallback((
     serverResponse: NewServerScheduleResponse,
-    currentSelectedPlaces: CoreSelectedPlace[] = [], // Already available
+    currentSelectedPlaces: CoreSelectedPlace[] = [],
     tripStartDate: Date | null = null,
-    lastPayload: SchedulePayload | null = null // New parameter
+    lastPayload: SchedulePayload | null = null 
   ): ItineraryDay[] => {
     console.log('[useItineraryParser] 서버 응답 파싱 시작:', {
       schedule_items: serverResponse.schedule?.length || 0,
@@ -183,11 +183,9 @@ export const useItineraryParser = () => {
       return [];
     }
 
-    // Removed mappedPlaceById and mappedPlaceByName as new logic uses lastPayload and currentSelectedPlaces directly
-
     const scheduleByDay = new Map<string, ServerScheduleItem[]>();
     serverResponse.schedule.forEach(item => {
-      const dayKey = item.time_block.split('_')[0]; // e.g., "Mon", "Tue"
+      const dayKey = item.time_block.split('_')[0]; 
       if (!scheduleByDay.has(dayKey)) {
         scheduleByDay.set(dayKey, []);
       }
@@ -196,42 +194,32 @@ export const useItineraryParser = () => {
 
     const routeByDay = new Map<string, any>();
     serverResponse.route_summary.forEach(route => {
-      routeByDay.set(route.day, route); // Assuming route_summary item has a 'day' property like "Mon", "Tue"
+      routeByDay.set(route.day, route); 
     });
 
     const dayMapping: Record<string, number> = {};
-    // Ensure days are sorted chronologically if not already
     const sortedDayKeys = [...scheduleByDay.keys()].sort((a, b) => {
       const dayOrder = { 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6, 'Sun': 7 };
       return (dayOrder[a as keyof typeof dayOrder] || 8) - (dayOrder[b as keyof typeof dayOrder] || 8);
     });
     
     sortedDayKeys.forEach((dayKey, index) => {
-      dayMapping[dayKey] = index + 1; // 1-based day number
+      dayMapping[dayKey] = index + 1; 
     });
 
     console.log('[useItineraryParser] 요일 -> 일차 매핑:', dayMapping);
 
     const result: ItineraryDay[] = sortedDayKeys.map((dayOfWeekKey) => {
       const dayItemsOriginal = scheduleByDay.get(dayOfWeekKey) || [];
-      const routeInfo = routeByDay.get(dayOfWeekKey); // Get route info by dayKey "Mon", "Tue" etc.
-      const dayNumber = dayMapping[dayOfWeekKey]; // 1-based day number
-
-      // mergeScheduleItems groups consecutive items for the same place.
-      // If a place appears multiple times consecutively (e.g. for lunch and then a break),
-      // it will be one group. `processServerScheduleItem` is designed for one server item.
-      // So we iterate over original items, or if mergeScheduleItems is crucial,
-      // adapt `processServerScheduleItem` to handle a group.
-      // For now, let's iterate over original items.
-      // const mergedDayItems = mergeScheduleItems(dayItemsOriginal);
+      const routeInfo = routeByDay.get(dayOfWeekKey); 
+      const dayNumber = dayMapping[dayOfWeekKey];
       
-      // Using dayItemsOriginal directly with the new processServerScheduleItem
       const places: ItineraryPlaceWithTime[] = dayItemsOriginal.map((item, itemIndex) => {
         return processServerScheduleItem(
           item,
           itemIndex,
           dayNumber,
-          dayItemsOriginal.length, // total places for this day
+          dayItemsOriginal.length,
           lastPayload,
           currentSelectedPlaces
         );
@@ -244,11 +232,11 @@ export const useItineraryParser = () => {
       if (routeInfo && routeInfo.interleaved_route) {
         routeInfo.interleaved_route.forEach((id: number | string) => { 
           const idStr = String(id);
-          interleaved_route.push(idStr); // Keep original type if server sends mixed types and downstream handles it
-          // This simple even/odd check for nodes/links might be too naive if interleaved_route is complex
-          if (interleaved_route.length % 2 !== 0) { // Assuming nodes are at odd positions (1st, 3rd, ..)
+          interleaved_route.push(idStr); 
+          // This logic might need refinement based on actual interleaved_route structure
+          if (interleaved_route.length % 2 !== 0 || typeof id === 'string' && id.startsWith('N')) { // Simple heuristic
             nodeIds.push(idStr);
-          } else { // Assuming links are at even positions (2nd, 4th, ..)
+          } else {
             linkIds.push(idStr);
           }
         });
@@ -265,22 +253,22 @@ export const useItineraryParser = () => {
         routeData: {
           nodeIds: nodeIds,
           linkIds: linkIds,
-          segmentRoutes: routeInfo?.segment_routes || [] // Assuming segment_routes might exist
+          segmentRoutes: routeInfo?.segment_routes || [] 
         },
-        interleaved_route: interleaved_route
+        interleaved_route: interleaved_route // Store the processed interleaved_route
       };
     });
     
     const totalPlaces = result.reduce((sum, day) => sum + day.places.length, 0);
     const placesWithDefaultCoords = result.reduce((sum, day) => 
       sum + day.places.filter(p => p.isFallback && p.x === 126.5 && p.y === 33.4).length, 0
-    ); // check for fallback AND default coords
+    );
     
     console.log('[useItineraryParser] 파싱 완료된 일정:', {
       일수: result.length,
       각일자별장소수: result.map(day => day.places.length),
       총장소수: totalPlaces,
-      기본값사용장소수: placesWithDefaultCoords, // Updated name
+      기본값사용장소수: placesWithDefaultCoords,
     });
 
     if (placesWithDefaultCoords > 0) {

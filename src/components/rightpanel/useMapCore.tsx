@@ -1,14 +1,11 @@
-
 import { useMapInitialization } from '@/hooks/map/useMapInitialization';
 import { useMapNavigation } from '@/hooks/map/useMapNavigation';
-// import { useMapMarkers } from '@/hooks/map/useMapMarkers'; // Deprecated
-// import { useMapItineraryRouting } from '@/hooks/map/useMapItineraryRouting'; // Older
-import { useGeoJsonState } from '@/hooks/map/useGeoJsonState';
+import { useGeoJsonState as useAppGeoJsonState } from '@/hooks/map/useGeoJsonState'; // Renamed to avoid conflict
 import { useServerRoutes } from '@/hooks/map/useServerRoutes';
 import { useMapFeatures } from '@/hooks/map/useMapFeatures';
-import { Place, ItineraryDay } from '@/types/supabase';
-import { ServerRouteResponse, SegmentRoute } from '@/types/schedule'; // SegmentRoute 추가
-import { useCallback } from 'react'; // useState, useEffect 제거, useCallback만 사용
+import type { Place, ItineraryDay } from '@/types/supabase'; // Supabase was an example, ensure it's the correct core Place type
+import type { ServerRouteResponse, SegmentRoute } from '@/types/schedule';
+import { useCallback } from 'react';
 
 /**
  * 지도 핵심 기능 통합 훅
@@ -18,11 +15,10 @@ const useMapCore = () => {
     map, 
     mapContainer, 
     isMapInitialized, 
-    isNaverLoaded, // isNaverLoaded를 여기서 가져옴
+    isNaverLoaded,
     isMapError
   } = useMapInitialization();
   
-  // useMapFeatures에 isNaverLoaded 전달
   const features = useMapFeatures(map, isNaverLoaded); 
 
   const { 
@@ -33,56 +29,46 @@ const useMapCore = () => {
     panTo 
   } = useMapNavigation(map);
 
-  // GeoJsonState에서 필요한 값들 가져오기
-  const geoJsonHookState = useGeoJsonState();
-  const { showGeoJson, toggleGeoJsonVisibility } = geoJsonHookState; // setShowGeoJson 직접 가져오지 않음
+  const appGeoJsonHookState = useAppGeoJsonState(); // Use renamed hook
+  const { showGeoJson, toggleGeoJsonVisibility, handleGeoJsonLoaded: appHandleGeoJsonLoaded } = appGeoJsonHookState;
   
-  // setShowGeoJson 함수 생성 (useCallback 사용)
   const setShowGeoJson = useCallback((show: boolean) => {
-    // showGeoJson 상태와 전달된 show 값이 다를 때만 toggleGeoJsonVisibility 호출
-    if (geoJsonHookState.showGeoJson !== show) { // geoJsonHookState.showGeoJson 사용
+    if (appGeoJsonHookState.showGeoJson !== show) {
       toggleGeoJsonVisibility();
     }
-  }, [geoJsonHookState.showGeoJson, toggleGeoJsonVisibility]); // geoJsonHookState.showGeoJson 의존성 추가
+  }, [appGeoJsonHookState.showGeoJson, toggleGeoJsonVisibility]);
 
   const {
     serverRoutesData,
-    setServerRoutes: setServerRoutesBase
+    setAllServerRoutesData // Use the new setter from useServerRoutes
   } = useServerRoutes();
 
-  // setServerRoutes 함수 수정 - 함수형 업데이트 처리
-  const setServerRoutes = (
+  // setServerRoutes 함수 수정
+  const setServerRoutes = useCallback((
     dayRoutes: Record<number, ServerRouteResponse> | 
                ((prevRoutes: Record<number, ServerRouteResponse>) => Record<number, ServerRouteResponse>)
   ) => {
+    // Assuming ServerRouteResponse is compatible with ServerRouteDataForDay
+    // If not, a proper mapping function would be needed here.
     if (typeof dayRoutes === 'function') {
-        // 함수를 먼저 실행하여 결과 객체를 얻음
-        const newRoutes = dayRoutes(serverRoutesData); 
-        // 객체를 전달
-        setServerRoutesBase(
-          newRoutes,
-          showGeoJson, 
-          setShowGeoJson
-        );
+        setAllServerRoutesData(prev => dayRoutes(prev as any) as any);
     } else {
-        // 객체를 직접 전달
-        setServerRoutesBase(
-          dayRoutes,
-          showGeoJson, 
-          setShowGeoJson
-        );
+        setAllServerRoutesData(dayRoutes as any);
     }
-  };
+    // Logic to show GeoJSON if routes are set (example)
+    // if (Object.keys(dayRoutes).length > 0 && !showGeoJson) {
+    //   setShowGeoJson(true);
+    // }
+  }, [setAllServerRoutesData /*, showGeoJson, setShowGeoJson */ ]); // Dependencies updated
   
   const renderItineraryRouteWrapper = ( 
     itineraryDay: ItineraryDay | null,
     allServerRoutesInput?: Record<number, ServerRouteResponse>, 
     onCompleteInput?: () => void 
   ) => {
-    // 수정: features.renderItineraryRoute 호출 시 모든 인자 전달
     features.renderItineraryRoute(
         itineraryDay,
-        allServerRoutesInput ?? serverRoutesData, 
+        allServerRoutesInput ?? (serverRoutesData as any), // Cast if types differ
         onCompleteInput 
     );
   };
@@ -92,7 +78,6 @@ const useMapCore = () => {
     itineraryDay: ItineraryDay,
     onComplete?: () => void 
   ) => {
-    // 수정: features.showRouteForPlaceIndex 호출 시 모든 인자 전달
     features.showRouteForPlaceIndex(
         placeIndex, 
         itineraryDay, 
@@ -120,24 +105,24 @@ const useMapCore = () => {
     isNaverLoaded,
     isMapError,
     addMarkers: features.addMarkers,
-    calculateRoutes: calculateRoutesWrapper,
+    calculateRoutes: features.calculateRoutes, // Direct pass
     clearMarkersAndUiElements,
     panTo,
-    showGeoJson: geoJsonHookState.showGeoJson, // Correctly expose showGeoJson from the hook state
-    toggleGeoJsonVisibility: geoJsonHookState.toggleGeoJsonVisibility, // Correctly expose toggle
-    isGeoJsonLoaded: geoJsonHookState.isGeoJsonLoaded,
-    geoJsonNodes: geoJsonHookState.geoJsonNodes,
-    geoJsonLinks: geoJsonHookState.geoJsonLinks,
-    handleGeoJsonLoaded: geoJsonHookState.handleGeoJsonLoaded,
-    checkGeoJsonMapping: geoJsonHookState.checkGeoJsonMapping,
+    showGeoJson: appGeoJsonHookState.showGeoJson,
+    toggleGeoJsonVisibility: appGeoJsonHookState.toggleGeoJsonVisibility,
+    isGeoJsonLoaded: appGeoJsonHookState.isGeoJsonLoaded,
+    geoJsonNodes: appGeoJsonHookState.geoJsonNodes,
+    geoJsonLinks: appGeoJsonHookState.geoJsonLinks,
+    handleGeoJsonLoaded: appHandleGeoJsonLoaded, // Pass through the app-level GeoJSON loaded handler
+    checkGeoJsonMapping: appGeoJsonHookState.checkGeoJsonMapping,
     mapPlacesWithGeoNodes: features.mapPlacesWithGeoNodes,
     renderItineraryRoute: renderItineraryRouteWrapper, 
     clearAllRoutes: features.clearAllRoutes,
-    highlightSegment: highlightSegmentWrapper, 
+    highlightSegment: features.highlightSegment, // Direct pass
     clearPreviousHighlightedPath: features.clearPreviousHighlightedPath,
-    showRouteForPlaceIndex: showRouteForPlaceIndexWrapper, 
-    renderGeoJsonRoute: renderGeoJsonRouteWrapper,
-    serverRoutesData,
+    showRouteForPlaceIndex: features.showRouteForPlaceIndex, // Direct pass
+    renderGeoJsonRoute: features.renderGeoJsonRoute, // Direct pass
+    serverRoutesData: serverRoutesData as any, // Cast if types differ
     setServerRoutes
   };
 };

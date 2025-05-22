@@ -1,7 +1,7 @@
 
 import { useEffect } from 'react';
 import { toast } from 'sonner';
-import useGeoJsonState from './geojson/useGeoJsonState';
+import useGeoJsonState from './geojson/useGeoJsonState'; // This is src/components/rightpanel/geojson/useGeoJsonState
 import GeoJsonLoader from './geojson/GeoJsonLoader';
 import GeoJsonRenderer from './geojson/GeoJsonRenderer';
 import { GeoJsonLayerProps } from './geojson/GeoJsonTypes';
@@ -13,17 +13,17 @@ const GeoJsonLayer: React.FC<GeoJsonLayerProps> = ({
   isNaverLoaded,
   onGeoJsonLoaded
 }) => {
-  // GeoJSON 상태 관리 훅 사용
+  // GeoJSON 상태 관리 훅 사용 (from ./geojson/useGeoJsonState)
   const {
     isLoading,
     error,
     isLoaded,
     nodes,
     links,
-    handleLoadSuccess,
-    handleLoadError,
-    handleDisplayedFeaturesChange,
-    registerGlobalInterface
+    handleLoadSuccess, // This is passed to GeoJsonLoader
+    handleLoadError,   // This is passed to GeoJsonLoader
+    // handleDisplayedFeaturesChange, // Removed
+    // registerGlobalInterface // Removed, handled internally by the hook
   } = useGeoJsonState(map);
 
   // 데이터 로드 성공 시 콜백 호출
@@ -33,12 +33,12 @@ const GeoJsonLayer: React.FC<GeoJsonLayerProps> = ({
     }
   }, [isLoaded, nodes, links, onGeoJsonLoaded]);
   
-  // 전역 인터페이스 등록
-  useEffect(() => {
-    if (isMapInitialized && isNaverLoaded && isLoaded) {
-      return registerGlobalInterface();
-    }
-  }, [isMapInitialized, isNaverLoaded, isLoaded, registerGlobalInterface]);
+  // 전역 인터페이스 등록은 useGeoJsonState 내부의 useEffect에서 처리됩니다.
+  // useEffect(() => {
+  //   if (isMapInitialized && isNaverLoaded && isLoaded) {
+  //     return registerGlobalInterface(); // Removed
+  //   }
+  // }, [isMapInitialized, isNaverLoaded, isLoaded, registerGlobalInterface]);
 
   return (
     <>
@@ -47,24 +47,24 @@ const GeoJsonLayer: React.FC<GeoJsonLayerProps> = ({
         <GeoJsonLoader
           isMapInitialized={isMapInitialized}
           isNaverLoaded={isNaverLoaded}
-          onLoadSuccess={(nodes, links) => {
-            handleLoadSuccess(nodes, links);
+          onLoadSuccess={(loadedNodes, loadedLinks) => { // Renamed for clarity from original context
+            handleLoadSuccess(loadedNodes, loadedLinks); // Call the function from the hook
             if (visible) {
               toast.success('경로 데이터가 로드되었습니다.');
             }
           }}
-          onLoadError={handleLoadError}
+          onLoadError={handleLoadError} // Call the function from the hook
         />
       )}
       
       {/* 데이터 렌더러 컴포넌트 */}
-      {isLoaded && (
+      {isLoaded && map && ( // Ensure map is also available for renderer
         <GeoJsonRenderer
           map={map}
           visible={visible}
           nodes={nodes}
           links={links}
-          onDisplayedFeaturesChange={handleDisplayedFeaturesChange}
+          // onDisplayedFeaturesChange={handleDisplayedFeaturesChange} // Removed
         />
       )}
       
@@ -86,3 +86,4 @@ const GeoJsonLayer: React.FC<GeoJsonLayerProps> = ({
 };
 
 export default GeoJsonLayer;
+

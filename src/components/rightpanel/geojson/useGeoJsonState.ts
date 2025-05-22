@@ -1,7 +1,6 @@
-
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Feature, FeatureCollection, Point, LineString } from 'geojson'; // Import specific GeoJSON types
-import { GeoNode, GeoLink, RouteStyle, GeoJsonLayerRef } from './GeoJsonTypes';
+import type { Feature, Point, LineString, Position } from 'geojson'; // Import specific GeoJSON types
+import type { GeoNode, GeoLink, RouteStyle, GeoJsonLayerRef } from './GeoJsonTypes';
 
 
 // 기본 경로 스타일 정의
@@ -82,7 +81,7 @@ const useGeoJsonState = (map: naver.maps.Map | null) => { // map can be null ini
     return link;
   }, []);
   
-  const renderRoute = useCallback((nodeIds: string[], linkIds: string[], style: RouteStyle = defaultRouteStyle): any[] => {
+  const renderRoute = useCallback((nodeIds: string[], linkIds: string[], style: RouteStyle = defaultRouteStyle): (naver.maps.Marker | naver.maps.Polyline)[] => {
     if (!map || !isLoaded || !window.naver || !window.naver.maps) {
       console.warn('[useGeoJsonState] renderRoute: 지도 미초기화, GeoJSON 미로드, 또는 Naver API 미준비.');
       return [];
@@ -96,14 +95,15 @@ const useGeoJsonState = (map: naver.maps.Map | null) => { // map can be null ini
 
     linkIds.forEach(linkId => {
       const link = getLinkById(String(linkId)); // Ensure linkId is string
-      if (!link || !link.coordinates || link.coordinates.length < 2) {
-        console.warn(`[useGeoJsonState] 링크 ID ${linkId}를 찾을 수 없거나 좌표가 유효하지 않습니다.`);
+      // GeoLink.coordinates is number[][] which is Position[]
+      if (!link || !link.coordinates || !Array.isArray(link.coordinates) || link.coordinates.length < 2) {
+        console.warn(`[useGeoJsonState] 링크 ID ${linkId}를 찾을 수 없거나 좌표가 유효하지 않습니다. Coordinates:`, link?.coordinates);
         return;
       }
       
       try {
-        const path = link.coordinates.map(coord => 
-          new window.naver.maps.LatLng(coord[1], coord[0]) // GeoJSON is [lng, lat]
+        const path = link.coordinates.map((coord: number[]) =>  // coord is [lng, lat]
+          new window.naver.maps.LatLng(coord[1], coord[0]) 
         );
         
         const polyline = new window.naver.maps.Polyline({
@@ -124,15 +124,16 @@ const useGeoJsonState = (map: naver.maps.Map | null) => { // map can be null ini
     
     nodeIds.forEach(nodeId => {
       const node = getNodeById(String(nodeId)); // Ensure nodeId is string
-      if (!node || !node.coordinates || node.coordinates.length < 2) {
-        console.warn(`[useGeoJsonState] 노드 ID ${nodeId}를 찾을 수 없거나 좌표가 유효하지 않습니다.`);
+      // GeoNode.coordinates is number[] which is Position
+      if (!node || !node.coordinates || !Array.isArray(node.coordinates) || node.coordinates.length < 2) {
+        console.warn(`[useGeoJsonState] 노드 ID ${nodeId}를 찾을 수 없거나 좌표가 유효하지 않습니다. Coordinates:`, node?.coordinates);
         return;
       }
       
       try {
         const position = new window.naver.maps.LatLng(
-          node.coordinates[1], // GeoJSON is [lng, lat]
-          node.coordinates[0]
+          node.coordinates[1], // GeoJSON is [lng, lat], so node.coordinates[1] is lat
+          node.coordinates[0]  // node.coordinates[0] is lng
         );
         
         const marker = new window.naver.maps.Marker({
@@ -181,9 +182,12 @@ const useGeoJsonState = (map: naver.maps.Map | null) => { // map can be null ini
 
   // Effect to register/cleanup global interface
   useEffect(() => {
-    const cleanupGlobalInterface = registerGlobalInterface();
-    return cleanupGlobalInterface;
-  }, [registerGlobalInterface]);
+    // Only register if map is available, to ensure Naver API context is potentially ready
+    if (map && window.naver && window.naver.maps) {
+      const cleanupGlobalInterface = registerGlobalInterface();
+      return cleanupGlobalInterface;
+    }
+  }, [map, registerGlobalInterface]); // Added map dependency
   
   return {
     isLoading, // For initial data fetch state via GeoJsonLoader

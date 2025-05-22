@@ -18,7 +18,9 @@ interface Window {
   geoJsonLayer?: {
     renderRoute: (nodeIds: string[], linkIds: string[], style?: any) => any[];
     clearDisplayedFeatures: () => void;
-    getNodeById: (id: string) => any;
-    getLinkById: (id: string) => any;
+    getNodeById: (id: string) => any; // Consider using specific GeoNode type
+    getLinkById: (id: string) => any; // Consider using specific GeoLink type
+    isLoaded: () => boolean; // Added isLoaded
   };
 }
+
