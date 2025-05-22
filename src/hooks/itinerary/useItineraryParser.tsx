@@ -1,8 +1,9 @@
 import { useCallback } from 'react';
-import { NewServerScheduleResponse, ServerScheduleItem, SchedulePayload, SchedulePlace } from '@/types/schedule';
+import { NewServerScheduleResponse, ServerScheduleItem, SchedulePayload, PlaceDetails } from '@/types/schedule';
 import { ItineraryDay, ItineraryPlaceWithTime, SelectedPlace as CoreSelectedPlace, Place } from '@/types/core';
 import { mergeScheduleItems } from './parser-utils/mergeScheduleItems';
 import { parseIntId, isSameId } from '@/utils/id-utils';
+import { supabase } from '@/integrations/supabase/client';
 
 // --- Helper Function Stubs (as definitions were not provided) ---
 const mapServerTypeToCategory = (serverType: string): string => {
@@ -52,6 +53,115 @@ const determineFinalId = (originalId: string | number | undefined | null, fallba
   }
   // Fallback: generate a string ID if originalId is null, undefined, or an unexpected type
   return `${fallbackNamePrefix.replace(/\s+/g, '_')}_${itemIndex}_${dayNumber}_gen`;
+};
+
+const mapCategoryToSupabaseTable = (category: string): string | null => {
+  switch (category) {
+    case '숙소': return 'accommodation_information';
+    case '카페': return 'cafe_information';
+    case '관광지': return 'landmark_information';
+    case '음식점': return 'restaurant_information';
+    // Add other mappings if necessary. '교통', '기타' might not have corresponding info tables.
+    default: return null;
+  }
+};
+
+const enrichScheduleWithSupabaseDetails = async (itineraryDays: ItineraryDay[]): Promise<ItineraryDay[]> => {
+  console.group('[ENRICH_SCHEDULE_WITH_SUPABASE_DETAILS] Supabase 상세 정보 로딩 시작');
+  
+  const placesToFetchDetailsFor = new Map<number, { place: ItineraryPlaceWithTime, tableName: string }>();
+
+  itineraryDays.forEach(day => {
+    day.places.forEach(place => {
+      // Fetch if it's a fallback OR if we want to always refresh from Supabase (here, only for fallbacks with numeric ID)
+      // And ensure the ID is a number (original DB ID)
+      if (place.isFallback && typeof place.id === 'number') {
+        const tableName = mapCategoryToSupabaseTable(place.category);
+        if (tableName) {
+          placesToFetchDetailsFor.set(place.id, { place, tableName });
+        }
+      }
+    });
+  });
+
+  if (placesToFetchDetailsFor.size === 0) {
+    console.log('Supabase에서 추가로 로드할 상세 정보가 없습니다.');
+    console.groupEnd();
+    return itineraryDays;
+  }
+
+  console.log(`${placesToFetchDetailsFor.size}개 장소에 대한 상세 정보를 Supabase에서 로드합니다.`);
+
+  const allFetches: Promise<any>[] = [];
+  const placesByTable: Record<string, number[]> = {};
+
+  placesToFetchDetailsFor.forEach(({ tableName }, id) => {
+    if (!placesByTable[tableName]) {
+      placesByTable[tableName] = [];
+    }
+    placesByTable[tableName].push(id);
+  });
+
+  const fetchedDetailsById = new Map<number, PlaceDetails>();
+
+  for (const tableName in placesByTable) {
+    const idsToFetch = placesByTable[tableName];
+    if (idsToFetch.length > 0) {
+      console.log(`테이블 '${tableName}'에서 ID ${idsToFetch.join(', ')} 로딩 중...`);
+      const fetchPromise = supabase
+        .from(tableName)
+        .select('id, place_name, road_address, lot_address, latitude, longitude, location') // Adjust columns as needed
+        .in('id', idsToFetch)
+        .then(({ data, error }) => {
+          if (error) {
+            console.error(`테이블 '${tableName}' 정보 로딩 오류:`, error);
+            return;
+          }
+          if (data) {
+            data.forEach((dbRow: any) => {
+              const placeDetail: PlaceDetails = {
+                id: dbRow.id, // Should be number
+                place_name: dbRow.place_name,
+                road_address: dbRow.road_address,
+                lot_address: dbRow.lot_address,
+                latitude: dbRow.latitude,   // y
+                longitude: dbRow.longitude, // x
+                location: dbRow.location,
+              };
+              fetchedDetailsById.set(dbRow.id, placeDetail);
+            });
+          }
+        });
+      allFetches.push(fetchPromise);
+    }
+  }
+
+  await Promise.all(allFetches);
+  console.log('모든 Supabase 정보 로딩 완료. 총', fetchedDetailsById.size, '개 상세 정보 획득.');
+
+  // Update ItineraryPlaceWithTime objects
+  itineraryDays.forEach(day => {
+    day.places.forEach(place => {
+      if (typeof place.id === 'number' && fetchedDetailsById.has(place.id)) {
+        const details = fetchedDetailsById.get(place.id)!;
+        console.log(`ID ${place.id} (${place.name}) 장소 정보 업데이트:`, details);
+        place.details = details;
+        if (details.longitude !== undefined && details.latitude !== undefined) {
+          place.x = details.longitude;
+          place.y = details.latitude;
+        }
+        place.name = details.place_name || place.name; // Update name if different
+        place.address = details.road_address || details.lot_address || place.address;
+        // If road_address exists in details, update place.road_address
+        if (details.road_address) place.road_address = details.road_address;
+        
+        place.isFallback = false; // Details successfully fetched and applied
+      }
+    });
+  });
+  
+  console.groupEnd();
+  return itineraryDays;
 };
 
 // Adapted from user's prompt and existing structure
@@ -167,7 +277,6 @@ const processServerScheduleItem = (
     }
   }
 
-
   if (placeDetails) {
     const result: ItineraryPlaceWithTime = { // Explicitly type
       id: determineFinalId(placeDetails.id, placeDetails.name, itemIndex, dayNumber), 
@@ -187,8 +296,9 @@ const processServerScheduleItem = (
       departTime: calculateDepartTime(extractTimeFromTimeBlock(serverItem.time_block), 60),
       stayDuration: 60, // Default stay duration
       travelTimeToNext: "15분", // Example, should be from route_summary if available
-      isFallback: false,
-      geoNodeId: placeDetails.geoNodeId, 
+      isFallback: false, // Details found from currentSelectedPlaces
+      geoNodeId: placeDetails.geoNodeId,
+      // details field is not populated here, will be done by enrichScheduleWithSupabaseDetails if needed
     };
     console.groupEnd();
     return result;
@@ -213,7 +323,8 @@ const processServerScheduleItem = (
     departTime: calculateDepartTime(extractTimeFromTimeBlock(serverItem.time_block), 60),
     stayDuration: 60,
     travelTimeToNext: "15분", 
-    isFallback: true,
+    isFallback: true, // Mark as fallback, to be potentially enriched by Supabase
+    // details field is not populated here
   };
   console.groupEnd();
   return fallbackResult;
@@ -234,12 +345,12 @@ export const useItineraryParser = () => {
     return `${(targetDate.getMonth() + 1).toString().padStart(2, '0')}/${targetDate.getDate().toString().padStart(2, '0')}`;
   };
 
-  const parseServerResponse = useCallback((
+  const parseServerResponse = useCallback(async ( // Made async
     serverResponse: NewServerScheduleResponse,
     currentSelectedPlaces: CoreSelectedPlace[] = [],
     tripStartDate: Date | null = null,
-    lastPayload: SchedulePayload | null = null // lastPayload 추가
-  ): ItineraryDay[] => {
+    lastPayload: SchedulePayload | null = null
+  ): Promise<ItineraryDay[]> => { // Return Promise
     console.group('[PARSE_SERVER_RESPONSE] 서버 응답 파싱 시작');
     console.log('원본 서버 응답 데이터:', JSON.stringify(serverResponse, null, 2));
     console.log('현재 선택된 장소 (상세정보용) 수:', currentSelectedPlaces.length);
@@ -282,7 +393,7 @@ export const useItineraryParser = () => {
 
     console.log('[useItineraryParser] 요일 -> 일차 매핑:', dayMapping);
 
-    const result: ItineraryDay[] = sortedDayKeys.map((dayOfWeekKey) => {
+    let result: ItineraryDay[] = sortedDayKeys.map((dayOfWeekKey) => {
       const dayItemsOriginal = scheduleByDay.get(dayOfWeekKey) || [];
       const routeInfo = routeByDay.get(dayOfWeekKey); 
       const dayNumber = dayMapping[dayOfWeekKey];
@@ -318,12 +429,11 @@ export const useItineraryParser = () => {
 
       const totalDistance = routeInfo?.total_distance_m ? routeInfo.total_distance_m / 1000 : 0;
 
-
       return {
         day: dayNumber,
         dayOfWeek: dayOfWeekKey,
         date: formatDate(tripStartDate, dayNumber - 1),
-        places: places,
+        places: places, // places array created by processServerScheduleItem
         totalDistance: totalDistance,
         routeData: {
           nodeIds: nodeIds,
@@ -334,6 +444,9 @@ export const useItineraryParser = () => {
       };
     });
     
+    // Enrich with Supabase details
+    result = await enrichScheduleWithSupabaseDetails(result);
+
     const totalPlaces = result.reduce((sum, day) => sum + day.places.length, 0);
     const placesWithDefaultCoords = result.reduce((sum, day) => 
       sum + day.places.filter(p => p.isFallback && p.x === 126.5 && p.y === 33.4).length, 0

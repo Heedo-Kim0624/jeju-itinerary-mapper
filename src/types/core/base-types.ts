@@ -1,59 +1,48 @@
 
 /**
- * Base type definitions for the application
+ * Base types used throughout the application.
  */
 
-// CategoryName type 
-export type CategoryName = '숙소' | '관광지' | '음식점' | '카페';
+// Represents a geographic coordinate.
+export interface Coordinate {
+  x: number; // Longitude
+  y: number; // Latitude
+}
 
-// Basic place interface
-export interface Place {
-  id: string;
+// Represents a generic place.
+export interface Place extends Coordinate {
+  id: string | number; // Changed to string | number
   name: string;
+  category: string; // e.g., 'restaurant', 'attraction', 'cafe', 'accommodation'
   address: string;
+  road_address: string;
   phone: string;
-  category: string;
   description: string;
   rating: number;
-  x: number;
-  y: number;
   image_url: string;
-  road_address: string;
   homepage: string;
-  operationTimeData?: {
-    [key: string]: number;
-  };
-  isSelected?: boolean;
-  isRecommended?: boolean;
-  geoNodeId?: string;
-  geoNodeDistance?: number;
-  weight?: number;
-  isCandidate?: boolean;
-  raw?: any;
-  categoryDetail?: string;
+  
+  // Optional fields
   reviewCount?: number;
+  operationTimeData?: { [key: string]: number }; // e.g. { "Mon_0900": 1 (open), "Mon_1000": 0 (closed)}
+  weight?: number; // For ranking or scoring
+  raw?: any; // Raw data from source if needed
+  categoryDetail?: string; // More specific category, e.g. "Korean BBQ"
   naverLink?: string;
   instaLink?: string;
-  operatingHours?: string;
+  operatingHours?: string; // Formatted operating hours string
+  geoNodeId?: string; // ID of the corresponding node in GeoJSON data (if applicable)
 }
 
-// Selected place interface
+// Represents a place that has been selected by the user, possibly with additional state.
 export interface SelectedPlace extends Place {
-  category: CategoryName;
-  isSelected: boolean;
-  isCandidate: boolean;
+  id: string | number; // Changed to string | number and ensured it's present
+  isSelected?: boolean; // Explicitly for selected places in a list
+  isCandidate?: boolean; // If the place is a candidate (e.g. for itinerary)
 }
 
-// Schedule place interface (simplified place data for API requests)
-export interface SchedulePlace {
-  id: number | string;
-  name: string;
-}
-
-// Trip date and time interface
-export interface TripDateTime {
-  startDate: Date;
-  endDate: Date;
-  startTime: string;
-  endTime: string;
+// Type for storing category keywords and their weights
+export interface CategoryKeywordWeight {
+  category: string; // Main category name (e.g., "음식점")
+  keywords: Array<{ keyword: string; weight: number }>;
 }

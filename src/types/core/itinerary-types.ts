@@ -5,11 +5,26 @@
 import { Place } from './base-types';
 import { RouteData } from './route-data';
 
+// Details fetched from Supabase for a place
+export interface PlaceDetails {
+  id: number; // Supabase ID, always number
+  place_name: string;
+  road_address?: string;
+  lot_address?: string;
+  latitude?: number;  // y
+  longitude?: number; // x
+  location?: string;  // e.g. "제주시", "서귀포시"
+  // Add any other fields fetched from Supabase *_information tables
+  // Example: specific fields from accommodation_information, etc.
+  // phone?: string; // Already in ItineraryPlaceWithTime
+  // homepage?: string; // Already in ItineraryPlaceWithTime
+}
+
 // Place with time information
 export interface ItineraryPlaceWithTime {
-  id: string | number;          // Unique identifier for this itinerary entry (can be original place ID or generated) - CHANGED
+  id: string | number;          // Unique identifier for this itinerary entry (can be original place ID or generated)
   name: string;                 // Name of the place
-  category: string;             // Category of the place (e.g., 'restaurant', 'attraction')
+  category: string;             // Category of the place (e.g., '음식점', '관광지')
   
   timeBlock: string;            // Original time block string from server, or formatted start time. e.g., "Tue_0900" or "09:00"
   arriveTime?: string;          // Formatted arrival time, e.g., "09:00"
@@ -31,20 +46,12 @@ export interface ItineraryPlaceWithTime {
   // For GeoJSON based routing if applicable
   geoNodeId?: string;  // ID of the corresponding node in GeoJSON data
       
-  isFallback?: boolean;         // True if detailed information could not be found and default/server values are used
+  isFallback?: boolean;         // True if detailed information could not be found or was defaulted
+  details?: PlaceDetails;       // Optional: Detailed information fetched from Supabase
   
   // Properties for compatibility with Place selection logic
   isSelected?: boolean;
   isCandidate?: boolean;
-  // Potentially other fields from Place if needed for itinerary specific logic:
-  // reviewCount?: number;
-  // operationTimeData?: { [key: string]: number };
-  // weight?: number;
-  // raw?: any;
-  // categoryDetail?: string;
-  // naverLink?: string;
-  // instaLink?: string;
-  // operatingHours?: string;
 }
 
 // Day itinerary interface
