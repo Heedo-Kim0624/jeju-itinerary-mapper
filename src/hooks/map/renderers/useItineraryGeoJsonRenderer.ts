@@ -1,6 +1,6 @@
 
 import { useCallback } from 'react';
-import type { Place, ItineraryDay } from '@/types/supabase';
+import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/supabase';
 import type { GeoJsonFeature, GeoJsonLinkProperties, GeoCoordinates } from '@/components/rightpanel/geojson/GeoJsonTypes';
 import type { ServerRouteResponse } from '@/types/schedule';
 import { createNaverLatLng } from '@/utils/map/mapSetup';
@@ -15,7 +15,7 @@ interface UseItineraryGeoJsonRendererProps {
   map: any;
   isNaverLoadedParam: boolean;
   geoJsonLinks: GeoJsonFeature[];
-  mapPlacesWithGeoNodesFn: (places: Place[]) => Place[];
+  mapPlacesWithGeoNodesFn: (places: Place[] | ItineraryPlaceWithTime[]) => Place[] | ItineraryPlaceWithTime[];
   addPolyline: (
     pathCoordinates: { lat: number; lng: number }[],
     color: string,
@@ -51,7 +51,8 @@ export const useItineraryGeoJsonRenderer = ({
       if (!itineraryDay || !itineraryDay.routeData || !itineraryDay.routeData.linkIds || itineraryDay.routeData.linkIds.length === 0) {
         console.warn('[ItineraryGeoJsonRenderer] No itinerary day or linkIds to render route.');
         if (itineraryDay && itineraryDay.places && itineraryDay.places.length > 1) {
-            const mappedPlaces = mapPlacesWithGeoNodesFn(itineraryDay.places);
+            // 수정: ItineraryPlaceWithTime[] 타입을 함수에 전달할 수 있도록 타입 호환성 수정
+            const mappedPlaces = mapPlacesWithGeoNodesFn(itineraryDay.places) as Place[];
             const validPlaces = mappedPlaces.filter(p =>
                 typeof p.x === 'number' && typeof p.y === 'number' &&
                 !isNaN(p.x) && !isNaN(p.y)
@@ -119,7 +120,8 @@ export const useItineraryGeoJsonRenderer = ({
             if (naverCoords.length > 0) fitBoundsToCoordinates(map, naverCoords);
           }
         } else if (itineraryDay.places && itineraryDay.places.length > 0) {
-            const mappedPlaces = mapPlacesWithGeoNodesFn(itineraryDay.places);
+            // 수정: ItineraryPlaceWithTime[] 타입을 함수에 전달할 수 있도록 타입 호환성 수정
+            const mappedPlaces = mapPlacesWithGeoNodesFn(itineraryDay.places) as Place[];
             const validPlacesCoords = mappedPlaces
                 .filter(p => typeof p.y === 'number' && typeof p.x === 'number' && !isNaN(p.y) && !isNaN(p.x))
                 .map(p => ({ lat: p.y as number, lng: p.x as number }));

@@ -1,3 +1,4 @@
+
 import { useRef, useEffect } from 'react';
 import { useMapContext } from '../MapContext';
 import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/core';
@@ -176,17 +177,21 @@ export const useMapMarkers = ({
         markersRef.current = newMarkers;
     
         if (validPlacesToDisplay.length > 0) {
-            if (!(selectedPlace || highlightPlaceId)) {
-                console.log("[useMapMarkers] Fitting map bounds to displayed markers.");
-                fitBoundsToPlaces(map, validPlacesToDisplay as Place[]); // fitBoundsToPlaces expects Place[]
-            }
+          if (!(selectedPlace || highlightPlaceId)) {
+            console.log("[useMapMarkers] Fitting map bounds to displayed markers.");
+            fitBoundsToPlaces(map, validPlacesToDisplay as Place[]); // fitBoundsToPlaces expects Place[]
+          }
         }
       }
     } else {
       console.log("[useMapMarkers] No places to display after filtering.");
     }
     
-    const placeToFocus = selectedPlace || (highlightPlaceId !== undefined ? validPlacesToDisplay.find(p => isSameId(p.id, highlightPlaceId)) : null);
+    // 이 부분이 수정되어야 합니다. validPlacesToDisplay는 이 스코프에서 접근할 수 없습니다.
+    // 선택된 장소나 강조 표시할 장소를 기준으로 지도를 이동시키는 코드입니다.
+    const placeToFocus = selectedPlace || (highlightPlaceId !== undefined ? 
+      placesToDisplayOnMap.find(p => isSameId(p.id, highlightPlaceId)) : null);
+      
     if (placeToFocus && placeToFocus.y != null && placeToFocus.x != null) {
       console.log(`[useMapMarkers] Panning to focused place: ${placeToFocus.name}`);
       if (map.getZoom() < 15) map.setZoom(15, true);

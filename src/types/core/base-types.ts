@@ -4,7 +4,7 @@
  */
 
 // CategoryName type 
-export type CategoryName = '숙소' | '관광지' | '음식점' | '카페';
+export type CategoryName = '숙소' | '관광지' | '음식점' | '카페' | '교통';
 
 // Basic place interface
 export interface Place {

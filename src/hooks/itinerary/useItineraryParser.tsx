@@ -1,3 +1,4 @@
+
 import { useCallback } from 'react';
 import { NewServerScheduleResponse, ServerScheduleItem, SchedulePayload, SchedulePlace } from '@/types/schedule';
 import { ItineraryDay, ItineraryPlaceWithTime, SelectedPlace as CoreSelectedPlace, Place } from '@/types/core';
@@ -301,6 +302,7 @@ export const useItineraryParser = () => {
       // ... keep existing code (routeData processing)
       const nodeIds: string[] = [];
       const linkIds: string[] = [];
+      // 수정: interleaved_route 배열을 타입 호환성 문제 없이 처리
       const interleaved_route: (string | number)[] = [];
 
       if (routeInfo && routeInfo.interleaved_route) {
