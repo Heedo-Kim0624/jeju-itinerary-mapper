@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { format } from 'date-fns';
-import { Calendar, Clock, MapPin, Navigation } from 'lucide-react';
+import { Calendar, Clock, MapPin, Navigation, X } from 'lucide-react'; // X 아이콘 추가
 import { ItineraryDay, ItineraryPlaceWithTime } from '@/types/core';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +13,7 @@ interface ScheduleViewerProps {
   onDaySelect: (day: number) => void;
   startDate: Date;
   itineraryDay?: ItineraryDay | null;
+  onClose?: () => void; // onClose 속성 추가
 }
 
 const ScheduleViewer: React.FC<ScheduleViewerProps> = ({ 
@@ -20,11 +21,23 @@ const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
   selectedDay, 
   onDaySelect, 
   startDate, 
-  itineraryDay 
+  itineraryDay,
+  onClose // onClose prop 추가
 }) => {
   if (!schedule || schedule.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-8 text-center">
+        {onClose && (
+          <div className="absolute top-2 right-2">
+            <button 
+              onClick={onClose} 
+              className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+              aria-label="Close"
+            >
+              <X className="h-5 w-5 text-muted-foreground" />
+            </button>
+          </div>
+        )}
         <Calendar className="mb-2 h-6 w-6 text-muted-foreground" />
         <p className="text-sm text-muted-foreground">생성된 일정이 없습니다.</p>
       </div>
@@ -39,6 +52,17 @@ const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
   if (!dayToDisplay) {
     return (
       <div className="flex flex-col items-center justify-center py-8 text-center">
+         {onClose && (
+          <div className="absolute top-2 right-2">
+            <button 
+              onClick={onClose} 
+              className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+              aria-label="Close"
+            >
+              <X className="h-5 w-5 text-muted-foreground" />
+            </button>
+          </div>
+        )}
         <Calendar className="mb-2 h-6 w-6 text-muted-foreground" />
         <p className="text-sm text-muted-foreground">선택된 날짜의 일정이 없습니다.</p>
       </div>
@@ -61,7 +85,18 @@ const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
   const formattedDate = format(dayDate, 'yyyy-MM-dd');
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 p-4 relative">
+      {onClose && (
+        <div className="absolute top-3 right-3">
+          <button 
+            onClick={onClose} 
+            className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+            aria-label="Close schedule viewer"
+          >
+            <X className="h-5 w-5 text-muted-foreground" />
+          </button>
+        </div>
+      )}
       <div className="space-y-2">
         <h3 className="text-lg font-medium tracking-tight">{dayToDisplay.day}일차 ({dayToDisplay.dayOfWeek}) - {formattedDate}</h3>
         <div className="flex items-center text-sm text-muted-foreground">
