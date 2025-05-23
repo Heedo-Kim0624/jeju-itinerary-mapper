@@ -1,15 +1,13 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useMapContext } from './MapContext';
 import MapMarkers from './MapMarkers';
 import MapLoadingOverlay from './MapLoadingOverlay';
 import GeoJsonLayer from './GeoJsonLayer';
 import MapControls from './MapControls';
 import type { Place, ItineraryDay } from '@/types/supabase';
-// Removed toast import as it's handled in the new hook
 import { useMapItineraryVisualization } from '@/hooks/map/useMapItineraryVisualization';
-// Removed import for DaySelectorMapOverlay since we're no longer using it
-import { useMapDataEffects } from '@/hooks/map/useMapDataEffects'; // Import the new hook
+import { useMapDataEffects } from '@/hooks/map/useMapDataEffects';
 
 interface MapProps {
   places: Place[];
@@ -39,10 +37,8 @@ const Map: React.FC<MapProps> = ({
     checkGeoJsonMapping,
     serverRoutesData,
     renderItineraryRoute,
-    // geoJsonNodes and geoJsonLinks are used by useMapItineraryVisualization, not directly here anymore
     geoJsonNodes, 
     geoJsonLinks,
-    // clearAllRoutes // This was not used directly in Map.tsx
   } = useMapContext();
 
   const {
@@ -65,7 +61,16 @@ const Map: React.FC<MapProps> = ({
     selectedDay,
   });
 
-  // All useEffect blocks and handlePlaceClick function have been moved to useMapDataEffects
+  // 마지막으로 선택된 일차 추적
+  const lastSelectedDayRef = React.useRef<number | null>(null);
+
+  // selectedDay가 변경될 때 로그 추적
+  useEffect(() => {
+    if (selectedDay !== lastSelectedDayRef.current) {
+      console.log(`[Map] 선택된 일차가 변경되었습니다: ${lastSelectedDayRef.current} -> ${selectedDay}`);
+      lastSelectedDayRef.current = selectedDay;
+    }
+  }, [selectedDay]);
 
   return (
     <div ref={mapContainer} className="w-full h-full relative flex-grow">
@@ -75,7 +80,8 @@ const Map: React.FC<MapProps> = ({
         itinerary={itinerary}
         selectedDay={selectedDay}
         selectedPlaces={selectedPlaces}
-        onPlaceClick={handlePlaceClick} // Use the handler from the hook
+        onPlaceClick={handlePlaceClick}
+        highlightPlaceId={selectedPlace?.id}
       />
       
       {map && (

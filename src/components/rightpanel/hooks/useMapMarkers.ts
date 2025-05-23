@@ -47,6 +47,15 @@ export const useMapMarkers = ({
       return;
     }
 
+    // 디버깅: 선택된 일차 변경 감지 추가
+    console.log("[useMapMarkers] Selection change check:", {
+      selectedDay,
+      prevSelectedDay: prevSelectedDayRef.current,
+      dayChanged: selectedDay !== prevSelectedDayRef.current,
+      itineraryLength: itinerary?.length,
+      markersCount: markersRef.current.length
+    });
+
     const itineraryChanged = prevItineraryRef.current !== itinerary;
     const dayChanged = selectedDay !== prevSelectedDayRef.current;
     const placesPropChanged = prevPlacesRef.current !== places;
@@ -78,15 +87,7 @@ export const useMapMarkers = ({
 
       // 경로 생성 모드가 아닌 경우에만 마커를 렌더링
       // 일정이 있으면 해당 일정의 마커만 표시, 없으면 기본 마커 표시
-      if (itinerary && itinerary.length > 0) {
-        // 일정이 있을 때의 마커 표시 로직
-        renderMarkers();
-      } else if (places.length > 0 && (!itinerary || itinerary.length === 0)) {
-        // 일정이 없을 때의 기본 마커 표시 로직
-        renderMarkers();
-      } else {
-        console.log("[useMapMarkers] No markers to render - either in itinerary mode with no data or no places available");
-      }
+      renderMarkers();
     }
   }, [
     map, isMapInitialized, isNaverLoaded,
@@ -107,7 +108,9 @@ export const useMapMarkers = ({
         if (currentDayData && currentDayData.places && currentDayData.places.length > 0) {
           placesToDisplay = currentDayData.places;
           isDisplayingItineraryDay = true;
-          console.log(`[useMapMarkers] Displaying itinerary day ${selectedDay}: ${placesToDisplay.length} places.`);
+          console.log(`[useMapMarkers] Displaying itinerary day ${selectedDay}: ${placesToDisplay.length} places with coordinates:`, 
+            placesToDisplay.map(p => ({name: p.name, id: p.id, coords: [p.y, p.x]}))
+          );
         } else {
           console.log(`[useMapMarkers] Itinerary active for day ${selectedDay}, but no places found for this day. No itinerary markers shown.`);
         }

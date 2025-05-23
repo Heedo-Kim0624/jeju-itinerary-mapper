@@ -44,6 +44,9 @@ export const useScheduleStateAndEffects = () => {
     // 현재 선택된 날짜의 일정 데이터 찾기
     const currentDayData = itinerary.find(d => d.day === selectedDay);
     
+    console.log(`[useScheduleStateAndEffects] 선택된 ${selectedDay}일차 경로를 렌더링합니다:`, 
+      currentDayData ? `${currentDayData.places.length} 장소가 있습니다.` : '해당 일차 데이터가 없습니다.');
+    
     if (currentDayData?.interleaved_route) {
       // 모든 경로 지우기
       clearAllRoutes();
@@ -66,6 +69,7 @@ export const useScheduleStateAndEffects = () => {
       renderGeoJsonRoute(routeSegment);
     } else if (currentDayData) {
       console.log(`[useScheduleStateAndEffects] ${selectedDay}일차는 경로 데이터가 없습니다.`);
+      clearAllRoutes();
     } else {
       console.log(`[useScheduleStateAndEffects] ${selectedDay}일차 데이터를 찾을 수 없습니다.`);
       clearAllRoutes();
