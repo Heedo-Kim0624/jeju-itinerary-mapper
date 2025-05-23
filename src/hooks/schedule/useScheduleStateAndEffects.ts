@@ -16,10 +16,8 @@ export const useScheduleStateAndEffects = () => {
   const isLoadingStateRef = useRef(isLoadingState);
   // 이전 선택 일차 추적을 위한 ref
   const prevSelectedDayRef = useRef<number | null>(null);
-  // 이벤트 디스패치 타이머
-  const mapUpdateTimerRef = useRef<NodeJS.Timeout | null>(null);
-  // 이벤트 디스패치 방지 플래그
-  const eventDispatchedRef = useRef<boolean>(false);
+  // 이벤트 디스패치 타임스탬프 추적
+  const lastEventTimeRef = useRef<number>(0);
 
   useEffect(() => {
     isLoadingStateRef.current = isLoadingState;
@@ -32,13 +30,8 @@ export const useScheduleStateAndEffects = () => {
 
   // 일정 선택 핸들러 - 개선된 버전
   const handleSelectDay = useCallback((day: number) => {
-    // 이전에 설정된 타이머 취소
-    if (mapUpdateTimerRef.current) {
-      clearTimeout(mapUpdateTimerRef.current);
-    }
-    
     // 동일한 일차를 다시 선택한 경우 불필요한 처리 방지
-    if (day === prevSelectedDayRef.current && !eventDispatchedRef.current) {
+    if (day === prevSelectedDayRef.current) {
       return;
     }
     
@@ -46,21 +39,17 @@ export const useScheduleStateAndEffects = () => {
     prevSelectedDayRef.current = day;
     setSelectedDay(day);
     
-    // 이벤트 중복 발생 방지 플래그 설정
-    eventDispatchedRef.current = true;
-    
-    // 맵 업데이트를 위한 이벤트 발생 (약간의 지연을 두어 상태 업데이트 완료 보장)
-    mapUpdateTimerRef.current = setTimeout(() => {
+    // 중복 이벤트 발생 방지 (최소 500ms 간격)
+    const now = Date.now();
+    if (now - lastEventTimeRef.current > 500) {
+      lastEventTimeRef.current = now;
+      
+      // 맵 업데이트를 위한 이벤트 발생
       const daySelectedEvent = new CustomEvent('itineraryDaySelected', { 
         detail: { day }
       });
       window.dispatchEvent(daySelectedEvent);
-      
-      // 이벤트 발생 후 플래그 초기화를 위한 추가 타이머
-      setTimeout(() => {
-        eventDispatchedRef.current = false;
-      }, 500);
-    }, 100);
+    }
   }, []);
 
   // 선택된 일정 날짜에 따라 지도에 경로 렌더링
@@ -76,7 +65,7 @@ export const useScheduleStateAndEffects = () => {
     // 현재 선택된 날짜의 일정 데이터 찾기
     const currentDayData = itinerary.find(d => d.day === selectedDay);
     
-    // 모든 경로 지우기 (항상 경로를 지우고 다시 그림)
+    // 모든 경로 지우기
     clearAllRoutes();
     
     if (currentDayData?.interleaved_route) {

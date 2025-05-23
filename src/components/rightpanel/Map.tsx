@@ -69,21 +69,26 @@ const Map: React.FC<MapProps> = ({
     selectedDay,
   });
 
-  // 일정 및 선택된 일자가 변경되면 로그 기록
+  // 일정 및 선택된 일자가 변경되면 경로 렌더링
   useEffect(() => {
-    if (itinerary && selectedDay !== null && currentDayData) {
-      // 콘솔 로그 제거
+    if (itinerary && selectedDay !== null && currentDayData && renderItineraryRoute) {
+      console.log(`[Map] Selected day ${selectedDay} has ${currentDayData.places?.length || 0} places`);
+      renderItineraryRoute(currentDayData, serverRoutesData);
     }
-  }, [itinerary, selectedDay, currentDayData]);
+  }, [itinerary, selectedDay, currentDayData, serverRoutesData, renderItineraryRoute]);
 
-  // MapMarkers에 대한 고유 키 생성
+  // MapMarkers에 대한 고유 키 생성 - 의존성 배열 확장
   const markersKey = useMemo(() => {
-    const placesHash = places.length > 0 ? places[0].id : 'empty';
-    const itineraryHash = itinerary && itinerary.length > 0 
-      ? `${itinerary.length}-${itinerary[0].day}` 
-      : 'no-itinerary';
-    return `markers-${selectedDay || 'none'}-${itineraryHash}-${placesHash}`;
-  }, [selectedDay, itinerary, places]);
+    const placesId = places.length > 0 ? places[0].id : 'empty';
+    const itineraryId = itinerary && itinerary.length > 0 ? 
+      `${itinerary.length}-${itinerary[0].id || itinerary[0].day}` : 
+      'no-itinerary';
+    const dayId = selectedDay !== null ? `day-${selectedDay}` : 'no-day';
+    const selectedPlaceId = selectedPlace ? `place-${selectedPlace.id}` : 'no-selected';
+    
+    // 타임스탬프를 추가하여 모든 변경사항에 대해 확실히 새로운 키 생성
+    return `markers-${dayId}-${itineraryId}-${placesId}-${selectedPlaceId}-${Date.now()}`;
+  }, [places, itinerary, selectedDay, selectedPlace]);
 
   return (
     <div ref={mapContainer} className="w-full h-full relative flex-grow">

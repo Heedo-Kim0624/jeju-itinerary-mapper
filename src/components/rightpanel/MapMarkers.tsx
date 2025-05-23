@@ -22,6 +22,8 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
   onPlaceClick,
   highlightPlaceId,
 }) => {
+  console.log(`[MapMarkers] Component rendered with selectedDay: ${selectedDay}`);
+  
   const { forceMarkerUpdate } = useMapMarkers({
     places,
     selectedPlace,
@@ -32,18 +34,35 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
     highlightPlaceId,
   });
 
-  // 초기 마운트시에만 마커 업데이트 강제 (한 번만 실행)
+  // 초기 마운트시 마커 업데이트 (한 번만 실행)
   useEffect(() => {
-    // 첫 렌더링 후 한 번만 실행
     const timer = setTimeout(() => {
       forceMarkerUpdate();
     }, 300);
     
     return () => clearTimeout(timer);
-  }, []); // 빈 의존성 배열로 컴포넌트 마운트 시에만 실행
+  }, [forceMarkerUpdate]);
 
   // 이 컴포넌트는 UI를 렌더링하지 않음
   return null;
 };
 
-export default React.memo(MapMarkers); // React.memo로 감싸서 불필요한 리렌더링 방지
+// 메모이제이션을 통한 불필요한 리렌더링 방지, 커스텀 비교 함수 추가
+export default React.memo(MapMarkers, (prevProps, nextProps) => {
+  // 변경이 있을 때만 리렌더링하도록 비교 로직 구현
+  const isSameSelectedDay = prevProps.selectedDay === nextProps.selectedDay;
+  const isSameSelectedPlace = prevProps.selectedPlace?.id === nextProps.selectedPlace?.id;
+  const isSameHighlightId = prevProps.highlightPlaceId === nextProps.highlightPlaceId;
+  
+  // 일정 데이터 길이 비교
+  const prevItineraryLength = prevProps.itinerary?.length || 0;
+  const nextItineraryLength = nextProps.itinerary?.length || 0;
+  const isSameItineraryLength = prevItineraryLength === nextItineraryLength;
+  
+  // places 배열 길이 비교
+  const isSamePlacesLength = prevProps.places.length === nextProps.places.length;
+  
+  // 모든 조건이 동일하면 리렌더링 방지
+  return isSameSelectedDay && isSameSelectedPlace && isSameHighlightId && 
+         isSameItineraryLength && isSamePlacesLength;
+});
