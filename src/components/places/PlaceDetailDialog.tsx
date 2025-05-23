@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -82,7 +81,7 @@ const PlaceDetailDialog: React.FC<PlaceDetailDialogProps> = ({ place, open, onOp
               </div>
             )}
 
-            {place.phone && (
+            {place.phone && place.phone !== "정보 없음" && (
               <div className="flex items-center">
                 <Phone className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
                 <span className="text-sm">{formatPhoneNumber(place.phone)}</span>

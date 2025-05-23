@@ -1,5 +1,4 @@
-
-import { ItineraryDay, NewServerScheduleResponse, ServerScheduleItem, Place } from '@/types/core';
+import { ItineraryDay, NewServerScheduleResponse, Place } from '@/types/core';
 import { formatDate } from './timeUtils';
 import { buildGroupedItineraryPlaces } from './groupedPlacesProcessor';
 import { processRouteData } from './routeSummaryProcessor';
@@ -7,27 +6,41 @@ import { organizeAndSortScheduleByDay } from './scheduleOrganizer';
 import { organizeRouteByDay } from './routeOrganizer';
 import type { DetailedPlace } from '@/types/detailedPlace';
 
+// Helper for chronological day sort based on common English/Korean day names
+const dayOrderLookup: { [key: string]: number } = {
+  'Mon': 1, '월': 1,
+  'Tue': 2, '화': 2,
+  'Wed': 3, '수': 3,
+  'Thu': 4, '목': 4,
+  'Fri': 5, '금': 5,
+  'Sat': 6, '토': 6,
+  'Sun': 7, '일': 7
+};
+
 /**
  * Main function to build itinerary days from server response
  */
 export const buildItineraryDays = (
   serverResponse: NewServerScheduleResponse,
   tripStartDate: Date | null = null,
-  dayMapping: Record<string, number>,
-  getPlaceDetailsByIdCallback: (id: number) => DetailedPlace | undefined, // PlaceData 타입 제거
+  dayMapping: Record<string, number>, // This dayMapping is based on chronologically sorted day keys
+  getPlaceDetailsByIdCallback: (id: number) => DetailedPlace | undefined,
   allPlacesMapByName: Map<string, Place>
 ): ItineraryDay[] => {
-  // Organize schedule and route data using new utilities
   const scheduleByDay = organizeAndSortScheduleByDay(serverResponse.schedule);
   const routeByDay = organizeRouteByDay(serverResponse.route_summary);
 
-  // Build itinerary for each day
-  const sortedDayKeys = [...scheduleByDay.keys()].sort();
+  // Get day keys from scheduleByDay and sort them chronologically
+  const dayKeysFromSchedule = Array.from(scheduleByDay.keys());
+  const sortedChronologicalDayKeys = dayKeysFromSchedule.sort((a, b) => 
+    (dayOrderLookup[a] || 99) - (dayOrderLookup[b] || 99)
+  );
 
-  const result = sortedDayKeys.map((dayOfWeekKey) => {
+  // Build itinerary for each day using chronologically sorted keys
+  const itineraryDaysUnsorted = sortedChronologicalDayKeys.map((dayOfWeekKey) => {
     const dayItemsOriginal = scheduleByDay.get(dayOfWeekKey) || [];
-    const routeInfo = routeByDay.get(dayOfWeekKey); // This can be undefined if no route for the day
-    const dayNumber = dayMapping[dayOfWeekKey];
+    const routeInfo = routeByDay.get(dayOfWeekKey);
+    const dayNumber = dayMapping[dayOfWeekKey]; // dayMapping should be created based on these sorted keys
 
     // Parameters to buildGroupedItineraryPlaces updated
     // Pass the callback function here
@@ -57,5 +70,8 @@ export const buildItineraryDays = (
     };
   });
 
-  return result;
+  // Sort the final ItineraryDay array by the 'day' number to be absolutely sure
+  const sortedItineraryDays = itineraryDaysUnsorted.sort((a, b) => a.day - b.day);
+
+  return sortedItineraryDays;
 };
