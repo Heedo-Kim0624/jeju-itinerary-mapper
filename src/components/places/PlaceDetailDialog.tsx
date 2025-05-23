@@ -5,11 +5,11 @@ import { Button } from '@/components/ui/button';
 import { ExternalLink, MapPin, Phone, Info, Calendar, Clock, Home, Instagram } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import type { ItineraryPlaceWithTime } from '@/types/core';
-import type { Place } from '@/types/core'; // Place 타입 추가
+import type { Place } from '@/types/core';
 import { formatPhoneNumber } from '@/utils/stringUtils';
 
 interface PlaceDetailDialogProps {
-  place: (ItineraryPlaceWithTime | Place) | null; // 타입을 유니온으로 변경
+  place: (ItineraryPlaceWithTime | Place) | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -85,7 +85,7 @@ const PlaceDetailDialog: React.FC<PlaceDetailDialogProps> = ({ place, open, onOp
               </div>
             )}
 
-            {/* 전화번호 정보 영역 - 유효한 전화번호만 표시 */}
+            {/* 전화번호 정보는 유효할 때만 표시 */}
             {hasValidPhone && (
               <div className="flex items-center">
                 <Phone className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />

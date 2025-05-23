@@ -29,10 +29,12 @@ export const useItineraryCreationTrigger = ({
       console.warn("[useItineraryCreationTrigger] clearMarkersAndUiElements function is not available.");
     }
 
-    // 이전에 그려진 모든 경로 제거
+    // 이전에 그려진 모든 경로 제거 - 명확한 로깅 추가
     console.log("[useItineraryCreationTrigger] Clearing previous routes before itinerary creation.");
     if (clearAllRoutes) {
       clearAllRoutes();
+    } else {
+      console.warn("[useItineraryCreationTrigger] clearAllRoutes function is not available.");
     }
     
     // 일정 생성 함수 실행

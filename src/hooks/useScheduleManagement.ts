@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useServerResponseHandler } from '@/hooks/schedule/useServerResponseHandler';
@@ -26,7 +25,7 @@ export const useScheduleManagement = ({
   endDatetime
 }: ScheduleManagementProps) => {
   const [isManuallyGenerating, setIsManuallyGenerating] = useState(false);
-  const { clearMarkersAndUiElements } = useMapContext();
+  const { clearMarkersAndUiElements, clearAllRoutes } = useMapContext();
   
   const {
     itinerary,
@@ -77,12 +76,23 @@ export const useScheduleManagement = ({
       return;
     }
 
-    // 일정 생성 전에 마커 초기화
+    // 일정 생성 전에 모든 마커와 경로 초기화 - 순서 중요: 마커 먼저, 경로 나중에
+    console.log("[useScheduleManagement] 일정 생성 전 지도 마커 및 경로 초기화");
+    
+    // 마커 초기화
     if (clearMarkersAndUiElements) {
-      console.log("[useScheduleManagement] 일정 생성 전 지도 마커 초기화");
       clearMarkersAndUiElements();
+      console.log("[useScheduleManagement] 마커 및 UI 요소 초기화 완료");
     } else {
       console.warn("[useScheduleManagement] clearMarkersAndUiElements 함수를 찾을 수 없습니다");
+    }
+    
+    // 경로 초기화
+    if (clearAllRoutes) {
+      clearAllRoutes();
+      console.log("[useScheduleManagement] 모든 경로 초기화 완료");
+    } else {
+      console.warn("[useScheduleManagement] clearAllRoutes 함수를 찾을 수 없습니다");
     }
     
     setIsManuallyGenerating(true);
@@ -134,7 +144,8 @@ export const useScheduleManagement = ({
     endDatetime, 
     isListenerRegistered,
     setIsLoadingState,
-    clearMarkersAndUiElements
+    clearMarkersAndUiElements,
+    clearAllRoutes
   ]);
 
   // 서버 응답 처리 완료 시 상태 초기화

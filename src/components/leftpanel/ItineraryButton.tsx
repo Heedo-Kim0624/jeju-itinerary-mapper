@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -59,20 +58,22 @@ const ItineraryButton: React.FC<ItineraryButtonProps> = ({
     setIsCreating(true);
     
     // 디버깅용 로그 추가
-    console.log('경로 생성 버튼 클릭됨, 경로 생성 함수 호출');
+    console.log('[ItineraryButton] 경로 생성 버튼 클릭됨, 경로 생성 함수 호출');
     
     try {
       const result = onCreateItinerary();
+      console.log('[ItineraryButton] 경로 생성 시작 결과:', result);
+      
       if (!result) {
-        console.log('경로 생성 결과 없음');
+        console.log('[ItineraryButton] 경로 생성 초기화 실패');
         setIsCreating(false);
       } else {
-        console.log('경로 생성 성공!', result);
+        console.log('[ItineraryButton] 경로 생성 초기화 성공');
         // 성공 시에는 setIsCreating(false)를 호출하지 않음
         // 일정 화면으로 전환되기 때문에 버튼이 보이지 않게 됨
       }
     } catch (error) {
-      console.error('경로 생성 중 오류 발생', error);
+      console.error('[ItineraryButton] 경로 생성 중 오류 발생', error);
       setIsCreating(false);
       toast.error("경로 생성 중 오류가 발생했습니다");
     }
