@@ -25,7 +25,7 @@ export const useScheduleManagement = ({
   endDatetime
 }: ScheduleManagementProps) => {
   const [isManuallyGenerating, setIsManuallyGenerating] = useState(false);
-  const { clearMarkersAndUiElements, clearAllRoutes } = useMapContext();
+  const { clearMarkersAndUiElements, clearAllRoutes, setServerRoutes } = useMapContext(); // setServerRoutes 가져오기
   
   const {
     itinerary,
@@ -40,10 +40,10 @@ export const useScheduleManagement = ({
   const { processServerResponse } = useScheduleGenerationCore({
     selectedPlaces,
     startDate: dates?.startDate || new Date(),
-    geoJsonNodes: [], // 사용하지 않으므로 빈 배열 전달
+    geoJsonNodes: [], 
     setItinerary,
     setSelectedDay,
-    setServerRoutes: () => {}, // 더미 함수
+    setServerRoutes: setServerRoutes, // 실제 setServerRoutes 함수 전달
     setIsLoadingState,
   });
 
@@ -123,7 +123,7 @@ export const useScheduleManagement = ({
       
       // 30초 후에 자동으로 로딩 상태 해제 (타임아웃 처리)
       setTimeout(() => {
-        if (combinedIsLoading) {
+        if (combinedIsLoading) { // combinedIsLoading 상태를 다시 확인
           console.log("[useScheduleManagement] 일정 생성 타임아웃 (30초)");
           setIsManuallyGenerating(false);
           setIsLoadingState(false);
@@ -138,14 +138,15 @@ export const useScheduleManagement = ({
       toast.error("일정 생성 요청 중 오류가 발생했습니다.");
     }
   }, [
-    combinedIsLoading,
+    combinedIsLoading, // combinedIsLoading 의존성 추가
     selectedPlaces,
     startDatetime, 
     endDatetime, 
     isListenerRegistered,
-    setIsLoadingState,
+    setIsLoadingState, // setIsLoadingState 의존성 유지
     clearMarkersAndUiElements,
-    clearAllRoutes
+    clearAllRoutes,
+    setIsManuallyGenerating // setIsManuallyGenerating 의존성 추가
   ]);
 
   // 서버 응답 처리 완료 시 상태 초기화
