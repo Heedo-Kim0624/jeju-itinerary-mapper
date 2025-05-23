@@ -36,7 +36,7 @@ export const PlaceProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           if (detailedPlace.name) {
             // DetailedPlace를 Place 타입으로 변환 (필요한 필드만 선택)
             const place: Place = {
-              id: detailedPlace.id,
+              id: String(detailedPlace.id), // id를 string으로 명시적 변환 (수정된 부분)
               name: detailedPlace.name,
               address: detailedPlace.address,
               road_address: detailedPlace.road_address || '',
@@ -48,7 +48,7 @@ export const PlaceProvider: React.FC<{ children: ReactNode }> = ({ children }) =
               image_url: detailedPlace.image_url || '',
               homepage: detailedPlace.homepage || '',
               rating: detailedPlace.rating || 0,
-              geoNodeId: detailedPlace.geoNodeId,
+              geoNodeId: detailedPlace.geoNodeId ? String(detailedPlace.geoNodeId) : undefined, // geoNodeId도 string으로 변환
               naverLink: detailedPlace.link_url, // DetailedPlace의 link_url을 naverLink로 매핑
               instaLink: detailedPlace.instagram_url, // DetailedPlace의 instagram_url을 instaLink로 매핑
             };

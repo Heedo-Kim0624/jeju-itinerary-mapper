@@ -11,7 +11,7 @@ import type { PlaceData } from '@/hooks/data/useSupabaseDataFetcher';
  */
 export const buildGroupedItineraryPlaces = (
   serverScheduleItems: ServerScheduleItem[],
-  getPlaceDetailsByIdCallback: (id: number) => DetailedPlace | PlaceData | undefined,
+  getPlaceDetailsByIdCallback: (id: number) => DetailedPlace | undefined, // PlaceData 반환 타입 제거
   dayNumber: number, // Changed from dayIndex to dayNumber for clarity matching ItineraryDay.day
   allPlacesMapByName: Map<string, Place> // 추가된 인자
 ): ItineraryPlaceWithTime[] => {
@@ -24,23 +24,6 @@ export const buildGroupedItineraryPlaces = (
   console.log(`[buildGroupedItineraryPlaces] Day ${dayNumber} - Merged server items:`, mergedItems);
 
   const itineraryPlaces = mergedItems.map((mergedGroup, index) => {
-    const serverItem = mergedGroup.item;
-    
-    // ID를 먼저 시도하고, 없으면 이름으로 상세 정보 찾기 (이 부분은 mapToItineraryPlace로 이전)
-    // let placeDetails: CoreSelectedPlace | undefined;
-    // const serverPlaceIdStr = serverItem.id !== undefined ? String(serverItem.id) : undefined;
-
-    // if (serverPlaceIdStr && serverPlaceIdStr !== 'N/A') {
-    //   const numericId = parseInt(serverPlaceIdStr, 10);
-    //   if (!isNaN(numericId)) {
-    //     const detailsFromCallback = getPlaceDetailsByIdCallback(numericId);
-    //     // Convert DetailedPlace | PlaceData to CoreSelectedPlace if necessary, or adapt mapToItineraryPlace
-    //     // For now, assuming mapToItineraryPlace can handle DetailedPlace | PlaceData or we adapt it.
-    //   }
-    // }
-    // // findPlaceDetails는 SelectedPlace 타입 반환을 기대하나, 우리는 Place 또는 DetailedPlace를 가지고 있음.
-    // // 우선 mapToItineraryPlace에서 직접 처리하도록 수정.
-
     // mapToItineraryPlace 호출 시 allPlacesMapByName 전달
     return mapToItineraryPlace(
       mergedGroup,

@@ -1,3 +1,4 @@
+
 import { ItineraryDay, NewServerScheduleResponse, ServerScheduleItem, Place } from '@/types/core';
 import { formatDate } from './timeUtils';
 import { buildGroupedItineraryPlaces } from './groupedPlacesProcessor';
@@ -5,7 +6,6 @@ import { processRouteData } from './routeSummaryProcessor';
 import { organizeAndSortScheduleByDay } from './scheduleOrganizer';
 import { organizeRouteByDay } from './routeOrganizer';
 import type { DetailedPlace } from '@/types/detailedPlace';
-import type { PlaceData } from '@/hooks/data/useSupabaseDataFetcher';
 
 /**
  * Main function to build itinerary days from server response
@@ -14,7 +14,7 @@ export const buildItineraryDays = (
   serverResponse: NewServerScheduleResponse,
   tripStartDate: Date | null = null,
   dayMapping: Record<string, number>,
-  getPlaceDetailsByIdCallback: (id: number) => DetailedPlace | PlaceData | undefined,
+  getPlaceDetailsByIdCallback: (id: number) => DetailedPlace | undefined, // PlaceData 타입 제거
   allPlacesMapByName: Map<string, Place>
 ): ItineraryDay[] => {
   // Organize schedule and route data using new utilities

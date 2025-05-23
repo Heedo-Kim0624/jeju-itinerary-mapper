@@ -2,7 +2,6 @@
 import { ServerScheduleItem, SelectedPlace as CoreSelectedPlace, ItineraryPlaceWithTime, Place } from '@/types/core'; // Place 추가
 import { parseIntId } from '@/utils/id-utils'; // parseIntId 임포트
 import type { DetailedPlace } from '@/types/detailedPlace'; // DetailedPlace 임포트
-import type { PlaceData } from '@/hooks/data/useSupabaseDataFetcher'; // PlaceData 임포트
 
 /**
  * Generates a unique ID for an itinerary place, falling back if server ID is missing.
@@ -26,7 +25,7 @@ export const mapToItineraryPlace = (
   dayNumber: number, // dayIndex에서 dayNumber로 변경
   placeItemIndex: number,
   allPlacesMapByName: Map<string, Place>, 
-  getPlaceDetailsByIdCallback: (id: number) => DetailedPlace | undefined // PlaceData 가능성 제거, Context기반으로 DetailedPlace만 반환
+  getPlaceDetailsByIdCallback: (id: number) => DetailedPlace | undefined // 수정: PlaceData 가능성 제거
 ): ItineraryPlaceWithTime => {
   const item = group.item;
   let resolvedNumericId: number | null = null;
@@ -74,7 +73,6 @@ export const mapToItineraryPlace = (
   const arriveHour = timeBlockSuffix === "시작" || timeBlockSuffix === "끝" ? "00" : timeBlockSuffix.substring(0, 2);
   const arriveMinute = timeBlockSuffix === "시작" || timeBlockSuffix === "끝" ? "00" : timeBlockSuffix.substring(2, 4);
   const formattedArriveTime = timeBlockSuffix === "시작" || timeBlockSuffix === "끝" ? timeBlockSuffix : `${arriveHour}:${arriveMinute}`;
-
 
   let departHourCalc = parseInt(arriveHour, 10);
   let departMinuteCalc = parseInt(arriveMinute, 10);
@@ -135,7 +133,6 @@ export const mapToItineraryPlace = (
         geoNodeId = resolvedPlaceDetails.geoNodeId;
     }
   }
-
 
   return {
     id: itineraryPlaceId, 
