@@ -37,6 +37,7 @@ export const useMapMarkers = ({
   // 마커를 제거하는 함수
   const clearAllMarkers = useCallback(() => {
     if (markersRef.current.length > 0) {
+      console.log(`[useMapMarkers] Clearing all existing markers: ${markersRef.current.length}`);
       markersRef.current = clearMarkers(markersRef.current);
     }
   }, []);
@@ -66,26 +67,21 @@ export const useMapMarkers = ({
       }
     };
 
-    // 이벤트 타입 캐스팅
-    window.addEventListener('itineraryDaySelected', handleItineraryDaySelected as EventListener);
-    
-    return () => {
-      window.removeEventListener('itineraryDaySelected', handleItineraryDaySelected as EventListener);
-    };
-  }, [forceMarkerUpdate]);
-
-  // 스케줄 생성 시작 시 마커 모두 지우기
-  useEffect(() => {
+    // 스케줄 생성 시작 이벤트 핸들러
     const handleStartScheduleGeneration = () => {
+      console.log("[useMapMarkers] startScheduleGeneration 이벤트 감지됨 - 모든 마커 제거");
       clearAllMarkers();
     };
 
+    // 이벤트 타입 캐스팅
+    window.addEventListener('itineraryDaySelected', handleItineraryDaySelected as EventListener);
     window.addEventListener('startScheduleGeneration', handleStartScheduleGeneration);
     
     return () => {
+      window.removeEventListener('itineraryDaySelected', handleItineraryDaySelected as EventListener);
       window.removeEventListener('startScheduleGeneration', handleStartScheduleGeneration);
     };
-  }, [clearAllMarkers]);
+  }, [forceMarkerUpdate, clearAllMarkers]);
 
   // selectedDay, itinerary, places 변화 감지
   useEffect(() => {
@@ -114,6 +110,8 @@ export const useMapMarkers = ({
     let placesToDisplay: (Place | ItineraryPlaceWithTime)[] = [];
     let isDisplayingItineraryDay = false;
 
+    console.log(`[useMapMarkers] Rendering markers: {selectedDay: ${selectedDay}, itineraryLength: ${itinerary?.length || 0}, placesLength: ${places.length}}`);
+
     // 일정이 있고 선택된 일자가 있는 경우
     if (itinerary && itinerary.length > 0 && selectedDay !== null) {
       const currentDayData = itinerary.find(day => day.day === selectedDay);
@@ -121,10 +119,15 @@ export const useMapMarkers = ({
         placesToDisplay = currentDayData.places;
         isDisplayingItineraryDay = true;
         console.log(`[useMapMarkers] Displaying itinerary day ${selectedDay}: ${currentDayData.places.length} places`);
+      } else {
+        console.log(`[useMapMarkers] No places found for itinerary day ${selectedDay}`);
       }
     } else if (places.length > 0) {
       // 일정이 없는 경우 기본 장소 표시
       placesToDisplay = places;
+      console.log(`[useMapMarkers] No active itinerary. Displaying ${places.length} places from search.`);
+    } else {
+      console.log("[useMapMarkers] No places to display after filtering.");
     }
     
     if (placesToDisplay.length === 0) {
@@ -137,6 +140,7 @@ export const useMapMarkers = ({
     });
 
     if (validPlacesToDisplay.length === 0) {
+      console.log("[useMapMarkers] No valid coordinates found in places to display");
       return;
     }
     

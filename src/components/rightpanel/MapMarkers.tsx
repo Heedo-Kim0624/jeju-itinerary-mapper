@@ -24,7 +24,7 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
 }) => {
   console.log(`[MapMarkers] Component rendered with selectedDay: ${selectedDay}`);
   
-  const { forceMarkerUpdate } = useMapMarkers({
+  const { forceMarkerUpdate, clearAllMarkers } = useMapMarkers({
     places,
     selectedPlace,
     itinerary,
@@ -42,6 +42,20 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
     
     return () => clearTimeout(timer);
   }, [forceMarkerUpdate]);
+
+  // 경로 생성 시작 이벤트 감지 시 모든 마커 제거
+  useEffect(() => {
+    const handleStartScheduleGeneration = () => {
+      console.log("[MapMarkers] startScheduleGeneration 이벤트 감지 - 모든 마커 제거");
+      clearAllMarkers();
+    };
+    
+    window.addEventListener('startScheduleGeneration', handleStartScheduleGeneration);
+    
+    return () => {
+      window.removeEventListener('startScheduleGeneration', handleStartScheduleGeneration);
+    };
+  }, [clearAllMarkers]);
 
   // 이 컴포넌트는 UI를 렌더링하지 않음
   return null;

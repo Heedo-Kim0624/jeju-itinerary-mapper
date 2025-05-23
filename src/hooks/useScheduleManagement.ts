@@ -77,32 +77,26 @@ export const useScheduleManagement = ({
       return;
     }
 
-    // 일정 생성 전에 모든 마커와 경로 초기화
+    // 일정 생성 전에 모든 마커와 경로 초기화 - 더 명확한 로그 추가
     if (clearAllRoutes) {
       clearAllRoutes();
-      console.log("[useScheduleManagement] 모든 경로 초기화 완료");
+      console.log("[useScheduleManagement] 모든 경로를 초기화했습니다");
     }
     
     if (clearMarkersAndUiElements) {
+      // 명시적으로 마커 지우기 호출
       clearMarkersAndUiElements();
-      console.log("[useScheduleManagement] 마커 및 UI 요소 초기화 완료");
+      console.log("[useScheduleManagement] 모든 마커 및 UI 요소를 초기화했습니다");
     }
     
     setIsManuallyGenerating(true);
     setIsLoadingState(true);
     
-    // 시작 이벤트 발생 시 마커를 지우기 위한 커스텀 이벤트 트리거
-    const clearMarkersEvent = new CustomEvent("startScheduleGeneration", {
-      detail: {
-        selectedPlaces,
-        startDatetime,
-        endDatetime,
-      },
-    });
+    // 마커를 지우기 위한 커스텀 이벤트 발생 - 즉시 실행
+    console.log("[useScheduleManagement] startScheduleGeneration 이벤트 발생 (마커 초기화용)");
+    window.dispatchEvent(new CustomEvent("startScheduleGeneration"));
     
-    window.dispatchEvent(clearMarkersEvent);
-    
-    // 실제 일정 생성 이벤트 발생
+    // 실제 일정 생성 이벤트는 약간의 지연 후 발생
     setTimeout(() => {
       try {
         const event = new CustomEvent("startScheduleGeneration", {
@@ -113,7 +107,7 @@ export const useScheduleManagement = ({
           },
         });
         
-        console.log("[useScheduleManagement] startScheduleGeneration 이벤트 발생:", {
+        console.log("[useScheduleManagement] startScheduleGeneration 이벤트 발생 (일정 생성용):", {
           selectedPlaces: selectedPlaces.length,
           startDatetime,
           endDatetime,
