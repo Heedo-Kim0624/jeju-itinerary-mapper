@@ -72,14 +72,18 @@ const Map: React.FC<MapProps> = ({
   // 일정 및 선택된 일자가 변경되면 로그 기록
   useEffect(() => {
     if (itinerary && selectedDay !== null && currentDayData) {
-      console.log(`[Map] Selected day ${selectedDay} has ${currentDayData.places.length} places`);
+      // 콘솔 로그 제거
     }
   }, [itinerary, selectedDay, currentDayData]);
 
   // MapMarkers에 대한 고유 키 생성
   const markersKey = useMemo(() => {
-    return `markers-${selectedDay}-${itinerary ? itinerary.length : 0}-${places.length}`;
-  }, [selectedDay, itinerary, places.length]);
+    const placesHash = places.length > 0 ? places[0].id : 'empty';
+    const itineraryHash = itinerary && itinerary.length > 0 
+      ? `${itinerary.length}-${itinerary[0].day}` 
+      : 'no-itinerary';
+    return `markers-${selectedDay || 'none'}-${itineraryHash}-${placesHash}`;
+  }, [selectedDay, itinerary, places]);
 
   return (
     <div ref={mapContainer} className="w-full h-full relative flex-grow">

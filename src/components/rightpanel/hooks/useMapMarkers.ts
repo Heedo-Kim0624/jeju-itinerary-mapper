@@ -31,35 +31,65 @@ export const useMapMarkers = ({
   const prevSelectedDayRef = useRef<number | null>(null);
   const prevItineraryRef = useRef<ItineraryDay[] | null>(null);
   const prevPlacesRef = useRef<Place[] | null>(null);
-  const prevMarkerUpdateTriggerRef = useRef<number>(0);
-  const [markerUpdateTrigger, setMarkerUpdateTrigger] = useState(0);
+  const updateCountRef = useRef<number>(0);
+  const [shouldUpdateMarkers, setShouldUpdateMarkers] = useState<boolean>(false);
   
   // 마커를 제거하는 함수
   const clearAllMarkers = useCallback(() => {
     if (markersRef.current.length > 0) {
-      console.log("[useMapMarkers] Clearing all existing markers:", markersRef.current.length);
+      // 로그 제거
       markersRef.current = clearMarkers(markersRef.current);
     }
   }, []);
 
-  // 명시적으로 마커 재생성을 강제하는 함수
+  // 명시적으로 마커 재생성을 강제하는 함수 - 무한 루프 방지를 위해 최적화
   const forceMarkerUpdate = useCallback(() => {
-    if (prevMarkerUpdateTriggerRef.current === markerUpdateTrigger) {
+    // 이미 마커 업데이트가 예정되어 있다면 추가 업데이트 요청 무시
+    if (!shouldUpdateMarkers) {
       clearAllMarkers();
-      setMarkerUpdateTrigger(prev => prev + 1);
-      prevMarkerUpdateTriggerRef.current = markerUpdateTrigger + 1;
-      console.log("[useMapMarkers] Force marker update triggered", markerUpdateTrigger + 1);
+      setShouldUpdateMarkers(true);
+      updateCountRef.current += 1;
     }
-  }, [markerUpdateTrigger, clearAllMarkers]);
+  }, [shouldUpdateMarkers, clearAllMarkers]);
 
   // selectedDay가 변경될 때만 마커 업데이트 트리거
   useEffect(() => {
     if (selectedDay !== prevSelectedDayRef.current && isMapInitialized) {
-      console.log(`[useMapMarkers] Day changed from ${prevSelectedDayRef.current} to ${selectedDay} - Updating markers`);
       prevSelectedDayRef.current = selectedDay;
       forceMarkerUpdate();
     }
   }, [selectedDay, isMapInitialized, forceMarkerUpdate]);
+
+  // 일정이 변경될 때 마커 업데이트 트리거
+  useEffect(() => {
+    if (itinerary !== prevItineraryRef.current && isMapInitialized) {
+      prevItineraryRef.current = itinerary;
+      forceMarkerUpdate();
+    }
+  }, [itinerary, isMapInitialized, forceMarkerUpdate]);
+
+  // places prop이 변경될 때 마커 업데이트 트리거 
+  useEffect(() => {
+    // 깊은 비교 대신 참조 비교만 사용하여 불필요한 업데이트 방지
+    if (places !== prevPlacesRef.current && isMapInitialized) {
+      prevPlacesRef.current = places;
+      forceMarkerUpdate();
+    }
+  }, [places, isMapInitialized, forceMarkerUpdate]);
+
+  // 이벤트 리스너 등록
+  useEffect(() => {
+    const handleItineraryDaySelected = () => {
+      // 이벤트 발생 시 마커 업데이트 예약
+      forceMarkerUpdate();
+    };
+
+    window.addEventListener('itineraryDaySelected', handleItineraryDaySelected);
+    
+    return () => {
+      window.removeEventListener('itineraryDaySelected', handleItineraryDaySelected);
+    };
+  }, [forceMarkerUpdate]);
 
   // 마커 렌더링 로직
   const renderMarkers = useCallback(() => {
@@ -67,12 +97,6 @@ export const useMapMarkers = ({
       return;
     }
     
-    console.log("[useMapMarkers] Rendering markers:", {
-      selectedDay,
-      itineraryLength: itinerary?.length,
-      placesLength: places?.length
-    });
-
     let placesToDisplay: (Place | ItineraryPlaceWithTime)[] = [];
     let isDisplayingItineraryDay = false;
 
@@ -82,33 +106,25 @@ export const useMapMarkers = ({
       if (currentDayData && currentDayData.places && currentDayData.places.length > 0) {
         placesToDisplay = currentDayData.places;
         isDisplayingItineraryDay = true;
-        console.log(`[useMapMarkers] Displaying itinerary day ${selectedDay}: ${placesToDisplay.length} places`);
-      } else {
-        console.log(`[useMapMarkers] No places found for day ${selectedDay}`);
       }
     } else if (places.length > 0) {
       // 일정이 없는 경우 기본 장소 표시
       placesToDisplay = places;
-      console.log(`[useMapMarkers] Displaying ${placesToDisplay.length} places from search`);
     }
     
     if (placesToDisplay.length === 0) {
-      console.log("[useMapMarkers] No places to display after filtering");
       return;
     }
     
     const validPlacesToDisplay = placesToDisplay.filter(p => {
       if (p.x != null && p.y != null && !isNaN(Number(p.x)) && !isNaN(Number(p.y))) return true;
-      console.warn(`[useMapMarkers] Place '${p.name}' has invalid coordinates: x=${p.x}, y=${p.y}`);
       return false;
     });
 
     if (validPlacesToDisplay.length === 0) {
-      console.log("[useMapMarkers] No valid places to display markers for");
       return;
     }
     
-    console.log(`[useMapMarkers] Creating ${validPlacesToDisplay.length} markers`);
     const newMarkers: naver.maps.Marker[] = [];
 
     validPlacesToDisplay.forEach((place, index) => {
@@ -143,7 +159,6 @@ export const useMapMarkers = ({
 
     if (newMarkers.length > 0) {
       if (!(selectedPlace || highlightPlaceId)) {
-        console.log("[useMapMarkers] Fitting map bounds to displayed markers");
         fitBoundsToPlaces(map, validPlacesToDisplay as Place[]);
       }
     }
@@ -151,7 +166,6 @@ export const useMapMarkers = ({
     // 선택된 장소로 이동
     const placeToFocus = selectedPlace || (highlightPlaceId ? placesToDisplay.find(p => p.id === highlightPlaceId) : null);
     if (placeToFocus && placeToFocus.y != null && placeToFocus.x != null) {
-      console.log(`[useMapMarkers] Panning to ${placeToFocus.name}`);
       if (map.getZoom() < 15) map.setZoom(15, true);
       panToPosition(map, placeToFocus.y, placeToFocus.x);
     }
@@ -160,17 +174,14 @@ export const useMapMarkers = ({
     itinerary, selectedDay, selectedPlaces, onPlaceClick, highlightPlaceId
   ]);
 
-  // itinerary, selectedDay 또는 마커 업데이트 트리거가 변경될 때 마커 렌더링
+  // shouldUpdateMarkers가 true일 때만 마커를 업데이트하고 상태 초기화
   useEffect(() => {
-    clearAllMarkers();
-    renderMarkers();
-    
-    prevItineraryRef.current = itinerary;
-    prevPlacesRef.current = places;
-  }, [
-    clearAllMarkers, renderMarkers, markerUpdateTrigger,
-    itinerary, selectedDay
-  ]);
+    if (shouldUpdateMarkers && isMapInitialized) {
+      clearAllMarkers();
+      renderMarkers();
+      setShouldUpdateMarkers(false);
+    }
+  }, [shouldUpdateMarkers, isMapInitialized, clearAllMarkers, renderMarkers]);
   
   return {
     markers: markersRef.current,

@@ -18,29 +18,36 @@ export const useScheduleStateAndEffects = () => {
   const prevSelectedDayRef = useRef<number | null>(null);
   // 이벤트 디스패치 타이머
   const mapUpdateTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // 이벤트 디스패치 방지 플래그
+  const eventDispatchedRef = useRef<boolean>(false);
 
   useEffect(() => {
     isLoadingStateRef.current = isLoadingState;
   }, [isLoadingState]);
 
-  // 로딩 상태 설정 함수 (디버깅 로그 포함)
+  // 로딩 상태 설정 함수
   const setIsLoadingState = useCallback((loading: boolean) => {
-    console.log(`[useScheduleStateAndEffects] setIsLoadingState called with: ${loading}. Current state: ${isLoadingStateRef.current}`);
     setIsLoadingStateInternal(loading);
   }, []);
 
   // 일정 선택 핸들러 - 개선된 버전
   const handleSelectDay = useCallback((day: number) => {
-    console.log(`[useScheduleStateAndEffects] 일정 ${day}일차가 선택되었습니다. (이전: ${prevSelectedDayRef.current})`);
-    
     // 이전에 설정된 타이머 취소
     if (mapUpdateTimerRef.current) {
       clearTimeout(mapUpdateTimerRef.current);
     }
     
+    // 동일한 일차를 다시 선택한 경우 불필요한 처리 방지
+    if (day === prevSelectedDayRef.current && !eventDispatchedRef.current) {
+      return;
+    }
+    
     // 선택된 일차 업데이트
     prevSelectedDayRef.current = day;
     setSelectedDay(day);
+    
+    // 이벤트 중복 발생 방지 플래그 설정
+    eventDispatchedRef.current = true;
     
     // 맵 업데이트를 위한 이벤트 발생 (약간의 지연을 두어 상태 업데이트 완료 보장)
     mapUpdateTimerRef.current = setTimeout(() => {
@@ -48,7 +55,11 @@ export const useScheduleStateAndEffects = () => {
         detail: { day }
       });
       window.dispatchEvent(daySelectedEvent);
-      console.log(`[useScheduleStateAndEffects] itineraryDaySelected 이벤트 발생: ${day}일차`);
+      
+      // 이벤트 발생 후 플래그 초기화를 위한 추가 타이머
+      setTimeout(() => {
+        eventDispatchedRef.current = false;
+      }, 500);
     }, 100);
   }, []);
 
@@ -57,7 +68,6 @@ export const useScheduleStateAndEffects = () => {
     // 선택된 날짜가 없거나 일정이 없으면 아무 작업도 하지 않음
     if (selectedDay === null || itinerary.length === 0 || !renderGeoJsonRoute || !clearAllRoutes) {
       if (selectedDay === null && clearAllRoutes) {
-        console.log("[useScheduleStateAndEffects] 선택된 날짜가 없어 모든 경로를 제거합니다.");
         clearAllRoutes();
       }
       return;
@@ -65,9 +75,6 @@ export const useScheduleStateAndEffects = () => {
 
     // 현재 선택된 날짜의 일정 데이터 찾기
     const currentDayData = itinerary.find(d => d.day === selectedDay);
-    
-    console.log(`[useScheduleStateAndEffects] 선택된 ${selectedDay}일차 경로를 렌더링합니다:`, 
-      currentDayData ? `${currentDayData.places.length} 장소가 있습니다.` : '해당 일차 데이터가 없습니다.');
     
     // 모든 경로 지우기 (항상 경로를 지우고 다시 그림)
     clearAllRoutes();
@@ -77,8 +84,6 @@ export const useScheduleStateAndEffects = () => {
         // 경로 데이터 추출
         const nodes = extractAllNodesFromRoute(currentDayData.interleaved_route).map(String);
         const links = extractAllLinksFromRoute(currentDayData.interleaved_route).map(String);
-        
-        console.log(`[useScheduleStateAndEffects] 선택된 ${selectedDay}일차 경로 렌더링: ${nodes.length} 노드, ${links.length} 링크`);
         
         // 경로 렌더링에 필요한 형식으로 데이터 변환
         const routeSegment: SegmentRoute = { 
@@ -93,10 +98,6 @@ export const useScheduleStateAndEffects = () => {
       } catch (error) {
         console.error(`[useScheduleStateAndEffects] 경로 렌더링 중 오류:`, error);
       }
-    } else if (currentDayData) {
-      console.log(`[useScheduleStateAndEffects] ${selectedDay}일차는 경로 데이터가 없습니다.`);
-    } else {
-      console.log(`[useScheduleStateAndEffects] ${selectedDay}일차 데이터를 찾을 수 없습니다.`);
     }
   }, [selectedDay, itinerary, renderGeoJsonRoute, clearAllRoutes]);
 
