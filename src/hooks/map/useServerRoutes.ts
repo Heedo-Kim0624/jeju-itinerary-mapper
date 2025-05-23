@@ -1,11 +1,9 @@
-
 import { useState, useCallback } from 'react';
 import type { ServerRouteResponse } from '@/types/schedule'; // Ensure this type is correct
 import type { GeoLink } from '@/components/rightpanel/geojson/GeoJsonTypes'; // Use correct type for GeoLink
 
-// This interface was defined locally in the original file.
-// It should align with ServerRouteResponse or be used consistently.
-interface ServerRouteDataForDay {
+// ServerRouteDataForDay 인터페이스를 export 합니다.
+export interface ServerRouteDataForDay {
   day: number;
   nodeIds: string[];
   linkIds: string[];
@@ -59,7 +57,6 @@ export const useServerRoutes = () => {
         resolvedLinks.push(linkData);
       } else {
         missingLinkCount++;
-        // console.warn(`[useServerRoutes] getLinksForRoute: LINK_ID ${linkId}에 해당하는 GeoLink 데이터를 찾지 못했습니다.`);
       }
     });
 
@@ -69,7 +66,6 @@ export const useServerRoutes = () => {
     return resolvedLinks;
   }, []);
 
-
   return {
     serverRoutesData, 
     setDayRouteData, 
@@ -78,4 +74,3 @@ export const useServerRoutes = () => {
     setAllServerRoutesData, // Export the new setter
   };
 };
-
