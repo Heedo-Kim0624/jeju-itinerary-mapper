@@ -25,29 +25,31 @@ export const mapToItineraryPlace = (
   _selectedPlaceDetails_unused: CoreSelectedPlace | undefined, // 이 인자는 이제 사용되지 않음
   dayNumber: number, // dayIndex에서 dayNumber로 변경
   placeItemIndex: number,
-  allPlacesMapByName: Map<string, Place>, // 추가된 인자
-  getPlaceDetailsByIdCallback: (id: number) => DetailedPlace | PlaceData | undefined // 추가된 인자
+  allPlacesMapByName: Map<string, Place>, 
+  getPlaceDetailsByIdCallback: (id: number) => DetailedPlace | undefined // PlaceData 가능성 제거, Context기반으로 DetailedPlace만 반환
 ): ItineraryPlaceWithTime => {
   const item = group.item;
   let resolvedNumericId: number | null = null;
-  let resolvedPlaceDetails: Place | DetailedPlace | PlaceData | undefined = undefined;
+  // resolvedPlaceDetails 타입을 DetailedPlace | Place | undefined로 명확히 합니다.
+  let resolvedPlaceDetails: DetailedPlace | Place | undefined = undefined;
 
   // 1. 서버에서 온 ID를 파싱 시도
   if (item.id !== undefined && String(item.id).toLowerCase() !== 'n/a') {
     resolvedNumericId = parseIntId(item.id);
   }
 
-  // 2. 파싱된 숫자 ID로 상세 정보 조회 시도
+  // 2. 파싱된 숫자 ID로 상세 정보 조회 시도 (DetailedPlace 반환 기대)
   if (resolvedNumericId !== null) {
     resolvedPlaceDetails = getPlaceDetailsByIdCallback(resolvedNumericId);
   }
 
-  // 3. ID 기반 조회가 실패했거나 ID가 없었고, 이름 기반 매핑에서 장소를 찾았다면 해당 정보 사용
+  // 3. ID 기반 조회가 실패했거나 ID가 없었고, 이름 기반 매핑에서 장소를 찾았다면 해당 정보 사용 (Place 반환)
   if (!resolvedPlaceDetails && item.place_name) {
     const placeFromNameMapping = allPlacesMapByName.get(item.place_name);
     if (placeFromNameMapping) {
       console.log(`[mapToItineraryPlace] 장소 "${item.place_name}"에 대해 이름 기반 매핑으로 ID "${placeFromNameMapping.id}" 찾음.`);
       resolvedPlaceDetails = placeFromNameMapping; // Place 타입
+      // placeFromNameMapping.id는 string | number 일 수 있으므로 파싱
       resolvedNumericId = parseIntId(placeFromNameMapping.id); // ID도 업데이트
     }
   }
@@ -87,7 +89,8 @@ export const mapToItineraryPlace = (
     ? timeBlockSuffix 
     : `${departHourCalc.toString().padStart(2, '0')}:${departMinuteCalc.toString().padStart(2, '0')}`;
 
-  // resolvedPlaceDetails의 타입에 따라 필드 접근
+  // resolvedPlaceDetails의 타입에 따라 필드 접근 (let으로 변경하여 재할당 가능하게)
+  let placeName = item.place_name; // 기본값은 서버에서 온 이름
   let category = item.place_type || 'unknown';
   let x = 126.5312; // Default Jeju coordinates
   let y = 33.4996;
@@ -98,43 +101,47 @@ export const mapToItineraryPlace = (
   let rating = 0;
   let image_url = '';
   let homepage = '';
-  let naverLink = '';
-  let instaLink = '';
-  let geoNodeId: string | number | undefined = itineraryPlaceId; // geoNodeId는 ItineraryPlaceWithTime에서 string | number | undefined
+  let naverLink = ''; // DetailedPlace의 link_url 또는 Place의 naverLink
+  let instaLink = ''; // DetailedPlace의 instagram_url 또는 Place의 instaLink
+  let geoNodeId: string | number | undefined = itineraryPlaceId; 
   
   if (resolvedPlaceDetails) {
-    // Place 타입의 공통 필드
-    name = resolvedPlaceDetails.name; // 이름은 resolvedPlaceDetails 우선
+    placeName = resolvedPlaceDetails.name; // 상세정보 이름 우선
     category = resolvedPlaceDetails.category || item.place_type || 'unknown';
     x = resolvedPlaceDetails.x ?? x;
     y = resolvedPlaceDetails.y ?? y;
     address = resolvedPlaceDetails.address ?? address;
-    road_address = resolvedPlaceDetails.road_address ?? road_address;
-    phone = resolvedPlaceDetails.phone ?? phone;
-    description = resolvedPlaceDetails.description ?? description;
-    rating = resolvedPlaceDetails.rating ?? rating;
-    image_url = resolvedPlaceDetails.image_url ?? image_url;
-    homepage = resolvedPlaceDetails.homepage ?? homepage;
-    naverLink = resolvedPlaceDetails.naverLink ?? naverLink;
-    instaLink = resolvedPlaceDetails.instaLink ?? instaLink;
+    road_address = resolvedPlaceDetails.road_address || road_address; // Place에는 있지만 DetailedPlace에는 optional
+    phone = resolvedPlaceDetails.phone || phone; // Place에는 있지만 DetailedPlace에는 optional
+    description = resolvedPlaceDetails.description || description; // Place에는 있지만 DetailedPlace에는 optional
+    rating = resolvedPlaceDetails.rating || rating; // Place에는 있지만 DetailedPlace에는 optional
+    image_url = resolvedPlaceDetails.image_url || image_url; // Place에는 있지만 DetailedPlace에는 optional
+    homepage = resolvedPlaceDetails.homepage || homepage; // Place에는 있지만 DetailedPlace에는 optional
+    
+    // 타입에 따라 naverLink, instaLink, geoNodeId 설정
+    if ('link_url' in resolvedPlaceDetails && resolvedPlaceDetails.link_url) { // DetailedPlace
+        naverLink = resolvedPlaceDetails.link_url;
+    } else if ('naverLink' in resolvedPlaceDetails && resolvedPlaceDetails.naverLink) { // Place
+        naverLink = resolvedPlaceDetails.naverLink;
+    }
 
-    // DetailedPlace 타입에만 있는 필드 (존재한다면 사용)
-    if ('link_url' in resolvedPlaceDetails && (resolvedPlaceDetails as DetailedPlace).link_url) {
-        homepage = homepage || (resolvedPlaceDetails as DetailedPlace).link_url!;
+    if ('instagram_url' in resolvedPlaceDetails && resolvedPlaceDetails.instagram_url) { // DetailedPlace
+        instaLink = resolvedPlaceDetails.instagram_url;
+    } else if ('instaLink' in resolvedPlaceDetails && resolvedPlaceDetails.instaLink) { // Place
+        instaLink = resolvedPlaceDetails.instaLink;
     }
-    if ('geoNodeId' in resolvedPlaceDetails && (resolvedPlaceDetails as DetailedPlace).geoNodeId) {
-        geoNodeId = (resolvedPlaceDetails as DetailedPlace).geoNodeId;
+    
+    if (resolvedPlaceDetails.geoNodeId) {
+        geoNodeId = resolvedPlaceDetails.geoNodeId;
     }
-    // PlaceData 타입에만 있는 필드 (존재한다면 사용, DetailedPlace와 겹치지 않는 선에서)
-    // 예: if ('categories_details' in resolvedPlaceDetails) { description = description || (resolvedPlaceDetails as PlaceData).categories_details; }
   }
 
 
   return {
-    id: itineraryPlaceId, // 최종 생성된 유니크 ID
-    name: resolvedPlaceDetails?.name || item.place_name, // 상세정보 이름 우선
+    id: itineraryPlaceId, 
+    name: placeName, 
     category: category,
-    timeBlock: item.time_block, // 서버에서 온 원본 time_block 유지 또는 formattedArriveTime 사용 결정 필요
+    timeBlock: item.time_block, 
     arriveTime: formattedArriveTime,
     departTime: formattedDepartTime,
     stayDuration: stayDurationInMinutes,
@@ -142,12 +149,8 @@ export const mapToItineraryPlace = (
     
     x, y, address, road_address, phone, description, rating, image_url, homepage, naverLink, instaLink,
     
-    geoNodeId: typeof geoNodeId === 'number' ? String(geoNodeId) : geoNodeId, // geoNodeId를 string으로 통일하거나, 타입 그대로 유지
+    geoNodeId: typeof geoNodeId === 'number' ? String(geoNodeId) : geoNodeId, 
     isFallback: isFallback,
-    numericDbId: resolvedNumericId, // 복원된 숫자 ID
-
-    // Optional fields
-    // isSelected, isCandidate 등은 CoreSelectedPlace에서 오지만, 현재 CoreSelectedPlace를 직접 받지 않음.
-    // 필요하다면 resolvedPlaceDetails에서 이 정보를 가져오도록 추가 구현.
+    numericDbId: resolvedNumericId, 
   };
 };
