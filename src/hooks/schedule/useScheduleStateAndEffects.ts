@@ -10,12 +10,14 @@ export const useScheduleStateAndEffects = () => {
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [isLoadingState, setIsLoadingStateInternal] = useState<boolean>(true);
 
-  const { renderGeoJsonRoute, clearAllRoutes } = useMapContext();
+  const { renderGeoJsonRoute, clearAllRoutes, mapContainer } = useMapContext();
 
   // 로딩 상태 추적을 위한 ref
   const isLoadingStateRef = useRef(isLoadingState);
   // 이전 선택 일차 추적을 위한 ref
   const prevSelectedDayRef = useRef<number | null>(null);
+  // 이벤트 디스패치 타이머
+  const mapUpdateTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     isLoadingStateRef.current = isLoadingState;
@@ -27,11 +29,27 @@ export const useScheduleStateAndEffects = () => {
     setIsLoadingStateInternal(loading);
   }, []);
 
-  // 일정 선택 핸들러
+  // 일정 선택 핸들러 - 개선된 버전
   const handleSelectDay = useCallback((day: number) => {
     console.log(`[useScheduleStateAndEffects] 일정 ${day}일차가 선택되었습니다. (이전: ${prevSelectedDayRef.current})`);
+    
+    // 이전에 설정된 타이머 취소
+    if (mapUpdateTimerRef.current) {
+      clearTimeout(mapUpdateTimerRef.current);
+    }
+    
+    // 선택된 일차 업데이트
     prevSelectedDayRef.current = day;
     setSelectedDay(day);
+    
+    // 맵 업데이트를 위한 이벤트 발생 (약간의 지연을 두어 상태 업데이트 완료 보장)
+    mapUpdateTimerRef.current = setTimeout(() => {
+      const daySelectedEvent = new CustomEvent('itineraryDaySelected', { 
+        detail: { day }
+      });
+      window.dispatchEvent(daySelectedEvent);
+      console.log(`[useScheduleStateAndEffects] itineraryDaySelected 이벤트 발생: ${day}일차`);
+    }, 100);
   }, []);
 
   // 선택된 일정 날짜에 따라 지도에 경로 렌더링
@@ -55,22 +73,26 @@ export const useScheduleStateAndEffects = () => {
     clearAllRoutes();
     
     if (currentDayData?.interleaved_route) {
-      // 경로 데이터 추출
-      const nodes = extractAllNodesFromRoute(currentDayData.interleaved_route).map(String);
-      const links = extractAllLinksFromRoute(currentDayData.interleaved_route).map(String);
-      
-      console.log(`[useScheduleStateAndEffects] 선택된 ${selectedDay}일차 경로 렌더링: ${nodes.length} 노드, ${links.length} 링크`);
-      
-      // 경로 렌더링에 필요한 형식으로 데이터 변환
-      const routeSegment: SegmentRoute = { 
-        nodeIds: nodes, 
-        linkIds: links,
-        fromIndex: 0,
-        toIndex: nodes.length > 0 ? nodes.length - 1 : 0
-      };
-      
-      // 경로 렌더링
-      renderGeoJsonRoute(routeSegment);
+      try {
+        // 경로 데이터 추출
+        const nodes = extractAllNodesFromRoute(currentDayData.interleaved_route).map(String);
+        const links = extractAllLinksFromRoute(currentDayData.interleaved_route).map(String);
+        
+        console.log(`[useScheduleStateAndEffects] 선택된 ${selectedDay}일차 경로 렌더링: ${nodes.length} 노드, ${links.length} 링크`);
+        
+        // 경로 렌더링에 필요한 형식으로 데이터 변환
+        const routeSegment: SegmentRoute = { 
+          nodeIds: nodes, 
+          linkIds: links,
+          fromIndex: 0,
+          toIndex: nodes.length > 0 ? nodes.length - 1 : 0
+        };
+        
+        // 경로 렌더링
+        renderGeoJsonRoute(routeSegment);
+      } catch (error) {
+        console.error(`[useScheduleStateAndEffects] 경로 렌더링 중 오류:`, error);
+      }
     } else if (currentDayData) {
       console.log(`[useScheduleStateAndEffects] ${selectedDay}일차는 경로 데이터가 없습니다.`);
     } else {

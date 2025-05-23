@@ -1,4 +1,5 @@
-import React, { useEffect, useRef } from 'react';
+
+import React, { useEffect, useRef, useMemo } from 'react';
 import { useMapContext } from './MapContext';
 import MapMarkers from './MapMarkers';
 import MapLoadingOverlay from './MapLoadingOverlay';
@@ -7,7 +8,6 @@ import MapControls from './MapControls';
 import type { Place, ItineraryDay } from '@/types/supabase';
 import { useMapItineraryVisualization } from '@/hooks/map/useMapItineraryVisualization';
 import { useMapDataEffects } from '@/hooks/map/useMapDataEffects';
-// ServerRouteDataForDay는 useServerRoutes에서 export 했으므로 여기선 직접 필요 없음
 
 interface MapProps {
   places: Place[];
@@ -35,8 +35,8 @@ const Map: React.FC<MapProps> = ({
     handleGeoJsonLoaded,
     isGeoJsonLoaded,
     checkGeoJsonMapping,
-    serverRoutesData, // MapContext에서 Record<number, ServerRouteResponse> 타입으로 제공
-    renderItineraryRoute, // MapContext에서 (ItineraryDay | null, ...) 타입으로 제공
+    serverRoutesData,
+    renderItineraryRoute,
     geoJsonNodes, 
     geoJsonLinks,
   } = useMapContext();
@@ -48,35 +48,43 @@ const Map: React.FC<MapProps> = ({
     visualizeDayRoute,
   } = useMapItineraryVisualization(map, geoJsonNodes, geoJsonLinks);
 
+  // 현재 선택된 일자의 itinerary 데이터
+  const currentDayData = useMemo(() => {
+    if (itinerary && selectedDay !== null) {
+      return itinerary.find(day => day.day === selectedDay);
+    }
+    return null;
+  }, [itinerary, selectedDay]);
 
   const { handlePlaceClick } = useMapDataEffects({
     isMapInitialized,
     isGeoJsonLoaded,
     showGeoJson,
     toggleGeoJsonVisibility,
-    renderItineraryRoute, // 컨텍스트의 함수를 그대로 전달
-    serverRoutesData: serverRoutesData, // 컨텍스트의 데이터를 그대로 전달 (타입 불일치 가능성 있음, useMapDataEffects에서 미사용으로 회피)
+    renderItineraryRoute,
+    serverRoutesData,
     checkGeoJsonMapping,
     places,
     itinerary,
     selectedDay,
   });
 
-  const lastSelectedDayRef = useRef<number | null>(null);
-  const markersKeyRef = useRef<number>(0);
-
+  // 일정 및 선택된 일자가 변경되면 로그 기록
   useEffect(() => {
-    if (selectedDay !== lastSelectedDayRef.current) {
-      console.log(`[Map] 선택된 일차가 변경되었습니다: ${lastSelectedDayRef.current} -> ${selectedDay}`);
-      lastSelectedDayRef.current = selectedDay;
-      markersKeyRef.current += 1;
+    if (itinerary && selectedDay !== null && currentDayData) {
+      console.log(`[Map] Selected day ${selectedDay} has ${currentDayData.places.length} places`);
     }
-  }, [selectedDay]);
+  }, [itinerary, selectedDay, currentDayData]);
+
+  // MapMarkers에 대한 고유 키 생성
+  const markersKey = useMemo(() => {
+    return `markers-${selectedDay}-${itinerary ? itinerary.length : 0}-${places.length}`;
+  }, [selectedDay, itinerary, places.length]);
 
   return (
     <div ref={mapContainer} className="w-full h-full relative flex-grow">
       <MapMarkers
-        key={`markers-${markersKeyRef.current}-${selectedDay}`} // selectedDay를 key에 추가하여 강제 리렌더링 유도
+        key={markersKey}
         places={places}
         selectedPlace={selectedPlace}
         itinerary={itinerary}
