@@ -1,5 +1,5 @@
 
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { useMapContext } from '../MapContext';
 import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/core';
 import { clearMarkers } from '@/utils/map/mapCleanup';
@@ -31,6 +31,7 @@ export const useMapMarkers = ({
   const prevSelectedDayRef = useRef<number | null>(null);
   const prevItineraryRef = useRef<ItineraryDay[] | null>(null);
   const prevPlacesRef = useRef<Place[] | null>(null);
+  const [markerUpdateCount, setMarkerUpdateCount] = useState(0); // Force re-render counter
 
   // 마커를 제거하는 함수를 더 명확하게 정의
   const clearAllMarkers = () => {
@@ -39,6 +40,22 @@ export const useMapMarkers = ({
       markersRef.current = clearMarkers(markersRef.current);
     }
   };
+
+  // 명시적으로 마커 재생성을 강제하는 함수 추가
+  const forceMarkerUpdate = () => {
+    clearAllMarkers();
+    setMarkerUpdateCount(prev => prev + 1);
+    console.log("[useMapMarkers] Force marker update triggered");
+  };
+
+  // selectedDay가 변경될 때마다 마커 강제 업데이트
+  useEffect(() => {
+    if (selectedDay !== prevSelectedDayRef.current && isMapInitialized) {
+      console.log(`[useMapMarkers] Day changed from ${prevSelectedDayRef.current} to ${selectedDay} - Force updating markers`);
+      prevSelectedDayRef.current = selectedDay;
+      forceMarkerUpdate();
+    }
+  }, [selectedDay, isMapInitialized]);
 
   // itinerary 또는 selectedDay가 변경될 때 마커를 업데이트하는 로직
   useEffect(() => {
@@ -53,7 +70,8 @@ export const useMapMarkers = ({
       prevSelectedDay: prevSelectedDayRef.current,
       dayChanged: selectedDay !== prevSelectedDayRef.current,
       itineraryLength: itinerary?.length,
-      markersCount: markersRef.current.length
+      markersCount: markersRef.current.length,
+      markerUpdateForceCount: markerUpdateCount
     });
 
     const itineraryChanged = prevItineraryRef.current !== itinerary;
@@ -64,11 +82,12 @@ export const useMapMarkers = ({
     const selectedPlacesListChanged = JSON.stringify(selectedPlaces) !== JSON.stringify((markersRef.current as any)._prevSelectedPlacesList);
 
     // 변화가 감지되면 마커를 재생성
-    if (itineraryChanged || dayChanged || placesPropChanged || selectedPlaceChanged || highlightChanged || selectedPlacesListChanged) {
+    if (itineraryChanged || dayChanged || placesPropChanged || selectedPlaceChanged || highlightChanged || selectedPlacesListChanged || markerUpdateCount > 0) {
       console.log("[useMapMarkers] Change detected, regenerating markers:", {
         itineraryChanged,
         dayChanged,
         placesPropChanged,
+        markerUpdateForced: markerUpdateCount > 0,
         selectedDay,
         itineraryLength: itinerary?.length,
         placesLength: places?.length,
@@ -85,14 +104,13 @@ export const useMapMarkers = ({
       (markersRef.current as any)._prevHighlightPlaceId = highlightPlaceId;
       (markersRef.current as any)._prevSelectedPlacesList = selectedPlaces;
 
-      // 경로 생성 모드가 아닌 경우에만 마커를 렌더링
-      // 일정이 있으면 해당 일정의 마커만 표시, 없으면 기본 마커 표시
+      // 마커 렌더링
       renderMarkers();
     }
   }, [
     map, isMapInitialized, isNaverLoaded,
     places, selectedPlace, itinerary, selectedDay, selectedPlaces,
-    onPlaceClick, highlightPlaceId
+    onPlaceClick, highlightPlaceId, markerUpdateCount
   ]);
 
   // 마커 렌더링 함수
@@ -191,6 +209,7 @@ export const useMapMarkers = ({
   
   return {
     markers: markersRef.current,
-    clearAllMarkers
+    clearAllMarkers,
+    forceMarkerUpdate
   };
 };

@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/core';
 import { useMapMarkers } from './hooks/useMapMarkers';
 
@@ -23,7 +23,7 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
   highlightPlaceId,
 }) => {
   // Use the extracted hook for marker management
-  useMapMarkers({
+  const { forceMarkerUpdate } = useMapMarkers({
     places,
     selectedPlace,
     itinerary,
@@ -32,6 +32,12 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
     onPlaceClick,
     highlightPlaceId,
   });
+
+  // Force marker update when the component mounts or when selectedDay changes
+  useEffect(() => {
+    console.log(`[MapMarkers] Component rendered with selectedDay: ${selectedDay}`);
+    forceMarkerUpdate();
+  }, [selectedDay, forceMarkerUpdate]);
 
   // This component doesn't render anything visible
   return null;
