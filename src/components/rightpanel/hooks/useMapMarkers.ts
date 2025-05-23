@@ -1,3 +1,4 @@
+
 import { useRef, useEffect } from 'react';
 import { useMapContext } from '../MapContext';
 import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/core';
@@ -98,12 +99,9 @@ export const useMapMarkers = ({
     let placesToDisplay: (Place | ItineraryPlaceWithTime)[] = [];
     let isDisplayingItineraryDay = false;
 
-    // Modified logic to only display places that are in the itinerary
+    // 일정이 있는 경우에는 일반 장소 마커를 표시하지 않음
     if (itinerary && itinerary.length > 0) {
-      // Get all place IDs from the itinerary
-      const itineraryPlaceIds = new Set<string>();
-      
-      // If there's a selected day, show only that day's places
+      // 선택한 일자가 있으면 해당 일자의 장소만 표시
       if (selectedDay !== null) {
         const currentDayData = itinerary.find(day => day.day === selectedDay);
         if (currentDayData && currentDayData.places && currentDayData.places.length > 0) {
@@ -114,19 +112,14 @@ export const useMapMarkers = ({
           console.log(`[useMapMarkers] Itinerary active for day ${selectedDay}, but no places found for this day. No itinerary markers shown.`);
         }
       } else {
-        // No specific day selected but itinerary exists - collect all place IDs from all days
-        itinerary.forEach(day => {
-          day.places.forEach(place => itineraryPlaceIds.add(place.id));
-        });
-        
-        // Filter places to only include those in the itinerary
-        placesToDisplay = places.filter(place => itineraryPlaceIds.has(place.id));
-        console.log(`[useMapMarkers] No specific day selected. Displaying ${placesToDisplay.length} places from all days.`);
+        // 선택한 일자가 없으면 빈 배열 (마커 표시 안 함)
+        console.log(`[useMapMarkers] No specific day selected. No markers will be shown.`);
+        placesToDisplay = [];
       }
     } else {
-      // No itinerary, display empty map
-      console.log(`[useMapMarkers] No active itinerary. No markers will be shown.`);
-      placesToDisplay = [];
+      // 일정이 없는 경우 기본 장소 표시 (일반적인 검색 결과)
+      placesToDisplay = places;
+      console.log(`[useMapMarkers] No active itinerary. Displaying ${placesToDisplay.length} places from search.`);
     }
     
     if (placesToDisplay.length > 0) {
@@ -173,10 +166,10 @@ export const useMapMarkers = ({
         markersRef.current = newMarkers;
 
         if (validPlacesToDisplay.length > 0) {
-            if (!(selectedPlace || highlightPlaceId)) {
-                console.log("[useMapMarkers] Fitting map bounds to displayed markers.");
-                fitBoundsToPlaces(map, validPlacesToDisplay as Place[]);
-            }
+          if (!(selectedPlace || highlightPlaceId)) {
+            console.log("[useMapMarkers] Fitting map bounds to displayed markers.");
+            fitBoundsToPlaces(map, validPlacesToDisplay as Place[]);
+          }
         }
       }
     } else {

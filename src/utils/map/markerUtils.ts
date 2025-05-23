@@ -1,37 +1,48 @@
+
 import type { Place } from '@/types/supabase';
 import type { ItineraryPlaceWithTime } from '@/types/core';
 import { createNaverLatLng } from './mapSetup';
 import { getCategoryColor, mapCategoryNameToKey } from '@/utils/categoryColors';
 
-// Helper function to create SVG string for a map pin
-const createPinSvg = (
+// Helper function to create SVG string for a map circle
+const createCircleMarkerSvg = (
   color: string,
-  size: number = 28, // Adjusted default size
+  size: number = 36, // Default size for the circle
   label?: string | number,
   innerCircleColor: string = 'white'
 ): string => {
-  const strokeColor = "black"; // Outline for the pin shape itself for better visibility
-  const strokeWeight = 0.5; // Thinner stroke for the pin outline
+  // 테두리와 배경색 설정
+  const strokeColor = "white";
+  const strokeWidth = 2;
   
-  // Scale down viewBox elements if using a fixed viewBox="0 0 24 24"
-  const pathScaleFactor = size / 24;
-  const scaledInnerRadius = 3 * pathScaleFactor; // Original inner circle radius is 3 in a 24x24 viewbox
-  const scaledCx = 12 * pathScaleFactor;
-  const scaledCy = 10 * pathScaleFactor;
-
+  // 레이블 설정
   let labelContent = '';
   if (label) {
-    const fontSize = size * 0.45; // Adjust font size based on pin size
-    const textY = 10; // Y position in viewBox units
-    const textX = 12; // X position in viewBox units
-
-    labelContent = `<text x="${textX}" y="${textY}" dominant-baseline="middle" text-anchor="middle" fill="white" font-size="${fontSize}" font-family="Arial, sans-serif" font-weight="bold">${label}</text>`;
+    // 숫자 레이블에 대한 스타일링
+    const fontSize = Math.max(size * 0.45, 14); // 최소 폰트 크기 보장
+    labelContent = `
+      <text 
+        x="${size/2}" 
+        y="${size/2}" 
+        text-anchor="middle" 
+        dominant-baseline="middle" 
+        fill="white" 
+        font-family="Arial, sans-serif" 
+        font-weight="bold" 
+        font-size="${fontSize}px">${label}</text>
+    `;
   }
 
+  // SVG 원 생성
   return `
-    <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" style="overflow: visible;">
-      <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" fill="${color}" stroke="${strokeColor}" stroke-width="${strokeWeight}" stroke-linecap="round" stroke-linejoin="round"/>
-      <circle cx="12" cy="10" r="3" fill="${innerCircleColor}"/>
+    <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+      <circle 
+        cx="${size/2}" 
+        cy="${size/2}" 
+        r="${size/2 - strokeWidth/2}" 
+        fill="${color}" 
+        stroke="${strokeColor}" 
+        stroke-width="${strokeWidth}" />
       ${labelContent}
     </svg>
   `;
@@ -50,28 +61,28 @@ export const getMarkerIconOptions = (
 
   if (isItineraryDayPlace) {
     pinColor = (place as ItineraryPlaceWithTime).isFallback ? '#757575' : '#FF5A5F'; // Red for itinerary items, gray for fallback
-    pinSize = 32; // Slightly larger for itinerary items
+    pinSize = 36; // Slightly larger for itinerary items
     label = itineraryOrder;
   } else if (isSelected) {
     pinColor = '#007BFF'; // Blue for selected
     pinSize = 32; // Larger for selected
   } else if (isCandidate) {
     pinColor = '#FFA500'; // Orange for candidate
-    // Note: pinSize for candidate wasn't explicitly larger, keeping default 28 or 32 if selected also.
-    // If a larger size is desired for candidates, it can be set here.
-    // For consistency with 'selected', let's make it 32.
     pinSize = 32;
   } else if (place.category) {
     const categoryKey = mapCategoryNameToKey(place.category);
     pinColor = getCategoryColor(categoryKey);
-    // Default pinSize for category-colored markers remains 28 unless specified otherwise.
+    pinSize = 24; // Default size for category markers
   } else {
     pinColor = '#28A745'; // Fallback Default Green if no category or other state matches
   }
 
+  // 원형 마커 사용
+  const markerContent = createCircleMarkerSvg(pinColor, pinSize, label);
+  
   return {
-    content: createPinSvg(pinColor, pinSize, label),
-    anchor: { x: pinSize / 2, y: pinSize },
+    content: markerContent,
+    anchor: { x: pinSize / 2, y: pinSize / 2 }, // 앵커 포인트를 원의 중심으로 조정
     size: { width: pinSize, height: pinSize }
   };
 };
@@ -100,7 +111,11 @@ export const createNaverMarker = (
     } else if (iconConfig.content) {
       iconObject = {
         content: iconConfig.content,
-        anchor: iconConfig.anchor ? new window.naver.maps.Point(iconConfig.anchor.x, iconConfig.anchor.y) : new window.naver.maps.Point(iconConfig.size?.width ? iconConfig.size.width/2 : 14, iconConfig.size?.height || 28), // Default anchor for content based on size
+        anchor: iconConfig.anchor ? new window.naver.maps.Point(iconConfig.anchor.x, iconConfig.anchor.y) : 
+                new window.naver.maps.Point(
+                  iconConfig.size?.width ? iconConfig.size.width/2 : 14, 
+                  iconConfig.size?.height ? iconConfig.size.height/2 : 14
+                ), // 앵커 포인트를 원의 중심으로 조정
       };
     }
   }
@@ -120,7 +135,6 @@ export const addMarkersToMap = (
   places: Place[],
   selectedPlace: Place | null,
   candidatePlaces: Place[] = [],
-  // itineraryPlaces: Place[] = [], // This parameter seems unused in the original function
   onMarkerClick: (place: Place, index: number) => void
 ) => {
   const markers: any[] = [];

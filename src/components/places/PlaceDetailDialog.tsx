@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -40,6 +41,9 @@ const PlaceDetailDialog: React.FC<PlaceDetailDialogProps> = ({ place, open, onOp
   const stayDuration = isItineraryPlace(place) ? place.stayDuration : undefined;
   const timeBlockDisplay = isItineraryPlace(place) ? formatTimeBlock(place.timeBlock) : undefined;
 
+  // 전화번호가 유효한지 확인 ("정보 없음"이 아니고 존재하는 경우에만 표시)
+  const hasValidPhone = place.phone && place.phone !== "정보 없음";
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md md:max-w-lg">
@@ -81,7 +85,8 @@ const PlaceDetailDialog: React.FC<PlaceDetailDialogProps> = ({ place, open, onOp
               </div>
             )}
 
-            {place.phone && place.phone !== "정보 없음" && (
+            {/* 전화번호 정보 영역 - 유효한 전화번호만 표시 */}
+            {hasValidPhone && (
               <div className="flex items-center">
                 <Phone className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
                 <span className="text-sm">{formatPhoneNumber(place.phone)}</span>
