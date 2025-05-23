@@ -1,11 +1,11 @@
 
-import React, { useEffect, useRef, useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useMapContext } from './MapContext';
 import MapMarkers from './MapMarkers';
 import MapLoadingOverlay from './MapLoadingOverlay';
 import GeoJsonLayer from './GeoJsonLayer';
 import MapControls from './MapControls';
-import type { Place, ItineraryDay } from '@/types/supabase';
+import type { Place, ItineraryDay } from '@/types/supabase'; // Assuming this is correct, otherwise use types/core
 import { useMapItineraryVisualization } from '@/hooks/map/useMapItineraryVisualization';
 import { useMapDataEffects } from '@/hooks/map/useMapDataEffects';
 
@@ -73,22 +73,32 @@ const Map: React.FC<MapProps> = ({
   useEffect(() => {
     if (itinerary && selectedDay !== null && currentDayData && renderItineraryRoute) {
       console.log(`[Map] Selected day ${selectedDay} has ${currentDayData.places?.length || 0} places`);
-      renderItineraryRoute(currentDayData, serverRoutesData);
+      if (serverRoutesData && serverRoutesData[selectedDay]) { // Ensure serverRoutesData for the day exists
+        renderItineraryRoute(currentDayData, serverRoutesData);
+      } else if (!serverRoutesData || !serverRoutesData[selectedDay]) {
+        // Fallback or alternative logic if serverRoutesData is not ready for the selected day
+        // This might involve rendering a simpler route or just markers
+        console.warn(`[Map] serverRoutesData not available for day ${selectedDay}. Route rendering might be incomplete.`);
+        // Optionally, you could call renderItineraryRoute with a modified call or handle differently
+        // For now, just logging. Depending on requirements, could render markers only, or a direct line.
+      }
     }
   }, [itinerary, selectedDay, currentDayData, serverRoutesData, renderItineraryRoute]);
 
   // MapMarkers에 대한 고유 키 생성 - 의존성 배열 확장
   const markersKey = useMemo(() => {
-    const placesId = places.length > 0 ? places[0].id : 'empty';
-    const itineraryId = itinerary && itinerary.length > 0 ? 
-      `${itinerary.length}-${itinerary[0].id || itinerary[0].day}` : 
+    const placesId = places.map(p => p.id).join('_') || 'empty';
+    
+    const itineraryId = itinerary && itinerary.length > 0 && itinerary[0] ? 
+      `${itinerary.length}-${itinerary[0].day}-${itinerary[0].date}` : 
       'no-itinerary';
+      
     const dayId = selectedDay !== null ? `day-${selectedDay}` : 'no-day';
     const selectedPlaceId = selectedPlace ? `place-${selectedPlace.id}` : 'no-selected';
+    const selectedPlacesIds = selectedPlaces.map(p => p.id).join('_') || 'no-selected-places';
     
-    // 타임스탬프를 추가하여 모든 변경사항에 대해 확실히 새로운 키 생성
-    return `markers-${dayId}-${itineraryId}-${placesId}-${selectedPlaceId}-${Date.now()}`;
-  }, [places, itinerary, selectedDay, selectedPlace]);
+    return `markers-${dayId}-${itineraryId}-${placesId}-${selectedPlaceId}-${selectedPlacesIds}`;
+  }, [places, itinerary, selectedDay, selectedPlace, selectedPlaces]);
 
   return (
     <div ref={mapContainer} className="w-full h-full relative flex-grow">
