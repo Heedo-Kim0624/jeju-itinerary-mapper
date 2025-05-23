@@ -1,10 +1,10 @@
-
 import { useCallback } from 'react';
 import { toast } from 'sonner';
 import type { Place, SchedulePayload, ItineraryDay, NewServerScheduleResponse } from '@/types'; // @/types에서 가져오도록 변경
 import { isNewServerScheduleResponse } from '@/types'; // isNewServerScheduleResponse도 @/types에서 가져옴
 import { useMapContext } from '@/components/rightpanel/MapContext';
 import { useScheduleGenerator } from '@/hooks/use-schedule-generator';
+import type { ServerRouteDataForDay } from '@/hooks/map/useServerRoutes'; // ServerRouteDataForDay 타입 임포트
 
 /**
  * 일정 관련 핸들러 훅
@@ -185,7 +185,8 @@ export const useItineraryHandlers = () => {
   ) => {
     setShowItineraryFn(false);
     clearMarkersAndUiElements(); 
-    setServerRoutes({} as Record<number, import('@/types').ServerRouteResponse>);
+    // 타입을 ServerRouteDataForDay로 수정
+    setServerRoutes({} as Record<number, ServerRouteDataForDay>); 
     setCurrentPanelFn('category'); 
   }, [clearMarkersAndUiElements, setServerRoutes]);
 
