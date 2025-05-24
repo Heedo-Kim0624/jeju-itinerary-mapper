@@ -66,9 +66,15 @@ const GeoJsonLoader: React.FC<GeoJsonLoaderProps> = ({
         
         // 링크 객체 생성 및 노드 인접 링크/노드 설정
         const links = linkJson.features.map((feature: any): GeoLink => {
-          const id = String(feature.properties.LINK_ID);
-          const fromNodeId = String(feature.properties.F_NODE);
-          const toNodeId = String(feature.properties.T_NODE);
+          // LINK_ID 필드 정규화 - 다양한 형식 지원
+          const linkId = feature.properties.LINK_ID !== undefined ? feature.properties.LINK_ID :
+                         feature.properties.link_id !== undefined ? feature.properties.link_id :
+                         feature.properties.LinkId !== undefined ? feature.properties.LinkId :
+                         feature.properties.linkId;
+          
+          const id = String(linkId || feature.id || Math.random().toString(36).substring(2, 11));
+          const fromNodeId = String(feature.properties.F_NODE || feature.properties.from_node || '');
+          const toNodeId = String(feature.properties.T_NODE || feature.properties.to_node || '');
           const length = feature.properties.LENGTH || 0;
           
           // 노드 인접 링크 및 노드 업데이트
@@ -104,6 +110,21 @@ const GeoJsonLoader: React.FC<GeoJsonLoaderProps> = ({
           노드객체: nodes.length,
           링크객체: links.length
         });
+        
+        // LINK_ID 테스트 - 무작위 링크 항목 로깅
+        if (links.length > 0) {
+          const sampleLink = links[Math.floor(Math.random() * links.length)];
+          console.log('GeoJsonLoader: 샘플 링크 항목 검사:', {
+            id: sampleLink.id,
+            properties: sampleLink.properties ? {
+              LINK_ID: sampleLink.properties.LINK_ID,
+              link_id: sampleLink.properties.link_id,
+              LinkId: sampleLink.properties.LinkId
+            } : null,
+            fromNode: sampleLink.fromNode,
+            toNode: sampleLink.toNode
+          });
+        }
         
         // 성공 콜백 호출
         onLoadSuccess(nodes as GeoNode[], links);

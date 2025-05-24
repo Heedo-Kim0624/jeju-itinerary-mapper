@@ -77,13 +77,32 @@ export const useItineraryGeoJsonRenderer = ({
         let missingLinkCount = 0;
         let drawnPolylinesCount = 0;
 
+        // 개선된 링크 탐색 로직
         linkIds.forEach(linkId => {
-          const linkFeature = geoJsonLinks.find(
-            (feature: GeoJsonFeature) => {
+          const stringLinkId = String(linkId);
+          
+          // LINK_ID 필드를 properties 객체에서 정확하게 확인
+          const linkFeature = geoJsonLinks.find(feature => {
+            if (feature && feature.properties) {
+              // 대소문자와 공백을 무시하고 LINK_ID 필드명 검색
               const props = feature.properties as GeoJsonLinkProperties;
-              return String(props.LINK_ID) === String(linkId);
+              
+              // 다양한 필드명 형식 지원 (LINK_ID, link_id, Link_Id 등)
+              const linkIdProperties = [
+                props.LINK_ID, 
+                props.link_id, 
+                props.Link_Id,
+                props.linkId,
+                props.LinkId
+              ];
+              
+              // 숫자나 문자열 타입 모두 지원
+              return linkIdProperties.some(
+                prop => prop !== undefined && String(prop) === stringLinkId
+              );
             }
-          );
+            return false;
+          });
 
           if (linkFeature && linkFeature.geometry && linkFeature.geometry.type === 'LineString' && Array.isArray(linkFeature.geometry.coordinates)) {
             const coords = linkFeature.geometry.coordinates as GeoCoordinates[];
@@ -102,11 +121,26 @@ export const useItineraryGeoJsonRenderer = ({
                 allRouteCoordinatesForBounds.push(pathCoordsForPolyline);
               }
             } else {
-                 console.warn(`[ItineraryGeoJsonRenderer] LINK_ID ${linkId} has insufficient valid coordinates after processing.`);
+                console.warn(`[ItineraryGeoJsonRenderer] LINK_ID ${linkId} has insufficient valid coordinates after processing.`);
             }
           } else {
-            console.warn(`[ItineraryGeoJsonRenderer] LINK_ID ${linkId}에 해당하는 데이터를 geoJsonLinks에서 찾지 못했거나 형식이 올바르지 않습니다. Feature:`, linkFeature);
             missingLinkCount++;
+            // 추가적인 디버그 정보 기록
+            if (missingLinkCount <= 5) { // 처음 5개만 상세 로깅하여 로그 폭발 방지
+              console.warn(`[ItineraryGeoJsonRenderer] LINK_ID ${linkId}에 해당하는 데이터를 geoJsonLinks에서 찾지 못했거나 형식이 올바르지 않습니다. Feature:`, linkFeature);
+              
+              // 디버그용: 첫 몇개 geoJsonLinks 항목 구조 확인
+              if (missingLinkCount === 1 && geoJsonLinks.length > 0) {
+                const sampleLink = geoJsonLinks[0];
+                console.log(`[ItineraryGeoJsonRenderer] 샘플 geoJsonLinks 항목 구조:`, 
+                  sampleLink ? {
+                    type: sampleLink.type,
+                    properties_keys: sampleLink.properties ? Object.keys(sampleLink.properties) : 'No properties',
+                    geometry_type: sampleLink.geometry ? sampleLink.geometry.type : 'No geometry'
+                  } : 'No sample link'
+                );
+              }
+            }
           }
         });
 
