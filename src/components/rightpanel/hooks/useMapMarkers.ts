@@ -48,6 +48,8 @@ export const useMapMarkers = ({
     const newUpdateId = updateRequestIdRef.current + 1;
     updateRequestIdRef.current = newUpdateId;
     
+    console.log(`[useMapMarkers] forceMarkerUpdate called, updateId: ${newUpdateId}`);
+    
     // 약간의 지연을 두고 업데이트 트리거
     setTimeout(() => {
       // 다른 업데이트가 이미 예약되어 있지 않은 경우에만 실행
@@ -61,7 +63,11 @@ export const useMapMarkers = ({
   useEffect(() => {
     const handleItineraryDaySelected = (event: CustomEvent) => {
       const { day } = event.detail || {};
+      console.log(`[useMapMarkers] itineraryDaySelected event received with day: ${day}`);
+      
+      // 현재 선택된 날짜가 이벤트의 날짜와 다를 경우에만 업데이트
       if (day !== prevSelectedDayRef.current) {
+        console.log(`[useMapMarkers] Selected day changed from ${prevSelectedDayRef.current} to ${day}`);
         prevSelectedDayRef.current = day;
         forceMarkerUpdate();
       }
@@ -83,24 +89,32 @@ export const useMapMarkers = ({
     };
   }, [forceMarkerUpdate, clearAllMarkers]);
 
-  // selectedDay, itinerary, places 변화 감지
+  // selectedDay, itinerary, places 변화 감지 및 강제 업데이트
   useEffect(() => {
     const needsUpdate = 
       selectedDay !== prevSelectedDayRef.current || 
       itinerary !== prevItineraryRef.current ||
       places !== prevPlacesRef.current;
     
+    console.log(`[useMapMarkers] Checking for update needs: ${needsUpdate}, selectedDay: ${selectedDay}, prevDay: ${prevSelectedDayRef.current}`);
+    
     if (needsUpdate && isMapInitialized) {
       prevSelectedDayRef.current = selectedDay;
       prevItineraryRef.current = itinerary;
       prevPlacesRef.current = places;
-      forceMarkerUpdate();
+      
+      // 선택된 일자가 있고, 일정이 있는 경우에만 업데이트
+      if (selectedDay !== null && itinerary && itinerary.length > 0) {
+        console.log(`[useMapMarkers] Forcing marker update for day: ${selectedDay}`);
+        forceMarkerUpdate();
+      }
     }
   }, [selectedDay, itinerary, places, isMapInitialized, forceMarkerUpdate]);
 
   // 마커 렌더링 로직
   const renderMarkers = useCallback(() => {
     if (!map || !isMapInitialized || !isNaverLoaded || !window.naver || !window.naver.maps) {
+      console.log("[useMapMarkers] Cannot render markers: map not initialized or Naver not loaded");
       return;
     }
     
@@ -200,6 +214,7 @@ export const useMapMarkers = ({
   // updateTriggerId가 변경될 때만 마커 업데이트
   useEffect(() => {
     if (updateTriggerId > 0 && isMapInitialized) {
+      console.log(`[useMapMarkers] Updating markers due to trigger ID change: ${updateTriggerId}`);
       renderMarkers();
     }
   }, [updateTriggerId, isMapInitialized, renderMarkers]);

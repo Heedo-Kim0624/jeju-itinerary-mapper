@@ -34,14 +34,15 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
     highlightPlaceId,
   });
 
-  // 초기 마운트시 마커 업데이트 (한 번만 실행)
+  // 초기 마운트와 주요 props 변경 시 마커 업데이트
   useEffect(() => {
+    console.log(`[MapMarkers] selectedDay changed to: ${selectedDay}, forcing marker update`);
     const timer = setTimeout(() => {
       forceMarkerUpdate();
     }, 300);
     
     return () => clearTimeout(timer);
-  }, [forceMarkerUpdate]);
+  }, [selectedDay, itinerary, forceMarkerUpdate]);
 
   // 경로 생성 시작 이벤트 감지 시 모든 마커 제거
   useEffect(() => {
@@ -50,12 +51,25 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
       clearAllMarkers();
     };
     
+    // 일정 일자 선택 이벤트 감지
+    const handleDaySelected = (event: any) => {
+      if (event.detail && typeof event.detail.day === 'number') {
+        console.log(`[MapMarkers] itineraryDaySelected 이벤트 감지 - 일자: ${event.detail.day}`);
+        // 약간의 지연 후에 마커 업데이트 실행 (다른 이벤트 처리 완료 후)
+        setTimeout(() => {
+          forceMarkerUpdate();
+        }, 100);
+      }
+    };
+    
     window.addEventListener('startScheduleGeneration', handleStartScheduleGeneration);
+    window.addEventListener('itineraryDaySelected', handleDaySelected);
     
     return () => {
       window.removeEventListener('startScheduleGeneration', handleStartScheduleGeneration);
+      window.removeEventListener('itineraryDaySelected', handleDaySelected);
     };
-  }, [clearAllMarkers]);
+  }, [clearAllMarkers, forceMarkerUpdate]);
 
   // 이 컴포넌트는 UI를 렌더링하지 않음
   return null;
@@ -76,7 +90,11 @@ export default React.memo(MapMarkers, (prevProps, nextProps) => {
   // places 배열 길이 비교
   const isSamePlacesLength = prevProps.places.length === nextProps.places.length;
   
+  // 일정이 변경되었거나 선택된 일자가 변경된 경우 리렌더링 필요
+  if (!isSameSelectedDay || !isSameItineraryLength) {
+    return false; // 리렌더링 필요
+  }
+  
   // 모든 조건이 동일하면 리렌더링 방지
-  return isSameSelectedDay && isSameSelectedPlace && isSameHighlightId && 
-         isSameItineraryLength && isSamePlacesLength;
+  return isSameSelectedPlace && isSameHighlightId && isSamePlacesLength;
 });
