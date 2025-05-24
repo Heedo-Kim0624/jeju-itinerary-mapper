@@ -1,6 +1,6 @@
 
 import { useCallback } from 'react';
-import { useMapContext } from '../../MapContext'; // 경로 수정
+// useMapContext import는 더 이상 필요하지 않습니다. props로 map, isMapInitialized, isNaverLoaded를 받습니다.
 import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/core';
 import { getMarkerIconOptions, createNaverMarker } from '@/utils/map/markerUtils';
 import { createNaverLatLng } from '@/utils/map/mapSetup';
@@ -16,6 +16,9 @@ interface MarkerRenderLogicProps {
   onPlaceClick?: (place: Place | ItineraryPlaceWithTime, index: number) => void;
   highlightPlaceId?: string;
   markersRef: React.MutableRefObject<naver.maps.Marker[]>;
+  map: any; // naver.maps.Map | null 타입이 더 정확할 수 있습니다.
+  isMapInitialized: boolean;
+  isNaverLoaded: boolean;
 }
 
 export const useMarkerRenderLogic = ({
@@ -27,8 +30,11 @@ export const useMarkerRenderLogic = ({
   onPlaceClick,
   highlightPlaceId,
   markersRef,
+  map, // Prop으로 전달받음
+  isMapInitialized, // Prop으로 전달받음
+  isNaverLoaded, // Prop으로 전달받음
 }: MarkerRenderLogicProps) => {
-  const { map, isMapInitialized, isNaverLoaded } = useMapContext();
+  // const { map, isMapInitialized, isNaverLoaded } = useMapContext(); // 이 줄은 제거합니다.
 
   const renderMarkers = useCallback(() => {
     if (!map || !isMapInitialized || !isNaverLoaded || !window.naver || !window.naver.maps) {
@@ -122,11 +128,10 @@ export const useMarkerRenderLogic = ({
       panToPosition(map, placeToFocus.y, placeToFocus.x);
     }
   }, [
-    map, isMapInitialized, isNaverLoaded, markersRef,
+    map, isMapInitialized, isNaverLoaded, markersRef, // map, isMapInitialized, isNaverLoaded가 props로 사용됨
     places, selectedPlace, itinerary, selectedDay, selectedPlaces,
     onPlaceClick, highlightPlaceId,
   ]);
 
   return { renderMarkers };
 };
-
