@@ -1,11 +1,14 @@
 
-import { useRef, useEffect, useState, useCallback } from 'react';
-import { useMapContext } from '../MapContext';
+import { useCallback, useEffect } from 'react';
+import { useMapContext } from '../../MapContext';
 import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/core';
-import { clearMarkers } from '@/utils/map/mapCleanup';
-import { getMarkerIconOptions, createNaverMarker } from '@/utils/map/markerUtils';
-import { createNaverLatLng } from '@/utils/map/mapSetup';
-import { fitBoundsToPlaces, panToPosition } from '@/utils/map/mapViewControls';
+import { clearMarkers as clearMarkersUtil } from '@/utils/map/mapCleanup';
+
+import { useMarkerRefs } from './marker-utils/useMarkerRefs';
+import { useMarkerUpdater } from './marker-utils/useMarkerUpdater';
+import { useMarkerEventListeners } from './marker-utils/useMarkerEventListeners';
+import { useMarkerRenderLogic } from './marker-utils/useMarkerRenderLogic';
+import { useMarkerLifecycleManager } from './marker-utils/useMarkerLifecycleManager';
 
 interface UseMapMarkersProps {
   places: Place[];
@@ -17,221 +20,65 @@ interface UseMapMarkersProps {
   highlightPlaceId?: string;
 }
 
-export const useMapMarkers = ({
-  places,
-  selectedPlace,
-  itinerary,
-  selectedDay,
-  selectedPlaces = [],
-  onPlaceClick,
-  highlightPlaceId,
-}: UseMapMarkersProps) => {
-  const { map, isMapInitialized, isNaverLoaded } = useMapContext();
-  const markersRef = useRef<naver.maps.Marker[]>([]);
-  const prevSelectedDayRef = useRef<number | null>(null);
-  const prevItineraryRef = useRef<ItineraryDay[] | null>(null);
-  const prevPlacesRef = useRef<Place[] | null>(null);
-  const updateRequestIdRef = useRef<number>(0);
-  const [updateTriggerId, setUpdateTriggerId] = useState<number>(0);
-  
-  // 마커를 제거하는 함수
+export const useMapMarkers = (props: UseMapMarkersProps) => {
+  const { map, isMapInitialized } = useMapContext();
+  const {
+    places, selectedPlace, itinerary, selectedDay,
+    selectedPlaces = [], onPlaceClick, highlightPlaceId,
+  } = props;
+
+  const {
+    markersRef, prevSelectedDayRef, prevItineraryRef,
+    prevPlacesRef, updateRequestIdRef,
+  } = useMarkerRefs();
+
+  const { updateTriggerId, forceMarkerUpdate } = useMarkerUpdater({ updateRequestIdRef });
+
   const clearAllMarkers = useCallback(() => {
     if (markersRef.current.length > 0) {
       console.log(`[useMapMarkers] Clearing all existing markers: ${markersRef.current.length}`);
-      markersRef.current = clearMarkers(markersRef.current);
+      markersRef.current = clearMarkersUtil(markersRef.current);
     }
-  }, []);
+  }, [markersRef]);
 
-  // 명시적으로 마커 재생성을 강제하는 함수 (중복 호출 방지)
-  const forceMarkerUpdate = useCallback(() => {
-    // 이전 업데이트와 새 업데이트를 구별하기 위한 ID 증가
-    const newUpdateId = updateRequestIdRef.current + 1;
-    updateRequestIdRef.current = newUpdateId;
-    
-    console.log(`[useMapMarkers] forceMarkerUpdate called, updateId: ${newUpdateId}`);
-    
-    // 약간의 지연을 두고 업데이트 트리거
-    setTimeout(() => {
-      // 다른 업데이트가 이미 예약되어 있지 않은 경우에만 실행
-      if (updateRequestIdRef.current === newUpdateId) {
-        setUpdateTriggerId(newUpdateId);
-      }
-    }, 50);
-  }, []);
+  useMarkerEventListeners({
+    clearAllMarkers,
+    forceMarkerUpdate,
+    prevSelectedDayRef,
+  });
 
-  // 이벤트 리스너 등록
-  useEffect(() => {
-    const handleItineraryDaySelected = (event: CustomEvent) => {
-      const { day } = event.detail || {};
-      console.log(`[useMapMarkers] itineraryDaySelected event received with day: ${day}`);
-      
-      // 현재 선택된 날짜가 이벤트의 날짜와 다를 경우에만 업데이트
-      if (day !== prevSelectedDayRef.current) {
-        console.log(`[useMapMarkers] Selected day changed from ${prevSelectedDayRef.current} to ${day}`);
-        prevSelectedDayRef.current = day;
-        forceMarkerUpdate();
-      }
-    };
+  const { renderMarkers } = useMarkerRenderLogic({
+    places, selectedPlace, itinerary, selectedDay, selectedPlaces,
+    onPlaceClick, highlightPlaceId,
+    markersRef,
+  });
 
-    // 스케줄 생성 시작 이벤트 핸들러
-    const handleStartScheduleGeneration = () => {
-      console.log("[useMapMarkers] startScheduleGeneration 이벤트 감지됨 - 모든 마커 제거");
-      clearAllMarkers();
-    };
+  useMarkerLifecycleManager({
+    selectedDay, itinerary, places, isMapInitialized, map,
+    forceMarkerUpdate,
+    prevSelectedDayRef, prevItineraryRef, prevPlacesRef,
+  });
 
-    // 이벤트 타입 캐스팅
-    window.addEventListener('itineraryDaySelected', handleItineraryDaySelected as EventListener);
-    window.addEventListener('startScheduleGeneration', handleStartScheduleGeneration);
-    
-    return () => {
-      window.removeEventListener('itineraryDaySelected', handleItineraryDaySelected as EventListener);
-      window.removeEventListener('startScheduleGeneration', handleStartScheduleGeneration);
-    };
-  }, [forceMarkerUpdate, clearAllMarkers]);
-
-  // selectedDay, itinerary, places 변화 감지 및 강제 업데이트
-  useEffect(() => {
-    const needsUpdate = 
-      selectedDay !== prevSelectedDayRef.current || 
-      itinerary !== prevItineraryRef.current ||
-      places !== prevPlacesRef.current;
-    
-    console.log(`[useMapMarkers] Checking for update needs: ${needsUpdate}, selectedDay: ${selectedDay}, prevDay: ${prevSelectedDayRef.current}`);
-    
-    if (needsUpdate && isMapInitialized) {
-      prevSelectedDayRef.current = selectedDay;
-      prevItineraryRef.current = itinerary;
-      prevPlacesRef.current = places;
-      
-      // 선택된 일자가 있고, 일정이 있는 경우에만 업데이트
-      if (selectedDay !== null && itinerary && itinerary.length > 0) {
-        console.log(`[useMapMarkers] Forcing marker update for day: ${selectedDay}`);
-        forceMarkerUpdate();
-      }
-    }
-  }, [selectedDay, itinerary, places, isMapInitialized, forceMarkerUpdate]);
-
-  // 마커 렌더링 로직
-  const renderMarkers = useCallback(() => {
-    if (!map || !isMapInitialized || !isNaverLoaded || !window.naver || !window.naver.maps) {
-      console.log("[useMapMarkers] Cannot render markers: map not initialized or Naver not loaded");
-      return;
-    }
-    
-    // 먼저 기존 마커 제거
-    clearAllMarkers();
-    
-    let placesToDisplay: (Place | ItineraryPlaceWithTime)[] = [];
-    let isDisplayingItineraryDay = false;
-
-    console.log(`[useMapMarkers] Rendering markers: {selectedDay: ${selectedDay}, itineraryLength: ${itinerary?.length || 0}, placesLength: ${places.length}}`);
-
-    // 일정이 있고 선택된 일자가 있는 경우
-    if (itinerary && itinerary.length > 0 && selectedDay !== null) {
-      const currentDayData = itinerary.find(day => day.day === selectedDay);
-      if (currentDayData && currentDayData.places && currentDayData.places.length > 0) {
-        placesToDisplay = currentDayData.places;
-        isDisplayingItineraryDay = true;
-        console.log(`[useMapMarkers] Displaying itinerary day ${selectedDay}: ${currentDayData.places.length} places`);
-      } else {
-        console.log(`[useMapMarkers] No places found for itinerary day ${selectedDay}`);
-      }
-    } else if (places.length > 0) {
-      // 일정이 없는 경우 기본 장소 표시
-      placesToDisplay = places;
-      console.log(`[useMapMarkers] No active itinerary. Displaying ${places.length} places from search.`);
-    } else {
-      console.log("[useMapMarkers] No places to display after filtering.");
-    }
-    
-    if (placesToDisplay.length === 0) {
-      return;
-    }
-    
-    const validPlacesToDisplay = placesToDisplay.filter(p => {
-      if (p.x != null && p.y != null && !isNaN(Number(p.x)) && !isNaN(Number(p.y))) return true;
-      return false;
-    });
-
-    if (validPlacesToDisplay.length === 0) {
-      console.log("[useMapMarkers] No valid coordinates found in places to display");
-      return;
-    }
-    
-    console.log(`[useMapMarkers] Creating ${validPlacesToDisplay.length} markers`);
-    const newMarkers: naver.maps.Marker[] = [];
-
-    validPlacesToDisplay.forEach((place, index) => {
-      if (!window.naver || !window.naver.maps) return;
-
-      const position = createNaverLatLng(place.y!, place.x!);
-      if (!position) return;
-      
-      const isGloballySelectedCandidate = selectedPlaces.some(sp => sp.id === place.id);
-      const isInfoWindowTarget = selectedPlace?.id === place.id;
-      const isGeneralHighlightTarget = highlightPlaceId === place.id;
-      
-      const iconOptions = getMarkerIconOptions(
-        place,
-        isInfoWindowTarget || isGeneralHighlightTarget,
-        isGloballySelectedCandidate && !isInfoWindowTarget && !isGeneralHighlightTarget,
-        isDisplayingItineraryDay,
-        isDisplayingItineraryDay ? index + 1 : undefined
-      );
-      
-      const marker = createNaverMarker(map, position, iconOptions, place.name);
-      
-      if (marker && onPlaceClick && window.naver && window.naver.maps && window.naver.maps.Event) {
-        window.naver.maps.Event.addListener(marker, 'click', () => {
-          onPlaceClick(place, index);
-        });
-      }
-      
-      if (marker) newMarkers.push(marker);
-    });
-    
-    markersRef.current = newMarkers;
-
-    if (newMarkers.length > 0) {
-      if (!(selectedPlace || highlightPlaceId)) {
-        console.log("[useMapMarkers] Fitting map bounds to displayed markers");
-        fitBoundsToPlaces(map, validPlacesToDisplay as Place[]);
-      }
-    }
-    
-    // 선택된 장소로 이동
-    const placeToFocus = selectedPlace || (highlightPlaceId ? placesToDisplay.find(p => p.id === highlightPlaceId) : null);
-    if (placeToFocus && placeToFocus.y != null && placeToFocus.x != null) {
-      if (map.getZoom() < 15) map.setZoom(15, true);
-      panToPosition(map, placeToFocus.y, placeToFocus.x);
-    }
-  }, [
-    map, isMapInitialized, isNaverLoaded, places, selectedPlace,
-    itinerary, selectedDay, selectedPlaces, onPlaceClick, highlightPlaceId,
-    clearAllMarkers
-  ]);
-
-  // updateTriggerId가 변경될 때만 마커 업데이트
   useEffect(() => {
     if (updateTriggerId > 0 && isMapInitialized) {
-      console.log(`[useMapMarkers] Updating markers due to trigger ID change: ${updateTriggerId}`);
+      console.log(`[useMapMarkers] Main hook: Updating markers due to trigger ID change: ${updateTriggerId}`);
       renderMarkers();
     }
   }, [updateTriggerId, isMapInitialized, renderMarkers]);
   
-  // 컴포넌트 마운트 시 한 번만 초기 마커 렌더링
+  // Initial render on mount if map is already initialized
+  // This covers cases where component mounts after map is ready
   useEffect(() => {
-    if (isMapInitialized && map) {
-      const timer = setTimeout(() => {
+    if (isMapInitialized && updateTriggerId === 0) { // Only if no update has been triggered yet
+        console.log('[useMapMarkers] Initial mount render logic trigger.');
         forceMarkerUpdate();
-      }, 500);
-      return () => clearTimeout(timer);
     }
-  }, [isMapInitialized, map, forceMarkerUpdate]);
-  
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMapInitialized, map]); // updateTriggerId is intentionally omitted to run once on init if needed
+
   return {
     markers: markersRef.current,
     clearAllMarkers,
-    forceMarkerUpdate
+    forceMarkerUpdate,
   };
 };
