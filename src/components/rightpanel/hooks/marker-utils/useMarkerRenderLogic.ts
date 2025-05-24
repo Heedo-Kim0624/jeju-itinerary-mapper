@@ -1,6 +1,6 @@
 
 import { useCallback } from 'react';
-import { useMapContext } from '../../../MapContext';
+import { useMapContext } from '../../MapContext'; // 경로 수정
 import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/core';
 import { getMarkerIconOptions, createNaverMarker } from '@/utils/map/markerUtils';
 import { createNaverLatLng } from '@/utils/map/mapSetup';
@@ -129,3 +129,4 @@ export const useMarkerRenderLogic = ({
 
   return { renderMarkers };
 };
+

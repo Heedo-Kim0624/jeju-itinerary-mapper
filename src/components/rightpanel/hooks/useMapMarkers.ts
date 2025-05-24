@@ -1,6 +1,6 @@
 
 import { useCallback, useEffect } from 'react';
-import { useMapContext } from '../../MapContext';
+import { useMapContext } from '../MapContext'; // 경로 수정
 import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/core';
 import { clearMarkers as clearMarkersUtil } from '@/utils/map/mapCleanup';
 
@@ -50,6 +50,9 @@ export const useMapMarkers = (props: UseMapMarkersProps) => {
   const { renderMarkers } = useMarkerRenderLogic({
     places, selectedPlace, itinerary, selectedDay, selectedPlaces,
     onPlaceClick, highlightPlaceId,
+    map, // map prop 추가
+    isMapInitialized, // isMapInitialized prop 추가
+    isNaverLoaded: !!window.naver?.maps, // isNaverLoaded prop 추가 (간단한 확인)
     markersRef,
   });
 
@@ -66,15 +69,13 @@ export const useMapMarkers = (props: UseMapMarkersProps) => {
     }
   }, [updateTriggerId, isMapInitialized, renderMarkers]);
   
-  // Initial render on mount if map is already initialized
-  // This covers cases where component mounts after map is ready
   useEffect(() => {
-    if (isMapInitialized && updateTriggerId === 0) { // Only if no update has been triggered yet
+    if (isMapInitialized && updateTriggerId === 0) { 
         console.log('[useMapMarkers] Initial mount render logic trigger.');
         forceMarkerUpdate();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isMapInitialized, map]); // updateTriggerId is intentionally omitted to run once on init if needed
+  }, [isMapInitialized, map]);
 
   return {
     markers: markersRef.current,
@@ -82,3 +83,4 @@ export const useMapMarkers = (props: UseMapMarkersProps) => {
     forceMarkerUpdate,
   };
 };
+
