@@ -15,7 +15,7 @@ interface UseScheduleGenerationCoreProps {
 }
 
 export const useScheduleGenerationCore = ({
-  selectedPlaces,
+  selectedPlaces, // This prop is no longer directly used in processServerResponse after the fix
   startDate,
   // geoJsonNodes, // Not directly used in processServerResponse currently
   setItinerary,
@@ -31,10 +31,10 @@ export const useScheduleGenerationCore = ({
       setIsLoadingState(true);
 
       try {
+        // 수정된 부분: parseScheduleResponse 호출 시 selectedPlaces 인자 제거
         const parsedItinerary = parseScheduleResponse(
           serverResponse,
-          responseStartDate, // Use the startDate passed to this function
-          selectedPlaces 
+          responseStartDate // responseStartDate는 이 함수에 전달된 startDate를 사용합니다.
         );
 
         console.log("[useScheduleGenerationCore] Parsed itinerary:", parsedItinerary);
@@ -63,7 +63,7 @@ export const useScheduleGenerationCore = ({
     [
       setIsLoadingState,
       parseScheduleResponse,
-      selectedPlaces,
+      // selectedPlaces, // 의존성 배열에서 제거 (콜백 내에서 직접 사용하지 않음)
       // startDate, // startDate from props is for general context, responseStartDate is for this specific call
       setItinerary,
       setSelectedDay,
@@ -74,3 +74,4 @@ export const useScheduleGenerationCore = ({
     processServerResponse,
   };
 };
+
