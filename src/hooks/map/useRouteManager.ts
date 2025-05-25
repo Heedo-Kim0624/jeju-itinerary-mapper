@@ -1,7 +1,7 @@
 
 import { useCallback } from 'react';
 import type { Place, ItineraryDay } from '@/types/supabase';
-import type { GeoJsonFeature } from '@/components/rightpanel/geojson/GeoJsonTypes';
+import type { GeoJsonFeature, GeoLink } from '@/components/rightpanel/geojson/GeoJsonTypes'; // GeoLink 임포트 추가
 import type { ServerRouteResponse, SegmentRoute } from '@/types/schedule';
 import { useRoutePolylines } from './useRoutePolylines';
 import { useItineraryGeoJsonRenderer } from './renderers/useItineraryGeoJsonRenderer';
@@ -11,7 +11,7 @@ import { useDirectPathDrawer } from './renderers/useDirectPathDrawer';
 interface UseRouteManagerProps {
   map: any;
   isNaverLoadedParam: boolean;
-  geoJsonLinks: GeoJsonFeature[];
+  geoJsonLinks: GeoLink[]; // 타입 변경: GeoJsonFeature[] -> GeoLink[]
   geoJsonNodes: GeoJsonFeature[];
   mapPlacesWithGeoNodesFn: (places: Place[]) => Place[];
 }
@@ -33,7 +33,7 @@ export const useRouteManager = ({
   const { renderItineraryRoute } = useItineraryGeoJsonRenderer({
     map,
     isNaverLoadedParam,
-    geoJsonLinks,
+    geoJsonLinks, // 이제 GeoLink[] 타입으로 전달됨
     mapPlacesWithGeoNodesFn,
     addPolyline,
     clearAllMapPolylines,
@@ -66,6 +66,7 @@ export const useRouteManager = ({
       console.log(`[RouteManager] 일차 ${itineraryDay.day}의 경로 렌더링 - ${itineraryDay.routeData.linkIds.length}개 링크 ID 검증`);
       
       // 링크 ID 유효성 검사 (없을 경우 장소 간 직선 연결로 대체)
+      // geoJsonLinks가 GeoLink[] 타입이므로, properties 접근 등이 더 안전해집니다.
       const hasValidLinks = geoJsonLinks && geoJsonLinks.length > 0;
       if (!hasValidLinks) {
         console.warn("[RouteManager] 유효한 GeoJSON 링크 데이터가 없습니다. 장소간 직선 연결로 대체합니다.");
@@ -94,3 +95,4 @@ export const useRouteManager = ({
     calculateAndDrawDirectRoutes: drawDirectPath, // Rename for consistency
   };
 };
+
