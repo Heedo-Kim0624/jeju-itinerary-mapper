@@ -13,7 +13,7 @@ interface UseRouteManagerProps {
   isNaverLoadedParam: boolean;
   geoJsonNodes: GeoJsonNodeFeature[];
   mapPlacesWithGeoNodesFn: (places: Place[]) => Place[];
-  updateDayPolylinePaths: (day: number, polylinePaths: { lat: number; lng: number }[][]) => void;
+  updateDayPolylinePaths: (day: number, polylinePaths: { lat: number; lng: number }[][], currentItineraryDayData: ItineraryDay) => void;
 }
 
 export const useRouteManager = ({

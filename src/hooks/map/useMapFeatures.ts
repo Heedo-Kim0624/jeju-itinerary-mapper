@@ -4,14 +4,14 @@ import { usePlaceGeoJsonMapper } from './usePlaceGeoJsonMapper';
 import { useMapInteractionManager } from './useMapInteractionManager';
 import { useRouteManager } from './useRouteManager';
 import { useMapMarkers } from './useMapMarkers';
-import type { Place } from '@/types/supabase';
+import type { Place, ItineraryDay } from '@/types/supabase';
 import type { GeoNode, GeoJsonNodeFeature } from '@/components/rightpanel/geojson/GeoJsonTypes';
 
 // useMapFeaturesProps 인터페이스 정의하여 updateDayPolylinePaths 함수 타입 명시
 interface UseMapFeaturesProps {
   map: any;
   isNaverLoadedParam: boolean;
-  updateDayPolylinePaths: (day: number, polylinePaths: { lat: number; lng: number }[][]) => void;
+  updateDayPolylinePaths: (day: number, polylinePaths: { lat: number; lng: number }[][], currentItineraryDayData: ItineraryDay) => void;
 }
 
 export const useMapFeatures = ({ 
