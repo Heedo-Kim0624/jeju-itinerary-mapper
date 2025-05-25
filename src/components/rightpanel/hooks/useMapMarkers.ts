@@ -1,6 +1,6 @@
 
 import { useCallback, useEffect } from 'react';
-import { useMapContext } from '../MapContext'; // 경로 수정
+import { useMapContext } from '../MapContext';
 import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/core';
 import { clearMarkers as clearMarkersUtil } from '@/utils/map/mapCleanup';
 
@@ -21,7 +21,7 @@ interface UseMapMarkersProps {
 }
 
 export const useMapMarkers = (props: UseMapMarkersProps) => {
-  const { map, isMapInitialized } = useMapContext();
+  const { map, isMapInitialized, isNaverLoaded } = useMapContext();
   const {
     places, selectedPlace, itinerary, selectedDay,
     selectedPlaces = [], onPlaceClick, highlightPlaceId,
@@ -33,6 +33,9 @@ export const useMapMarkers = (props: UseMapMarkersProps) => {
   } = useMarkerRefs();
 
   const { updateTriggerId, forceMarkerUpdate } = useMarkerUpdater({ updateRequestIdRef });
+
+  // Diagnostics log to verify hook execution
+  console.log(`[useMapMarkers] Hook execution - selectedDay: ${selectedDay}, triggerId: ${updateTriggerId}, markers count: ${markersRef.current.length}`);
 
   const clearAllMarkers = useCallback(() => {
     if (markersRef.current.length > 0) {
@@ -50,9 +53,9 @@ export const useMapMarkers = (props: UseMapMarkersProps) => {
   const { renderMarkers } = useMarkerRenderLogic({
     places, selectedPlace, itinerary, selectedDay, selectedPlaces,
     onPlaceClick, highlightPlaceId,
-    map, // map prop 추가
-    isMapInitialized, // isMapInitialized prop 추가
-    isNaverLoaded: !!window.naver?.maps, // isNaverLoaded prop 추가 (간단한 확인)
+    map, 
+    isMapInitialized,
+    isNaverLoaded: !!window.naver?.maps,
     markersRef,
   });
 
@@ -62,7 +65,10 @@ export const useMapMarkers = (props: UseMapMarkersProps) => {
     prevSelectedDayRef, prevItineraryRef, prevPlacesRef,
   });
 
+  // Add special diagnostic effect to log marker updates
   useEffect(() => {
+    console.log(`[useMapMarkers] Update trigger changed: ${updateTriggerId}. Ready to render? ${isMapInitialized}`);
+    
     if (updateTriggerId > 0 && isMapInitialized) {
       console.log(`[useMapMarkers] Main hook: Updating markers due to trigger ID change: ${updateTriggerId}`);
       renderMarkers();
@@ -83,4 +89,3 @@ export const useMapMarkers = (props: UseMapMarkersProps) => {
     forceMarkerUpdate,
   };
 };
-

@@ -55,54 +55,56 @@ export const useScheduleManagement = ({
 
   const combinedIsLoading = isLoadingState || isManuallyGenerating;
 
-  // 일정 생성 프로세스 실행 함수
+  // Run schedule generation process function
   const runScheduleGenerationProcess = useCallback(() => {
-    console.log("[useScheduleManagement] 일정 생성 프로세스 시작");
+    console.log("[useScheduleManagement] Starting schedule generation process");
     
-    // 이미 생성 중이면 중복 실행 방지
+    // Prevent duplicate execution
     if (combinedIsLoading) {
-      console.log("[useScheduleManagement] 이미 일정 생성 중입니다");
+      console.log("[useScheduleManagement] Already generating schedule");
       return;
     }
 
-    // 선택된 장소가 없는 경우 에러 처리
+    // Validate required data
     if (selectedPlaces.length === 0) {
       toast.error("선택된 장소가 없습니다. 장소를 선택해주세요.");
       return;
     }
 
-    // 날짜 정보가 없는 경우 에러 처리
+    // Validate date info
     if (!startDatetime || !endDatetime) {
       toast.error("여행 날짜와 시간 정보가 올바르지 않습니다.");
       return;
     }
 
-    // 명확한 단계별 로그 추가
-    console.log("[useScheduleManagement] 마커와 경로 초기화 시작...");
+    // Clear step logs
+    console.log("[useScheduleManagement] Starting marker and route cleanup...");
     
-    // 1. 먼저 모든 마커 초기화 이벤트 발생 (이 이벤트가 다른 컴포넌트에서 처리됨)
-    window.dispatchEvent(new CustomEvent("startScheduleGeneration"));
-    console.log("[useScheduleManagement] startScheduleGeneration 이벤트 발생 완료 (마커 초기화)");
+    // Clear all markers immediately with direct event
+    const clearEvent = new Event("startScheduleGeneration");
+    window.dispatchEvent(clearEvent);
+    console.log("[useScheduleManagement] startScheduleGeneration event dispatched (marker cleanup)");
     
-    // 2. 약간의 지연 후 모든 경로 제거 - 명시적으로 호출
+    // Chain clear operations with short delays to ensure proper sequence
     setTimeout(() => {
+      // Clear all routes explicitly
       if (clearAllRoutes) {
         clearAllRoutes();
-        console.log("[useScheduleManagement] 모든 경로 초기화 완료");
+        console.log("[useScheduleManagement] All routes cleared");
       }
       
-      // 3. 모든 마커 및 UI 요소 명시적 제거
+      // Clear all markers and UI elements
       if (clearMarkersAndUiElements) {
         clearMarkersAndUiElements();
-        console.log("[useScheduleManagement] 모든 마커 및 UI 요소 초기화 완료");
+        console.log("[useScheduleManagement] All markers and UI elements cleared");
       }
       
-      // 4. 로딩 상태 시작
+      // Set loading states
       setIsManuallyGenerating(true);
       setIsLoadingState(true);
-      console.log("[useScheduleManagement] 로딩 상태 설정 완료");
+      console.log("[useScheduleManagement] Loading state set");
       
-      // 5. 실제 일정 생성 이벤트는 추가 지연 후 발생
+      // Trigger actual schedule generation with detail
       setTimeout(() => {
         try {
           const event = new CustomEvent("startScheduleGeneration", {
@@ -113,30 +115,30 @@ export const useScheduleManagement = ({
             },
           });
           
-          console.log("[useScheduleManagement] 일정 생성 이벤트 발생:", {
-            selectedPlaces: selectedPlaces.length,
+          console.log("[useScheduleManagement] Detailed schedule generation event dispatched:", {
+            selectedPlacesCount: selectedPlaces.length,
             startDatetime,
             endDatetime,
           });
           
           window.dispatchEvent(event);
           
-          // 30초 후에 자동으로 로딩 상태 해제 (타임아웃 처리)
+          // Timeout safety net
           setTimeout(() => {
-            if (combinedIsLoading) {
-              console.log("[useScheduleManagement] 일정 생성 타임아웃 (30초)");
+            if (isManuallyGenerating || isLoadingState) {
+              console.log("[useScheduleManagement] Schedule generation timed out (30s)");
               setIsManuallyGenerating(false);
               setIsLoadingState(false);
               toast.error("일정 생성 시간이 초과되었습니다. 다시 시도해주세요.");
             }
           }, 30000);
         } catch (error) {
-          console.error("[useScheduleManagement] 일정 생성 이벤트 발생 중 오류:", error);
+          console.error("[useScheduleManagement] Error dispatching schedule generation event:", error);
           setIsManuallyGenerating(false);
           setIsLoadingState(false);
           toast.error("일정 생성 요청 중 오류가 발생했습니다.");
         }
-      }, 300); // 마커 초기화 후 약간의 지연 시간 추가
+      }, 300);
     }, 100);
     
   }, [
@@ -144,16 +146,17 @@ export const useScheduleManagement = ({
     selectedPlaces,
     startDatetime, 
     endDatetime, 
-    isListenerRegistered,
     clearMarkersAndUiElements,
     clearAllRoutes,
     setIsLoadingState,
+    isManuallyGenerating,
+    isLoadingState
   ]);
 
-  // 서버 응답 처리 완료 시 상태 초기화
+  // Reset state when server response is processed
   useEffect(() => {
     if (itinerary && itinerary.length > 0 && isManuallyGenerating) {
-      console.log("[useScheduleManagement] 서버 응답 처리 완료, 로딩 상태 해제");
+      console.log("[useScheduleManagement] Server response processed, resetting loading state");
       setIsManuallyGenerating(false);
     }
   }, [itinerary, isManuallyGenerating]);

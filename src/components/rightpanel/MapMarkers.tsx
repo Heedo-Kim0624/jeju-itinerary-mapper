@@ -22,7 +22,8 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
   onPlaceClick,
   highlightPlaceId,
 }) => {
-  console.log(`[MapMarkers] Component rendered with selectedDay: ${selectedDay}`);
+  // Debug diagnostic for component render
+  console.log(`[MapMarkers] Component rendered with selectedDay: ${selectedDay}, itinerary: ${itinerary?.length || 0} days`);
   
   const { forceMarkerUpdate, clearAllMarkers } = useMapMarkers({
     places,
@@ -34,67 +35,84 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
     highlightPlaceId,
   });
 
-  // 초기 마운트와 주요 props 변경 시 마커 업데이트
+  // Enhanced diagnostic for key props changes
   useEffect(() => {
-    console.log(`[MapMarkers] selectedDay changed to: ${selectedDay}, forcing marker update`);
+    console.log(`[MapMarkers] selectedDay changed to: ${selectedDay}`);
+    console.log(`[MapMarkers] itinerary: ${itinerary ? `${itinerary.length} days` : 'null'}`);
+    if (selectedDay !== null && itinerary) {
+      const dayData = itinerary.find(day => day.day === selectedDay);
+      console.log(`[MapMarkers] Selected day ${selectedDay} has ${dayData?.places?.length || 0} places`);
+    }
+    
     const timer = setTimeout(() => {
+      console.log('[MapMarkers] Forcing marker update due to selectedDay/itinerary change');
       forceMarkerUpdate();
     }, 300);
     
     return () => clearTimeout(timer);
   }, [selectedDay, itinerary, forceMarkerUpdate]);
 
-  // 경로 생성 시작 이벤트 감지 시 모든 마커 제거
+  // Explicit handler for route generation event
   useEffect(() => {
     const handleStartScheduleGeneration = () => {
-      console.log("[MapMarkers] startScheduleGeneration 이벤트 감지 - 모든 마커 제거");
+      console.log("[MapMarkers] startScheduleGeneration event detected - clearing all markers");
       clearAllMarkers();
     };
     
-    // 일정 일자 선택 이벤트 감지
+    // Explicit handler for day selection event
     const handleDaySelected = (event: any) => {
       if (event.detail && typeof event.detail.day === 'number') {
-        console.log(`[MapMarkers] itineraryDaySelected 이벤트 감지 - 일자: ${event.detail.day}`);
-        // 약간의 지연 후에 마커 업데이트 실행 (다른 이벤트 처리 완료 후)
+        console.log(`[MapMarkers] itineraryDaySelected event detected - day: ${event.detail.day}`);
         setTimeout(() => {
+          console.log('[MapMarkers] Forcing marker update due to day selection event');
           forceMarkerUpdate();
         }, 100);
       }
     };
     
+    console.log("[MapMarkers] Registering direct event handlers");
     window.addEventListener('startScheduleGeneration', handleStartScheduleGeneration);
     window.addEventListener('itineraryDaySelected', handleDaySelected);
     
     return () => {
+      console.log("[MapMarkers] Removing direct event handlers");
       window.removeEventListener('startScheduleGeneration', handleStartScheduleGeneration);
       window.removeEventListener('itineraryDaySelected', handleDaySelected);
     };
   }, [clearAllMarkers, forceMarkerUpdate]);
 
-  // 이 컴포넌트는 UI를 렌더링하지 않음
+  // Add an unmount diagnostic
+  useEffect(() => {
+    return () => {
+      console.log("[MapMarkers] Component unmounting - cleaning up");
+    };
+  }, []);
+
   return null;
 };
 
-// 메모이제이션을 통한 불필요한 리렌더링 방지, 커스텀 비교 함수 추가
 export default React.memo(MapMarkers, (prevProps, nextProps) => {
-  // 변경이 있을 때만 리렌더링하도록 비교 로직 구현
+  // Enhanced comparison logic with diagnostics
   const isSameSelectedDay = prevProps.selectedDay === nextProps.selectedDay;
   const isSameSelectedPlace = prevProps.selectedPlace?.id === nextProps.selectedPlace?.id;
   const isSameHighlightId = prevProps.highlightPlaceId === nextProps.highlightPlaceId;
   
-  // 일정 데이터 길이 비교
   const prevItineraryLength = prevProps.itinerary?.length || 0;
   const nextItineraryLength = nextProps.itinerary?.length || 0;
   const isSameItineraryLength = prevItineraryLength === nextItineraryLength;
   
-  // places 배열 길이 비교
   const isSamePlacesLength = prevProps.places.length === nextProps.places.length;
   
-  // 일정이 변경되었거나 선택된 일자가 변경된 경우 리렌더링 필요
-  if (!isSameSelectedDay || !isSameItineraryLength) {
-    return false; // 리렌더링 필요
+  const shouldUpdate = !isSameSelectedDay || !isSameItineraryLength;
+  
+  if (shouldUpdate) {
+    console.log("[MapMarkers] Memo comparison detected change - will re-render", {
+      isSameSelectedDay,
+      isSameItineraryLength,
+      prevSelectedDay: prevProps.selectedDay,
+      nextSelectedDay: nextProps.selectedDay,
+    });
   }
   
-  // 모든 조건이 동일하면 리렌더링 방지
-  return isSameSelectedPlace && isSameHighlightId && isSamePlacesLength;
+  return isSameSelectedPlace && isSameHighlightId && isSamePlacesLength && isSameSelectedDay && isSameItineraryLength;
 });

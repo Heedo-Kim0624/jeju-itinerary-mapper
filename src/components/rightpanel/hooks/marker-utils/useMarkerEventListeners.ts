@@ -13,13 +13,14 @@ export const useMarkerEventListeners = ({
   prevSelectedDayRef,
 }: UseMarkerEventListenersProps) => {
   useEffect(() => {
+    console.log("[useMarkerEventListeners] Setting up event listeners");
+    
     const handleItineraryDaySelected = (event: CustomEvent) => {
       const { day } = event.detail || {};
       console.log(`[useMarkerEventListeners] itineraryDaySelected event received with day: ${day}`);
       
       if (day !== prevSelectedDayRef.current) {
         console.log(`[useMarkerEventListeners] Selected day changed from ${prevSelectedDayRef.current} to ${day}, forcing update.`);
-        // Note: prevSelectedDayRef is updated by useMarkerLifecycleManager or the main hook
         forceMarkerUpdate();
       }
     };
@@ -29,10 +30,14 @@ export const useMarkerEventListeners = ({
       clearAllMarkers();
     };
 
+    // Debug log to confirm event registration
+    console.log("[useMarkerEventListeners] Registering events: itineraryDaySelected and startScheduleGeneration");
+    
     window.addEventListener('itineraryDaySelected', handleItineraryDaySelected as EventListener);
     window.addEventListener('startScheduleGeneration', handleStartScheduleGeneration);
     
     return () => {
+      console.log("[useMarkerEventListeners] Removing event listeners");
       window.removeEventListener('itineraryDaySelected', handleItineraryDaySelected as EventListener);
       window.removeEventListener('startScheduleGeneration', handleStartScheduleGeneration);
     };
