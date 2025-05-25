@@ -1,32 +1,15 @@
 
 import { useCallback } from 'react';
-// GeoJsonNodeFeature와 GeoCoordinates 타입을 import 합니다.
-import type { GeoJsonNodeFeature, GeoCoordinates } from '@/components/rightpanel/geojson/GeoJsonTypes';
-import type { SegmentRoute } from '@/types/schedule';
-import { createNaverLatLng } from '@/utils/map/mapSetup';
-import { fitBoundsToCoordinates } from '@/utils/map/mapViewControls';
-
-const DEFAULT_ROUTE_COLOR = '#007bff';
-const HIGHLIGHT_COLOR = '#ffc107'; // Standard highlight color
+import type { SegmentRoute } from '@/types/core/route-data';
+import type { GeoJsonNodeFeature } from '@/components/rightpanel/geojson/GeoJsonTypes';
+import { createNaverLatLng } from '@/utils/map/mapSetup'; 
 
 interface UseSegmentGeoJsonRendererProps {
   map: any;
   isNaverLoadedParam: boolean;
-  geoJsonNodes: GeoJsonNodeFeature[]; // GeoJsonNodeFeature[] 사용
-  addPolyline: (
-    pathCoordinates: { lat: number; lng: number }[],
-    color: string,
-    weight?: number,
-    opacity?: number,
-    zIndex?: number
-  ) => any | null;
-  setHighlightedPolyline: (
-    pathCoordinates: { lat: number; lng: number }[],
-    color: string,
-    weight?: number,
-    opacity?: number,
-    zIndex?: number
-  ) => any | null;
+  geoJsonNodes: GeoJsonNodeFeature[];
+  addPolyline: (path: any[], options: any) => any;
+  setHighlightedPolyline: (path: any[], options: any) => void;
   clearHighlightedPolyline: () => void;
   clearAllMapPolylines: () => void;
 }
@@ -40,88 +23,118 @@ export const useSegmentGeoJsonRenderer = ({
   clearHighlightedPolyline,
   clearAllMapPolylines,
 }: UseSegmentGeoJsonRendererProps) => {
-  const renderGeoJsonSegmentRoute = useCallback((route: SegmentRoute) => {
-    if (!map || !isNaverLoadedParam || !route || !route.nodeIds || !route.linkIds) {
-      console.warn('[SegmentGeoJsonRenderer] Cannot render GeoJSON route: invalid input or map not ready');
+
+  // GeoJSON 노드 ID로부터 실제 좌표를 찾는 유틸리티 함수
+  const getNodeCoordinates = useCallback((nodeId: string): { lat: number; lng: number } | null => {
+    const node = geoJsonNodes.find(n => n.id === nodeId);
+    if (!node || !node.geometry || !node.geometry.coordinates) {
+      console.warn(`[useSegmentGeoJsonRenderer] Node not found or geometry/coordinates missing for ID: ${nodeId}`);
+      return null;
+    }
+
+    const coordsArray = node.geometry.coordinates;
+
+    // 좌표가 [경도, 위도] 숫자 쌍인지 확인 (Point 지오메트리)
+    if (Array.isArray(coordsArray) && 
+        coordsArray.length === 2 &&
+        typeof coordsArray[0] === 'number' &&
+        typeof coordsArray[1] === 'number') {
+      // GeoJSON 형식은 [경도, 위도] 순서이므로 반대로 반환
+      return {
+        lat: coordsArray[1], // 위도
+        lng: coordsArray[0]  // 경도
+      };
+    } else {
+      // 다른 지오메트리 타입(LineString, Polygon 등)이거나 예기치 않은 구조일 경우
+      console.warn(`[useSegmentGeoJsonRenderer] Node ${nodeId} (type: ${node.geometry.type}) has unexpected coordinate structure. Expected a Point geometry. Coordinates:`, coordsArray);
+      return null;
+    }
+  }, [geoJsonNodes]);
+
+  // 특정 세그먼트 경로만 렌더링하는 함수
+  const renderGeoJsonSegmentRoute = useCallback((segment: SegmentRoute) => {
+    if (!map || !isNaverLoadedParam || !segment || !segment.nodeIds) {
+      console.warn("[useSegmentGeoJsonRenderer] Cannot render segment: missing map, naver API, segment, or nodeIds.");
       return;
     }
 
-    clearAllMapPolylines();
-
-    // geoJsonNodes는 GeoJsonNodeFeature[] 타입입니다. properties는 GeoJsonNodeProperties 타입입니다.
-    const routeNodes = route.nodeIds.map(nodeId => {
-      return geoJsonNodes.find(node => String(node.properties.NODE_ID) === String(nodeId));
-    }).filter(Boolean) as GeoJsonNodeFeature[]; // filter(Boolean) 후 타입 단언 유지
-
-    if (routeNodes.length < 2) {
-      console.warn('[SegmentGeoJsonRenderer] Not enough valid nodes to render GeoJSON route');
-      return;
-    }
-
-    const coordinates = routeNodes.map(node => {
-      // node는 GeoJsonNodeFeature 타입
-      if (node.geometry.type === 'Point') {
-        const geoCoords = node.geometry.coordinates as GeoCoordinates;
-        if (geoCoords && typeof geoCoords[0] === 'number' && typeof geoCoords[1] === 'number') {
-          return { lat: geoCoords[1], lng: geoCoords[0] };
+    console.log(`[useSegmentGeoJsonRenderer] Rendering segment route from index ${segment.fromIndex} to ${segment.toIndex}`);
+    
+    const path: any[] = [];
+    
+    // 세그먼트의 노드 ID를 좌표로 변환
+    segment.nodeIds.forEach(nodeId => {
+      const coords = getNodeCoordinates(nodeId);
+      if (coords) {
+        const naverLatLng = createNaverLatLng(coords.lat, coords.lng);
+        // 타입 안전성을 위해 naverLatLng가 유효한지 확인 후 추가
+        if (naverLatLng && typeof naverLatLng === 'object') {
+          path.push(naverLatLng);
         }
       }
-      return null;
-    }).filter(Boolean) as { lat: number; lng: number }[];
+    });
 
-    if (coordinates.length < 2) {
-      console.warn('[SegmentGeoJsonRenderer] Not enough valid coordinates to render GeoJSON route');
+    if (path.length < 2) {
+      console.warn(`[useSegmentGeoJsonRenderer] Not enough valid coordinates to draw segment ${segment.fromIndex}-${segment.toIndex}. Path length: ${path.length}`);
       return;
     }
 
-    addPolyline(coordinates, DEFAULT_ROUTE_COLOR);
+    // 세그먼트 경로 추가
+    addPolyline(path, {
+      strokeColor: '#2563eb',
+      strokeOpacity: 0.8,
+      strokeWeight: 5
+    });
 
-    const naverCoords = coordinates.map(c => createNaverLatLng(c.lat, c.lng)).filter(c => c !== null) as any[];
-    if (naverCoords.length > 0) {
-      fitBoundsToCoordinates(map, naverCoords);
-    }
-  }, [map, isNaverLoadedParam, geoJsonNodes, addPolyline, clearAllMapPolylines]);
+  }, [map, isNaverLoadedParam, getNodeCoordinates, addPolyline]);
 
+  // 특정 세그먼트를 하이라이트 표시하는 함수
   const highlightGeoJsonSegment = useCallback((segment: SegmentRoute | null) => {
+    if (!map || !isNaverLoadedParam) {
+      console.warn("[useSegmentGeoJsonRenderer] Cannot highlight segment: map not ready");
+      return;
+    }
+
+    // 기존 하이라이트 제거
     clearHighlightedPolyline();
 
-    if (!map || !isNaverLoadedParam || !segment || !segment.nodeIds || segment.nodeIds.length < 2) {
+    if (!segment || !segment.nodeIds || segment.nodeIds.length < 2) {
+      console.log("[useSegmentGeoJsonRenderer] No valid segment to highlight or clear.");
       return;
     }
 
-    // geoJsonNodes는 GeoJsonNodeFeature[] 타입. properties는 GeoJsonNodeProperties
-    const segmentNodes = segment.nodeIds.map(nodeId => {
-      return geoJsonNodes.find(node => String(node.properties.NODE_ID) === String(nodeId));
-    }).filter(Boolean) as GeoJsonNodeFeature[]; // filter(Boolean) 후 타입 단언 유지
-
-    if (segmentNodes.length < 2) {
-      console.warn('[SegmentGeoJsonRenderer] Not enough valid nodes to highlight segment');
-      return;
-    }
-
-    const coordinates = segmentNodes.map(node => {
-      // node는 GeoJsonNodeFeature 타입
-      if (node.geometry.type === 'Point') {
-        const geoCoords = node.geometry.coordinates as GeoCoordinates;
-        if (geoCoords && typeof geoCoords[0] === 'number' && typeof geoCoords[1] === 'number') {
-          return { lat: geoCoords[1], lng: geoCoords[0] };
+    console.log(`[useSegmentGeoJsonRenderer] Highlighting segment from index ${segment.fromIndex} to ${segment.toIndex}`);
+    
+    const path: any[] = [];
+    
+    // 세그먼트의 노드 ID를 좌표로 변환
+    segment.nodeIds.forEach(nodeId => {
+      const coords = getNodeCoordinates(nodeId);
+      if (coords) {
+        const naverLatLng = createNaverLatLng(coords.lat, coords.lng);
+        // 타입 안전성을 위해 naverLatLng가 유효한지 확인 후 추가
+        if (naverLatLng && typeof naverLatLng === 'object') {
+          path.push(naverLatLng);
         }
       }
-      return null;
-    }).filter(Boolean) as { lat: number; lng: number }[];
+    });
 
-    if (coordinates.length < 2) {
-      console.warn('[SegmentGeoJsonRenderer] Not enough valid coordinates to highlight segment');
+    if (path.length < 2) {
+      console.warn(`[useSegmentGeoJsonRenderer] Not enough valid coordinates to highlight segment ${segment.fromIndex}-${segment.toIndex}. Path length: ${path.length}`);
       return;
     }
 
-    setHighlightedPolyline(coordinates, HIGHLIGHT_COLOR, 6, 0.8, 200);
+    // 하이라이트된 세그먼트를 다른 색상으로 표시
+    setHighlightedPolyline(path, {
+      strokeColor: '#f97316', // 하이라이트 색상 (주황색)
+      strokeOpacity: 0.9,
+      strokeWeight: 6
+    });
 
-    const naverCoords = coordinates.map(c => createNaverLatLng(c.lat, c.lng)).filter(c => c !== null) as any[];
-    if (naverCoords.length > 0) {
-      fitBoundsToCoordinates(map, naverCoords);
-    }
-  }, [map, isNaverLoadedParam, geoJsonNodes, setHighlightedPolyline, clearHighlightedPolyline]);
+  }, [map, isNaverLoadedParam, getNodeCoordinates, clearHighlightedPolyline, setHighlightedPolyline]);
 
-  return { renderGeoJsonSegmentRoute, highlightGeoJsonSegment };
+  return {
+    renderGeoJsonSegmentRoute,
+    highlightGeoJsonSegment
+  };
 };

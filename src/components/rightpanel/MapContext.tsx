@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react';
-import { Place, ItineraryDay } from '@/types/supabase';
+import { Place, ItineraryDay } from '@/types/core';
 import useMapCore from './useMapCore';
-import { SegmentRoute } from '@/types/schedule';
+import { SegmentRoute } from '@/types/core/route-data';
 import type { ServerRouteDataForDay } from '@/hooks/map/useServerRoutes';
 
 interface MapContextType {
@@ -59,8 +59,8 @@ interface MapContextType {
   // 중앙 집중식 상태 관리 추가
   currentRenderingDay: number | null;
   startDayRendering: (day: number | null) => void;
-  handleRouteRenderingCompleteForContext: () => void; // Renamed to avoid conflict if MapContext itself uses it
-  handleMarkerRenderingCompleteForContext: () => void; // Renamed
+  handleRouteRenderingCompleteForContext: () => void;
+  handleMarkerRenderingCompleteForContext: () => void; 
   renderingComplete: { route: boolean; markers: boolean };
 }
 
@@ -113,56 +113,72 @@ export const MapProvider: React.FC<{children: React.ReactNode}> = ({ children })
     markers: false
   });
   
+  // 중요: 일자 변경 시 렌더링 시작하는 함수
   const startDayRendering = useCallback((day: number | null) => {
     console.log(`[MapProvider] Starting rendering process for day: ${day} (from MapContext)`);
-    setCurrentRenderingDay(day); // 중요: currentRenderingDay를 여기서 설정해야 이벤트 발생 시 올바른 day 값 사용
-    setRenderingComplete({ route: false, markers: false });
     
+    // 이전 상태 초기화
+    setRenderingComplete({ route: false, markers: false });
+    setCurrentRenderingDay(day);
+    
+    // 지도 요소 초기화
     if (mapCoreValues.clearAllRoutes) {
-        console.log(`[MapProvider] Calling clearAllRoutes for day ${day}`);
-        mapCoreValues.clearAllRoutes();
+      console.log(`[MapProvider] Clearing all routes for day ${day}`);
+      mapCoreValues.clearAllRoutes();
     }
     if (mapCoreValues.clearMarkersAndUiElements) {
-        console.log(`[MapProvider] Calling clearMarkersAndUiElements for day ${day}`);
-        mapCoreValues.clearMarkersAndUiElements();
+      console.log(`[MapProvider] Clearing all markers for day ${day}`);
+      mapCoreValues.clearMarkersAndUiElements();
     }
     
-    // clearAllRoutes 와 clearMarkersAndUiElements가 동기적으로 실행되므로,
-    // 바로 이어서 dayRenderingStarted 이벤트를 발생시켜도 됩니다.
-    // 만약 해당 함수들이 비동기라면, 완료된 후 이벤트를 발생시켜야 합니다.
-    window.dispatchEvent(new CustomEvent('dayRenderingStarted', { detail: { day } }));
-    console.log(`[MapProvider] Dispatched 'dayRenderingStarted' for day ${day}. CurrentRenderingDay is now: ${day}`);
-  }, [mapCoreValues.clearAllRoutes, mapCoreValues.clearMarkersAndUiElements]); // setCurrentRenderingDay 제거, currentRenderingDay 의존성 제거
+    // 일자 렌더링 시작 이벤트 발생
+    const renderingStartEvent = new CustomEvent('dayRenderingStarted', { 
+      detail: { day } 
+    });
+    window.dispatchEvent(renderingStartEvent);
+    console.log(`[MapProvider] Dispatched 'dayRenderingStarted' event for day ${day}`);
+    
+    // 선택된 일자의 경로 렌더링 시작
+    if (day !== null && mapCoreValues.renderItineraryRoute) {
+      // renderItineraryRoute를 직접 호출하지 않고, 이벤트를 통해 처리
+      // 이렇게 하면 useMapDataEffects에서 selectedDay 변경을 감지하여 렌더링 진행
+      console.log(`[MapProvider] Routing will be triggered by 'itineraryDaySelected' event for day ${day}`);
+    }
+    
+  }, [mapCoreValues.clearAllRoutes, mapCoreValues.clearMarkersAndUiElements, mapCoreValues.renderItineraryRoute]);
   
+  // 경로 렌더링 완료 시 호출되는 함수
   const handleRouteRenderingCompleteForContext = useCallback(() => {
-    // 이 시점의 currentRenderingDay가 중요
-    console.log(`[MapProvider] Route rendering completed for day: ${currentRenderingDay} (received in MapContext)`);
+    console.log(`[MapProvider] Route rendering completed for day: ${currentRenderingDay}`);
     setRenderingComplete(prev => ({ ...prev, route: true }));
     
-    // 이벤트 발생 시점의 currentRenderingDay 값 사용
+    // 경로 렌더링 완료 이벤트 발생
     window.dispatchEvent(new CustomEvent('routeRenderingCompleteInternal', { 
       detail: { day: currentRenderingDay, source: 'MapContext' } 
     }));
-    console.log(`[MapProvider] Dispatched 'routeRenderingCompleteInternal' for day ${currentRenderingDay}`);
-  }, [currentRenderingDay]); // currentRenderingDay 의존성 추가
+    console.log(`[MapProvider] Dispatched 'routeRenderingCompleteInternal' event for day ${currentRenderingDay}`);
+  }, [currentRenderingDay]);
   
+  // 마커 렌더링 완료 시 호출되는 함수
   const handleMarkerRenderingCompleteForContext = useCallback(() => {
-    console.log(`[MapProvider] Marker rendering completed for day: ${currentRenderingDay} (received in MapContext)`);
+    console.log(`[MapProvider] Marker rendering completed for day: ${currentRenderingDay}`);
     setRenderingComplete(prev => {
       const newState = { ...prev, markers: true };
+      
+      // 경로와 마커 모두 완료되었으면 최종 완료 이벤트 발생
       if (newState.route && newState.markers) {
         console.log(`[MapProvider] All rendering completed for day: ${currentRenderingDay}`);
         window.dispatchEvent(new CustomEvent('dayRenderingCompleted', { 
           detail: { day: currentRenderingDay } 
         }));
-        console.log(`[MapProvider] Dispatched 'dayRenderingCompleted' for day ${currentRenderingDay}`);
+        console.log(`[MapProvider] Dispatched 'dayRenderingCompleted' event for day ${currentRenderingDay}`);
       }
+      
       return newState;
     });
-  }, [currentRenderingDay]); // currentRenderingDay 의존성 추가 및 renderingComplete.route 제거
+  }, [currentRenderingDay]);
 
-  // ... keep existing code (contextValue definition and return statement)
-  // ... useEffect for logging can be kept or removed
+  // Context 값 준비
   const contextValue = useMemo(() => ({
     ...mapCoreValues,
     currentRenderingDay,
@@ -178,26 +194,6 @@ export const MapProvider: React.FC<{children: React.ReactNode}> = ({ children })
     handleMarkerRenderingCompleteForContext,
     renderingComplete
   ]);
-  
-  if (process.env.NODE_ENV === 'development') {
-    console.log("[MapProvider] 제공되는 Context 값:", {
-      isMapInitialized: contextValue.isMapInitialized,
-      isNaverLoaded: contextValue.isNaverLoaded,
-      isGeoJsonLoaded: contextValue.isGeoJsonLoaded,
-      geoJsonNodesCount: contextValue.geoJsonNodes?.length || 0,
-      geoJsonLinksCount: contextValue.geoJsonLinks?.length || 0,
-      serverRoutesDataKeys: Object.keys(contextValue.serverRoutesData || {}),
-      hasRenderItineraryRoute: typeof contextValue.renderItineraryRoute === 'function',
-      hasUpdateDayPolylinePaths: typeof contextValue.updateDayPolylinePaths === 'function',
-      hasSetServerRoutes: typeof contextValue.setServerRoutes === 'function',
-      currentRenderingDay: contextValue.currentRenderingDay,
-      renderingComplete: contextValue.renderingComplete,
-      hasStartDayRendering: typeof contextValue.startDayRendering === 'function',
-    });
-    if (typeof contextValue.updateDayPolylinePaths !== 'function') {
-        console.warn("[MapProvider] updateDayPolylinePaths 함수가 context에 제공되지 않았습니다. useMapCore 반환값을 확인하세요.");
-    }
-  }
 
   return (
     <MapContext.Provider value={contextValue as unknown as MapContextType}>
