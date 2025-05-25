@@ -30,15 +30,14 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
   const { map, isMapInitialized, isNaverLoaded } = useMapContext();
   const markersRef = useRef<naver.maps.Marker[]>([]);
   
-  // useActualMapMarkersHook (src/components/rightpanel/hooks/useMapMarkers.ts)는 clearAllMarkers를 반환합니다.
-  // clearMarkersAndUiElements는 MapContext를 통해 제공되는 더 광범위한 정리 함수입니다.
   const { clearAllMarkers: clearAllMarkersFromActualHook } = useActualMapMarkersHook({
-    map, // map을 props로 전달해야 할 수 있습니다. useActualMapMarkersHook의 정의를 확인해야 합니다.
-    places, // 이 props들이 useActualMapMarkersHook에 필요한지 확인 필요
+    places,
     selectedPlace,
     itinerary,
     selectedDay,
-    // selectedPlaces, onPlaceClick, highlightPlaceId 등도 필요할 수 있음
+    selectedPlaces,
+    onPlaceClick,
+    highlightPlaceId,
   });
 
 
@@ -51,7 +50,7 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
     onPlaceClick,
     highlightPlaceId,
     markersRef,
-    map,
+    map, // map is passed to useMarkerRenderLogic, which might be fine if that hook expects it
     isMapInitialized,
     isNaverLoaded,
   });
@@ -106,9 +105,6 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
     
     if (isMapInitialized && isNaverLoaded) {
        console.log('[MapMarkers] useEffect[selectedDay, itinerary, places, highlightPlaceId, selectedPlace]: Calling renderMarkers.');
-       // renderMarkers 함수가 내부적으로 마커를 지우고 다시 그리므로, clearAllMarkers()를 여기서 호출할 필요는 없을 수 있습니다.
-       // useMarkerRenderLogic의 renderMarkers가 마커를 지우는지 확인해야 합니다.
-       // 현재 useMarkerRenderLogic의 renderMarkers는 markersRef.current = clearMarkersUtil(markersRef.current); 를 호출하여 자체 마커를 지웁니다.
        renderMarkers();
     } else {
        console.log('[MapMarkers] useEffect[...]: Map not ready, skipping renderMarkers.');
