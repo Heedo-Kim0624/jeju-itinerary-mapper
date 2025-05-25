@@ -1,3 +1,4 @@
+
 import { create } from 'zustand';
 
 // 일자별 경로 및 마커 데이터 타입 정의
@@ -26,10 +27,10 @@ interface RouteMemoryState {
   setSelectedDay: (day: number) => void;
   
   // 현재 선택된 일자의 데이터 가져오기
-  getCurrentDayRouteData: () => DayRouteData; // 반환 타입을 DayRouteData | undefined 에서 DayRouteData로 변경 (항상 emptyRouteData 반환 보장)
+  getCurrentDayRouteData: () => DayRouteData; 
   
   // 특정 일자의 데이터 가져오기
-  getDayRouteData: (day: number) => DayRouteData; // 반환 타입을 DayRouteData | undefined 에서 DayRouteData로 변경
+  getDayRouteData: (day: number) => DayRouteData;
   
   // 특정 일자의 폴리라인 데이터 삭제
   clearDayPolylines: (day: number) => void;
@@ -38,14 +39,14 @@ interface RouteMemoryState {
   clearAllRouteData: () => void;
 }
 
-// 기본 빈 경로 데이터 (상수 참조)
-const emptyRouteData: DayRouteData = {
+// 기본 빈 경로 데이터 (상수 참조가 아닌 함수로 새 인스턴스 생성)
+const createEmptyRouteData = (): DayRouteData => ({
   linkIds: [],
   nodeIds: [],
   polylines: [],
   markers: [],
   bounds: null
-};
+});
 
 // 상태 저장소 생성
 export const useRouteMemoryStore = create<RouteMemoryState>((set, get) => ({
@@ -54,7 +55,8 @@ export const useRouteMemoryStore = create<RouteMemoryState>((set, get) => ({
   
   setDayRouteData: (day, data) => {
     set(state => {
-      const currentData = state.routeDataByDay.get(day) || emptyRouteData; // Use emptyRouteData directly
+      // 현재 데이터를 가져오되, 없으면 새 빈 데이터 생성
+      const currentData = state.routeDataByDay.get(day) || createEmptyRouteData();
       const newData = { ...currentData, ...data };
       const newMap = new Map(state.routeDataByDay);
       newMap.set(day, newData);
@@ -65,7 +67,6 @@ export const useRouteMemoryStore = create<RouteMemoryState>((set, get) => ({
     });
   },
   
-  // ... keep existing code (initializeFromServerResponse)
   initializeFromServerResponse: (serverResponse) => {
     if (!serverResponse || !serverResponse.route_summary || !Array.isArray(serverResponse.route_summary)) {
       console.warn('[RouteMemoryStore] 유효한 서버 응답이 아닙니다.');
@@ -94,7 +95,7 @@ export const useRouteMemoryStore = create<RouteMemoryState>((set, get) => ({
       get().setDayRouteData(dayIndex, {
         linkIds,
         nodeIds,
-        polylines: [], // Ensure polylines and markers are initialized as empty arrays
+        polylines: [], // 빈 배열로 초기화
         markers: [],
         bounds: null
       });
@@ -113,20 +114,23 @@ export const useRouteMemoryStore = create<RouteMemoryState>((set, get) => ({
   
   getCurrentDayRouteData: () => {
     const { selectedDay, routeDataByDay } = get();
-    return routeDataByDay.get(selectedDay) || emptyRouteData; // Return constant emptyRouteData if not found
+    return routeDataByDay.get(selectedDay) || createEmptyRouteData(); // 항상 새로운 빈 객체 반환
   },
   
   getDayRouteData: (day) => {
-    return get().routeDataByDay.get(day) || emptyRouteData; // Return constant emptyRouteData if not found
+    return get().routeDataByDay.get(day) || createEmptyRouteData(); // 항상 새로운 빈 객체 반환
   },
   
-  // ... keep existing code (clearDayPolylines and clearAllRouteData)
   clearDayPolylines: (day) => {
-    const dayData = get().getDayRouteData(day); // This will now return emptyRouteData if not found
-    // Check if dayData is not the emptyRouteData reference before trying to access its properties
-    if (dayData && dayData !== emptyRouteData && dayData.polylines) {
+    const currentDayData = get().routeDataByDay.get(day);
+    if (!currentDayData) {
+      console.log(`[RouteMemoryStore] 일자 ${day}에 대한 데이터가 없어 폴리라인 삭제 스킵`);
+      return;
+    }
+    
+    if (currentDayData.polylines && currentDayData.polylines.length > 0) {
       // 기존 폴리라인 제거
-      dayData.polylines.forEach(polyline => {
+      currentDayData.polylines.forEach(polyline => {
         if (polyline && typeof polyline.setMap === 'function') {
           polyline.setMap(null);
         }
@@ -138,8 +142,6 @@ export const useRouteMemoryStore = create<RouteMemoryState>((set, get) => ({
       });
       
       console.log(`[RouteMemoryStore] 일자 ${day} 폴리라인 삭제 완료`);
-    } else if (dayData === emptyRouteData) {
-      console.log(`[RouteMemoryStore] 일자 ${day}에 대한 데이터가 없어 폴리라인 삭제 스킵`);
     }
   },
   
