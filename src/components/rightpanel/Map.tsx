@@ -1,3 +1,4 @@
+
 import React, { useMemo } from 'react';
 import { useMapContext } from './MapContext';
 import MapMarkers from './MapMarkers';
@@ -34,6 +35,7 @@ const Map: React.FC<MapProps> = ({
     checkGeoJsonMapping,
     renderItineraryRoute, // renderItineraryRoute 직접 가져오기
     serverRoutesData, // serverRoutesData 직접 가져오기
+    isGeoJsonLoaded, // isGeoJsonLoaded 다시 추가
   } = useMapContext();
 
   // 현재 선택된 일자의 itinerary 데이터

@@ -4,7 +4,7 @@ import { usePlaceGeoJsonMapper } from './usePlaceGeoJsonMapper';
 import { useMapInteractionManager } from './useMapInteractionManager';
 import { useRouteManager } from './useRouteManager';
 import { useMapMarkers } from '@/hooks/map/useMapMarkersLegacy';
-import type { Place, ItineraryDay } from '@/types/supabase';
+import type { Place, ItineraryDay } from '@/types/core'; // types/supabase에서 core로 변경
 import type { GeoNode, GeoJsonNodeFeature } from '@/components/rightpanel/geojson/GeoJsonTypes';
 
 // useMapFeaturesProps 인터페이스 정의하여 updateDayPolylinePaths 함수 타입 명시
@@ -56,7 +56,7 @@ export const useMapFeatures = ({
     map,
     isNaverLoadedParam,
     geoJsonNodes: geoJsonNodeFeatures,
-    mapPlacesWithGeoNodesFn: mapPlacesWithGeoNodes,
+    // mapPlacesWithGeoNodesFn: mapPlacesWithGeoNodes, // 이 prop 제거
     updateDayPolylinePaths, 
   });
 
@@ -69,7 +69,7 @@ export const useMapFeatures = ({
     } else {
       console.warn("[useMapFeatures] clearAllMapMarkers function is not available");
     }
-    if (clearAllDrawnRoutes) { // Check if clearAllDrawnRoutes exists
+    if (clearAllDrawnRoutes) { 
         clearAllDrawnRoutes();
     } else {
         console.warn("[useMapFeatures] clearAllDrawnRoutes function is not available");

@@ -7,9 +7,9 @@ import { useMapResize } from '@/hooks/useMapResize';
 // useGeoJsonLayer 제거
 import useGeoJsonStateHook from '@/components/rightpanel/geojson/useGeoJsonState'; // useGeoJsonState 임포트
 import { useMapMarkers as useMapMarkersLegacyHook } from '@/hooks/map/useMapMarkersLegacy';
-import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/supabase';
+import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/core'; // types/supabase에서 core로 변경
 import type { GeoNode, GeoJsonNodeFeature } from '@/components/rightpanel/geojson/GeoJsonTypes'; // 타입 임포트 추가
-import { SegmentRoute } from '@/types/schedule';
+import { SegmentRoute } from '@/types/core/route-data'; // types/schedule에서 core/route-data로 변경
 import { useServerRoutes, ServerRouteDataForDay } from '@/hooks/map/useServerRoutes';
 import { usePlaceGeoJsonMapper } from '@/hooks/map/usePlaceGeoJsonMapper';
 import { useRouteManager } from '@/hooks/map/useRouteManager'; // useRouteManager 임포트 추가
@@ -105,7 +105,7 @@ const useMapCore = () => {
     map: mapRef.current,
     isNaverLoadedParam: isNaverLoaded,
     geoJsonNodes: geoJsonNodeFeatures, // 변환된 geoJsonNodeFeatures 사용
-    mapPlacesWithGeoNodesFn: mapPlacesWithGeoNodes,
+    // mapPlacesWithGeoNodesFn: mapPlacesWithGeoNodes, // 이 prop 제거
     updateDayPolylinePaths: updateDayPolylinePaths,
   });
   
