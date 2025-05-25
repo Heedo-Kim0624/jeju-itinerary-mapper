@@ -1,4 +1,3 @@
-
 type Listener<T> = (data: T) => void;
 type Unsubscribe = () => void;
 
@@ -27,7 +26,7 @@ const getGlobalEmitter = (): EventEmitterInstance => {
           }
         };
       },
-      emit: <T>(event: string, data: T>): void => {
+      emit: <T>(event: string, data: T): void => {
         // console.log(`[EventEmitter] Emitting event: ${event}`, data);
         listeners[event]?.forEach(listener => {
           try {
