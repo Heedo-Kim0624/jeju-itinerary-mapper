@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { loadNaverMaps } from '@/utils/loadNaverMaps';
 import { initializeNaverMap } from '@/utils/map/mapInitializer'; // createNaverLatLng 제거
@@ -66,7 +65,8 @@ const useMapCore = () => {
     message: string;
   } => {
     const mappedPlaceObjects = mapPlacesWithGeoNodes(places);
-    const successfullyMappedPlaces = mappedPlaceObjects.filter(p => p.geoJsonNodeId != null);
+    // 여기를 p.geoJsonNodeId에서 p.geoNodeId로 수정 (타입 오류 해결)
+    const successfullyMappedPlaces = mappedPlaceObjects.filter(p => (p as any).geoNodeId != null);
     const total = places.length;
     const mappedCount = successfullyMappedPlaces.length;
     const rate = total > 0 ? ((mappedCount / total) * 100).toFixed(1) + '%' : '0%';
@@ -137,7 +137,8 @@ const useMapCore = () => {
     };
   }, []);
 
-  useMapResize(mapRef.current, mapContainerRef.current, [isMapInitialized]);
+  // useMapResize 호출 인자 수정 (타입 오류 해결)
+  useMapResize(mapRef.current);
 
   const panTo = useCallback((locationOrCoords: string | {lat: number, lng: number}) => {
     if (mapRef.current && isMapInitialized && isNaverLoaded) {
