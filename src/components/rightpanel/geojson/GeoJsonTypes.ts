@@ -29,6 +29,7 @@ export interface GeoJsonFeature {
   type: string;
   properties: GeoJsonNodeProperties | GeoJsonLinkProperties;
   geometry: GeoJsonGeometry;
+  id?: string | number; // id 속성 추가
 }
 
 export interface GeoJsonCollection {
