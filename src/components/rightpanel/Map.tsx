@@ -1,3 +1,4 @@
+
 import React, { useEffect, useMemo } from 'react';
 import { useMapContext } from './MapContext';
 import MapMarkers from './MapMarkers';
@@ -72,12 +73,17 @@ const Map: React.FC<MapProps> = ({
   useEffect(() => {
     if (itinerary && selectedDay !== null && currentDayData && renderItineraryRoute) {
       console.log(`[Map] Selected day ${selectedDay} has ${currentDayData.places?.length || 0} places`);
-      // renderItineraryRoute from context should handle serverRoutesData internally or be called appropriately
-      // Assuming renderItineraryRoute is now primarily driven by selectedDay from the store via events
-      // This effect might be simplified if renderItineraryRoute is robustly event-driven.
-      // For now, keep the log. The actual rendering is likely triggered by useRouteManager via mapDayChanged event.
+      if (serverRoutesData && serverRoutesData[selectedDay]) { // Ensure serverRoutesData for the day exists
+        renderItineraryRoute(currentDayData, serverRoutesData);
+      } else if (!serverRoutesData || !serverRoutesData[selectedDay]) {
+        // Fallback or alternative logic if serverRoutesData is not ready for the selected day
+        // This might involve rendering a simpler route or just markers
+        console.warn(`[Map] serverRoutesData not available for day ${selectedDay}. Route rendering might be incomplete.`);
+        // Optionally, you could call renderItineraryRoute with a modified call or handle differently
+        // For now, just logging. Depending on requirements, could render markers only, or a direct line.
+      }
     }
-  }, [itinerary, selectedDay, currentDayData, renderItineraryRoute]);
+  }, [itinerary, selectedDay, currentDayData, serverRoutesData, renderItineraryRoute]);
 
   // MapMarkers에 대한 고유 키 생성 - 의존성 배열 확장
   const markersKey = useMemo(() => {
@@ -87,7 +93,7 @@ const Map: React.FC<MapProps> = ({
       `${itinerary.length}-${itinerary[0].day}-${itinerary[0].date}` : 
       'no-itinerary';
       
-    const dayId = selectedDay !== null ? `day-${selectedDay}` : 'no-day'; 
+    const dayId = selectedDay !== null ? `day-${selectedDay}` : 'no-day';
     const selectedPlaceId = selectedPlace ? `place-${selectedPlace.id}` : 'no-selected';
     const selectedPlacesIds = selectedPlaces.map(p => p.id).join('_') || 'no-selected-places';
     
@@ -101,6 +107,7 @@ const Map: React.FC<MapProps> = ({
         places={places}
         selectedPlace={selectedPlace}
         itinerary={itinerary}
+        selectedDay={selectedDay}
         selectedPlaces={selectedPlaces}
         onPlaceClick={handlePlaceClick}
         highlightPlaceId={selectedPlace?.id}

@@ -43,6 +43,8 @@ const ItineraryView: React.FC<ItineraryViewProps> = ({
     <div className="h-full flex flex-col pb-16">
       <DaySelector
         itinerary={itinerary}
+        selectedDay={selectedDay}
+        onSelectDay={onSelectDay}
       />
       
       <div className="overflow-auto flex-1 px-4 pt-4 mt-16">

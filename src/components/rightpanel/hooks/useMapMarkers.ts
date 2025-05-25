@@ -1,21 +1,28 @@
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useMapContext } from '../MapContext';
 import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/core';
 import { clearMarkers as clearMarkersUtil } from '@/utils/map/mapCleanup';
 
-import { useMarkerRefs } from './marker-utils/useMarkerRefs';
+import { useMarkerRefs } from './marker-utils/useMarkerRefs'; // Keep if general marker refs are still useful
 import { useMarkerUpdater } from './marker-utils/useMarkerUpdater';
-import { useMarkerRenderLogic } from './marker-utils/useMarkerRenderLogic';
+// import { useMarkerEventListeners } from './marker-utils/useMarkerEventListeners'; // May need adjustment
+import { useMarkerRenderLogic } from './marker-utils/useMarkerRenderLogic'; // This will be heavily adapted
+// import { useMarkerLifecycleManager } from './marker-utils/useMarkerLifecycleManager'; // May need adjustment
 
 import { useRouteMemoryStore } from '@/hooks/map/useRouteMemoryStore';
 import { EventEmitter } from '@/hooks/events/useEventEmitter';
 
 interface UseMapMarkersProps {
-  places: Place[]; 
-  selectedPlace: Place | null; 
-  itinerary: ItineraryDay[] | null;
-  selectedPlaces?: Place[];
+  // These props might still be relevant for general place display, outside of itinerary context
+  places: Place[]; // General places, e.g. from search results
+  selectedPlace: Place | null; // A single selected place, not necessarily from itinerary
+  
+  // Itinerary related props - these will now be mainly driven by the store for the *selected day*
+  itinerary: ItineraryDay[] | null; // Full itinerary data, needed to get place details for a day
+  // selectedDay: number | null; // This prop will now be taken from useRouteMemoryStore
+
+  selectedPlacesUi?: Place[]; // Places selected in UI, e.g. for cart (might be different from itinerary)
   onPlaceClick?: (place: Place | ItineraryPlaceWithTime, index: number) => void;
   highlightPlaceId?: string;
 }
@@ -23,40 +30,35 @@ interface UseMapMarkersProps {
 export const useMapMarkers = (props: UseMapMarkersProps) => {
   const { map, isMapInitialized, isNaverLoaded } = useMapContext();
   const {
-    itinerary,
+    itinerary, // Full itinerary is needed to find details for places of the selected day
     onPlaceClick,
     highlightPlaceId,
+    // `places`, `selectedPlace`, `selectedPlacesUi` might be for non-itinerary markers
   } = props;
 
   // Zustand store for day-specific data
   const { 
-    selectedDay, 
+    selectedDay, // This is the crucial part: selectedDay from the store
     getDayRouteData, 
     setDayRouteData,
+    clearDayMarkers: clearDayMarkersFromStore 
   } = useRouteMemoryStore();
 
-  const { markersRef: generalMarkersRef } = useMarkerRefs();
+  const { markersRef: generalMarkersRef } = useMarkerRefs(); // For non-itinerary markers
   const [currentDayMarkers, setCurrentDayMarkers] = useState<any[]>([]);
 
-  // Memoize current day data to prevent unnecessary re-renders
+
   const clearAllCurrentDayMarkersFromMap = useCallback(() => {
     // Clear markers associated with the *currently selected day* from the map
-    const currentDayData = useRouteMemoryStore.getState().routeDataByDay.get(selectedDay);
-    if (currentDayData && currentDayData.markers) {
-      currentDayData.markers.forEach(m => {
-        if (m && typeof m.setMap === 'function') {
-            m.setMap(null);
-        }
-      });
+    const dayData = getDayRouteData(selectedDay);
+    if (dayData && dayData.markers) {
+      dayData.markers.forEach(m => m.setMap(null));
     }
     // Also clear any locally tracked currentDayMarkers if they haven't made it to store yet
-    currentDayMarkers.forEach(m => {
-        if (m && typeof m.setMap === 'function') {
-            m.setMap(null);
-        }
-    });
+    currentDayMarkers.forEach(m => m.setMap(null));
     setCurrentDayMarkers([]);
-  }, [selectedDay, currentDayMarkers]);
+  }, [selectedDay, getDayRouteData, currentDayMarkers]);
+
 
   // This is the core marker rendering logic for the selected itinerary day
   const renderMarkersForSelectedDay = useCallback(() => {
@@ -68,20 +70,14 @@ export const useMapMarkers = (props: UseMapMarkersProps) => {
 
     clearAllCurrentDayMarkersFromMap(); // Clear previous markers for the day
 
-    // Access store state directly to avoid stale closures
-    const storeState = useRouteMemoryStore.getState();
-    const dayDataFromStore = storeState.routeDataByDay.get(selectedDay);
+    const dayDataFromStore = getDayRouteData(selectedDay);
     let newMarkersForDay: any[] = [];
 
     // Check if markers are already created and stored for this day
     if (dayDataFromStore && dayDataFromStore.markers && dayDataFromStore.markers.length > 0) {
       console.log(`[useMapMarkers] Reusing ${dayDataFromStore.markers.length} markers for day ${selectedDay} from store.`);
       newMarkersForDay = dayDataFromStore.markers;
-      newMarkersForDay.forEach(marker => {
-        if (marker && typeof marker.setMap === 'function') {
-          marker.setMap(map); // Add them back to map
-        }
-      });
+      newMarkersForDay.forEach(marker => marker.setMap(map)); // Add them back to map
     } else {
       // Markers not in store, create them
       const currentItineraryDay = itinerary.find(d => d.day === selectedDay);
@@ -94,21 +90,9 @@ export const useMapMarkers = (props: UseMapMarkersProps) => {
               position,
               map,
               title: place.name,
-              icon: {
-                content: `<div style="width:24px;height:24px;background-color:blue;color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;">${index + 1}</div>`,
-                anchor: new window.naver.maps.Point(12, 12),
-              }
+              // TODO: Add custom icon logic based on index, selection, highlight
+              // Example: icon: getMarkerIcon(place, index, selectedPlace, highlightPlaceId)
             };
-            
-            // highlightPlaceId와 일치하는 경우 마커 스타일 변경
-            if (highlightPlaceId && place.id === highlightPlaceId) {
-                markerOptions.icon = {
-                    content: `<div style="width:30px;height:30px;background-color:red;color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;border:2px solid white;box-shadow:0 0 5px red;">${index + 1}</div>`,
-                    anchor: new window.naver.maps.Point(15, 15),
-                };
-                markerOptions.zIndex = 100;
-            }
-
             const marker = new window.naver.maps.Marker(markerOptions);
 
             if (onPlaceClick) {
@@ -119,34 +103,24 @@ export const useMapMarkers = (props: UseMapMarkersProps) => {
             newMarkersForDay.push(marker);
           }
         });
-        
-        // Use Store API directly to avoid state update issues
-        if (newMarkersForDay.length > 0) {
-          useRouteMemoryStore.getState().setDayRouteData(selectedDay, { 
-            markers: newMarkersForDay 
-          });
-        }
+        // Store newly created markers
+        setDayRouteData(selectedDay, { markers: newMarkersForDay });
       } else {
          console.log(`[useMapMarkers] No places found in itinerary for day ${selectedDay}.`);
       }
     }
-    
     setCurrentDayMarkers(newMarkersForDay);
     
     // Fit bounds to new markers if any
     if (newMarkersForDay.length > 0 && window.naver && window.naver.maps) {
         const bounds = new window.naver.maps.LatLngBounds();
-        newMarkersForDay.forEach(marker => {
-            if(marker && marker.getPosition) {
-                bounds.extend(marker.getPosition());
-            }
-        });
+        newMarkersForDay.forEach(marker => bounds.extend(marker.getPosition()));
         if (!bounds.isEmpty()) {
             map.fitBounds(bounds, { top: 70, right: 70, bottom: 70, left: 70 });
         }
     }
 
-  }, [map, isMapInitialized, isNaverLoaded, itinerary, selectedDay, onPlaceClick, highlightPlaceId, clearAllCurrentDayMarkersFromMap]);
+  }, [map, isMapInitialized, isNaverLoaded, itinerary, selectedDay, getDayRouteData, setDayRouteData, onPlaceClick, highlightPlaceId, clearAllCurrentDayMarkersFromMap]);
 
   // Effect to re-render markers when selectedDay (from store) changes or map is ready
   useEffect(() => {
@@ -158,30 +132,32 @@ export const useMapMarkers = (props: UseMapMarkersProps) => {
 
   // Event listener for explicit 'mapDayChanged' events
   useEffect(() => {
-    const handleMapDayChanged = (eventData: unknown) => {
-        const day = (eventData as { detail?: { day?: number }; day?: number })?.detail?.day ?? (eventData as { day?: number })?.day;
-        if (typeof day === 'number') {
-            console.log(`[useMapMarkers] 'mapDayChanged' event received for day ${day}. Triggering re-render.`);
-            if (isMapInitialized) {
-                renderMarkersForSelectedDay();
-            }
-        } else {
-            console.warn('[useMapMarkers] mapDayChanged event received with invalid data:', eventData);
-        }
+    const handleMapDayChanged = (data: { day: number }) => {
+      console.log(`[useMapMarkers] 'mapDayChanged' event received for day ${data.day}. Triggering re-render.`);
+      // The selectedDay from store should already be updated by useMapDaySelector.
+      // This effect primarily ensures renderMarkersForSelectedDay is called if map is initialized.
+      if (isMapInitialized) {
+        renderMarkersForSelectedDay();
+      }
     };
-    
     const unsubscribe = EventEmitter.subscribe('mapDayChanged', handleMapDayChanged);
     return () => unsubscribe();
   }, [isMapInitialized, renderMarkersForSelectedDay]);
+
 
   // Clear all markers on component unmount or when map is destroyed
   useEffect(() => {
     return () => {
       console.log("[useMapMarkers] Unmounting, clearing current day markers from map.");
       clearAllCurrentDayMarkersFromMap();
+      // If generalMarkersRef is used for non-itinerary markers, clear them too if needed
+      // generalMarkersRef.current = clearMarkersUtil(generalMarkersRef.current);
     };
   }, [clearAllCurrentDayMarkersFromMap]);
 
+
+  // The `forceMarkerUpdate` and `clearAllMarkers` might need to be re-evaluated.
+  // `clearAllMarkers` should perhaps clear data from the store for all days.
   const forceMarkerUpdate = useCallback(() => {
     console.log("[useMapMarkers] forceMarkerUpdate called. Re-rendering markers for current day.");
     renderMarkersForSelectedDay();
@@ -190,27 +166,17 @@ export const useMapMarkers = (props: UseMapMarkersProps) => {
   const clearAllMarkersAndStore = useCallback(() => {
      console.log("[useMapMarkers] Clearing all markers from map and store.");
      const store = useRouteMemoryStore.getState();
-     
-     // Iterate through all days in the store
-     store.routeDataByDay.forEach((_dayData, dayIdx) => {
-        const currentDayData = store.routeDataByDay.get(dayIdx);
-        if (currentDayData && currentDayData.markers) {
-          currentDayData.markers.forEach(m => {
-            if (m && typeof m.setMap === 'function') {
-              m.setMap(null);
-            }
-          });
-          
-          // Update the store with empty markers array
-          store.setDayRouteData(dayIdx, { markers: [] });
-        }
+     store.routeDataByDay.forEach((dayData, dayIdx) => {
+        dayData.markers.forEach(m => m.setMap(null));
+        store.setDayRouteData(dayIdx, { markers: [] }); // Clear from store
      });
-     
-     setCurrentDayMarkers([]); // Reset local state
+     setCurrentDayMarkers([]);
   }, []);
 
+
   return {
-    clearAllMarkers: clearAllMarkersAndStore, 
-    forceMarkerUpdate,
+    // markers: currentDayMarkers, // markers for the currently selected day
+    clearAllMarkers: clearAllMarkersAndStore, // Clears all markers from store and map
+    forceMarkerUpdate, // Triggers re-render for current day
   };
 };

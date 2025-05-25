@@ -1,29 +1,43 @@
 
 import { useCallback } from 'react';
 import { useRouteMemoryStore } from '@/hooks/map/useRouteMemoryStore';
-import { EventEmitter } from '@/hooks/events/useEventEmitter';
+import { EventEmitter } from '@/hooks/events/useEventEmitter'; // Using static emitter for simplicity here
+import { useScheduleStateAndEffects } from '@/hooks/schedule/useScheduleStateAndEffects';
+
 
 export const useMapDaySelector = () => {
-  const { selectedDay: selectedDayFromStore, setSelectedDay } = useRouteMemoryStore();
-  
-  // 일자 선택 핸들러
+  // Assuming useScheduleStateAndEffects is the source of truth for selectedDay for UI
+  const { selectedDay, setSelectedDay: setUiSelectedDay } = useScheduleStateAndEffects();
+  const { 
+    setSelectedDay: setRouteStoreSelectedDay, 
+    getCurrentDayRouteData 
+  } = useRouteMemoryStore();
+
   const handleDaySelect = useCallback((day: number) => {
-    // 이미 선택된 일자면 무시
-    if (selectedDayFromStore === day) return;
+    if (selectedDay === day) return;
+
+    console.log(`[useMapDaySelector] Day ${day} selected.`);
     
-    console.log(`[useMapDaySelector] 일자 ${day} 선택`);
+    // Update UI state
+    setUiSelectedDay(day);
     
-    // 경로 메모리 상태 업데이트
-    setSelectedDay(day);
+    // Update route memory store's selected day
+    setRouteStoreSelectedDay(day);
     
-    // 경로 및 마커 렌더링 이벤트 발생
+    // Emit event for map components to react
     EventEmitter.emit('mapDayChanged', { day });
     
-    console.log(`[useMapDaySelector] mapDayChanged 이벤트 발생됨 (일자: ${day})`);
-  }, [selectedDayFromStore, setSelectedDay]);
-  
+    const currentDayData = getCurrentDayRouteData(); // This will now fetch for the newly set 'day'
+    console.log(`[useMapDaySelector] Day ${day} route data from store:`, {
+      linkIds: currentDayData?.linkIds?.length || 0,
+      nodeIds: currentDayData?.nodeIds?.length || 0,
+      polylines: currentDayData?.polylines?.length || 0,
+      markers: currentDayData?.markers?.length || 0,
+    });
+  }, [selectedDay, setUiSelectedDay, setRouteStoreSelectedDay, getCurrentDayRouteData]);
+
   return {
-    selectedDayFromUI: selectedDayFromStore,
-    handleDaySelect
+    selectedDayFromUI: selectedDay, // This is the day selected in the UI (e.g., ItineraryPanel)
+    handleDaySelect,
   };
 };

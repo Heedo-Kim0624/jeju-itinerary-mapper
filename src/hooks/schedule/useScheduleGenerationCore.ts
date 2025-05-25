@@ -31,9 +31,8 @@ export const useScheduleGenerationCore = ({
   const { fetchAllCategoryData } = useSupabaseDataFetcher();
   const { enrichItineraryData } = useItineraryEnricher();
 
-  // 함수 시그니처 수정: (serverResponse, startDate) => ItineraryDay[] 형태로 맞추기
   const processServerResponse = useCallback(
-    async (serverResponse: NewServerScheduleResponse, startDate: Date): Promise<ItineraryDay[]> => {
+    async (serverResponse: NewServerScheduleResponse) => {
       console.log('[useScheduleGenerationCore] 서버 응답 처리 시작');
 
       try {
@@ -45,7 +44,7 @@ export const useScheduleGenerationCore = ({
           console.error('[useScheduleGenerationCore] 서버 응답 파싱 결과가 비어 있습니다.');
           toast.error('일정 생성 실패: 서버 응답을 파싱할 수 없습니다.');
           setIsLoadingState(false);
-          return [];
+          return;
         }
         console.log('[useScheduleGenerationCore] 서버 응답 기본 파싱 완료', parsedItinerary.length, '일차');
 
@@ -80,17 +79,13 @@ export const useScheduleGenerationCore = ({
         setServerRoutes(routeDataForMap); // 변환된 데이터로 지도 컨텍스트 업데이트
 
         toast.success(`${enrichedItinerary.length}일 일정이 생성되었습니다.`);
-        
-        // 함수 반환 타입 수정: ItineraryDay[] 반환
-        return enrichedItinerary;
       } catch (error) {
         console.error('[useScheduleGenerationCore] 서버 응답 처리 중 오류:', error);
         toast.error('일정 생성 처리 중 오류가 발생했습니다.');
         setIsLoadingState(false);
-        return []; // 오류 시 빈 배열 반환
       }
     },
-    [startDate, setItinerary, setSelectedDay, setServerRoutes, setIsLoadingState, fetchAllCategoryData, enrichItineraryData]
+    [startDate, setItinerary, setSelectedDay, setServerRoutes, setIsLoadingState, fetchAllCategoryData, enrichItineraryData, parseServerResponse]
   );
 
   return {

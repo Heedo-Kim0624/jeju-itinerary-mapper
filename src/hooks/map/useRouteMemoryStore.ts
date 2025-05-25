@@ -1,176 +1,126 @@
 
 import { create } from 'zustand';
+import { dayStringToIndex } from '@/utils/date/dayMapping';
+import type { ServerRouteSummaryItem, NewServerScheduleResponse } from '@/types/core';
 
 // 일자별 경로 및 마커 데이터 타입 정의
 export interface DayRouteData {
   linkIds: string[];
   nodeIds: string[];
-  polylines: any[];
-  markers: any[];
-  bounds: any;
+  polylines: any[]; // Naver Polyline instances
+  markers: any[];   // Naver Marker instances
+  bounds: any | null; // Naver LatLngBounds instance
 }
 
 interface RouteMemoryState {
-  // 일자별 경로 및 마커 데이터 저장
   routeDataByDay: Map<number, DayRouteData>;
-  
-  // 현재 선택된 일자
   selectedDay: number;
-  
-  // 일자별 데이터 설정
   setDayRouteData: (day: number, data: Partial<DayRouteData>) => void;
-  
-  // 서버 응답에서 일자별 데이터 초기화
-  initializeFromServerResponse: (serverResponse: any) => void;
-  
-  // 선택된 일자 변경
+  initializeFromServerResponse: (serverResponse: NewServerScheduleResponse, startDate: Date) => void;
   setSelectedDay: (day: number) => void;
-  
-  // 현재 선택된 일자의 데이터 가져오기
-  getCurrentDayRouteData: () => DayRouteData; 
-  
-  // 특정 일자의 데이터 가져오기
-  getDayRouteData: (day: number) => DayRouteData;
-  
-  // 특정 일자의 폴리라인 데이터 삭제
-  clearDayPolylines: (day: number) => void;
-  
-  // 모든 경로 데이터 초기화
+  getCurrentDayRouteData: () => DayRouteData | undefined;
+  getDayRouteData: (day: number) => DayRouteData | undefined;
   clearAllRouteData: () => void;
+  clearDayPolylines: (day: number) => void;
+  clearDayMarkers: (day: number) => void;
 }
 
-// 기본 빈 경로 데이터 (상수 참조가 아닌 함수로 새 인스턴스 생성)
-const createEmptyRouteData = (): DayRouteData => ({
+const emptyRouteData: DayRouteData = {
   linkIds: [],
   nodeIds: [],
   polylines: [],
   markers: [],
   bounds: null
-});
+};
 
-// 상태 저장소 생성
 export const useRouteMemoryStore = create<RouteMemoryState>((set, get) => ({
   routeDataByDay: new Map(),
   selectedDay: 1,
-  
+
   setDayRouteData: (day, data) => {
     set(state => {
-      // 현재 데이터를 가져오되, 없으면 새 빈 데이터 생성
-      const currentData = state.routeDataByDay.get(day) || createEmptyRouteData();
+      const currentData = state.routeDataByDay.get(day) || { ...emptyRouteData };
       const newData = { ...currentData, ...data };
       const newMap = new Map(state.routeDataByDay);
       newMap.set(day, newData);
-      
-      console.log(`[RouteMemoryStore] 일자 ${day} 경로 데이터 업데이트:`, newData);
-      
+      console.log(`[RouteMemoryStore] Day ${day} route data updated:`, {
+        linkIds: newData.linkIds.length,
+        nodeIds: newData.nodeIds.length,
+        polylines: newData.polylines.length,
+        markers: newData.markers.length,
+      });
       return { routeDataByDay: newMap };
     });
   },
-  
-  initializeFromServerResponse: (serverResponse) => {
+
+  initializeFromServerResponse: (serverResponse, startDate) => {
     if (!serverResponse || !serverResponse.route_summary || !Array.isArray(serverResponse.route_summary)) {
-      console.warn('[RouteMemoryStore] 유효한 서버 응답이 아닙니다.');
+      console.warn('[RouteMemoryStore] Invalid server response or missing route_summary.');
       return;
     }
+
+    const newRouteDataByDay = new Map<number, DayRouteData>();
     
-    // 기존 데이터 초기화
-    set({ routeDataByDay: new Map() });
-    
-    // 서버 응답에서 일자별 데이터 추출 및 저장
-    serverResponse.route_summary.forEach((summary: any) => {
-      if (!summary || !summary.day) return;
+    serverResponse.route_summary.forEach((summary: ServerRouteSummaryItem, index: number) => {
+      // Use chronological index (0-based from serverResponse) mapped to day number (1-based)
+      // This assumes route_summary is ordered by day.
+      const dayIndex = index + 1; 
+
+      const linkIds = (summary.interleaved_route || []).filter((_, idx) => idx % 2 === 1).map(String); // Odd indices are link IDs
+      const nodeIds = (summary.interleaved_route || []).filter((_, idx) => idx % 2 === 0).map(String); // Even indices are node IDs
       
-      // 일자가 숫자 형식인지 확인
-      const dayIndex = typeof summary.day === 'number' ? summary.day : parseInt(summary.day, 10);
-      if (isNaN(dayIndex)) {
-        console.warn(`[RouteMemoryStore] 유효하지 않은 일자: ${summary.day}`);
-        return;
-      }
-      
-      // 링크 ID 및 노드 ID 추출
-      const linkIds = summary.interleaved_route || [];
-      const nodeIds = summary.places_routed || [];
-      
-      // 일자별 데이터 저장
-      get().setDayRouteData(dayIndex, {
+      newRouteDataByDay.set(dayIndex, {
+        ...emptyRouteData, // Start with empty defaults
         linkIds,
         nodeIds,
-        polylines: [], // 빈 배열로 초기화
-        markers: [],
-        bounds: null
       });
-      
-      console.log(`[RouteMemoryStore] 일자 ${dayIndex} 경로 데이터 초기화 완료:`, {
+
+      console.log(`[RouteMemoryStore] Day ${dayIndex} (Server Day Key: ${summary.day}) route data initialized:`, {
         linkIds: linkIds.length,
         nodeIds: nodeIds.length
       });
     });
+    set({ routeDataByDay: newRouteDataByDay });
   },
-  
+
   setSelectedDay: (day) => {
     set({ selectedDay: day });
-    console.log(`[RouteMemoryStore] 선택된 일자 변경: ${day}`);
+    console.log(`[RouteMemoryStore] Selected day changed to: ${day}`);
   },
-  
+
   getCurrentDayRouteData: () => {
     const { selectedDay, routeDataByDay } = get();
-    return routeDataByDay.get(selectedDay) || createEmptyRouteData(); // 항상 새로운 빈 객체 반환
+    return routeDataByDay.get(selectedDay) || { ...emptyRouteData };
   },
-  
+
   getDayRouteData: (day) => {
-    return get().routeDataByDay.get(day) || createEmptyRouteData(); // 항상 새로운 빈 객체 반환
+    return get().routeDataByDay.get(day) || { ...emptyRouteData };
   },
   
-  clearDayPolylines: (day) => {
-    const currentDayData = get().routeDataByDay.get(day);
-    if (!currentDayData) {
-      console.log(`[RouteMemoryStore] 일자 ${day}에 대한 데이터가 없어 폴리라인 삭제 스킵`);
-      return;
-    }
-    
-    if (currentDayData.polylines && currentDayData.polylines.length > 0) {
-      // 기존 폴리라인 제거
-      currentDayData.polylines.forEach(polyline => {
-        if (polyline && typeof polyline.setMap === 'function') {
-          polyline.setMap(null);
-        }
-      });
-      
-      // 데이터 업데이트
-      get().setDayRouteData(day, {
-        polylines: []
-      });
-      
-      console.log(`[RouteMemoryStore] 일자 ${day} 폴리라인 삭제 완료`);
+  clearDayPolylines: (day: number) => {
+    const dayData = get().routeDataByDay.get(day);
+    if (dayData && dayData.polylines) {
+      dayData.polylines.forEach(p => p.setMap(null));
+      get().setDayRouteData(day, { polylines: [] });
+      console.log(`[RouteMemoryStore] Cleared polylines for day ${day}`);
     }
   },
-  
+
+  clearDayMarkers: (day: number) => {
+    const dayData = get().routeDataByDay.get(day);
+    if (dayData && dayData.markers) {
+      dayData.markers.forEach(m => m.setMap(null));
+      get().setDayRouteData(day, { markers: [] });
+      console.log(`[RouteMemoryStore] Cleared markers for day ${day}`);
+    }
+  },
+
   clearAllRouteData: () => {
-    const { routeDataByDay } = get();
-    
-    // 모든 시각적 요소 제거
-    routeDataByDay.forEach((dayData, day) => {
-      // 폴리라인 제거
-      if (dayData.polylines) {
-        dayData.polylines.forEach(polyline => {
-          if (polyline && typeof polyline.setMap === 'function') {
-            polyline.setMap(null);
-          }
-        });
-      }
-      
-      // 마커 제거
-      if (dayData.markers) {
-        dayData.markers.forEach(marker => {
-          if (marker && typeof marker.setMap === 'function') {
-            marker.setMap(null);
-          }
-        });
-      }
+    get().routeDataByDay.forEach((dayData, day) => {
+        dayData.polylines.forEach(p => p.setMap(null));
+        dayData.markers.forEach(m => m.setMap(null));
     });
-    
-    // 데이터 초기화
-    set({ routeDataByDay: new Map() });
-    console.log('[RouteMemoryStore] 모든 경로 데이터 초기화');
+    set({ routeDataByDay: new Map(), selectedDay: 1 });
+    console.log('[RouteMemoryStore] All route data cleared');
   }
 }));
