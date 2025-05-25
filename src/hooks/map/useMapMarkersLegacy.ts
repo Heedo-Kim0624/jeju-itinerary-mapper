@@ -135,7 +135,6 @@ export const useMapMarkers = (map: any) => {
         backgroundColor: "white",
         borderColor: "#ddd",
         borderWidth: 1,
-        anchorSize: new window.naver.maps.Size(10, 10),
         pixelOffset: new window.naver.maps.Point(0, -5)
       });
 

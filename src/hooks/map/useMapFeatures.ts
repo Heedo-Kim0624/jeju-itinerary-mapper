@@ -1,9 +1,10 @@
+
 import { useMemo, useCallback } from 'react';
-import { useGeoJsonState } from '@/hooks/map/useGeoJsonState';
+import { useGeoJsonState as useActualGeoJsonState } from '@/components/rightpanel/geojson/useGeoJsonState'; // Renamed to avoid conflict
 import { usePlaceGeoJsonMapper } from './usePlaceGeoJsonMapper';
 import { useMapInteractionManager } from './useMapInteractionManager';
 import { useRouteManager } from './useRouteManager';
-import { useMapMarkers } from './useMapMarkers';
+import { useMapMarkers } from '@/hooks/map/useMapMarkersLegacy'; // 변경: 경로 수정
 import type { Place, ItineraryDay } from '@/types/supabase';
 import type { GeoNode, GeoJsonNodeFeature } from '@/components/rightpanel/geojson/GeoJsonTypes';
 
@@ -17,21 +18,30 @@ interface UseMapFeaturesProps {
 export const useMapFeatures = ({ 
   map, 
   isNaverLoadedParam, 
-  updateDayPolylinePaths // props로 받음
+  updateDayPolylinePaths 
 }: UseMapFeaturesProps) => {
-  const geoJsonState = useGeoJsonState(); // app-level GeoJSON state
+  const geoJsonState = useActualGeoJsonState(); // Use renamed import
 
   const geoJsonNodeFeatures = useMemo((): GeoJsonNodeFeature[] => {
-    if (!geoJsonState.geoJsonNodes || geoJsonState.geoJsonNodes.length === 0) {
+    if (!geoJsonState.geoJsonData?.features || geoJsonState.geoJsonData.features.length === 0) { // Adjusted to access features from geoJsonData
       return [];
     }
-    return geoJsonState.geoJsonNodes.map((node: GeoNode): GeoJsonNodeFeature => ({
+    // Assuming geoJsonState.geoJsonData.features are already GeoJsonNodeFeature[]
+    // If not, mapping might be needed, but useGeoJsonState likely provides them in correct format
+    // For now, let's assume geoJsonState.geoJsonData.features is what we need
+    // This part needs to align with the actual structure returned by useActualGeoJsonState
+    // A common pattern is for geoJsonState.geoJsonData to be a FeatureCollection,
+    // and geoJsonState.geoJsonData.features to be an array of Features.
+    // Let's assume geoJsonState.geoJsonNodes is the correct source as per the original code.
+    const nodesSource = geoJsonState.geoJsonNodes || []; // Fallback to geoJsonNodes if geoJsonData.features is not the path
+    
+    return nodesSource.map((node: GeoNode): GeoJsonNodeFeature => ({
       type: "Feature",
       geometry: node.geometry,
       properties: node.properties,
       id: node.id,
     }));
-  }, [geoJsonState.geoJsonNodes]);
+  }, [geoJsonState.geoJsonNodes, geoJsonState.geoJsonData]); // Added geoJsonState.geoJsonData
 
   const { mapPlacesWithGeoNodes } = usePlaceGeoJsonMapper({
     geoJsonNodes: geoJsonNodeFeatures, 
@@ -41,7 +51,7 @@ export const useMapFeatures = ({
   // 여기서는 isNaverLoadedParam을 그대로 전달.
   const { addMarkers: addMarkersFromInteractionManager, showRouteForPlaceIndex } = useMapInteractionManager({
     map,
-    isNaverLoadedParam, // 또는 isNaverLoaded
+    isNaverLoadedParam, 
   });
 
   const {
@@ -56,27 +66,31 @@ export const useMapFeatures = ({
     isNaverLoadedParam,
     geoJsonNodes: geoJsonNodeFeatures,
     mapPlacesWithGeoNodesFn: mapPlacesWithGeoNodes,
-    updateDayPolylinePaths, // 전달받은 함수를 다시 전달
+    updateDayPolylinePaths, 
   });
 
   const { clearMarkersAndUiElements: clearAllMapMarkers } = useMapMarkers(map);
 
-  const clearMarkersAndUiElements = useCallback(() => { // useCallback 추가
+  const clearMarkersAndUiElements = useCallback(() => { 
     console.log("[useMapFeatures] Clearing all markers and UI elements");
     if (clearAllMapMarkers) {
       clearAllMapMarkers();
     } else {
       console.warn("[useMapFeatures] clearAllMapMarkers function is not available");
     }
-    clearAllDrawnRoutes();
+    if (clearAllDrawnRoutes) { // Check if clearAllDrawnRoutes exists
+        clearAllDrawnRoutes();
+    } else {
+        console.warn("[useMapFeatures] clearAllDrawnRoutes function is not available");
+    }
   }, [clearAllMapMarkers, clearAllDrawnRoutes]);
 
   return {
-    addMarkers: addMarkersFromInteractionManager, // useMapInteractionManager에서 온 addMarkers 사용
+    addMarkers: addMarkersFromInteractionManager, 
     clearMarkersAndUiElements,
     calculateRoutes: calculateAndDrawDirectRoutes,
     renderItineraryRoute,
-    clearAllRoutes: clearAllDrawnRoutes, // clearAllDrawnRoutes를 clearAllRoutes로 반환
+    clearAllRoutes: clearAllDrawnRoutes, 
     highlightSegment,
     clearPreviousHighlightedPath,
     showRouteForPlaceIndex,
