@@ -1,3 +1,4 @@
+
 import { useCallback } from 'react';
 import type { ItineraryDay, Place } from '@/types/core';
 import { GeoJsonNodeFeature } from '@/components/rightpanel/geojson/GeoJsonTypes';
@@ -27,7 +28,6 @@ export const useItineraryGeoJsonRenderer = ({
   updateDayPolylinePaths,
 }: UseItineraryGeoJsonRendererProps) => {
 
-  // 일정 경로 렌더링 함수 (특정 일차의 장소들을 연결하는 경로)
   const renderItineraryRoute = useCallback((
     itineraryDay: ItineraryDay | null,
     allServerRoutesInput?: Record<number, ServerRouteDataForDay>,
@@ -41,27 +41,25 @@ export const useItineraryGeoJsonRenderer = ({
     console.log(`[ItineraryGeoJsonRenderer] 일차 ${itineraryDay.day} 경로 렌더링 시작.`);
     clearAllMapPolylines();
 
-    // 1. Link ID 기반 경로
     if (itineraryDay.routeData?.linkIds && itineraryDay.routeData.linkIds.length > 0) {
       const linkIds = itineraryDay.routeData.linkIds;
       console.log(`[ItineraryGeoJsonRenderer] Day ${itineraryDay.day}: Link ID 기반 경로 계산. 링크 수: ${linkIds.length}`);
       
       const getNodeById = (nodeId: string | number): GeoJsonNodeFeature | undefined => {
-        return window.geoJsonLayer?.getNodeById?.(String(nodeId)); // String(nodeId)로 수정
+        return window.geoJsonLayer?.getNodeById?.(String(nodeId));
       };
 
       const allPolylinePaths: { lat: number; lng: number }[][] = [];
       
       let missingLinkCount = 0;
-      let segments: { start: number; end: number; coords: any[] }[] = [];
-      let currentSegment: { start: number; end: number; coords: any[] } | undefined;
+      let segments: { start: number; end: number; coords: { lat: number; lng: number }[] }[] = [];
+      let currentSegment: { start: number; end: number; coords: { lat: number; lng: number }[] } | undefined;
       
-      // 링크 ID로부터 경로 구성
       for (let i = 0; i < linkIds.length; i++) {
         const linkId = linkIds[i];
         
-        const linkFeature = window.geoJsonLayer?.getLinkById?.(String(linkId)); // String(linkId) 및 getLinkById 사용
-        const linkCoordsRaw = linkFeature?.geometry?.coordinates; // geometry.coordinates에서 직접 가져오기
+        const linkFeature = window.geoJsonLayer?.getLinkById?.(String(linkId));
+        const linkCoordsRaw = linkFeature?.geometry?.coordinates;
 
         if (!linkCoordsRaw || !Array.isArray(linkCoordsRaw) || linkCoordsRaw.length < 2 || !linkCoordsRaw.every(c => Array.isArray(c) && c.length === 2)) {
           missingLinkCount++;
@@ -80,33 +78,31 @@ export const useItineraryGeoJsonRenderer = ({
               const endNodeId = itineraryDay.routeData?.nodeIds?.[nextValidLinkIndex];
               
               if (startNodeId && endNodeId) {
-                const startNode = getNodeById(startNodeId); // getNodeById는 이미 String 처리됨
-                const endNode = getNodeById(endNodeId); // getNodeById는 이미 String 처리됨
+                const startNode = getNodeById(startNodeId);
+                const endNode = getNodeById(endNodeId);
                 
-                if (startNode?.geometry?.coordinates && endNode?.geometry?.coordinates) {
+                const startNodeCoords = startNode?.geometry?.coordinates;
+                const endNodeCoords = endNode?.geometry?.coordinates;
+
+                if (startNodeCoords && typeof startNodeCoords[0] === 'number' && typeof startNodeCoords[1] === 'number' &&
+                    endNodeCoords && typeof endNodeCoords[0] === 'number' && typeof endNodeCoords[1] === 'number') {
                   try {
                     const directPath = [
-                      {
-                        lat: startNode.geometry.coordinates[1],
-                        lng: startNode.geometry.coordinates[0]
-                      },
-                      {
-                        lat: endNode.geometry.coordinates[1],
-                        lng: endNode.geometry.coordinates[0]
-                      }
+                      { lat: startNodeCoords[1], lng: startNodeCoords[0] },
+                      { lat: endNodeCoords[1], lng: endNodeCoords[0] }
                     ];
                     
-                    addPolyline(directPath, '#FF9500', 4, 0.7, 10); // 주황색 fallback
+                    addPolyline(directPath, '#FF9500', 4, 0.7, 10);
                     allPolylinePaths.push(directPath);
                     
                     i = nextValidLinkIndex - 1;
-                    currentSegment = undefined; // 새 세그먼트 시작 강제
-                    continue;
+                    currentSegment = undefined;
+                    continue; 
                   } catch (e) {
                     console.error(`[ItineraryGeoJsonRenderer] Error creating fallback path:`, e);
                   }
                 } else {
-                  console.log(`[ItineraryGeoJsonRenderer] Day ${itineraryDay.day}: Fallback 위한 노드 ID ${startNodeId} 또는 ${endNodeId}의 좌표 찾을 수 없음.`);
+                  console.log(`[ItineraryGeoJsonRenderer] Day ${itineraryDay.day}: Fallback 위한 노드 ID ${startNodeId} 또는 ${endNodeId}의 좌표 찾을 수 없거나 유효하지 않음.`);
                 }
               }
             }
@@ -115,11 +111,23 @@ export const useItineraryGeoJsonRenderer = ({
           continue;
         }
         
-        // linkCoordsRaw는 [[lng, lat], [lng, lat], ...] 형태여야 함
-        const pathCoords: {lat: number; lng: number}[] = linkCoordsRaw.map((coord: number[]) => ({
-          lat: coord[1],
-          lng: coord[0]
-        }));
+        const pathCoords: {lat: number; lng: number}[] = linkCoordsRaw
+          .map((coordPair: any) => {
+            const lng = coordPair?.[0];
+            const lat = coordPair?.[1];
+            if (typeof lat === 'number' && typeof lng === 'number') {
+              return { lat, lng };
+            }
+            console.warn(`[ItineraryGeoJsonRenderer] Malformed coordinate pair in link ${linkId}: ${JSON.stringify(coordPair)}`);
+            return null;
+          })
+          .filter(Boolean) as {lat: number; lng: number}[];
+
+        if (pathCoords.length === 0) { // All coordinate pairs in this link were malformed
+            console.warn(`[ItineraryGeoJsonRenderer] Link ${linkId} resulted in no valid coordinates after filtering.`);
+            currentSegment = undefined; // Reset segment
+            continue;
+        }
         
         if (!currentSegment) {
           currentSegment = {
@@ -129,16 +137,26 @@ export const useItineraryGeoJsonRenderer = ({
           };
           segments.push(currentSegment);
         } else {
-          currentSegment.coords.push(...pathCoords.slice(1));
+          // Ensure currentSegment.coords and pathCoords are not empty before slice
+          if (pathCoords.length > 0) {
+             // If pathCoords starts with the same point as currentSegment.coords ends, skip the first point of pathCoords
+            const lastCurrentCoord = currentSegment.coords[currentSegment.coords.length -1];
+            const firstPathCoord = pathCoords[0];
+            if (lastCurrentCoord && firstPathCoord && lastCurrentCoord.lat === firstPathCoord.lat && lastCurrentCoord.lng === firstPathCoord.lng) {
+                 currentSegment.coords.push(...pathCoords.slice(1));
+            } else {
+                 currentSegment.coords.push(...pathCoords);
+            }
+          }
           currentSegment.end = i;
         }
         
         if (currentSegment.coords.length > 100 || i === linkIds.length - 1) {
-          const polylinePath = currentSegment.coords;
-          
-          addPolyline(polylinePath, '#4285F4', 5, 0.8, 10); // 파란색 주 경로
-          allPolylinePaths.push(polylinePath);
-          
+           if (currentSegment.coords.length > 1) { // Need at least 2 points for a polyline
+            const polylinePath = currentSegment.coords;
+            addPolyline(polylinePath, '#4285F4', 5, 0.8, 10);
+            allPolylinePaths.push(polylinePath);
+          }
           currentSegment = undefined;
         }
       }
@@ -160,11 +178,15 @@ export const useItineraryGeoJsonRenderer = ({
       console.log(`[ItineraryGeoJsonRenderer] Day ${itineraryDay.day}: 서버 캐시된 경로 데이터 사용. ${serverData.polylinePaths.length}개 세그먼트`);
       
       serverData.polylinePaths.forEach(path => {
-        addPolyline(path, '#4285F4', 5, 0.8, 10);
+        // Ensure path itself is an array of valid {lat, lng} objects
+        if (Array.isArray(path) && path.every(p => typeof p.lat === 'number' && typeof p.lng === 'number')) {
+          addPolyline(path, '#4285F4', 5, 0.8, 10);
+        } else {
+          console.warn(`[ItineraryGeoJsonRenderer] Invalid path format in serverData for day ${itineraryDay.day}`);
+        }
       });
       
     } 
-    // 3. 폴백: 장소들 사이에 직선 연결
     else if (itineraryDay.places && itineraryDay.places.length > 0) {
       console.log(`[ItineraryGeoJsonRenderer] Day ${itineraryDay.day}: Link ID/서버 경로 없음. Fallback: 직선 연결 (${itineraryDay.places.length}개 장소).`);
       
@@ -175,7 +197,8 @@ export const useItineraryGeoJsonRenderer = ({
         const source = places[i];
         const target = places[i + 1];
         
-        if (!source.x || !source.y || !target.x || !target.y) {
+        if (typeof source.x !== 'number' || typeof source.y !== 'number' || 
+            typeof target.x !== 'number' || typeof target.y !== 'number') {
           console.warn(`[ItineraryGeoJsonRenderer] Invalid coordinates in Day ${itineraryDay.day} for places:`, 
                       source.name, target.name);
           continue;
@@ -186,7 +209,7 @@ export const useItineraryGeoJsonRenderer = ({
           { lat: target.y, lng: target.x }
         ];
         
-        addPolyline(directPath, '#FF9500', 4, 0.7, 5); // 주황색 fallback
+        addPolyline(directPath, '#FF9500', 4, 0.7, 5);
         allPolylinePathsFallback.push(directPath);
       }
       
