@@ -1,12 +1,11 @@
-
 import { useGeoJsonState } from '@/hooks/map/useGeoJsonState';
 import { usePlaceGeoJsonMapper } from './usePlaceGeoJsonMapper';
 import { useMapInteractionManager } from './useMapInteractionManager';
 import { useRouteManager } from './useRouteManager';
-import { useMapMarkers } from './useMapMarkers';
-import type { Place } from '@/types/supabase';
+import { eventEmitter } from '@/utils/eventEmitter';
+import type { Place, ItineraryDay } from '@/types/supabase';
 
-export const useMapFeatures = (map: any, isNaverLoadedParam: boolean) => {
+export const useMapFeatures = (map: any, isNaverLoadedParam: boolean, itinerary: ItineraryDay[] | null) => {
   const geoJsonState = useGeoJsonState();
 
   const { mapPlacesWithGeoNodes } = usePlaceGeoJsonMapper({
@@ -23,7 +22,7 @@ export const useMapFeatures = (map: any, isNaverLoadedParam: boolean) => {
     renderGeoJsonRoute,
     highlightSegment,
     clearPreviousHighlightedPath,
-    clearAllDrawnRoutes,
+    clearAllDrawnRoutes: routeManagerClearRoutes,
     calculateAndDrawDirectRoutes,
   } = useRouteManager({
     map,
@@ -31,30 +30,22 @@ export const useMapFeatures = (map: any, isNaverLoadedParam: boolean) => {
     geoJsonLinks: geoJsonState.geoJsonLinks,
     geoJsonNodes: geoJsonState.geoJsonNodes,
     mapPlacesWithGeoNodesFn: mapPlacesWithGeoNodes,
+    itinerary,
   });
 
-  // Use the marker management from useMapMarkers hook
-  const { clearMarkersAndUiElements: clearAllMapMarkers } = useMapMarkers(map);
-
-  // Create a comprehensive function that clears both markers and routes
   const clearMarkersAndUiElements = () => {
-    console.log("[useMapFeatures] Clearing all markers and UI elements");
-    // First clear all markers
-    if (clearAllMapMarkers) {
-      clearAllMapMarkers();
-    } else {
-      console.warn("[useMapFeatures] clearAllMapMarkers function is not available");
-    }
-    
-    // Then clear all routes
-    clearAllDrawnRoutes();
+    console.log("[useMapFeatures] Emitting clearAllMapElements event to clear markers and routes.");
+    eventEmitter.emit('clearAllMapElements');
   };
 
-  const clearAllRoutes = clearAllDrawnRoutes; // Keep this alias for backward compatibility
+  const clearAllRoutes = () => {
+    console.log("[useMapFeatures] Clearing all routes (delegating to routeManager or event).");
+    routeManagerClearRoutes();
+  };
 
   return {
     addMarkers,
-    clearMarkersAndUiElements, // This now properly clears both markers and routes
+    clearMarkersAndUiElements,
     calculateRoutes: calculateAndDrawDirectRoutes,
     renderItineraryRoute,
     clearAllRoutes,

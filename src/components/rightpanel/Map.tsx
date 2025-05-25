@@ -1,139 +1,138 @@
 
-import React, { useEffect, useMemo } from 'react';
-import { useMapContext } from './MapContext';
-import MapMarkers from './MapMarkers';
+import React, { useEffect, useRef, useMemo } from 'react';
+import { useMapContext } from './MapContext'; // Keep for other context values if needed
 import MapLoadingOverlay from './MapLoadingOverlay';
-import GeoJsonLayer from './GeoJsonLayer';
-import MapControls from './MapControls';
-import type { Place, ItineraryDay } from '@/types/supabase'; // Assuming this is correct, otherwise use types/core
-import { useMapItineraryVisualization } from '@/hooks/map/useMapItineraryVisualization';
-import { useMapDataEffects } from '@/hooks/map/useMapDataEffects';
+import GeoJsonLayer from './GeoJsonLayer'; // Keep if still managing raw GeoJSON visibility toggle
+import MapControls from './MapControls';   // Keep for map controls (zoom, geojson toggle)
 
+import { useJejuMap } from '@/hooks/use-jeju-map'; // As per guide
+import { useDayMarkerRenderer } from '@/hooks/map/useDayMarkerRenderer';
+import { useDayRouteRenderer } from '@/hooks/map/useDayRouteRenderer';
+import { useGeoJsonData } from '@/hooks/map/useGeoJsonData'; // New GeoJSON data hook
+import { useRouteMemoryStore } from '@/hooks/map/useRouteMemoryStore';
+import { useItinerary } from '@/hooks/use-itinerary'; // For itinerary data
+import DaySelector from '@/components/common/DaySelector'; // New DaySelector
+import { useEventEmitter } from '@/utils/eventEmitter';
+
+import styles from './Map.module.css';
+import type { Place } from '@/types/supabase'; // Original Place type for props
+
+// Props for Map component - adjust if necessary
 interface MapProps {
-  places: Place[];
+  places: Place[]; // General places, might not be directly used if all driven by itinerary
   selectedPlace: Place | null;
-  itinerary: ItineraryDay[] | null;
-  selectedDay: number | null;
-  selectedPlaces?: Place[];
+  // itinerary and selectedDay are now primarily sourced from hooks
 }
 
 const Map: React.FC<MapProps> = ({ 
-  places, 
-  selectedPlace, 
-  itinerary, 
-  selectedDay,
-  selectedPlaces = [] 
+  // places, // This prop might become redundant if markers are solely from itinerary
+  // selectedPlace // This prop might also be handled differently
 }) => {
-  const {
-    mapContainer,
-    map,
-    isMapInitialized,
-    isNaverLoaded,
-    isMapError,
-    showGeoJson,
-    toggleGeoJsonVisibility,
-    handleGeoJsonLoaded,
-    isGeoJsonLoaded,
-    checkGeoJsonMapping,
-    serverRoutesData,
-    renderItineraryRoute,
-    geoJsonNodes, 
-    geoJsonLinks,
-  } = useMapContext();
+  const { mapContainer: mapContextContainer, isMapError: contextMapError, map: contextMap } = useMapContext(); // Get container from context if preferred
+  const mapRefExt = useRef<HTMLDivElement>(null);
+  const effectiveMapRef = mapContextContainer || mapRefExt;
 
-  const {
-    itinerary: visualizedItinerary,
-    currentDay: visualizedCurrentDay,
-    totalDistance: visualizedTotalDistance,
-    visualizeDayRoute,
-  } = useMapItineraryVisualization(map, geoJsonNodes, geoJsonLinks);
+  const { mapInstance: naverMap, isNaverLoaded, isMapInitialized : isJejuMapInitialized, isMapError: jejuMapError } = useJejuMap(effectiveMapRef); // Use the map instance from useJejuMap
+  
+  const { geoJsonLinks, isLoading: isGeoJsonLoading, error: geoJsonError } = useGeoJsonData();
+  
+  const { itinerary, selectedDay: itinerarySelectedDay, setSelectedDay: setItinerarySelectedDay } = useItinerary(); // Source of truth for itinerary data
+  const { setSelectedDay: setStoreSelectedDay, clearAllData: clearRouteMemoryData } = useRouteMemoryStore();
+  const storeSelectedDay = useRouteMemoryStore(s => s.selectedDay);
 
-  // 현재 선택된 일자의 itinerary 데이터
-  const currentDayData = useMemo(() => {
-    if (itinerary && selectedDay !== null) {
-      return itinerary.find(day => day.day === selectedDay);
+  const { emit } = useEventEmitter();
+
+
+  // Sync selectedDay from useItinerary to useRouteMemoryStore
+  useEffect(() => {
+    if (itinerarySelectedDay !== null && itinerarySelectedDay !== storeSelectedDay) {
+      // console.log(`[Map.tsx] Syncing itinerarySelectedDay (${itinerarySelectedDay}) to storeSelectedDay.`);
+      setStoreSelectedDay(itinerarySelectedDay);
     }
-    return null;
-  }, [itinerary, selectedDay]);
-
-  const { handlePlaceClick } = useMapDataEffects({
-    isMapInitialized,
-    isGeoJsonLoaded,
-    showGeoJson,
-    toggleGeoJsonVisibility,
-    renderItineraryRoute,
-    serverRoutesData,
-    checkGeoJsonMapping,
-    places,
-    itinerary,
-    selectedDay,
+  }, [itinerarySelectedDay, storeSelectedDay, setStoreSelectedDay]);
+  
+  const { clearAllMarkers } = useDayMarkerRenderer({
+    map: naverMap,
+    isNaverLoaded
+  });
+  
+  const { clearAllPolylines } = useDayRouteRenderer({
+    map: naverMap,
+    isNaverLoaded,
+    geoJsonLinks
   });
 
-  // 일정 및 선택된 일자가 변경되면 경로 렌더링
-  useEffect(() => {
-    if (itinerary && selectedDay !== null && currentDayData && renderItineraryRoute) {
-      console.log(`[Map] Selected day ${selectedDay} has ${currentDayData.places?.length || 0} places`);
-      if (serverRoutesData && serverRoutesData[selectedDay]) { // Ensure serverRoutesData for the day exists
-        renderItineraryRoute(currentDayData, serverRoutesData);
-      } else if (!serverRoutesData || !serverRoutesData[selectedDay]) {
-        // Fallback or alternative logic if serverRoutesData is not ready for the selected day
-        // This might involve rendering a simpler route or just markers
-        console.warn(`[Map] serverRoutesData not available for day ${selectedDay}. Route rendering might be incomplete.`);
-        // Optionally, you could call renderItineraryRoute with a modified call or handle differently
-        // For now, just logging. Depending on requirements, could render markers only, or a direct line.
-      }
+  const handleDaySelect = (day: number) => {
+    // console.log(`[Map.tsx] DaySelector selected day: ${day}`);
+    if (setItinerarySelectedDay) { // useItinerary might not provide setSelectedDay if read-only
+       setItinerarySelectedDay(day);
     }
-  }, [itinerary, selectedDay, currentDayData, serverRoutesData, renderItineraryRoute]);
+    setStoreSelectedDay(day); // Always update the store
+  };
 
-  // MapMarkers에 대한 고유 키 생성 - 의존성 배열 확장
-  const markersKey = useMemo(() => {
-    const placesId = places.map(p => p.id).join('_') || 'empty';
-    
-    const itineraryId = itinerary && itinerary.length > 0 && itinerary[0] ? 
-      `${itinerary.length}-${itinerary[0].day}-${itinerary[0].date}` : 
-      'no-itinerary';
-      
-    const dayId = selectedDay !== null ? `day-${selectedDay}` : 'no-day';
-    const selectedPlaceId = selectedPlace ? `place-${selectedPlace.id}` : 'no-selected';
-    const selectedPlacesIds = selectedPlaces.map(p => p.id).join('_') || 'no-selected-places';
-    
-    return `markers-${dayId}-${itineraryId}-${placesId}-${selectedPlaceId}-${selectedPlacesIds}`;
-  }, [places, itinerary, selectedDay, selectedPlace, selectedPlaces]);
+  // Listener for clearing all map elements
+  useEffect(() => {
+    const handleClearEvent = () => {
+      // console.log('[Map.tsx] Received clearAllMapElements event. Clearing markers and polylines.');
+      clearAllMarkers();
+      clearAllPolylines();
+      // Optionally, also clear the route memory store if it's a full reset
+      // clearRouteMemoryData(); // Uncomment if a full reset is desired on this event
+    };
+
+    const unsubscribe = eventEmitter.on('clearAllMapElements', handleClearEvent);
+    return () => unsubscribe();
+  }, [clearAllMarkers, clearAllPolylines, eventEmitter, clearRouteMemoryData]);
+
+
+  // MapContext provided values that might still be relevant:
+  const { showGeoJson, toggleGeoJsonVisibility, handleGeoJsonLoaded, isGeoJsonLoaded: contextIsGeoJsonLoaded } = useMapContext();
+
+  // Determine overall loading/error state
+  const isLoading = isGeoJsonLoading || !isNaverLoaded || !isJejuMapInitialized;
+  const hasError = jejuMapError || geoJsonError || contextMapError;
+
+
+  // Memoize DaySelector to prevent re-renders if itinerary/selectedDay haven't changed meaningfully
+  const daySelectorElement = useMemo(() => {
+    if (itinerary && itinerary.length > 0 && itinerarySelectedDay !== null) {
+      return (
+        <DaySelector
+          itinerary={itinerary}
+          selectedDay={itinerarySelectedDay}
+          onSelectDay={handleDaySelect}
+        />
+      );
+    }
+    return null;
+  }, [itinerary, itinerarySelectedDay, handleDaySelect]);
 
   return (
-    <div ref={mapContainer} className="w-full h-full relative flex-grow">
-      <MapMarkers
-        key={markersKey}
-        places={places}
-        selectedPlace={selectedPlace}
-        itinerary={itinerary}
-        selectedDay={selectedDay}
-        selectedPlaces={selectedPlaces}
-        onPlaceClick={handlePlaceClick}
-        highlightPlaceId={selectedPlace?.id}
-      />
-      
-      {map && (
+    <div ref={effectiveMapRef} className={styles.mapContainer}>
+      {/* Map rendering is handled by useJejuMap hook into the ref */}
+      {/* GeoJsonLayer might still be used for raw GeoJSON features if separate from routes */}
+      {naverMap && ( // Ensure map instance exists before rendering layers that depend on it
         <GeoJsonLayer 
-          map={map} 
-          visible={showGeoJson} 
-          isMapInitialized={isMapInitialized}
+          map={naverMap} 
+          visible={showGeoJson} // From MapContext
+          isMapInitialized={isJejuMapInitialized}
           isNaverLoaded={isNaverLoaded}
-          onGeoJsonLoaded={handleGeoJsonLoaded}
+          onGeoJsonLoaded={handleGeoJsonLoaded} // From MapContext
         />
       )}
       
       <MapControls
-        showGeoJson={showGeoJson}
-        onToggleGeoJson={toggleGeoJsonVisibility}
-        isMapInitialized={isMapInitialized}
-        isGeoJsonLoaded={isGeoJsonLoaded}
+        showGeoJson={showGeoJson} // From MapContext
+        onToggleGeoJson={toggleGeoJsonVisibility} // From MapContext
+        isMapInitialized={isJejuMapInitialized}
+        isGeoJsonLoaded={contextIsGeoJsonLoaded || (geoJsonLinks.length > 0 && !isGeoJsonLoading)} // Combine context and local GeoJSON status
       />
       
       <MapLoadingOverlay
         isNaverLoaded={isNaverLoaded}
-        isMapError={isMapError}
+        isMapError={!!hasError} // Pass combined error state
       />
+      {daySelectorElement}
     </div>
   );
 };

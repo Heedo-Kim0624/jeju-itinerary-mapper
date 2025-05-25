@@ -1,100 +1,128 @@
 
-// src/hooks/map/useDayRouteRenderer.ts
-import { useCallback, useState } from 'react';
-import type { ItineraryDay } from '@/types/supabase';
-import { ROUTE_COLORS, calculateDistance, ItineraryRouteOptions } from '@/utils/map/itineraryRoutingUtils';
-import { toast } from 'sonner';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { useRouteMemoryStore } from './useRouteMemoryStore';
+import type { GeoLink } from '@/types/core/route-data'; // Ensure GeoLink is imported correctly
 
 interface UseDayRouteRendererProps {
-  map: any;
-  addMainRoutePolyline: (polyline: any) => void;
-  clearAllPolylines: () => void;
-  mainRoutePolylinesRef: React.MutableRefObject<any[]>; // To update currentRoutes for highlightSegment
+  map: any; 
+  isNaverLoaded: boolean;
+  geoJsonLinks: GeoLink[]; 
 }
 
-export const useDayRouteRenderer = ({ map, addMainRoutePolyline, clearAllPolylines, mainRoutePolylinesRef }: UseDayRouteRendererProps) => {
-  const [totalDistance, setTotalDistance] = useState<number>(0);
-  const [lastRenderedDay, setLastRenderedDay] = useState<number | null>(null);
-  // This state mimics the old `currentRoutes` state, used by the highlighter.
-  const [currentDayMainPolyline, setCurrentDayMainPolyline] = useState<any|null>(null);
+export const useDayRouteRenderer = ({ map, isNaverLoaded, geoJsonLinks }: UseDayRouteRendererProps) => {
+  const selectedDay = useRouteMemoryStore(state => state.selectedDay);
+  const getDayRouteData = useRouteMemoryStore(state => state.getDayRouteData);
+  
+  const [_renderedPolylines, setRenderedPolylines] = useState<any[]>([]);
+  const polylinesRef = useRef<any[]>([]);
+  
+  const getLinkDataById = useCallback((linkId: string): GeoLink | undefined => {
+    if (!geoJsonLinks || geoJsonLinks.length === 0) return undefined;
+    return geoJsonLinks.find(link => link.properties.LINK_ID === linkId);
+  }, [geoJsonLinks]);
+  
+  const convertCoordsToLatLngArray = useCallback((coordinates: number[][]): any[] => {
+    if (!window.naver || !isNaverLoaded) return [];
+    return coordinates.map(coord => new window.naver.maps.LatLng(coord[1], coord[0])); // GeoJSON: [lng, lat]
+  }, [isNaverLoaded]);
 
+  const createPolyline = useCallback((path: any[], options: any = {}) => {
+    if (!map || !window.naver || !isNaverLoaded || path.length < 2) return null;
+    
+    const defaultOptions = {
+      strokeColor: '#007AFF',
+      strokeWeight: 4, // Slightly thinner than markers
+      strokeOpacity: 0.75,
+      strokeStyle: 'solid',
+      strokeLineCap: 'round',
+      strokeLineJoin: 'round',
+      zIndex: 50 // Below markers
+    };
+    
+    return new window.naver.maps.Polyline({
+      map,
+      path,
+      ...defaultOptions,
+      ...options
+    });
+  }, [map, isNaverLoaded]);
 
-  const renderDayRoute = useCallback((itineraryDay: ItineraryDay | null, options?: ItineraryRouteOptions) => {
-    if (!map || !window.naver || !itineraryDay || itineraryDay.places.length < 2) {
-      console.log("경로를 그릴 수 없습니다 (useDayRouteRenderer):", {
-        맵존재: !!map, 
-        네이버존재: !!window.naver, 
-        일정존재: !!itineraryDay,
-        장소개수: itineraryDay?.places?.length
-      });
-      setCurrentDayMainPolyline(null);
-      mainRoutePolylinesRef.current = [];
-      return;
+  const clearPolylines = useCallback(() => {
+    polylinesRef.current.forEach(polyline => {
+      if (polyline && typeof polyline.setMap === 'function') polyline.setMap(null);
+    });
+    polylinesRef.current = [];
+    setRenderedPolylines([]);
+    // console.log('[useDayRouteRenderer] All polylines cleared.');
+  }, []);
+  
+  const renderDayRoute = useCallback(() => {
+    if (!map || !isNaverLoaded || geoJsonLinks.length === 0) {
+        // console.log('[useDayRouteRenderer] Prerequsites not met for rendering route.');
+        return;
     }
 
-    clearAllPolylines();
+    clearPolylines();
     
-    try {
-      const pathPoints = itineraryDay.places.map(place => {
-        if (typeof place.y !== 'number' || typeof place.x !== 'number') {
-            console.warn(`Invalid coordinates for place ${place.name} in renderDayRoute`);
-            return null;
-        }
-        return new window.naver.maps.LatLng(place.y, place.x);
-      }).filter(p => p !== null);
-
-      if (pathPoints.length < 2) {
-        console.warn("Not enough valid points to draw route in renderDayRoute");
-        setCurrentDayMainPolyline(null);
-        mainRoutePolylinesRef.current = [];
+    const dayData = getDayRouteData(selectedDay);
+    if (!dayData || !dayData.linkIds || dayData.linkIds.length === 0) {
+      // console.log(`[useDayRouteRenderer] No route data for day ${selectedDay}.`);
+      return;
+    }
+    
+    // console.log(`[useDayRouteRenderer] Rendering route for day ${selectedDay} with ${dayData.linkIds.length} links.`);
+    
+    const newPolylines: any[] = [];
+    let missingLinksCount = 0;
+    
+    dayData.linkIds.forEach(linkId => {
+      const linkGeoJson = getLinkDataById(String(linkId));
+      if (!linkGeoJson) {
+        missingLinksCount++;
         return;
       }
       
-      const dayIndex = (itineraryDay.day - 1) % ROUTE_COLORS.length;
-      const strokeColor = options?.strokeColor || ROUTE_COLORS[dayIndex];
-      
-      const mainPolyline = new window.naver.maps.Polyline({
-        map: map,
-        path: pathPoints,
-        strokeColor: strokeColor,
-        strokeWeight: options?.strokeWeight || 5,
-        strokeOpacity: options?.strokeOpacity || 0.7,
-        strokeStyle: options?.strokeStyle || 'solid',
-        zIndex: options?.zIndex || 100,
-      });
-      
-      addMainRoutePolyline(mainPolyline);
-      setCurrentDayMainPolyline(mainPolyline); // Store the main polyline for this day
-      
-      let calculatedTotalDist = 0;
-      for (let i = 0; i < itineraryDay.places.length - 1; i++) {
-        const current = itineraryDay.places[i];
-        const next = itineraryDay.places[i + 1];
-        
-        if (current.x && current.y && next.x && next.y) {
-          const segmentDist = calculateDistance(current.y, current.x, next.y, next.x);
-          calculatedTotalDist += segmentDist;
-        }
+      const { coordinates } = linkGeoJson.geometry;
+      if (!coordinates || coordinates.length < 2) {
+        // console.warn(`[useDayRouteRenderer] Invalid coordinates for LINK_ID ${linkId}`);
+        return;
       }
       
-      setTotalDistance(calculatedTotalDist);
-      setLastRenderedDay(itineraryDay.day);
+      const path = convertCoordsToLatLngArray(coordinates);
+      if (path.length < 2) {
+        // console.warn(`[useDayRouteRenderer] Path conversion failed for LINK_ID ${linkId}`);
+        return;
+      }
       
-      console.log(`[useDayRouteRenderer] ${itineraryDay.day}일차 경로가 성공적으로 렌더링되었습니다. (${itineraryDay.places.length}개 장소, 총 거리: ${calculatedTotalDist.toFixed(2)}km)`);
-      toast.success(`${itineraryDay.day}일차 경로가 지도에 표시되었습니다.`);
-      
-    } catch (error) {
-      console.error("[useDayRouteRenderer] 경로 렌더링 중 오류 발생:", error);
-      toast.error("경로 표시 중 오류가 발생했습니다.");
-      setCurrentDayMainPolyline(null);
-      mainRoutePolylinesRef.current = [];
+      const polyline = createPolyline(path);
+      if (polyline) {
+        newPolylines.push(polyline);
+      }
+    });
+    
+    if (missingLinksCount > 0) {
+      console.warn(`[useDayRouteRenderer] Could not find GeoJSON data for ${missingLinksCount} link IDs out of ${dayData.linkIds.length}.`);
     }
-  }, [map, addMainRoutePolyline, clearAllPolylines, mainRoutePolylinesRef]);
+    
+    polylinesRef.current = newPolylines;
+    setRenderedPolylines(newPolylines);
+    // console.log(`[useDayRouteRenderer] Route rendering complete for day ${selectedDay}: ${newPolylines.length} polylines drawn.`);
 
+  }, [map, isNaverLoaded, selectedDay, geoJsonLinks, getDayRouteData, getLinkDataById, convertCoordsToLatLngArray, createPolyline, clearPolylines]);
+  
+  useEffect(() => {
+    if (map && isNaverLoaded && geoJsonLinks && geoJsonLinks.length > 0) {
+      // console.log(`[useDayRouteRenderer] Effect triggered for day ${selectedDay}. Rendering route.`);
+      renderDayRoute();
+    }
+     return () => {
+        // clearPolylines(); // Similar to marker hook, clearing here might be problematic.
+    };
+  }, [map, isNaverLoaded, geoJsonLinks, selectedDay, renderDayRoute]);
+  
   return {
+    renderedPolylines: polylinesRef.current,
     renderDayRoute,
-    totalDistance,
-    lastRenderedDay,
-    currentDayMainPolyline, // This is needed for the highlighter
+    clearAllPolylines: clearPolylines
   };
 };
