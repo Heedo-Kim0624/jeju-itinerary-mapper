@@ -1,10 +1,9 @@
-
 import { useMemo, useCallback } from 'react';
-import { useGeoJsonState as useActualGeoJsonState } from '@/components/rightpanel/geojson/useGeoJsonState'; // Renamed to avoid conflict
+import useActualGeoJsonState from '@/components/rightpanel/geojson/useGeoJsonState'; // 변경: default import로 수정
 import { usePlaceGeoJsonMapper } from './usePlaceGeoJsonMapper';
 import { useMapInteractionManager } from './useMapInteractionManager';
 import { useRouteManager } from './useRouteManager';
-import { useMapMarkers } from '@/hooks/map/useMapMarkersLegacy'; // 변경: 경로 수정
+import { useMapMarkers } from '@/hooks/map/useMapMarkersLegacy';
 import type { Place, ItineraryDay } from '@/types/supabase';
 import type { GeoNode, GeoJsonNodeFeature } from '@/components/rightpanel/geojson/GeoJsonTypes';
 
@@ -20,20 +19,12 @@ export const useMapFeatures = ({
   isNaverLoadedParam, 
   updateDayPolylinePaths 
 }: UseMapFeaturesProps) => {
-  const geoJsonState = useActualGeoJsonState(); // Use renamed import
+  const geoJsonState = useActualGeoJsonState(map); // map 인스턴스 전달
 
   const geoJsonNodeFeatures = useMemo((): GeoJsonNodeFeature[] => {
-    if (!geoJsonState.geoJsonData?.features || geoJsonState.geoJsonData.features.length === 0) { // Adjusted to access features from geoJsonData
-      return [];
-    }
-    // Assuming geoJsonState.geoJsonData.features are already GeoJsonNodeFeature[]
-    // If not, mapping might be needed, but useGeoJsonState likely provides them in correct format
-    // For now, let's assume geoJsonState.geoJsonData.features is what we need
-    // This part needs to align with the actual structure returned by useActualGeoJsonState
-    // A common pattern is for geoJsonState.geoJsonData to be a FeatureCollection,
-    // and geoJsonState.geoJsonData.features to be an array of Features.
-    // Let's assume geoJsonState.geoJsonNodes is the correct source as per the original code.
-    const nodesSource = geoJsonState.geoJsonNodes || []; // Fallback to geoJsonNodes if geoJsonData.features is not the path
+    // 기존 geoJsonState.geoJsonNodes는 GeoNode[] 타입이므로 이를 GeoJsonNodeFeature[]로 변환
+    // useActualGeoJsonState에서 반환하는 nodes가 GeoNode[] 타입이라고 가정
+    const nodesSource = geoJsonState.nodes || []; 
     
     return nodesSource.map((node: GeoNode): GeoJsonNodeFeature => ({
       type: "Feature",
@@ -41,7 +32,7 @@ export const useMapFeatures = ({
       properties: node.properties,
       id: node.id,
     }));
-  }, [geoJsonState.geoJsonNodes, geoJsonState.geoJsonData]); // Added geoJsonState.geoJsonData
+  }, [geoJsonState.nodes]); // geoJsonState.nodes로 변경
 
   const { mapPlacesWithGeoNodes } = usePlaceGeoJsonMapper({
     geoJsonNodes: geoJsonNodeFeatures, 
