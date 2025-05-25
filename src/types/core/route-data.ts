@@ -90,6 +90,17 @@ export interface GeoLink {
   };
 }
 
+// GeoJSON 노드(Point Feature) 데이터 구조 추가
+export interface GeoJsonNode {
+  type: "Feature";
+  id?: string | number;
+  geometry: {
+    type: "Point";
+    coordinates: [number, number]; // [longitude, latitude]
+  };
+  properties: Record<string, any>;
+}
+
 // 일자별 마커 데이터 구조
 export interface DayMarkerData {
   day: number;                   // 일차 (1, 2, 3, ...)
@@ -128,3 +139,4 @@ export interface ItineraryPlace {
   stayDuration?: string;
   travelTimeToNext?: string;
 }
+
