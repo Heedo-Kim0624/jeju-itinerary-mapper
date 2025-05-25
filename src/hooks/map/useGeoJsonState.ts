@@ -1,6 +1,9 @@
 import { useState, useCallback } from 'react';
 import { Place } from '@/types/supabase';
 import { toast } from 'sonner';
+// GeoNode와 GeoLink 타입을 import합니다. 경로가 정확한지 확인해주세요.
+// 가정: GeoJsonTypes.ts가 src/components/rightpanel/geojson/GeoJsonTypes.ts 에 위치
+import type { GeoNode, GeoLink } from '@/components/rightpanel/geojson/GeoJsonTypes';
 
 /**
  * GeoJson 상태 관리 훅 (애플리케이션 레벨)
@@ -9,8 +12,9 @@ export const useGeoJsonState = () => {
   // GeoJSON 관련 상태
   const [showGeoJson, setShowGeoJson] = useState(false);
   const [isGeoJsonLoaded, setIsGeoJsonLoaded] = useState(false);
-  const [geoJsonNodes, setGeoJsonNodes] = useState<any[]>([]); // Consider using GeoNode[] type
-  const [geoJsonLinks, setGeoJsonLinks] = useState<any[]>([]); // Consider using GeoLink[] type
+  // geoJsonNodes와 geoJsonLinks의 타입을 명시적으로 지정합니다.
+  const [geoJsonNodes, setGeoJsonNodes] = useState<GeoNode[]>([]);
+  const [geoJsonLinks, setGeoJsonLinks] = useState<GeoLink[]>([]);
   
   // GeoJSON 가시성 토글
   const toggleGeoJsonVisibility = useCallback(() => {
@@ -18,7 +22,8 @@ export const useGeoJsonState = () => {
   }, []);
 
   // GeoJSON 데이터 로드 완료 핸들러 (GeoJsonLoader의 onLoadSuccess 통해 호출됨)
-  const handleGeoJsonLoaded = useCallback((nodes: any[], links: any[]) => {
+  // handleGeoJsonLoaded의 파라미터 타입도 명시적으로 GeoNode[], GeoLink[]로 변경합니다.
+  const handleGeoJsonLoaded = useCallback((nodes: GeoNode[], links: GeoLink[]) => {
     console.log('[App/useGeoJsonState] handleGeoJsonLoaded 호출됨:', { 
       노드수: nodes.length,
       링크수: links.length
@@ -26,7 +31,7 @@ export const useGeoJsonState = () => {
     
     if (links.length > 0) {
       console.log('[App/useGeoJsonState] 첫 번째 링크 샘플 (수신 데이터):', {
-        id: links[0].id, // GeoJsonLoader에서 정규화된 ID
+        id: links[0].id,
         id_type: typeof links[0].id,
         properties_LINK_ID: links[0].properties?.LINK_ID,
         properties_LINK_ID_type: typeof links[0].properties?.LINK_ID
@@ -40,7 +45,7 @@ export const useGeoJsonState = () => {
     setIsGeoJsonLoaded(true);
     
     setTimeout(() => {
-      console.log('[App/useGeoJsonState] 상태 업데이트 후 geoJsonLinks 길이:', links.length);
+      console.log('[App/useGeoJsonState] 상태 업데이트 후 geoJsonLinks 길이:', links.length); // links.length를 사용해야 올바른 값 로깅
     }, 0);
   }, []);
 
