@@ -6,21 +6,18 @@
 export const processRouteData = (routeInfo: any) => {
   const nodeIds: string[] = [];
   const linkIds: string[] = [];
-  const interleaved_route: (string | number)[] = [];
+  const interleaved_route_strings: string[] = []; // Ensure all IDs are strings
 
   if (routeInfo && routeInfo.interleaved_route) {
-    routeInfo.interleaved_route.forEach((id: number | string) => {
-      const idStr = String(id);
-      interleaved_route.push(idStr);
-      // A common pattern is that nodes start with 'N' or are odd in interleaved_route
-      // However, the original logic was:
-      // if (interleaved_route.length % 2 !== 0 || (typeof id === 'string' && id.startsWith('N')))
-      // Let's assume for now that odd positions are nodes and even are links if not 'N' prefixed
-      // This logic might need to be very specific to the server's route format.
-      // The original logic:
-      if (interleaved_route.length % 2 !== 0 || (typeof id === 'string' && id.startsWith('N'))) {
+    // Ensure all IDs in interleaved_route are strings for consistency
+    const temp_interleaved_route_strings = routeInfo.interleaved_route.map((id: number | string) => String(id));
+
+    temp_interleaved_route_strings.forEach((idStr: string, index: number) => {
+      interleaved_route_strings.push(idStr);
+      // Assuming [NODE, LINK, NODE, LINK, ...]
+      if (index % 2 === 0) { // Node ID at even indices (0, 2, 4...)
          nodeIds.push(idStr);
-      } else {
+      } else { // Link ID at odd indices (1, 3, 5...)
          linkIds.push(idStr);
       }
     });
@@ -31,8 +28,8 @@ export const processRouteData = (routeInfo: any) => {
   return {
     nodeIds,
     linkIds,
-    interleaved_route,
-    totalDistance, // This is total distance for the day's route
-    segmentRoutes: routeInfo?.segment_routes || [] // Keep segment_routes
+    interleaved_route: interleaved_route_strings, // Return string array
+    totalDistance,
+    segmentRoutes: routeInfo?.segment_routes || []
   };
 };
