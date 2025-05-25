@@ -1,13 +1,12 @@
 
 import { useCallback } from 'react';
 import type { GeoJsonFeature, GeoJsonNodeProperties, GeoCoordinates } from '@/components/rightpanel/geojson/GeoJsonTypes';
-// SegmentRoute 타입을 types/core/route-data.ts 에서 가져옵니다.
-import type { SegmentRoute } from '@/types/core/route-data';
+import type { SegmentRoute } from '@/types/schedule';
 import { createNaverLatLng } from '@/utils/map/mapSetup';
 import { fitBoundsToCoordinates } from '@/utils/map/mapViewControls';
 
 const DEFAULT_ROUTE_COLOR = '#007bff';
-const HIGHLIGHT_COLOR = '#ffc107';
+const HIGHLIGHT_COLOR = '#ffc107'; // Standard highlight color
 
 interface UseSegmentGeoJsonRendererProps {
   map: any;
@@ -41,17 +40,14 @@ export const useSegmentGeoJsonRenderer = ({
   clearAllMapPolylines,
 }: UseSegmentGeoJsonRendererProps) => {
   const renderGeoJsonSegmentRoute = useCallback((route: SegmentRoute) => {
-    if (!map || !isNaverLoadedParam || !route || !route.from_node || !route.to_node) {
+    if (!map || !isNaverLoadedParam || !route || !route.nodeIds || !route.linkIds) {
       console.warn('[SegmentGeoJsonRenderer] Cannot render GeoJSON route: invalid input or map not ready');
       return;
     }
 
     clearAllMapPolylines();
 
-    // SegmentRoute는 from_node와 to_node를 가집니다. 이를 기반으로 노드를 찾습니다.
-    const routeNodeIds = [route.from_node, route.to_node];
-
-    const routeNodes = routeNodeIds.map(nodeId => {
+    const routeNodes = route.nodeIds.map(nodeId => {
       return geoJsonNodes.find(node => {
         const props = node.properties as GeoJsonNodeProperties;
         return String(props.NODE_ID) === String(nodeId);
@@ -59,13 +55,10 @@ export const useSegmentGeoJsonRenderer = ({
     }).filter(Boolean) as GeoJsonFeature[];
 
     if (routeNodes.length < 2) {
-      console.warn('[SegmentGeoJsonRenderer] Not enough valid nodes to render GeoJSON route for segment');
+      console.warn('[SegmentGeoJsonRenderer] Not enough valid nodes to render GeoJSON route');
       return;
     }
 
-    // SegmentRoute의 links 속성을 사용하여 경로를 그릴 수도 있지만, 여기서는 노드 간 직접 연결로 가정합니다.
-    // 만약 links를 사용해야 한다면, geoJsonLinks에서 해당 링크들을 찾아 좌표를 연결해야 합니다.
-    // 현재는 from_node와 to_node를 직접 연결하는 것으로 간주합니다.
     const coordinates = routeNodes.map(node => {
       if (node && node.geometry.type === 'Point') {
         const geoCoords = node.geometry.coordinates as GeoCoordinates;
@@ -77,7 +70,7 @@ export const useSegmentGeoJsonRenderer = ({
     }).filter(Boolean) as { lat: number; lng: number }[];
 
     if (coordinates.length < 2) {
-      console.warn('[SegmentGeoJsonRenderer] Not enough valid coordinates to render GeoJSON route for segment');
+      console.warn('[SegmentGeoJsonRenderer] Not enough valid coordinates to render GeoJSON route');
       return;
     }
 
@@ -92,13 +85,11 @@ export const useSegmentGeoJsonRenderer = ({
   const highlightGeoJsonSegment = useCallback((segment: SegmentRoute | null) => {
     clearHighlightedPolyline();
 
-    if (!map || !isNaverLoadedParam || !segment || !segment.from_node || !segment.to_node) {
+    if (!map || !isNaverLoadedParam || !segment || !segment.nodeIds || segment.nodeIds.length < 2) {
       return;
     }
-    
-    const segmentNodeIds = [segment.from_node, segment.to_node];
 
-    const segmentNodes = segmentNodeIds.map(nodeId => {
+    const segmentNodes = segment.nodeIds.map(nodeId => {
       return geoJsonNodes.find(node => {
         const props = node.properties as GeoJsonNodeProperties;
         return String(props.NODE_ID) === String(nodeId);

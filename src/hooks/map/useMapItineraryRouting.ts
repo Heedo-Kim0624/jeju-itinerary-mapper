@@ -6,9 +6,6 @@ import { useMultiDayRouteRenderer } from './useMultiDayRouteRenderer';
 import { useItinerarySegmentHighlighter } from './useItinerarySegmentHighlighter';
 import type { ItineraryDay } from '@/types/supabase';
 import type { ItineraryRouteOptions } from '@/utils/map/itineraryRoutingUtils';
-import { useGeoJsonData } from './useGeoJsonData'; 
-import type { GeoLink } from '@/types/core/route-data';
-
 
 export const useMapItineraryRouting = (map: any) => {
   const {
@@ -17,16 +14,15 @@ export const useMapItineraryRouting = (map: any) => {
     removeTemporaryPolyline,
     clearAllPolylines,
     clearTemporaryPolylines,
+    mainRoutePolylinesRef, // Pass this to day route renderer
   } = useItineraryPolylinesManager();
 
-  const { geoJsonLinks } = useGeoJsonData(); 
-
-  const dayRouteRendererInstance = useDayRouteRenderer({ 
-    map, 
-    isNaverLoaded: !!(map && window.naver?.maps), 
-    geoJsonLinks: geoJsonLinks as GeoLink[], 
-  });
-
+  const {
+    renderDayRoute,
+    totalDistance,
+    lastRenderedDay,
+    currentDayMainPolyline, // Get this for the highlighter
+  } = useDayRouteRenderer({ map, addMainRoutePolyline, clearAllPolylines, mainRoutePolylinesRef });
 
   const { renderMultiDayRoutes } = useMultiDayRouteRenderer({ map, addMainRoutePolyline, clearAllPolylines });
   
@@ -35,23 +31,23 @@ export const useMapItineraryRouting = (map: any) => {
     addTemporaryPolyline,
     removeTemporaryPolyline,
     clearTemporaryPolylines,
-    currentDayMainPolyline: null, // TODO: Determine the correct source for this or update hook
+    currentDayMainPolyline, // Pass the current day's main polyline
   });
 
-  const clearAllRoutes = clearAllPolylines; 
+  // Expose public API
+  const clearAllRoutes = clearAllPolylines; // Alias for clarity and consistency with old API
   
+  // The main highlightSegment function to match the original API
   const highlightSegment = (fromIndex: number, toIndex: number, itineraryDay: ItineraryDay) => {
     return highlightItinerarySegment(fromIndex, toIndex, itineraryDay);
   };
 
-  const renderDayRouteFromStore = () => {
-    dayRouteRendererInstance.renderDayRoute();
-  };
-
   return {
-    renderDayRoute: renderDayRouteFromStore, 
+    renderDayRoute: (itineraryDay: ItineraryDay | null, options?: ItineraryRouteOptions) => renderDayRoute(itineraryDay, options),
     renderMultiDayRoutes: (itinerary: ItineraryDay[] | null) => renderMultiDayRoutes(itinerary),
     clearAllRoutes,
+    totalDistance,
     highlightSegment,
+    lastRenderedDay,
   };
 };

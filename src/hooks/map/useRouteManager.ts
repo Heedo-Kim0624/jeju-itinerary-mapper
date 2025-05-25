@@ -1,7 +1,8 @@
+
 import { useCallback } from 'react';
 import type { Place, ItineraryDay } from '@/types/supabase';
-import type { GeoJsonFeature, GeoLink } from '@/components/rightpanel/geojson/GeoJsonTypes';
-import type { ServerRouteDataForDay } from '@/hooks/map/useServerRoutes'; // ServerRouteDataForDay 임포트
+import type { GeoJsonFeature, GeoLink } from '@/components/rightpanel/geojson/GeoJsonTypes'; // GeoLink 임포트 추가
+import type { ServerRouteResponse, SegmentRoute } from '@/types/schedule';
 import { useRoutePolylines } from './useRoutePolylines';
 import { useItineraryGeoJsonRenderer } from './renderers/useItineraryGeoJsonRenderer';
 import { useSegmentGeoJsonRenderer } from './renderers/useSegmentGeoJsonRenderer';
@@ -10,10 +11,9 @@ import { useDirectPathDrawer } from './renderers/useDirectPathDrawer';
 interface UseRouteManagerProps {
   map: any;
   isNaverLoadedParam: boolean;
-  geoJsonLinks: GeoLink[]; 
+  geoJsonLinks: GeoLink[]; // 타입 변경: GeoJsonFeature[] -> GeoLink[]
   geoJsonNodes: GeoJsonFeature[];
   mapPlacesWithGeoNodesFn: (places: Place[]) => Place[];
-  itinerary: ItineraryDay[] | null; // Added itinerary
 }
 
 export const useRouteManager = ({
@@ -22,7 +22,6 @@ export const useRouteManager = ({
   geoJsonLinks,
   geoJsonNodes,
   mapPlacesWithGeoNodesFn,
-  itinerary, // Added itinerary
 }: UseRouteManagerProps) => {
   const {
     addPolyline,
@@ -31,17 +30,13 @@ export const useRouteManager = ({
     clearHighlightedPolyline,
   } = useRoutePolylines({ map, isNaverLoadedParam });
 
-  // The useItineraryGeoJsonRenderer might be replaced by useDayRouteRenderer logic.
-  // For now, keeping its structure but acknowledging it might be unused or need updates.
   const { renderItineraryRoute } = useItineraryGeoJsonRenderer({
     map,
     isNaverLoadedParam,
-    geoJsonLinks, 
+    geoJsonLinks, // 이제 GeoLink[] 타입으로 전달됨
     mapPlacesWithGeoNodesFn,
     addPolyline,
     clearAllMapPolylines,
-    // This hook might need 'itinerary' and 'selectedDay' if it's to remain functional
-    // alongside the new day-specific renderers.
   });
 
   const { renderGeoJsonSegmentRoute, highlightGeoJsonSegment } = useSegmentGeoJsonRenderer({
@@ -60,35 +55,26 @@ export const useRouteManager = ({
     addPolyline,
   });
 
+  // 경로 렌더링 함수 - LINK_ID 미탐색 문제 해결
   const renderItineraryRouteWithLinkIdCheck = useCallback((
     itineraryDay: ItineraryDay | null, 
-    allServerRoutesInput?: Record<number, ServerRouteDataForDay>,
+    allServerRoutesInput?: Record<number, ServerRouteResponse>,
     onComplete?: () => void
   ) => {
+    // LINK_ID 검증 로직 추가
     if (itineraryDay?.routeData?.linkIds && itineraryDay.routeData.linkIds.length > 0) {
-      console.log(`[RouteManager] Rendering route for day ${itineraryDay.day} - ${itineraryDay.routeData.linkIds.length} link IDs`);
+      console.log(`[RouteManager] 일차 ${itineraryDay.day}의 경로 렌더링 - ${itineraryDay.routeData.linkIds.length}개 링크 ID 검증`);
       
+      // 링크 ID 유효성 검사 (없을 경우 장소 간 직선 연결로 대체)
+      // geoJsonLinks가 GeoLink[] 타입이므로, properties 접근 등이 더 안전해집니다.
       const hasValidLinks = geoJsonLinks && geoJsonLinks.length > 0;
       if (!hasValidLinks) {
-        console.warn("[RouteManager] No valid GeoJSON link data. Route rendering might use fallbacks.");
+        console.warn("[RouteManager] 유효한 GeoJSON 링크 데이터가 없습니다. 장소간 직선 연결로 대체합니다.");
       }
     }
     
-    // renderItineraryRoute를 호출할 때 allServerRoutesInput을 전달합니다.
-    // useItineraryGeoJsonRenderer의 renderItineraryRoute가 이 타입을 받을 수 있도록 수정 필요할 수 있음
-    // 현재 useItineraryGeoJsonRenderer의 renderItineraryRoute는 두 번째 인자로 allServerRoutesInput을 받도록 되어있지 않음.
-    // 이 부분은 해당 훅의 정의를 확인하고 맞춰야 합니다. 여기서는 일단 호출 시그니처만 맞춤.
-    // TODO: useItineraryGeoJsonRenderer의 renderItineraryRoute 시그니처 확인 및 필요시 수정
-    // 임시로 renderItineraryRoute가 allServerRoutesInput을 받는다고 가정하고 전달
-    // renderItineraryRoute(itineraryDay, allServerRoutesInput, onComplete);
-    // 수정: useItineraryGeoJsonRenderer의 renderItineraryRoute는 해당 인자를 받지 않으므로,
-    // useMapCore 레벨에서 이 값을 가지고 실제 경로 렌더링 로직을 호출해야 합니다.
-    // 여기서는 일단 타입만 맞추고, 실제 로직은 useItineraryGeoJsonRenderer가 아닌 다른 경로 렌더러(예: useDayRouteRenderer)를 통해 처리될 가능성이 높음.
-    // 지금은 단순히 타입 일관성을 맞추는 데 집중합니다.
-    renderItineraryRoute(itineraryDay, onComplete as any); // allServerRoutesInput을 제거하거나, renderItineraryRoute의 시그니처를 변경해야 합니다. 
-                                                         // 여기서는 제거하고 onComplete만 전달합니다. (추후 로직 검토 필요)
-
-
+    // 기존 렌더링 함수 호출
+    renderItineraryRoute(itineraryDay, allServerRoutesInput, onComplete);
   }, [renderItineraryRoute, geoJsonLinks]);
 
   const clearAllDrawnRoutes = useCallback(() => {
@@ -101,11 +87,12 @@ export const useRouteManager = ({
   }, [clearHighlightedPolyline]);
 
   return {
-    renderItineraryRoute: renderItineraryRouteWithLinkIdCheck, 
-    renderGeoJsonRoute: renderGeoJsonSegmentRoute, 
-    highlightSegment: highlightGeoJsonSegment, 
+    renderItineraryRoute: renderItineraryRouteWithLinkIdCheck, // 개선된 함수 사용
+    renderGeoJsonRoute: renderGeoJsonSegmentRoute, // Rename for consistency with original API
+    highlightSegment: highlightGeoJsonSegment, // Rename for consistency
     clearPreviousHighlightedPath,
     clearAllDrawnRoutes,
-    calculateAndDrawDirectRoutes: drawDirectPath, 
+    calculateAndDrawDirectRoutes: drawDirectPath, // Rename for consistency
   };
 };
+

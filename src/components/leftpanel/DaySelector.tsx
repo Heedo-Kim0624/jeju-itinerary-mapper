@@ -1,18 +1,18 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import type { ItineraryDay } from '@/types'; 
+import { ItineraryDay } from '@/types'; // @/types에서 가져오도록 변경
 
 interface DaySelectorProps {
   itinerary: ItineraryDay[] | null;
-  selectedDay: number | null; // Added selectedDay
-  onSelectDay: (day: number) => void; // Added onSelectDay
+  selectedDay: number | null;
+  onSelectDay: (day: number) => void;
 }
 
 const DaySelector: React.FC<DaySelectorProps> = ({
   itinerary,
-  selectedDay, // Use selectedDay from props
-  onSelectDay, // Use onSelectDay from props
+  selectedDay,
+  onSelectDay,
 }) => {
   if (!itinerary || itinerary.length === 0) {
     return null;
@@ -26,7 +26,7 @@ const DaySelector: React.FC<DaySelectorProps> = ({
             key={dayItem.day}
             variant={selectedDay === dayItem.day ? "default" : "outline"}
             size="sm"
-            className={`min-w-[70px] h-16 rounded-md flex flex-col items-center justify-center gap-0.5 px-3 ${ // Adjusted min-width
+            className={`min-w-16 h-16 rounded-md flex flex-col items-center justify-center gap-0.5 px-3 ${
               selectedDay === dayItem.day ? 'bg-primary text-primary-foreground' : ''
             }`}
             onClick={() => onSelectDay(dayItem.day)}

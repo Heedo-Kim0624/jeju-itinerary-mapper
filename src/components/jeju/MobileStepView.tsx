@@ -240,8 +240,13 @@ const MobileStepView: React.FC<MobileStepViewProps> = ({
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-jeju-light-gray relative">
       <div className="absolute inset-0 z-0">
-        {/* Map 컴포넌트에 props 전달하지 않음 - MapProps가 옵셔널로 변경되어 문제 없음 */}
-        <Map />
+        <Map
+          places={filteredPlaces}
+          selectedPlace={selectedPlace}
+          itinerary={itinerary}
+          selectedDay={selectedItineraryDay}
+          selectedPlaces={filteredPlaces.filter(p => p.isSelected)} 
+        />
       </div>
       
       <div 
