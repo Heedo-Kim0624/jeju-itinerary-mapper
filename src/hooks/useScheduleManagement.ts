@@ -1,11 +1,10 @@
-
 import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useServerResponseHandler } from '@/hooks/schedule/useServerResponseHandler';
 import { useScheduleStateAndEffects } from '@/hooks/schedule/useScheduleStateAndEffects';
 import { useScheduleGenerationCore } from '@/hooks/schedule/useScheduleGenerationCore';
 import { useMapContext } from '@/components/rightpanel/MapContext';
-import { type ItineraryDay, type SelectedPlace } from '@/types/core';
+import { type ItineraryDay, type SelectedPlace, type NewServerScheduleResponse } from '@/types/core';
 
 interface ScheduleManagementProps {
   selectedPlaces: SelectedPlace[];
@@ -55,56 +54,45 @@ export const useScheduleManagement = ({
 
   const combinedIsLoading = isLoadingState || isManuallyGenerating;
 
-  // Run schedule generation process function
   const runScheduleGenerationProcess = useCallback(() => {
     console.log("[useScheduleManagement] Starting schedule generation process");
     
-    // Prevent duplicate execution
     if (combinedIsLoading) {
       console.log("[useScheduleManagement] Already generating schedule");
       return;
     }
 
-    // Validate required data
     if (selectedPlaces.length === 0) {
       toast.error("선택된 장소가 없습니다. 장소를 선택해주세요.");
       return;
     }
 
-    // Validate date info
     if (!startDatetime || !endDatetime) {
       toast.error("여행 날짜와 시간 정보가 올바르지 않습니다.");
       return;
     }
-
-    // Clear step logs
+    
     console.log("[useScheduleManagement] Starting marker and route cleanup...");
     
-    // Clear all markers immediately with direct event
     const clearEvent = new Event("startScheduleGeneration");
     window.dispatchEvent(clearEvent);
     console.log("[useScheduleManagement] startScheduleGeneration event dispatched (marker cleanup)");
     
-    // Chain clear operations with short delays to ensure proper sequence
     setTimeout(() => {
-      // Clear all routes explicitly
       if (clearAllRoutes) {
         clearAllRoutes();
         console.log("[useScheduleManagement] All routes cleared");
       }
       
-      // Clear all markers and UI elements
       if (clearMarkersAndUiElements) {
         clearMarkersAndUiElements();
         console.log("[useScheduleManagement] All markers and UI elements cleared");
       }
       
-      // Set loading states
       setIsManuallyGenerating(true);
       setIsLoadingState(true);
       console.log("[useScheduleManagement] Loading state set");
       
-      // Trigger actual schedule generation with detail
       setTimeout(() => {
         try {
           const event = new CustomEvent("startScheduleGeneration", {
@@ -112,6 +100,11 @@ export const useScheduleManagement = ({
               selectedPlaces,
               startDatetime,
               endDatetime,
+              // Pass the callback that will process the server response.
+              // The actual WebSocket/event listener for server data will call this.
+              // This structure assumes that the actual server communication is managed elsewhere (e.g. global event listener)
+              // and it will call `rawServerResponseReceived` event, which `useServerResponseHandler` listens to.
+              // And `useServerResponseHandler` then calls its `onServerResponse` prop (which is `processServerResponse` from `useScheduleGenerationCore`).
             },
           });
           
@@ -123,7 +116,6 @@ export const useScheduleManagement = ({
           
           window.dispatchEvent(event);
           
-          // Timeout safety net
           setTimeout(() => {
             if (isManuallyGenerating || isLoadingState) {
               console.log("[useScheduleManagement] Schedule generation timed out (30s)");
@@ -153,7 +145,6 @@ export const useScheduleManagement = ({
     isLoadingState
   ]);
 
-  // Reset state when server response is processed
   useEffect(() => {
     if (itinerary && itinerary.length > 0 && isManuallyGenerating) {
       console.log("[useScheduleManagement] Server response processed, resetting loading state");

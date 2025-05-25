@@ -1,4 +1,3 @@
-
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useMapContext } from '../MapContext';
 import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/core';
@@ -22,7 +21,7 @@ interface UseMapMarkersProps {
   itinerary: ItineraryDay[] | null; // Full itinerary data, needed to get place details for a day
   // selectedDay: number | null; // This prop will now be taken from useRouteMemoryStore
 
-  selectedPlacesUi?: Place[]; // Places selected in UI, e.g. for cart (might be different from itinerary)
+  selectedPlaces?: Place[]; // Places selected in UI, e.g. for cart (might be different from itinerary)
   onPlaceClick?: (place: Place | ItineraryPlaceWithTime, index: number) => void;
   highlightPlaceId?: string;
 }
@@ -38,7 +37,7 @@ export const useMapMarkers = (props: UseMapMarkersProps) => {
 
   // Zustand store for day-specific data
   const { 
-    selectedDay, // This is the crucial part: selectedDay from the store
+    selectedDay, // This is obtained from the store
     getDayRouteData, 
     setDayRouteData,
     clearDayMarkers: clearDayMarkersFromStore 
@@ -90,8 +89,6 @@ export const useMapMarkers = (props: UseMapMarkersProps) => {
               position,
               map,
               title: place.name,
-              // TODO: Add custom icon logic based on index, selection, highlight
-              // Example: icon: getMarkerIcon(place, index, selectedPlace, highlightPlaceId)
             };
             const marker = new window.naver.maps.Marker(markerOptions);
 
@@ -166,13 +163,15 @@ export const useMapMarkers = (props: UseMapMarkersProps) => {
   const clearAllMarkersAndStore = useCallback(() => {
      console.log("[useMapMarkers] Clearing all markers from map and store.");
      const store = useRouteMemoryStore.getState();
-     store.routeDataByDay.forEach((dayData, dayIdx) => {
-        dayData.markers.forEach(m => m.setMap(null));
+     store.routeDataByDay.forEach((_dayData, dayIdx) => { // Iterate using dayIdx from map keys or a range
+        const dayRouteD = store.getDayRouteData(dayIdx); // Get specific day data
+        if (dayRouteD && dayRouteD.markers) {
+          dayRouteD.markers.forEach(m => m.setMap(null));
+        }
         store.setDayRouteData(dayIdx, { markers: [] }); // Clear from store
      });
      setCurrentDayMarkers([]);
   }, []);
-
 
   return {
     // markers: currentDayMarkers, // markers for the currently selected day

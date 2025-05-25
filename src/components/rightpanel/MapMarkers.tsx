@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/core';
 import { useMapMarkers } from './hooks/useMapMarkers';
@@ -20,7 +19,6 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
   onPlaceClick,
   highlightPlaceId,
 }) => {
-  // Debug diagnostic for component render
   console.log(`[MapMarkers] Component rendered, itinerary: ${itinerary?.length || 0} days`);
   
   const { forceMarkerUpdate, clearAllMarkers } = useMapMarkers({
@@ -32,7 +30,6 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
     highlightPlaceId,
   });
 
-  // Enhanced diagnostic for key props changes
   useEffect(() => {
     console.log(`[MapMarkers] itinerary: ${itinerary ? `${itinerary.length} days` : 'null'}`);
     
@@ -44,17 +41,16 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
     return () => clearTimeout(timer);
   }, [itinerary, forceMarkerUpdate]);
 
-  // Explicit handler for route generation event
   useEffect(() => {
     const handleStartScheduleGeneration = () => {
       console.log("[MapMarkers] startScheduleGeneration event detected - clearing all markers");
       clearAllMarkers();
     };
     
-    // Explicit handler for day selection event
     const handleDaySelected = (event: any) => {
-      if (event.detail && typeof event.detail.day === 'number') {
-        console.log(`[MapMarkers] itineraryDaySelected event detected - day: ${event.detail.day}`);
+      const day = event.day ?? event.detail?.day;
+      if (typeof day === 'number') {
+        console.log(`[MapMarkers] mapDayChanged (or similar) event detected - day: ${day}`);
         setTimeout(() => {
           console.log('[MapMarkers] Forcing marker update due to day selection event');
           forceMarkerUpdate();
@@ -62,18 +58,19 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
       }
     };
     
-    console.log("[MapMarkers] Registering direct event handlers");
+    console.log("[MapMarkers] Registering direct event handlers for window events and custom EventEmitter");
     window.addEventListener('startScheduleGeneration', handleStartScheduleGeneration);
-    window.addEventListener('itineraryDaySelected', handleDaySelected);
+    
+    const { EventEmitter } = await import('@/hooks/events/useEventEmitter');
+    const unsubscribe = EventEmitter.subscribe('mapDayChanged', handleDaySelected);
     
     return () => {
-      console.log("[MapMarkers] Removing direct event handlers");
+      console.log("[MapMarkers] Removing event handlers");
       window.removeEventListener('startScheduleGeneration', handleStartScheduleGeneration);
-      window.removeEventListener('itineraryDaySelected', handleDaySelected);
+      unsubscribe();
     };
   }, [clearAllMarkers, forceMarkerUpdate]);
 
-  // Add an unmount diagnostic
   useEffect(() => {
     return () => {
       console.log("[MapMarkers] Component unmounting - cleaning up");
@@ -84,7 +81,6 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
 };
 
 export default React.memo(MapMarkers, (prevProps, nextProps) => {
-  // Enhanced comparison logic with diagnostics
   const isSameSelectedPlace = prevProps.selectedPlace?.id === nextProps.selectedPlace?.id;
   const isSameHighlightId = prevProps.highlightPlaceId === nextProps.highlightPlaceId;
   
@@ -93,16 +89,17 @@ export default React.memo(MapMarkers, (prevProps, nextProps) => {
   const isSameItineraryLength = prevItineraryLength === nextItineraryLength;
   
   const isSamePlacesLength = prevProps.places.length === nextProps.places.length;
+  const isSameSelectedPlacesLength = (prevProps.selectedPlaces?.length || 0) === (nextProps.selectedPlaces?.length || 0);
   
-  const shouldUpdate = !isSameItineraryLength;
+  const shouldUpdate = !isSameItineraryLength || !isSamePlacesLength || !isSameSelectedPlacesLength;
   
   if (shouldUpdate) {
     console.log("[MapMarkers] Memo comparison detected change - will re-render", {
-      isSameItineraryLength,
-      prevItineraryLength,
-      nextItineraryLength,
+      isSameItineraryLength, prevItineraryLength, nextItineraryLength,
+      isSamePlacesLength, prevPlacesLength: prevProps.places.length, nextPlacesLength: nextProps.places.length,
+      isSameSelectedPlacesLength, prevSelectedPlacesLength: prevProps.selectedPlaces?.length, nextSelectedPlacesLength: nextProps.selectedPlaces?.length,
     });
   }
   
-  return isSameSelectedPlace && isSameHighlightId && isSamePlacesLength && isSameItineraryLength;
+  return isSameSelectedPlace && isSameHighlightId && isSamePlacesLength && isSameItineraryLength && isSameSelectedPlacesLength;
 });
