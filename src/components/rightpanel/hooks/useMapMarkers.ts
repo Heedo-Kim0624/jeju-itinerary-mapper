@@ -75,13 +75,33 @@ export const useMapMarkers = (props: UseMapMarkersProps) => {
     }
   }, [updateTriggerId, isMapInitialized, renderMarkers]);
   
+  // 초기 마운트 시 강제 렌더링
   useEffect(() => {
     if (isMapInitialized && updateTriggerId === 0) { 
         console.log('[useMapMarkers] Initial mount render logic trigger.');
         forceMarkerUpdate();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isMapInitialized, map]);
+  }, [isMapInitialized, map, forceMarkerUpdate, updateTriggerId]);
+
+  // 일정 일자 변경을 위한 명시적 이벤트 리스너
+  useEffect(() => {
+    const handleItineraryDaySelectedEvent = (event: any) => {
+      if (event.detail && typeof event.detail.day === 'number') {
+        console.log(`[useMapMarkers] itineraryDaySelected 이벤트 감지됨 - 일차: ${event.detail.day}, 타임스탬프: ${event.detail.timestamp || 'unknown'}`);
+        // 약간의 지연 후 마커 업데이트 강제 실행 (상태 변경 전파 시간 확보)
+        setTimeout(() => {
+          clearAllMarkers(); // 기존 마커 명시적 제거
+          forceMarkerUpdate(); // 마커 새로 그리기
+        }, 50);
+      }
+    };
+    
+    window.addEventListener('itineraryDaySelected', handleItineraryDaySelectedEvent);
+    
+    return () => {
+      window.removeEventListener('itineraryDaySelected', handleItineraryDaySelectedEvent);
+    };
+  }, [clearAllMarkers, forceMarkerUpdate]);
 
   return {
     markers: markersRef.current,

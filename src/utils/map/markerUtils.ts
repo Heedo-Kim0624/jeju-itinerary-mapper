@@ -1,12 +1,13 @@
+
 import type { Place } from '@/types/supabase';
 import type { ItineraryPlaceWithTime } from '@/types/core';
 import { createNaverLatLng } from './mapSetup';
 import { getCategoryColor, mapCategoryNameToKey } from '@/utils/categoryColors';
 
-// Helper function to create SVG string for a map circle
+// SVG 마커 생성 유틸리티
 const createCircleMarkerSvg = (
   color: string,
-  size: number = 36, // Default size for the circle
+  size: number = 36, // 기본 크기
   label?: string | number,
   innerCircleColor: string = 'white'
 ): string => {
@@ -17,7 +18,7 @@ const createCircleMarkerSvg = (
   // 레이블 설정
   let labelContent = '';
   if (label) {
-    // 숫자 레이블에 대한 스타일링
+    // 숫자 레이블 스타일링
     const fontSize = Math.max(size * 0.45, 14); // 최소 폰트 크기 보장
     labelContent = `
       <text 
@@ -32,7 +33,7 @@ const createCircleMarkerSvg = (
     `;
   }
 
-  // SVG 원 생성
+  // SVG 원형 마커 생성
   return `
     <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
       <circle 
@@ -47,6 +48,7 @@ const createCircleMarkerSvg = (
   `;
 };
 
+// 마커 아이콘 옵션 결정 함수
 export const getMarkerIconOptions = (
   place: Place | ItineraryPlaceWithTime,
   isSelected: boolean,
@@ -58,34 +60,36 @@ export const getMarkerIconOptions = (
   let pinSize = 28;
   let label: string | number | undefined = undefined;
 
+  // 마커 타입에 따른 색상과 크기 결정
   if (isItineraryDayPlace) {
-    pinColor = (place as ItineraryPlaceWithTime).isFallback ? '#757575' : '#FF5A5F'; // Red for itinerary items, gray for fallback
-    pinSize = 36; // Slightly larger for itinerary items
-    label = itineraryOrder;
+    pinColor = (place as ItineraryPlaceWithTime).isFallback ? '#757575' : '#FF5A5F'; // 일정 마커는 빨강, 폴백 마커는 회색
+    pinSize = 36; // 일정 마커는 크게
+    label = itineraryOrder; // 순서 번호 표시
   } else if (isSelected) {
-    pinColor = '#007BFF'; // Blue for selected
-    pinSize = 32; // Larger for selected
+    pinColor = '#007BFF'; // 선택된 마커는 파랑
+    pinSize = 32; // 선택된 마커는 약간 크게
   } else if (isCandidate) {
-    pinColor = '#FFA500'; // Orange for candidate
+    pinColor = '#FFA500'; // 후보 마커는 주황
     pinSize = 32;
   } else if (place.category) {
     const categoryKey = mapCategoryNameToKey(place.category);
-    pinColor = getCategoryColor(categoryKey);
-    pinSize = 24; // Default size for category markers
+    pinColor = getCategoryColor(categoryKey); // 카테고리별 색상
+    pinSize = 24; // 일반 마커는 작게
   } else {
-    pinColor = '#28A745'; // Fallback Default Green if no category or other state matches
+    pinColor = '#28A745'; // 기본 색상 (초록)
   }
 
-  // 원형 마커 사용
+  // 원형 마커 SVG 생성
   const markerContent = createCircleMarkerSvg(pinColor, pinSize, label);
   
   return {
     content: markerContent,
-    anchor: { x: pinSize / 2, y: pinSize / 2 }, // 앵커 포인트를 원의 중심으로 조정
+    anchor: { x: pinSize / 2, y: pinSize / 2 }, // 앵커는 원의 중심
     size: { width: pinSize, height: pinSize }
   };
 };
 
+// Naver 지도에 마커 생성 함수
 export const createNaverMarker = (
   map: any,
   position: any, // naver.maps.LatLng
@@ -93,13 +97,16 @@ export const createNaverMarker = (
   title?: string,
   clickable: boolean = true,
   visible: boolean = true,
-  zIndex?: number // zIndex 파라미터 추가
+  zIndex?: number
 ) => {
   if (!window.naver || !window.naver.maps) {
     console.error("Naver Maps API not initialized when creating marker.");
     return null;
   }
+  
   let iconObject: any = null;
+  
+  // 아이콘 설정
   if (iconConfig) {
     if (iconConfig.url) {
       iconObject = {
@@ -120,6 +127,7 @@ export const createNaverMarker = (
     }
   }
 
+  // 마커 생성 및 반환
   return new window.naver.maps.Marker({
     position: position,
     map: map,
@@ -127,10 +135,11 @@ export const createNaverMarker = (
     title: title,
     clickable: clickable,
     visible: visible,
-    zIndex: zIndex, // zIndex 설정
+    zIndex: zIndex,
   });
 };
 
+// 마커 배열 생성 함수
 export const addMarkersToMap = (
   map: any,
   places: Place[],
@@ -143,11 +152,14 @@ export const addMarkersToMap = (
     console.error("Naver Maps API not available in addMarkersToMap");
     return markers;
   }
+  
+  // 각 장소마다 마커 생성
   places.forEach((place, index) => {
-    if (place.y == null || place.x == null) { // Check for null or undefined
+    if (place.y == null || place.x == null) {
         console.warn(`[markerUtils] Place '${place.name}' is missing coordinates (y: ${place.y}, x: ${place.x}) and will be skipped.`);
         return;
     }
+    
     const position = createNaverLatLng(place.y, place.x);
     if (!position) return;
 
@@ -156,16 +168,19 @@ export const addMarkersToMap = (
     
     const iconOptions = getMarkerIconOptions(place, isSelected, isCandidate, false, undefined);
     
-    // Default zIndex for general markers, selected markers could have higher zIndex
+    // 마커 Z-index 설정
     const zIndex = isSelected ? 200 : 50;
     const marker = createNaverMarker(map, position, iconOptions, place.name, true, true, zIndex);
     
+    // 클릭 이벤트 핸들러 등록
     if (marker && window.naver.maps.Event) {
       window.naver.maps.Event.addListener(marker, 'click', () => {
         onMarkerClick(place, index);
       });
     }
+    
     if (marker) markers.push(marker);
   });
+  
   return markers;
 };

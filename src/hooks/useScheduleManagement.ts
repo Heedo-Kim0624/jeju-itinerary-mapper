@@ -1,10 +1,11 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useServerResponseHandler } from '@/hooks/schedule/useServerResponseHandler';
 import { useScheduleStateAndEffects } from '@/hooks/schedule/useScheduleStateAndEffects';
 import { useScheduleGenerationCore } from '@/hooks/schedule/useScheduleGenerationCore';
 import { useMapContext } from '@/components/rightpanel/MapContext';
-import { type ItineraryDay, type SelectedPlace, type Place, CategoryName } from '@/types/core'; // CategoryName 임포트
+import { type ItineraryDay, type SelectedPlace, type Place, CategoryName } from '@/types/core'; 
 
 interface ScheduleManagementProps {
   selectedPlaces: SelectedPlace[];
@@ -18,23 +19,21 @@ interface ScheduleManagementProps {
   endDatetime: string | null;
 }
 
-// 제주국제공항 정보
+// 제주국제공항 정보 - 정확한 데이터로 업데이트
 const JEJU_AIRPORT_TEMPLATE: Omit<SelectedPlace, 'id'> = {
   name: '제주국제공항',
-  x: 126.4920, // Longitude
-  y: 33.5113,  // Latitude
-  category: '관광지' as CategoryName, // '관광지'로 변경
+  x: 126.4920, // 정확한 경도 좌표
+  y: 33.5113,  // 정확한 위도 좌표
+  category: '관광지' as CategoryName, // CategoryName 타입으로 명시적 타입 단언
   address: '제주특별자치도 제주시 공항로 2',
-  image_url: 'https://ldb-phinf.pstatic.net/20150831_15/1441006911611CNxnQ_JPEG/11570553_0.jpg', // 이미지 URL 추가
-  // SelectedPlace에 필요한 나머지 필드들의 기본값 설정
+  image_url: 'https://ldb-phinf.pstatic.net/20150831_15/1441006911611CNxnQ_JPEG/11570553_0.jpg',
   phone: '064-797-2114',
   description: '제주도의 관문 국제공항',
-  rating: 4, // 적절한 평점 설정
+  rating: 4,
   road_address: '제주특별자치도 제주시 공항로 2',
   homepage: 'https://www.airport.co.kr/jeju/main.do',
-  isSelected: false, // SelectedPlace 필드
-  isCandidate: false, // SelectedPlace 필드
-  // operationTimeData, geoNodeId, geoNodeDistance, weight, raw, categoryDetail, reviewCount, naverLink, instaLink, operatingHours 등은 필요에 따라 추가
+  isSelected: false,
+  isCandidate: false,
 };
 
 export const useScheduleManagement = ({
@@ -73,78 +72,88 @@ export const useScheduleManagement = ({
 
   const combinedIsLoading = isLoadingState || isManuallyGenerating;
 
-  // Run schedule generation process function
+  // 스케줄 생성 프로세스 실행 함수 개선
   const runScheduleGenerationProcess = useCallback(() => {
     console.log("[useScheduleManagement] Starting schedule generation process");
     
-    // Prevent duplicate execution
+    // 중복 실행 방지
     if (combinedIsLoading) {
       console.log("[useScheduleManagement] Already generating schedule");
       return;
     }
 
-    // Validate required data
-    if (selectedPlaces.length === 0 && !JEJU_AIRPORT_TEMPLATE) { // 공항 정보가 없을 경우 대비
+    // 필요한 데이터 검증
+    if (selectedPlaces.length === 0 && !JEJU_AIRPORT_TEMPLATE) {
       toast.error("선택된 장소가 없습니다. 장소를 선택해주세요.");
       return;
     }
 
-    // Validate date info
+    // 날짜 정보 검증
     if (!startDatetime || !endDatetime) {
       toast.error("여행 날짜와 시간 정보가 올바르지 않습니다.");
       return;
     }
 
-    // Clear step logs
+    // 스텝 로그 초기화
     console.log("[useScheduleManagement] Starting marker and route cleanup...");
     
-    // Clear all markers immediately with direct event
+    // 마커 초기화 이벤트 실행
     const clearEvent = new Event("startScheduleGeneration");
     window.dispatchEvent(clearEvent);
     console.log("[useScheduleManagement] startScheduleGeneration event dispatched (marker cleanup)");
     
-    // Chain clear operations with short delays to ensure proper sequence
+    // 단계적으로 초기화 작업 수행
     setTimeout(() => {
-      // Clear all routes explicitly
+      // 모든 경로 명시적 초기화
       if (clearAllRoutes) {
         clearAllRoutes();
         console.log("[useScheduleManagement] All routes cleared");
       }
       
-      // Clear all markers and UI elements
+      // 모든 마커와 UI 요소 초기화
       if (clearMarkersAndUiElements) {
         clearMarkersAndUiElements();
         console.log("[useScheduleManagement] All markers and UI elements cleared");
       }
       
-      // Set loading states
+      // 로딩 상태 설정
       setIsManuallyGenerating(true);
       setIsLoadingState(true);
       console.log("[useScheduleManagement] Loading state set");
       
-      // Trigger actual schedule generation with detail
+      // 실제 스케줄 생성 트리거
       setTimeout(() => {
         try {
-          // 공항 정보를 포함한 장소 목록 생성
-          const airportStart: SelectedPlace = { ...JEJU_AIRPORT_TEMPLATE, id: `jeju-airport-start-${Date.now()}` };
-          const airportEnd: SelectedPlace = { ...JEJU_AIRPORT_TEMPLATE, id: `jeju-airport-end-${Date.now()}` };
+          // 고유 ID로 공항 장소 생성
+          const airportStart: SelectedPlace = { 
+            ...JEJU_AIRPORT_TEMPLATE, 
+            id: `jeju-airport-start-${Date.now()}` 
+          };
+          const airportEnd: SelectedPlace = { 
+            ...JEJU_AIRPORT_TEMPLATE, 
+            id: `jeju-airport-end-${Date.now()}`
+          };
 
+          // 이미 공항과 동일한 장소는 필터링
           let placesForGeneration: SelectedPlace[] = selectedPlaces.filter(
-            p => !(p.name === JEJU_AIRPORT_TEMPLATE.name && p.x === JEJU_AIRPORT_TEMPLATE.x && p.y === JEJU_AIRPORT_TEMPLATE.y)
+            p => !(p.name === JEJU_AIRPORT_TEMPLATE.name && 
+                  Math.abs(p.x - JEJU_AIRPORT_TEMPLATE.x) < 0.001 && 
+                  Math.abs(p.y - JEJU_AIRPORT_TEMPLATE.y) < 0.001)
           );
           
-          // 사용자 선택 장소가 없어도 공항 출발/도착은 기본으로
+          // 사용자 선택 장소가 없어도 공항 출발/도착은 기본으로 포함
           if (placesForGeneration.length === 0) {
             placesForGeneration = [airportStart, airportEnd];
           } else {
             placesForGeneration = [airportStart, ...placesForGeneration, airportEnd];
           }
           
-          console.log("[useScheduleManagement] Places for generation (with airport):", placesForGeneration.map(p=>p.name));
+          console.log("[useScheduleManagement] Places for generation (with airport):", placesForGeneration.map(p => p.name));
 
+          // 스케줄 생성 이벤트 발생
           const event = new CustomEvent("startScheduleGeneration", {
             detail: {
-              selectedPlaces: placesForGeneration, // 공항이 추가된 장소 목록 사용
+              selectedPlaces: placesForGeneration,
               startDatetime,
               endDatetime,
             },
@@ -158,7 +167,7 @@ export const useScheduleManagement = ({
           
           window.dispatchEvent(event);
           
-          // Timeout safety net
+          // 타임아웃 안전장치
           setTimeout(() => {
             if (isManuallyGenerating || isLoadingState) {
               console.log("[useScheduleManagement] Schedule generation timed out (30s)");
@@ -178,24 +187,22 @@ export const useScheduleManagement = ({
     
   }, [
     combinedIsLoading,
-    selectedPlaces, // 원본 selectedPlaces는 의존성에 유지
+    selectedPlaces,
     startDatetime, 
     endDatetime, 
     clearMarkersAndUiElements,
     clearAllRoutes,
     setIsLoadingState,
-    // isManuallyGenerating, // useCallback 내부에서 setIsManuallyGenerating 상태를 변경하므로, 의존성에서 제외하거나 주의해야 함
-    // isLoadingState      // useCallback 내부에서 setIsLoadingState 상태를 변경하므로, 의존성에서 제외하거나 주의해야 함
   ]);
 
-  // Reset state when server response is processed
+  // 서버 응답 처리 완료 시 상태 리셋
   useEffect(() => {
-    if (itinerary && itinerary.length > 0 && (isManuallyGenerating || isLoadingState)) { // isLoadingState도 함께 체크
+    if (itinerary && itinerary.length > 0 && (isManuallyGenerating || isLoadingState)) {
       console.log("[useScheduleManagement] Server response processed, resetting loading states");
       setIsManuallyGenerating(false);
-      setIsLoadingState(false); // isLoadingState도 리셋
+      setIsLoadingState(false);
     }
-  }, [itinerary, isManuallyGenerating, isLoadingState, setIsManuallyGenerating, setIsLoadingState]); // 의존성 추가
+  }, [itinerary, isManuallyGenerating, isLoadingState]);
 
   return {
     itinerary,

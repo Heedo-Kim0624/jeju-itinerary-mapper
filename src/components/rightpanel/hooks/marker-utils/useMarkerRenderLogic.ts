@@ -40,6 +40,7 @@ export const useMarkerRenderLogic = ({
       return;
     }
     
+    // 항상 먼저 기존 마커 모두 제거
     if (markersRef.current.length > 0) {
         console.log(`[useMarkerRenderLogic] Clearing ${markersRef.current.length} existing markers from ref.`);
         markersRef.current = clearMarkersUtil(markersRef.current);
@@ -50,6 +51,7 @@ export const useMarkerRenderLogic = ({
 
     console.log(`[useMarkerRenderLogic] Determining places to display: selectedDay=${selectedDay}, itinerary items=${itinerary?.length || 0}, general places=${places.length}`);
 
+    // 중요: 일정이 있고 선택된 날짜가 있을 때는 그 날짜의 일정 장소만 표시
     if (itinerary && itinerary.length > 0 && selectedDay !== null) {
       const currentDayData = itinerary.find(day => day.day === selectedDay);
       if (currentDayData && currentDayData.places && currentDayData.places.length > 0) {
@@ -61,12 +63,12 @@ export const useMarkerRenderLogic = ({
         placesToDisplay = []; 
         console.log(`[useMarkerRenderLogic] No places found for itinerary day ${selectedDay}. Displaying 0 markers.`);
       }
-    } else if (places.length > 0 && selectedDay === null) { // selectedDay가 null일 때만 일반 장소 표시
+    } else if (places.length > 0 && selectedDay === null) { 
+      // 일정이 선택되지 않았을 때만 일반 장소 표시 - 이 부분이 핵심
       placesToDisplay = places;
       console.log(`[useMarkerRenderLogic] No active itinerary day. Displaying ${places.length} general places from search/props.`);
     } else {
       console.log("[useMarkerRenderLogic] No itinerary day selected or no general places to display. Displaying 0 markers.");
-      // placesToDisplay는 이미 빈 배열이거나 위 조건에서 설정됨
     }
     
     if (placesToDisplay.length === 0) {
