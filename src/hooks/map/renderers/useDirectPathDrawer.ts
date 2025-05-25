@@ -1,37 +1,50 @@
 
 import { useCallback } from 'react';
-import type { Place } from '@/types/supabase';
+import type { Place } from '@/types/core';
+import { createNaverLatLng } from '@/utils/map/mapSetup';
 
 interface UseDirectPathDrawerProps {
   map: any;
   isNaverLoadedParam: boolean;
-  addPolyline: (
-    pathCoordinates: { lat: number; lng: number }[],
-    color: string,
-    weight?: number,
-    opacity?: number,
-    zIndex?: number
-  ) => any | null;
+  addPolyline: (path: any[], options: any) => any;
 }
-
-const DIRECT_ROUTE_COLOR = '#22c55e';
-const DIRECT_ROUTE_WEIGHT = 4;
 
 export const useDirectPathDrawer = ({
   map,
   isNaverLoadedParam,
   addPolyline,
 }: UseDirectPathDrawerProps) => {
-  const drawDirectPath = useCallback((placesToRoute: Place[]) => {
-    if (!map || !isNaverLoadedParam || placesToRoute.length < 2) return;
 
-    const pathCoordinates = placesToRoute
-        .filter(p => typeof p.x === 'number' && typeof p.y === 'number' && !isNaN(p.x) && !isNaN(p.y))
-        .map(place => ({ lat: place.y as number, lng: place.x as number }));
+  // 두 지점 사이의 직선 경로를 그리는 함수
+  const drawDirectPath = useCallback((places: Place[]) => {
+    if (!map || !isNaverLoadedParam || !places || places.length < 2) {
+      console.warn("[useDirectPathDrawer] Cannot draw direct path: missing data or not enough places");
+      return;
+    }
 
-    if (pathCoordinates.length < 2) return;
-
-    addPolyline(pathCoordinates, DIRECT_ROUTE_COLOR, DIRECT_ROUTE_WEIGHT);
+    console.log(`[useDirectPathDrawer] Drawing direct paths between ${places.length} places`);
+    
+    // 연속된 장소들 사이에 직선 경로 그리기
+    for (let i = 0; i < places.length - 1; i++) {
+      const from = places[i];
+      const to = places[i + 1];
+      
+      if (!from.y || !from.x || !to.y || !to.x) {
+        console.warn(`[useDirectPathDrawer] Missing coordinates for path ${i} to ${i+1}`);
+        continue;
+      }
+      
+      const fromLatLng = createNaverLatLng(from.y, from.x);
+      const toLatLng = createNaverLatLng(to.y, to.x);
+      
+      addPolyline([fromLatLng, toLatLng], {
+        strokeColor: '#9333ea', // 보라색
+        strokeOpacity: 0.7,
+        strokeWeight: 3,
+        strokeStyle: 'dashed'
+      });
+    }
+    
   }, [map, isNaverLoadedParam, addPolyline]);
 
   return { drawDirectPath };
