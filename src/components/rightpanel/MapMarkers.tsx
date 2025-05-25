@@ -1,9 +1,10 @@
 import React, { useEffect, useRef } from 'react';
 import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/core';
-import { useMapMarkers as useActualMapMarkersHook } from './hooks/useMapMarkers'; // Renamed to avoid confusion
+// Removed: import { useMapMarkers as useActualMapMarkersHook } from './hooks/useMapMarkers';
 import { useMarkerRenderLogic } from './hooks/marker-utils/useMarkerRenderLogic';
-import { useMarkerEventListeners } from './hooks/marker-utils/useMarkerEventListeners'; // If still needed
+import { useMarkerEventListeners } from './hooks/marker-utils/useMarkerEventListeners';
 import { useMapContext } from './MapContext';
+import { clearMarkers as clearMarkersUtil } from '@/utils/map/mapCleanup';
 
 
 interface MapMarkersProps {
@@ -30,16 +31,7 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
   const { map, isMapInitialized, isNaverLoaded } = useMapContext();
   const markersRef = useRef<naver.maps.Marker[]>([]);
   
-  const { clearAllMarkers: clearAllMarkersFromActualHook } = useActualMapMarkersHook({
-    places,
-    selectedPlace,
-    itinerary,
-    selectedDay,
-    selectedPlaces,
-    onPlaceClick,
-    highlightPlaceId,
-  });
-
+  // Removed: useActualMapMarkersHook call and clearAllMarkersFromActualHook
 
   const { renderMarkers } = useMarkerRenderLogic({
     places,
@@ -50,12 +42,11 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
     onPlaceClick,
     highlightPlaceId,
     markersRef,
-    map, // map is passed to useMarkerRenderLogic, which might be fine if that hook expects it
+    map,
     isMapInitialized,
     isNaverLoaded,
   });
   
-  // forceMarkerUpdate function for event listeners
   const forceMarkerUpdate = React.useCallback(() => {
     if (isMapInitialized && isNaverLoaded) {
       console.log('[MapMarkers] Forcing marker update via renderMarkers()');
@@ -66,40 +57,28 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
   }, [isMapInitialized, isNaverLoaded, renderMarkers]);
   
   const clearAllMarkers = React.useCallback(() => {
-      console.log('[MapMarkers] Clearing all markers.');
-      if (clearAllMarkersFromActualHook && typeof clearAllMarkersFromActualHook === 'function') {
-        console.log('[MapMarkers] Calling clearAllMarkersFromActualHook.');
-        clearAllMarkersFromActualHook(); // Clears markers managed by useActualMapMarkersHook
-      } else {
-        console.warn('[MapMarkers] clearAllMarkersFromActualHook is not available or not a function.');
-      }
-      // Also clear markersRef which is used by useMarkerRenderLogic
+      console.log('[MapMarkers] Clearing all markers from local markersRef.');
+      // Simplified: clearAllMarkersFromActualHook is removed
       if (markersRef.current.length > 0) {
-          markersRef.current.forEach(marker => {
-              if(marker && typeof marker.setMap === 'function') marker.setMap(null);
-          });
-          markersRef.current = [];
+          // Use utility, ensures markersRef.current is reassigned to empty array
+          markersRef.current = clearMarkersUtil(markersRef.current); 
           console.log('[MapMarkers] Cleared markers from local markersRef.');
       }
-  }, [clearAllMarkersFromActualHook, markersRef]);
+  }, [markersRef]); // Dependency array updated
 
 
-  // Event listeners for global state changes (e.g., generation start, external day selection)
-  // These might be redundant if prop changes are handled well.
-  // prevSelectedDayRef is used by useMarkerEventListeners
   const prevSelectedDayRef = useRef<number | null>(selectedDay);
   useEffect(() => {
     prevSelectedDayRef.current = selectedDay;
   }, [selectedDay]);
 
   useMarkerEventListeners({
-    clearAllMarkers, // Pass our combined clearAllMarkers
+    clearAllMarkers, 
     forceMarkerUpdate,
     prevSelectedDayRef,
   });
 
 
-  // Main effect for re-rendering markers when relevant props change
   useEffect(() => {
     console.log(`[MapMarkers] Props changed. SelectedDay: ${selectedDay}, Itinerary length: ${itinerary?.length}, Places length: ${places.length}, Highlight: ${highlightPlaceId}, SelectedPlace: ${selectedPlace?.id}`);
     
@@ -112,7 +91,6 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
   }, [selectedDay, itinerary, places, highlightPlaceId, selectedPlace, renderMarkers, isMapInitialized, isNaverLoaded]);
 
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       console.log("[MapMarkers] Component unmounting - clearing all markers.");
@@ -120,10 +98,9 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
     };
   }, [clearAllMarkers]);
 
-  return null; // This component doesn't render DOM itself
+  return null; 
 };
 
-// React.memo comparison function
 export default React.memo(MapMarkers, (prevProps, nextProps) => {
   const changedProps: string[] = [];
   if (prevProps.selectedDay !== nextProps.selectedDay) changedProps.push('selectedDay');

@@ -1,128 +1,177 @@
-import { useMapInitialization } from '@/hooks/map/useMapInitialization';
-import { useMapNavigation } from '@/hooks/map/useMapNavigation';
-import { useGeoJsonState as useAppGeoJsonState } from '@/hooks/map/useGeoJsonState';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { loadNaverMapsScript } from '@/utils/map/mapInitializer';
+import { initializeMap, createNaverLatLng, naverMapsSetup } from '@/utils/map/mapSetup';
+import { panToPosition, fitBoundsToPlaces } from '@/utils/map/mapViewControls';
+import { useMapResize } from '@/hooks/useMapResize';
+import { useGeoJsonLayer } from '@/components/rightpanel/geojson/useGeoJsonData';
+import { useRouteManager } from '@/hooks/map/useRouteManager';
+import { useMapMarkersLegacy } from '@/hooks/map/useMapMarkersLegacy'; // 경로 변경
+import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/supabase';
+import { SegmentRoute } from '@/types/schedule';
 import { useServerRoutes } from '@/hooks/map/useServerRoutes';
-import { useMapFeatures } from '@/hooks/map/useMapFeatures';
-import type { Place, ItineraryDay } from '@/types/supabase';
-import type { ServerRouteDataForDay } from '@/hooks/map/useServerRoutes';
-import type { SegmentRoute } from '@/types/schedule';
-import { useCallback } from 'react';
+import { ServerRouteDataForDay } from '@/hooks/map/useServerRoutes';
+import { usePlaceGeoJsonMapper } from '@/hooks/map/usePlaceGeoJsonMapper';
 
-/**
- * 지도 핵심 기능 통합 훅
- */
+
+const MAP_ID = 'map';
+
 const useMapCore = () => {
-  const { 
-    map, 
-    mapContainer, 
-    isMapInitialized, 
-    isNaverLoaded,
-    isMapError
-  } = useMapInitialization();
-  
+  const mapRef = useRef<any>(null);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const [isNaverLoaded, setIsNaverLoaded] = useState(false);
+  const [isMapInitialized, setIsMapInitialized] = useState(false);
+  const [isMapError, setIsMapError] = useState(false);
+
   const {
-    serverRoutesData,
-    setAllServerRoutesData,
-    updateDayPolylinePaths
-  } = useServerRoutes();
+    geoJsonData,
+    showGeoJson,
+    toggleGeoJsonVisibility,
+    handleGeoJsonLoaded,
+    isGeoJsonLoaded,
+    geoJsonNodes,
+    geoJsonLinks,
+  } = useGeoJsonLayer(mapRef);
 
-  const features = useMapFeatures({
-    map, 
-    isNaverLoadedParam: isNaverLoaded, 
-    updateDayPolylinePaths
-  }); 
+  const {
+    mapPlacesWithGeoNodes,
+    checkGeoJsonMapping,
+  } = usePlaceGeoJsonMapper(geoJsonNodes);
+
+  const {
+    addMarkers: addMarkersFromHook,
+    clearMarkersAndUiElements: clearMarkersAndUiElementsFromHook,
+    calculateRoutes: calculateRoutesFromHook,
+  } = useMapMarkersLegacy(mapRef.current); // 변경된 훅 이름 사용
 
   const { 
-    clearMarkersAndUiElements, 
-  } = features;
+    serverRoutesData, 
+    setServerRoutes, 
+    updateDayPolylinePaths,
+    // getDayPolylinePaths // If you need to retrieve paths
+  } = useServerRoutes(mapRef.current);
 
-  const { 
-    panTo 
-  } = useMapNavigation(map);
 
-  const appGeoJsonHookState = useAppGeoJsonState();
-  const { showGeoJson, toggleGeoJsonVisibility, handleGeoJsonLoaded: appHandleGeoJsonLoaded } = appGeoJsonHookState;
+  const {
+    renderItineraryRoute,
+    renderGeoJsonRoute, // Renamed from renderSegmentedRoute for clarity
+    highlightSegment, // Renamed from highlightRouteSegment
+    clearPreviousHighlightedPath, // Renamed from clearHighlightedSegmentPath
+    clearAllDrawnRoutes, // Renamed from clearAllRoutes
+    calculateAndDrawDirectRoutes,
+  } = useRouteManager({
+    map: mapRef.current,
+    isNaverLoadedParam: isNaverLoaded,
+    geoJsonNodes: geoJsonNodes,
+    mapPlacesWithGeoNodesFn: mapPlacesWithGeoNodes,
+    updateDayPolylinePaths: updateDayPolylinePaths,
+  });
   
-  const setShowGeoJson = useCallback((show: boolean) => {
-    if (appGeoJsonHookState.showGeoJson !== show) {
-      toggleGeoJsonVisibility();
+  useEffect(() => {
+    const init = async () => {
+      try {
+        await loadNaverMapsScript();
+        setIsNaverLoaded(true);
+        if (mapContainerRef.current && !mapRef.current) {
+          const naver = window.naver;
+          if (naver && naver.maps) {
+            const mapInstance = initializeMap(mapContainerRef.current, MAP_ID);
+            mapRef.current = mapInstance;
+            setIsMapInitialized(true);
+            naverMapsSetup(mapInstance); // 초기 네이버 지도 설정 적용
+            console.log('[useMapCore] Naver Map initialized and configured.');
+          } else {
+            throw new Error("Naver Maps API not fully loaded.");
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load Naver Maps:', error);
+        setIsMapError(true);
+      }
+    };
+    init();
+
+    return () => {
+      // Cleanup if necessary, though map instance might be managed elsewhere or not need explicit destroy
+    };
+  }, []);
+
+  useMapResize(mapRef.current, mapContainerRef.current, [isMapInitialized]);
+
+  const panTo = useCallback((locationOrCoords: string | {lat: number, lng: number}) => {
+    if (mapRef.current && isMapInitialized && isNaverLoaded) {
+      if (typeof locationOrCoords === 'string') {
+        // Geocoding logic would be needed here if 'locationOrCoords' is an address string
+        // For now, assuming it's not an address string or this part is handled elsewhere.
+        console.warn("panTo with string address not implemented, requires geocoding.");
+      } else {
+        panToPosition(mapRef.current, locationOrCoords.lat, locationOrCoords.lng);
+      }
     }
-  }, [appGeoJsonHookState.showGeoJson, toggleGeoJsonVisibility]);
-  
-  const setServerRoutes = useCallback((
-    dayRoutes: Record<number, ServerRouteDataForDay> | 
-               ((prevRoutes: Record<number, ServerRouteDataForDay>) => Record<number, ServerRouteDataForDay>)
-  ) => {
-    if (typeof dayRoutes === 'function') {
-        setAllServerRoutesData(prev => dayRoutes(prev));
+  }, [isMapInitialized, isNaverLoaded]);
+
+  const showRouteForPlaceIndex = useCallback((placeIndex: number, itineraryDay: ItineraryDay, onComplete?: () => void) => {
+    if (!mapRef.current || !itineraryDay || !itineraryDay.routeData || !itineraryDay.routeData.segmentRoutes) {
+      console.warn("[useMapCore] Map not ready or missing route data for showRouteForPlaceIndex.");
+      if (onComplete) onComplete();
+      return;
+    }
+    
+    const segment = itineraryDay.routeData.segmentRoutes.find(
+      seg => seg.fromIndex === placeIndex || seg.toIndex === placeIndex + 1 // This logic might need adjustment based on how segments are defined
+    );
+
+    if (segment) {
+      console.log(`[useMapCore] Highlighting segment for place index ${placeIndex}:`, segment);
+      highlightSegment(segment); // Use the renamed function
     } else {
-        setAllServerRoutesData(dayRoutes);
+      console.log(`[useMapCore] No specific segment found for place index ${placeIndex}, clearing previous highlight.`);
+      clearPreviousHighlightedPath(); // Use the renamed function
     }
-  }, [setAllServerRoutesData]);
-  
-  const renderItineraryRouteWrapper = ( 
-    itineraryDay: ItineraryDay | null,
-    allServerRoutesInput?: Record<number, ServerRouteDataForDay>, 
-    onCompleteInput?: () => void 
-  ) => {
-    features.renderItineraryRoute(
-        itineraryDay,
-        allServerRoutesInput ?? serverRoutesData, 
-        onCompleteInput 
-    );
-  };
+    if (onComplete) onComplete();
+  }, [highlightSegment, clearPreviousHighlightedPath, isMapInitialized]);
 
-  const showRouteForPlaceIndexWrapper = ( 
-    placeIndex: number, 
-    itineraryDay: ItineraryDay,
-    onComplete?: () => void 
-  ) => {
-    features.showRouteForPlaceIndex(
-        placeIndex, 
-        itineraryDay, 
-        onComplete 
-    );
-  };
-  
-  const calculateRoutesWrapper = (placesToRoute: Place[]) => {
-    features.calculateRoutes(placesToRoute);
-  };
-  
-  const highlightSegmentWrapper = (segment: SegmentRoute | null) => {
-    features.highlightSegment(segment);
-  };
 
-  const renderGeoJsonRouteWrapper = (route: SegmentRoute) => {
-    features.renderGeoJsonRoute(route);
-  };
+  // Expose serverRoutesData in the context
+  if (process.env.NODE_ENV === 'development' && mapRef.current) {
+    // console.log("[useMapCore] Hook Values:", {
+    //   isMapInitialized, isNaverLoaded, isGeoJsonLoaded,
+    //   geoJsonNodesCount: geoJsonNodes?.length,
+    //   geoJsonLinksCount: geoJsonLinks?.length,
+    //   hasRenderItineraryRoute: typeof renderItineraryRoute === 'function',
+    //   hasHighlightSegment: typeof highlightSegment === 'function',
+    //   serverRoutesDataKeys: Object.keys(serverRoutesData || {}),
+    //   updateDayPolylinePathsProvided: typeof updateDayPolylinePaths === 'function',
+    // });
+  }
+  
 
   return {
-    map,
-    mapContainer,
+    map: mapRef.current,
+    mapContainer: mapContainerRef,
     isMapInitialized,
     isNaverLoaded,
     isMapError,
-    addMarkers: features.addMarkers,
-    calculateRoutes: calculateRoutesWrapper,
-    clearMarkersAndUiElements,
+    addMarkers: addMarkersFromHook,
+    calculateRoutes: calculateRoutesFromHook,
+    clearMarkersAndUiElements: clearMarkersAndUiElementsFromHook,
     panTo,
-    showGeoJson: appGeoJsonHookState.showGeoJson,
-    toggleGeoJsonVisibility: appGeoJsonHookState.toggleGeoJsonVisibility,
-    isGeoJsonLoaded: appGeoJsonHookState.isGeoJsonLoaded,
-    geoJsonNodes: appGeoJsonHookState.geoJsonNodes,
-    geoJsonLinks: appGeoJsonHookState.geoJsonLinks,
-    handleGeoJsonLoaded: appHandleGeoJsonLoaded,
-    checkGeoJsonMapping: appGeoJsonHookState.checkGeoJsonMapping,
-    mapPlacesWithGeoNodes: features.mapPlacesWithGeoNodes,
-    renderItineraryRoute: renderItineraryRouteWrapper, 
-    clearAllRoutes: features.clearAllRoutes,
-    highlightSegment: highlightSegmentWrapper,
-    clearPreviousHighlightedPath: features.clearPreviousHighlightedPath,
-    showRouteForPlaceIndex: showRouteForPlaceIndexWrapper,
-    renderGeoJsonRoute: renderGeoJsonRouteWrapper,
-    serverRoutesData: serverRoutesData,
+    showGeoJson,
+    toggleGeoJsonVisibility,
+    renderItineraryRoute,
+    clearAllRoutes: clearAllDrawnRoutes, // Use the renamed function from useRouteManager
+    handleGeoJsonLoaded,
+    highlightSegment, // Expose renamed function
+    clearPreviousHighlightedPath, // Expose renamed function
+    isGeoJsonLoaded,
+    checkGeoJsonMapping,
+    mapPlacesWithGeoNodes,
+    showRouteForPlaceIndex,
+    renderGeoJsonRoute, // Expose renamed function
+    geoJsonNodes,
+    geoJsonLinks,
+    serverRoutesData,
     setServerRoutes,
-    updateDayPolylinePaths
+    updateDayPolylinePaths,
   };
 };
 
