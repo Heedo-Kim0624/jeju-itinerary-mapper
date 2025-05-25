@@ -1,99 +1,52 @@
-import { useState, useCallback } from 'react';
-import { Place } from '@/types/supabase';
-import { toast } from 'sonner';
+
+import { useCallback, useState } from 'react';
+import type { GeoJsonFeature, GeoLink } from '@/components/rightpanel/geojson/GeoJsonTypes';
 
 /**
- * GeoJson 상태 관리 훅 (애플리케이션 레벨)
+ * GeoJSON 애플리케이션 상태를 관리하는 훅
+ * @returns {Object} GeoJSON 노드, 링크, 로드 상태, 가시성 상태 및 관련 함수들
  */
 export const useGeoJsonState = () => {
-  // GeoJSON 관련 상태
-  const [showGeoJson, setShowGeoJson] = useState(false);
   const [isGeoJsonLoaded, setIsGeoJsonLoaded] = useState(false);
-  const [geoJsonNodes, setGeoJsonNodes] = useState<any[]>([]); // Consider using GeoNode[] type
-  const [geoJsonLinks, setGeoJsonLinks] = useState<any[]>([]); // Consider using GeoLink[] type
-  
-  // GeoJSON 가시성 토글
-  const toggleGeoJsonVisibility = useCallback(() => {
-    setShowGeoJson(prev => !prev);
-  }, []);
+  const [geoJsonNodes, setGeoJsonNodes] = useState<GeoJsonFeature[]>([]);
+  const [geoJsonLinks, setGeoJsonLinks] = useState<GeoLink[]>([]);
+  const [showGeoJson, setShowGeoJson] = useState(true); // 초기값은 true로 설정 (또는 필요에 따라 false)
 
-  // GeoJSON 데이터 로드 완료 핸들러 (GeoJsonLoader의 onLoadSuccess 통해 호출됨)
-  const handleGeoJsonLoaded = useCallback((nodes: any[], links: any[]) => {
-    console.log('[App/useGeoJsonState] handleGeoJsonLoaded 호출됨:', { 
-      노드수: nodes.length,
-      링크수: links.length
-    });
-    
-    if (links.length > 0) {
-      console.log('[App/useGeoJsonState] 첫 번째 링크 샘플 (수신 데이터):', {
-        id: links[0].id, // GeoJsonLoader에서 정규화된 ID
-        id_type: typeof links[0].id,
-        properties_LINK_ID: links[0].properties?.LINK_ID,
-        properties_LINK_ID_type: typeof links[0].properties?.LINK_ID
-      });
-    } else {
-      console.warn('[App/useGeoJsonState] handleGeoJsonLoaded: 링크 배열이 비어있습니다!');
-    }
-    
+  // GeoJSON 데이터 로드 완료 처리 함수
+  const handleGeoJsonLoaded = useCallback((nodes: GeoJsonFeature[], links: GeoLink[]) => {
+    console.log(`[useGeoJsonState] 앱 레벨 GeoJSON 데이터 로드됨: 노드 ${nodes.length}개, 링크 ${links.length}개`);
     setGeoJsonNodes(nodes);
     setGeoJsonLinks(links);
     setIsGeoJsonLoaded(true);
-    
-    setTimeout(() => {
-      console.log('[App/useGeoJsonState] 상태 업데이트 후 geoJsonLinks 길이:', links.length);
-    }, 0);
   }, []);
 
-  // 장소-GeoJSON 노드 매핑 품질 검사
-  const checkGeoJsonMapping = useCallback((places: Place[]) => {
-    if (!isGeoJsonLoaded || places.length === 0) {
-      return {
-        totalPlaces: places.length,
-        mappedPlaces: 0,
-        mappingRate: '0%',
-        averageDistance: 'N/A',
-        success: false,
-        message: 'GeoJSON 데이터가 로드되지 않았거나 장소가 없습니다.'
-      };
+  // GeoJSON 매핑 확인 함수
+  const checkGeoJsonMapping = useCallback((places: any[]) => {
+    if (geoJsonNodes.length === 0) {
+      console.warn('[useGeoJsonState] GeoJSON 노드가 로드되지 않음');
+      return false;
     }
     
-    const totalPlaces = places.length;
-    const placesWithGeoNodeId = places.filter(p => p.geoNodeId);
-    const mappedPlaces = placesWithGeoNodeId.length;
-    const mappingRate = totalPlaces > 0 ? ((mappedPlaces / totalPlaces) * 100).toFixed(1) : '0.0';
+    const mappedCount = places.filter(place => {
+      return geoJsonNodes.some(node => node.properties && String(node.properties.NODE_ID) === String(place.id));
+    }).length;
     
-    // 평균 거리 계산
-    const distanceSum = placesWithGeoNodeId.reduce((sum, place) => {
-      return sum + (place.geoNodeDistance || 0);
-    }, 0);
-    
-    const averageDistanceFloat = mappedPlaces > 0 ? (distanceSum / mappedPlaces) : 0;
-    const averageDistance = mappedPlaces > 0 ? averageDistanceFloat.toFixed(1) : 'N/A';
-    
-    // 매핑 성공 여부 판단 (50% 이상이고 평균 거리 100m 이내)
-    const success = 
-      (mappedPlaces / totalPlaces >= 0.5 || totalPlaces === 0) && 
-      (averageDistance === 'N/A' || averageDistanceFloat < 100);
-    
-    return {
-      totalPlaces,
-      mappedPlaces,
-      mappingRate: `${mappingRate}%`,
-      averageDistance: averageDistance === 'N/A' ? averageDistance : parseFloat(averageDistance),
-      success,
-      message: success ? 
-        `매핑 성공: ${mappedPlaces}/${totalPlaces} 장소 매핑됨 (${mappingRate}%), 평균 거리: ${averageDistance}m` :
-        `매핑 부족: ${mappedPlaces}/${totalPlaces} 장소만 매핑됨 (${mappingRate}%), 평균 거리: ${averageDistance}m`
-    };
-  }, [isGeoJsonLoaded]);
+    console.log(`[useGeoJsonState] 장소 ${places.length}개 중 ${mappedCount}개가 GeoJSON 노드에 매핑됨`);
+    return mappedCount > 0;
+  }, [geoJsonNodes]);
+
+  // GeoJSON 레이어 가시성 토글 함수
+  const toggleGeoJsonVisibility = useCallback(() => {
+    setShowGeoJson(prevShow => !prevShow);
+  }, []);
 
   return {
-    showGeoJson,
     isGeoJsonLoaded,
     geoJsonNodes,
     geoJsonLinks,
-    toggleGeoJsonVisibility,
+    showGeoJson, // 가시성 상태 반환
     handleGeoJsonLoaded,
-    checkGeoJsonMapping
+    checkGeoJsonMapping,
+    toggleGeoJsonVisibility // 가시성 토글 함수 반환
   };
 };
