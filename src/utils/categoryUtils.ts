@@ -1,5 +1,9 @@
 
-import type { CategoryName } from '@/types/core/base-types'; // base-types에서 CategoryName 임포트
+// CategoryName 타입을 base-types에서 가져와 재내보내기
+import type { CategoryName } from '@/types/core/base-types'; 
+
+// 타입을 그대로 재내보내기 (re-export)
+export type { CategoryName };
 
 // 카테고리 별 키워드 타입 정의 추가
 export type CategoryKeywords = {
@@ -89,4 +93,3 @@ export const timeOfDayWeights = {
   }
   // '교통' 관련 제거
 };
-

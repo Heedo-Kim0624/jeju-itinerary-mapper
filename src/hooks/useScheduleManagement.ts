@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useServerResponseHandler } from '@/hooks/schedule/useServerResponseHandler';
@@ -24,15 +23,15 @@ const JEJU_AIRPORT_TEMPLATE: Omit<SelectedPlace, 'id'> = {
   name: '제주국제공항',
   x: 126.4920, // Longitude
   y: 33.5113,  // Latitude
-  category: '관광지' as CategoryName, // '관광지'로 변경 및 타입 단언
+  category: '관광지' as CategoryName, // '관광지'로 변경
   address: '제주특별자치도 제주시 공항로 2',
-  image_url: '', // photoUrl -> image_url로 변경
+  image_url: 'https://ldb-phinf.pstatic.net/20150831_15/1441006911611CNxnQ_JPEG/11570553_0.jpg', // 이미지 URL 추가
   // SelectedPlace에 필요한 나머지 필드들의 기본값 설정
-  phone: '',
+  phone: '064-797-2114',
   description: '제주도의 관문 국제공항',
-  rating: 0, // 기본값 또는 실제 평점
+  rating: 4, // 적절한 평점 설정
   road_address: '제주특별자치도 제주시 공항로 2',
-  homepage: '',
+  homepage: 'https://www.airport.co.kr/jeju/main.do',
   isSelected: false, // SelectedPlace 필드
   isCandidate: false, // SelectedPlace 필드
   // operationTimeData, geoNodeId, geoNodeDistance, weight, raw, categoryDetail, reviewCount, naverLink, instaLink, operatingHours 등은 필요에 따라 추가

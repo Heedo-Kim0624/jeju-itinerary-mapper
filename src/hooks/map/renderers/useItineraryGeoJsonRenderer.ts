@@ -1,4 +1,3 @@
-
 import { useCallback, useEffect } from 'react';
 import type { Place, ItineraryDay } from '@/types/supabase';
 import type { GeoCoordinates, GeoNode } from '@/components/rightpanel/geojson/GeoJsonTypes';
@@ -80,8 +79,8 @@ export const useItineraryGeoJsonRenderer = ({
       const cachedPolylinePaths = currentDayServerData?.polylinePaths;
 
       try {
-        let newCalculatedPolylinePaths: { lat: number; lng: number }[][] = [];
-        let boundsFitCoords: { lat: number; lng: number }[] = [];
+        let newCalculatedPolylinePaths: { lat: number; lng: number; }[][] = [];
+        let boundsFitCoords: { lat: number; lng: number; }[] = [];
 
         if (cachedPolylinePaths && cachedPolylinePaths.length > 0) {
           console.log(`[ItineraryGeoJsonRenderer] Day ${itineraryDay.day}: 캐시된 폴리라인 경로 ${cachedPolylinePaths.length}개 사용.`);
@@ -123,14 +122,15 @@ export const useItineraryGeoJsonRenderer = ({
               const prevNodeIdInInterleaved = interleavedRoute[2 * index];
               const nextNodeIdInInterleaved = interleavedRoute[2 * index + 2];
 
-              if (prevNodeIdInInterleaved && nextNodeIdInInterleaved && getNodeByIdFromContext) { // getNodeByIdFromContext 사용
+              if (prevNodeIdInInterleaved && nextNodeIdInInterleaved && getNodeByIdFromContext) { 
                 const prevNode = getNodeByIdFromContext(String(prevNodeIdInInterleaved));
                 const nextNode = getNodeByIdFromContext(String(nextNodeIdInInterleaved));
 
                 if (prevNode?.geometry?.coordinates && nextNode?.geometry?.coordinates) {
                   // GeoNode.geometry.coordinates는 [lng, lat] 순서
-                  const p1 = { lat: prevNode.geometry.coordinates[1], lng: prevNode.geometry.coordinates[0] };
-                  const p2 = { lat: nextNode.geometry.coordinates[1], lng: nextNode.geometry.coordinates[0] };
+                  const p1 = { lat: prevNode.geometry.coordinates[1] as number, lng: prevNode.geometry.coordinates[0] as number };
+                  const p2 = { lat: nextNode.geometry.coordinates[1] as number, lng: nextNode.geometry.coordinates[0] as number };
+                  
                   if (isValidCoordinate(p1.lat, p1.lng) && isValidCoordinate(p2.lat, p2.lng)) {
                     const fallbackPath = [p1, p2];
                     addPolyline(fallbackPath, FALLBACK_ROUTE_COLOR, USER_ROUTE_WEIGHT - 1, USER_ROUTE_OPACITY, USER_ROUTE_ZINDEX -1);
@@ -148,6 +148,7 @@ export const useItineraryGeoJsonRenderer = ({
               }
             }
           });
+          
           if (missingLinkCount > 0) console.warn(`[ItineraryGeoJsonRenderer] Day ${itineraryDay.day}: 누락/Fallback 처리된 Link ID 총 ${missingLinkCount}개 (전체: ${linkIds.length}개)`);
           
           if (newCalculatedPolylinePaths.length > 0) {
@@ -214,4 +215,3 @@ export const useItineraryGeoJsonRenderer = ({
 
   return { renderItineraryRoute };
 };
-
