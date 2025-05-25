@@ -1,6 +1,7 @@
 
 import { useCallback, useState } from 'react';
 import type { GeoJsonFeature, GeoLink } from '@/components/rightpanel/geojson/GeoJsonTypes';
+import type { Place } from '@/types/supabase'; // Place 타입을 임포트합니다.
 
 /**
  * GeoJSON 애플리케이션 상태를 관리하는 훅
@@ -21,18 +22,43 @@ export const useGeoJsonState = () => {
   }, []);
 
   // GeoJSON 매핑 확인 함수
-  const checkGeoJsonMapping = useCallback((places: any[]) => {
+  const checkGeoJsonMapping = useCallback((places: Place[]) => {
+    const totalPlaces = places.length;
+    let mappedPlaces = 0;
+    let message = '';
+    let success = false;
+
     if (geoJsonNodes.length === 0) {
-      console.warn('[useGeoJsonState] GeoJSON 노드가 로드되지 않음');
-      return false;
+      message = '[useGeoJsonState] GeoJSON 노드가 로드되지 않았습니다.';
+      console.warn(message);
+      success = false;
+    } else {
+      mappedPlaces = places.filter(place => 
+        geoJsonNodes.some(node => node.properties && String(node.properties.NODE_ID) === String(place.id))
+      ).length;
+      
+      success = mappedPlaces > 0;
+      if (success) {
+        message = `[useGeoJsonState] 장소 ${totalPlaces}개 중 ${mappedPlaces}개가 GeoJSON 노드에 매핑됨`;
+      } else {
+        message = `[useGeoJsonState] 장소 ${totalPlaces}개 중 GeoJSON 노드에 매핑된 장소가 없습니다.`;
+      }
+      console.log(message);
     }
     
-    const mappedCount = places.filter(place => {
-      return geoJsonNodes.some(node => node.properties && String(node.properties.NODE_ID) === String(place.id));
-    }).length;
+    const mappingRate = totalPlaces > 0 ? ((mappedPlaces / totalPlaces) * 100).toFixed(2) + '%' : '0%';
     
-    console.log(`[useGeoJsonState] 장소 ${places.length}개 중 ${mappedCount}개가 GeoJSON 노드에 매핑됨`);
-    return mappedCount > 0;
+    // TODO: 평균 거리 계산 로직은 필요시 추가 구현
+    const averageDistance = 'N/A'; 
+
+    return {
+      totalPlaces,
+      mappedPlaces,
+      mappingRate,
+      averageDistance,
+      success,
+      message
+    };
   }, [geoJsonNodes]);
 
   // GeoJSON 레이어 가시성 토글 함수
