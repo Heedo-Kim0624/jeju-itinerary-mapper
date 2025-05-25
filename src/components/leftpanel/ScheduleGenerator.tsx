@@ -139,7 +139,7 @@ const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({
   }, [selectedPlaces, dates, startDatetimeLocal, endDatetimeLocal]);
 
   if (isLoading) {
-    return <ScheduleLoadingIndicator onClose={onClose} />;
+    return <ScheduleLoadingIndicator />; // onClose prop 제거
   }
 
   if (itinerary && itinerary.length > 0) {

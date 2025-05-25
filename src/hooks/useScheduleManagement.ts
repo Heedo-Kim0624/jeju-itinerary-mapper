@@ -119,7 +119,7 @@ export const useScheduleManagement = ({
         // 기존 로직 (실제 API 호출 등) - 현재는 manualLogData 사용에 집중
         // 여기서는 manualLogData가 없으면 에러 처리 또는 기존 API 호출 로직을 넣어야 합니다.
         // 지금은 manualLogData가 있을 때만 동작하도록 합니다.
-        toast.warn("수동 로그 데이터가 제공되지 않았습니다. 실제 API 호출 로직이 필요합니다.");
+        toast.warning("수동 로그 데이터가 제공되지 않았습니다. 실제 API 호출 로직이 필요합니다.");
         setIsManuallyGenerating(false);
         setIsLoadingState(false);
         return;
