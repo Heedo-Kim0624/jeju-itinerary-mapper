@@ -1,39 +1,38 @@
+// @ts-nocheck
+// TODO: map.js 관련 타입 정의 추가 필요
 
 export const clearMarkers = (markers: any[]) => {
-  markers.forEach(marker => {
-    if (marker && typeof marker.setMap === 'function') {
-      try {
+  if (markers && markers.length > 0) {
+    markers.forEach(marker => {
+      if (marker && typeof marker.setMap === 'function') {
         marker.setMap(null);
-      } catch (error) {
-        console.error("Error clearing marker:", error);
       }
-    }
-  });
-  return [];
-};
-
-export const clearInfoWindows = (infoWindows: any[]) => {
-  infoWindows.forEach(infoWindow => {
-    if (infoWindow && typeof infoWindow.close === 'function') {
-      try {
-        infoWindow.close();
-      } catch (error) {
-        console.error("Error closing infoWindow:", error);
-      }
-    }
-  });
-  return [];
+    });
+  }
+  return []; // 항상 새 배열 반환
 };
 
 export const clearPolylines = (polylines: any[]) => {
-  polylines.forEach(polyline => {
-    if (polyline && typeof polyline.setMap === 'function') {
-      try {
+  if (polylines && polylines.length > 0) {
+    polylines.forEach(polyline => {
+      if (polyline && typeof polyline.setMap === 'function') {
         polyline.setMap(null);
-      } catch (error) {
-        console.error("Error clearing polyline:", error);
       }
-    }
-  });
-  return [];
+    });
+  }
+  return []; // 항상 새 배열 반환
+};
+
+export const clearInfoWindows = (infoWindows: any[]) => {
+  if (infoWindows && infoWindows.length > 0) {
+    infoWindows.forEach(infoWindow => {
+      if (infoWindow && typeof infoWindow.close === 'function') {
+        infoWindow.close(); // 정보창 닫기
+      }
+      if (infoWindow && typeof infoWindow.setMap === 'function') {
+        infoWindow.setMap(null); // 지도에서 제거 (필요한 경우)
+      }
+    });
+  }
+  return []; // 항상 새 배열 반환
 };
