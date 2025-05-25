@@ -1,4 +1,3 @@
-
 /**
  * Types related to route data and segments
  */
@@ -8,6 +7,7 @@ export interface RouteData {
   nodeIds: string[];
   linkIds: string[];
   segmentRoutes?: SegmentRoute[];
+  day?: number; // 일자 정보 추가
 }
 
 // Segment route interface

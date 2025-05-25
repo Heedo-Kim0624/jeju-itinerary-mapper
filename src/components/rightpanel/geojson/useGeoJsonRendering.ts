@@ -15,35 +15,50 @@ export const useGeoJsonRendering = (
   map: naver.maps.Map | null,
   isLoaded: boolean,
   getNodeById: (id: string) => GeoNode | undefined,
-  getLinkById: (id: string) => GeoLink | undefined
+  getLinkById: (id: string) => GeoLink | undefined,
+  onRenderingComplete?: () => void // Make callback optional, to be provided by MapContext/useMapCore
 ) => {
   const activeMarkersRef = useRef<naver.maps.Marker[]>([]);
   const activePolylinesRef = useRef<naver.maps.Polyline[]>([]);
 
   const clearDisplayedFeatures = useCallback(() => {
+    // console.log('[useGeoJsonRendering] Clearing all GeoJSON features');
     activeMarkersRef.current.forEach(marker => marker.setMap(null));
     activeMarkersRef.current = [];
     activePolylinesRef.current.forEach(polyline => polyline.setMap(null));
     activePolylinesRef.current = [];
-    console.log('[useGeoJsonRendering] 모든 GeoJSON 경로 피처(마커, 폴리라인) 제거됨');
+    // console.log('[useGeoJsonRendering] All GeoJSON route features (markers, polylines) removed.');
   }, []);
 
-  const renderRoute = useCallback((nodeIds: string[], linkIds: string[], style: RouteStyle = defaultRouteStyle): (naver.maps.Marker | naver.maps.Polyline)[] => {
+  const renderRoute = useCallback((
+    nodeIds: string[], 
+    linkIds: string[], 
+    dayForLogging: number | null, // 일자 정보 (로깅용)
+    style: RouteStyle = defaultRouteStyle
+  ): (naver.maps.Marker | naver.maps.Polyline)[] => {
+    const loggingPrefix = `[GeoJsonRendering Day ${dayForLogging ?? 'N/A'}]`;
+
     if (!map || !isLoaded || !window.naver || !window.naver.maps) {
-      console.warn('[useGeoJsonRendering] renderRoute: 지도 미초기화, GeoJSON 미로드, 또는 Naver API 미준비.');
+      console.warn(`${loggingPrefix} renderRoute: Map not initialized, GeoJSON not loaded, or Naver API not ready.`);
+      if (onRenderingComplete) onRenderingComplete(); // Still call complete if skipping
       return [];
     }
 
+    console.log(`${loggingPrefix} Rendering route. Links: ${linkIds.length}, Nodes: ${nodeIds.length}`);
+    
     clearDisplayedFeatures();
 
     const newRenderedFeatures: (naver.maps.Marker | naver.maps.Polyline)[] = [];
     const newPolylines: naver.maps.Polyline[] = [];
     const newMarkers: naver.maps.Marker[] = [];
+    let missingLinkCount = 0;
+    let missingNodeCount = 0;
 
     linkIds.forEach(linkId => {
       const link = getLinkById(String(linkId));
       if (!link || !link.coordinates || !Array.isArray(link.coordinates) || link.coordinates.length < 2) {
-        console.warn(`[useGeoJsonRendering] 링크 ID ${linkId}를 찾을 수 없거나 좌표가 유효하지 않습니다. Coordinates:`, link?.coordinates);
+        // console.warn(`${loggingPrefix} Link ID ${linkId} not found or coordinates invalid.`);
+        missingLinkCount++;
         return;
       }
       if (!window.naver || !window.naver.maps) return;
@@ -63,14 +78,16 @@ export const useGeoJsonRendering = (
         newPolylines.push(polyline);
         newRenderedFeatures.push(polyline);
       } catch (e) {
-        console.error(`[useGeoJsonRendering] 링크 ${linkId} 렌더링 중 오류:`, e, link);
+        console.error(`${loggingPrefix} Error rendering link ${linkId}:`, e, link);
+        missingLinkCount++;
       }
     });
 
     nodeIds.forEach(nodeId => {
       const node = getNodeById(String(nodeId));
       if (!node || !node.coordinates || !Array.isArray(node.coordinates) || node.coordinates.length < 2) {
-        console.warn(`[useGeoJsonRendering] 노드 ID ${nodeId}를 찾을 수 없거나 좌표가 유효하지 않습니다. Coordinates:`, node?.coordinates);
+        // console.warn(`${loggingPrefix} Node ID ${nodeId} not found or coordinates invalid.`);
+        missingNodeCount++;
         return;
       }
       if (!window.naver || !window.naver.maps) return;
@@ -89,19 +106,24 @@ export const useGeoJsonRendering = (
         newMarkers.push(marker);
         newRenderedFeatures.push(marker);
       } catch (e) {
-        console.error(`[useGeoJsonRendering] 노드 ${nodeId} 렌더링 중 오류:`, e, node);
+        console.error(`${loggingPrefix} Error rendering node ${nodeId}:`, e, node);
+        missingNodeCount++;
       }
     });
 
     activePolylinesRef.current = newPolylines;
     activeMarkersRef.current = newMarkers;
-    console.log(`[useGeoJsonRendering] 경로 렌더링 완료: ${newPolylines.length} 링크, ${newMarkers.length} 노드`);
+    console.log(`${loggingPrefix} Route rendering complete: ${newPolylines.length} links, ${newMarkers.length} nodes. (Missing: ${missingLinkCount} links, ${missingNodeCount} nodes)`);
+    
+    if (onRenderingComplete) {
+      onRenderingComplete(); // Call the completion callback
+    }
+    
     return newRenderedFeatures;
-  }, [map, isLoaded, clearDisplayedFeatures, getLinkById, getNodeById]);
+  }, [map, isLoaded, clearDisplayedFeatures, getLinkById, getNodeById, onRenderingComplete]);
 
   return {
     renderRoute,
     clearDisplayedFeatures,
-    // activeMarkersRef and activePolylinesRef are internal to this hook
   };
 };

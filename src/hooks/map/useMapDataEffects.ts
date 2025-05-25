@@ -1,20 +1,21 @@
 
 import { useCallback, useState, useEffect, useRef } from 'react';
-import type { Place, ItineraryDay } from '@/types/supabase';
+import type { Place, ItineraryDay } from '@/types/supabase'; // or @/types/core
 import type { ServerRouteDataForDay } from '@/hooks/map/useServerRoutes';
+import { useMapContext } from '@/components/rightpanel/MapContext'; // For handleRouteRenderingCompleteForContext
 
 interface UseMapDataEffectsProps {
   isMapInitialized: boolean;
   isGeoJsonLoaded: boolean;
-  renderItineraryRoute: (
+  renderItineraryRoute: ( // This comes from MapContext -> useMapCore -> useRouteManager
     itineraryDay: ItineraryDay | null,
     allServerRoutes?: Record<number, ServerRouteDataForDay>,
-    onComplete?: () => void
+    onComplete?: () => void // This onComplete is for the renderItineraryRoute itself
   ) => void;
   serverRoutesData: Record<number, ServerRouteDataForDay> | null;
   checkGeoJsonMapping: (places: Place[]) => void;
-  places: Place[]; // General places
-  itinerary: ItineraryDay[] | null; // Full itinerary
+  places: Place[]; 
+  itinerary: ItineraryDay[] | null; 
   selectedDay: number | null;
 }
 
@@ -31,12 +32,14 @@ export const useMapDataEffects = ({
   const prevItineraryRef = useRef<ItineraryDay[] | null>(null);
   const prevSelectedDayRef = useRef<number | null>(null);
   const prevServerRoutesDataRef = useRef<Record<number, ServerRouteDataForDay> | null>(null);
-  const [isRouteVisualized, setIsRouteVisualized] = useState(false);
+  // const [isRouteVisualized, setIsRouteVisualized] = useState(false); // This state might be less relevant now
   
   const routeRenderingInProgressRef = useRef(false);
+  const { handleRouteRenderingCompleteForContext } = useMapContext(); // Get context's handler
 
   const handlePlaceClick = useCallback((place: Place, index: number) => {
-    // This function is for individual place clicks
+    // This function is for individual place clicks, can be expanded later
+    console.log(`[MapDataEffects] Place clicked: ${place.name}, index: ${index}`);
   }, []);
 
   // Main effect for route visualization
@@ -58,17 +61,15 @@ export const useMapDataEffects = ({
       }
       routeRenderingInProgressRef.current = true;
 
-      // Update refs immediately to prevent re-entry with stale ref values
-      // These refs track the state for which processing has started.
       prevItineraryRef.current = itinerary;
       prevSelectedDayRef.current = selectedDay;
       prevServerRoutesDataRef.current = serverRoutesData;
 
-      // Defer the actual rendering logic to ensure it happens after potential state updates settle
       timeoutId = setTimeout(() => {
         console.log(`[MapDataEffects] Starting route processing for day: ${selectedDay}. Clearing old routes first.`);
-        // Clear existing polylines by rendering null.
-        // The renderItineraryRoute function should handle actual polyline clearing.
+        
+        // The renderItineraryRoute (from useRouteManager) should handle clearing its polylines.
+        // It then calls its own onComplete.
         renderItineraryRoute(null, serverRoutesData || undefined, () => {
           console.log(`[MapDataEffects] Old routes cleared for day: ${selectedDay}. Now checking for new route.`);
           let effectiveItineraryDay: ItineraryDay | null = null;
@@ -80,24 +81,37 @@ export const useMapDataEffects = ({
           if (effectiveItineraryDay) {
             console.log(`[MapDataEffects] Rendering new route for day ${selectedDay}`);
             renderItineraryRoute(effectiveItineraryDay, serverRoutesData || undefined, () => {
-              setIsRouteVisualized(true);
+              // This onComplete is for the *new* route rendering.
+              // setIsRouteVisualized(true);
               routeRenderingInProgressRef.current = false;
-              console.log(`[MapDataEffects] Route for day ${selectedDay} rendered. Dispatching event.`);
-              window.dispatchEvent(new CustomEvent('routeRenderingComplete', { detail: { day: selectedDay, status: 'rendered' } }));
+              console.log(`[MapDataEffects] Route for day ${selectedDay} rendered. Notifying MapContext.`);
+              if (handleRouteRenderingCompleteForContext) {
+                handleRouteRenderingCompleteForContext(); // Notify MapContext
+              }
+              // Event dispatch 'routeRenderingComplete' is now 'routeRenderingCompleteInternal' from MapContext
             });
           } else {
-            console.log(`[MapDataEffects] No valid itinerary data for day ${selectedDay}, routes remain cleared. Dispatching event.`);
-            setIsRouteVisualized(false); // No route is visualized
+            console.log(`[MapDataEffects] No valid itinerary data for day ${selectedDay}, routes remain cleared. Notifying MapContext.`);
+            // setIsRouteVisualized(false);
             routeRenderingInProgressRef.current = false;
-            window.dispatchEvent(new CustomEvent('routeRenderingComplete', { detail: { day: selectedDay, status: 'cleared' } }));
+            if (handleRouteRenderingCompleteForContext) {
+                handleRouteRenderingCompleteForContext(); // Notify MapContext even if no route, so markers can proceed
+            }
+            // Event dispatch 'routeRenderingComplete' is now 'routeRenderingCompleteInternal' from MapContext
           }
         });
-      }, 0); // setTimeout 0 to defer to next tick
+      }, 0); 
     }
     return () => {
       if (timeoutId) {
         clearTimeout(timeoutId);
       }
+      // If a route rendering was in progress and component unmounts or effect re-runs, reset the lock.
+      // This might need careful handling if multiple effects can trigger route rendering.
+      // For now, assume this effect is the primary driver for day changes.
+      // if (routeRenderingInProgressRef.current) {
+      //   routeRenderingInProgressRef.current = false;
+      // }
     };
   }, [
     isMapInitialized,
@@ -105,9 +119,9 @@ export const useMapDataEffects = ({
     itinerary,
     selectedDay,
     serverRoutesData,
+    handleRouteRenderingCompleteForContext, // Added dependency
   ]);
 
-  // Map geoJSON data to places only when needed 
   useEffect(() => {
     if (isMapInitialized && isGeoJsonLoaded && places.length > 0 && checkGeoJsonMapping) {
       checkGeoJsonMapping(places);
@@ -115,8 +129,7 @@ export const useMapDataEffects = ({
   }, [isMapInitialized, isGeoJsonLoaded, places, checkGeoJsonMapping]);
 
   return {
-    isRouteVisualized,
+    // isRouteVisualized, // This state might be less critical now.
     handlePlaceClick,
   };
 };
-
