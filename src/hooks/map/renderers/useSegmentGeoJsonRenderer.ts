@@ -54,7 +54,10 @@ export const useSegmentGeoJsonRenderer = ({
       const coords = getNodeCoordinates(nodeId);
       if (coords) {
         const naverLatLng = createNaverLatLng(coords.lat, coords.lng);
-        path.push(naverLatLng);
+        // 타입 안전성을 위해 naverLatLng가 유효한지 확인 후 추가
+        if (naverLatLng && typeof naverLatLng === 'object') {
+          path.push(naverLatLng);
+        }
       }
     });
 
@@ -96,7 +99,10 @@ export const useSegmentGeoJsonRenderer = ({
       const coords = getNodeCoordinates(nodeId);
       if (coords) {
         const naverLatLng = createNaverLatLng(coords.lat, coords.lng);
-        path.push(naverLatLng);
+        // 타입 안전성을 위해 naverLatLng가 유효한지 확인 후 추가
+        if (naverLatLng && typeof naverLatLng === 'object') {
+          path.push(naverLatLng);
+        }
       }
     });
 
