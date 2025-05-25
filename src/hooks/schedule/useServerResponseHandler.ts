@@ -1,11 +1,9 @@
-
 import { useCallback, useEffect, useRef } from 'react';
 import { NewServerScheduleResponse, ItineraryDay } from '@/types/core';
-// import { getDateStringMMDD, getDayOfWeekString } from '../itinerary/parser-utils/timeUtils'; // 사용되지 않으므로 주석 처리
 import { useSupabaseDataFetcher } from '../data/useSupabaseDataFetcher';
 import { useItineraryEnricher } from '../itinerary/useItineraryEnricher';
 import { useRouteMemoryStore } from '@/hooks/map/useRouteMemoryStore';
-import { eventEmitter, GlobalEventEmitter } from '@/utils/eventEmitter'; // GlobalEventEmitter 추가
+import { GlobalEventEmitter } from '@/utils/eventEmitter'; // GlobalEventEmitter import
 
 interface ServerResponseHandlerProps {
   onServerResponse: (response: NewServerScheduleResponse) => void;
@@ -21,7 +19,7 @@ export const useServerResponseHandler = ({
 }: ServerResponseHandlerProps) => {
   const listenerRegistered = useRef(false);
   const { fetchAllCategoryData } = useSupabaseDataFetcher();
-  const { enrichItineraryData } = useItineraryEnricher(); // enrichItineraryData 사용
+  const { enrichItineraryData } = useItineraryEnricher(); 
   const { initializeFromServerResponse: initializeRouteMemory } = useRouteMemoryStore();
   
   const handleRawServerResponse = useCallback(async (event: Event) => {
@@ -44,7 +42,7 @@ export const useServerResponseHandler = ({
     } else {
       console.error("[useServerResponseHandler] Server response event did not contain valid response data.");
     }
-  }, [onServerResponse, fetchAllCategoryData, initializeRouteMemory]); // enrichItineraryData 제거, GlobalEventEmitter 의존성 불필요
+  }, [onServerResponse, fetchAllCategoryData, initializeRouteMemory]); 
 
   useEffect(() => {
     if (enabled && !listenerRegistered.current) {
@@ -64,42 +62,39 @@ export const useServerResponseHandler = ({
     }
   }, [enabled, handleRawServerResponse]);
 
-  // processServerResponse 함수는 더 이상 originalParseServerResponse를 직접 호출하지 않고,
-  // enrichItineraryData를 사용하여 itineraryDays를 보강합니다.
-  // ItineraryDay[]를 반환하도록 수정합니다.
   const processServerResponse = useCallback((
     serverResponse: NewServerScheduleResponse,
-    startDate: Date, // startDate는 enrichItineraryData 또는 하위 로직에서 사용될 수 있습니다.
-    itineraryDaysInput: ItineraryDay[] // 파싱된 ItineraryDay[]를 입력으로 받음
+    startDate: Date, 
+    itineraryDaysInput: ItineraryDay[] 
   ): ItineraryDay[] => {
     console.log("[processServerResponse] Starting server response processing.");
     
     try {
-      // initializeRouteMemory는 handleRawServerResponse에서 호출됩니다.
-      // 여기서 itineraryDaysInput (예: 외부 파서 결과)을 받아 보강합니다.
       console.log("[processServerResponse] Base parsing (assumed done externally) resulted in:", itineraryDaysInput.length, "days.");
       
-      const enrichedItinerary = enrichItineraryData(itineraryDaysInput); // itineraryDaysInput 사용
+      const enrichedItinerary = enrichItineraryData(itineraryDaysInput); 
       console.log("[processServerResponse] Supabase data enrichment complete.");
       
       return enrichedItinerary;
     } catch (error) {
       console.error("[processServerResponse] Error during response processing:", error);
-      return []; // 오류 발생 시 빈 배열 반환
+      return []; 
     }
-  }, [enrichItineraryData]); // 의존성 배열에서 startDate 제거, 필요한 경우 다시 추가
+  }, [enrichItineraryData]); 
 
   return {
     isListenerRegistered: listenerRegistered.current,
-    processServerResponse
+    processServerResponse // processServerResponse를 반환
   };
 };
 
-// parseServerResponse는 외부에서 사용될 수 있도록 export를 유지합니다.
-// (구현은 제공되지 않았으므로, 기존 파일에 해당 함수가 있다고 가정)
-// export const parseServerResponse = ... (기존 parseServerResponse 함수 구현)
-// 만약 parseServerResponse 함수가 없다면, 이 export는 제거해야 합니다.
-// 여기서는 originalParseServerResponse가 실제 parseServerResponse를 의미한다고 가정하고,
-// 이 파일 내에서는 직접 사용하지 않으므로, 해당 export는 필요에 따라 유지/제거합니다.
-// 현재 파일에서는 사용되지 않으므로 주석 처리 또는 삭제 가능.
-// export const parseServerResponse = originalParseServerResponse; 
+// processServerResponse를 parseServerResponse라는 이름으로 export (shim 역할)
+// 또는 consumer에서 processServerResponse를 직접 사용하도록 변경할 수 있음
+// 여기서는 useScheduleParser.ts에서 처리하도록 남겨둠.
+// 만약 parseServerResponse라는 이름으로 export해야 한다면 아래와 같이 추가:
+// export const parseServerResponse = (ssr: NewServerScheduleResponse, sd: Date, idi: ItineraryDay[]) => {
+//   const { processServerResponse: psr } = useServerResponseHandler({onServerResponse: () => {}, enabled: false});
+//   return psr(ssr, sd, idi);
+// };
+// 하지만 이는 훅 내부 로직을 외부에서 호출하는 방식이므로 권장되지 않음.
+// 대신 useScheduleParser.ts에서 useServerResponseHandler의 processServerResponse를 가져와 export.
