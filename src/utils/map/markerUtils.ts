@@ -1,4 +1,3 @@
-
 import type { Place } from '@/types/supabase';
 import type { ItineraryPlaceWithTime } from '@/types/core';
 import { createNaverLatLng } from './mapSetup';
@@ -93,7 +92,8 @@ export const createNaverMarker = (
   iconConfig?: { url?: string; size?: { width: number; height: number }; anchor?: { x: number; y: number }; content?: string },
   title?: string,
   clickable: boolean = true,
-  visible: boolean = true
+  visible: boolean = true,
+  zIndex?: number // zIndex 파라미터 추가
 ) => {
   if (!window.naver || !window.naver.maps) {
     console.error("Naver Maps API not initialized when creating marker.");
@@ -115,7 +115,7 @@ export const createNaverMarker = (
                 new window.naver.maps.Point(
                   iconConfig.size?.width ? iconConfig.size.width/2 : 14, 
                   iconConfig.size?.height ? iconConfig.size.height/2 : 14
-                ), // 앵커 포인트를 원의 중심으로 조정
+                ),
       };
     }
   }
@@ -127,6 +127,7 @@ export const createNaverMarker = (
     title: title,
     clickable: clickable,
     visible: visible,
+    zIndex: zIndex, // zIndex 설정
   });
 };
 
@@ -155,7 +156,9 @@ export const addMarkersToMap = (
     
     const iconOptions = getMarkerIconOptions(place, isSelected, isCandidate, false, undefined);
     
-    const marker = createNaverMarker(map, position, iconOptions, place.name);
+    // Default zIndex for general markers, selected markers could have higher zIndex
+    const zIndex = isSelected ? 200 : 50;
+    const marker = createNaverMarker(map, position, iconOptions, place.name, true, true, zIndex);
     
     if (marker && window.naver.maps.Event) {
       window.naver.maps.Event.addListener(marker, 'click', () => {

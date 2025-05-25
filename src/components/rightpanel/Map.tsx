@@ -1,11 +1,10 @@
-
-import React, { useEffect, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { useMapContext } from './MapContext';
 import MapMarkers from './MapMarkers';
 import MapLoadingOverlay from './MapLoadingOverlay';
 import GeoJsonLayer from './GeoJsonLayer';
 import MapControls from './MapControls';
-import type { Place, ItineraryDay } from '@/types/supabase'; // Assuming this is correct, otherwise use types/core
+import type { Place, ItineraryDay } from '@/types/supabase';
 import { useMapDataEffects } from '@/hooks/map/useMapDataEffects';
 
 interface MapProps {
@@ -29,14 +28,11 @@ const Map: React.FC<MapProps> = ({
     isMapInitialized,
     isNaverLoaded,
     isMapError,
-    showGeoJson, // This prop is used by MapControls and GeoJsonLayer
-    toggleGeoJsonVisibility, // This prop is used by MapControls
+    showGeoJson,
+    toggleGeoJsonVisibility,
     handleGeoJsonLoaded,
     isGeoJsonLoaded,
     checkGeoJsonMapping,
-    serverRoutesData,
-    renderItineraryRoute,
-    // updateDayPolylinePaths, // useMapContext에서 가져오는 updateDayPolylinePaths는 useMapDataEffects에 직접 전달하지 않음
   } = useMapContext();
 
   // 현재 선택된 일자의 itinerary 데이터
@@ -50,29 +46,21 @@ const Map: React.FC<MapProps> = ({
   const { handlePlaceClick } = useMapDataEffects({
     isMapInitialized,
     isGeoJsonLoaded,
-    renderItineraryRoute,
-    // updateDayPolylinePaths, // 이 줄을 제거하여 오류 수정
-    serverRoutesData,
+    renderItineraryRoute: useMapContext().renderItineraryRoute,
+    serverRoutesData: useMapContext().serverRoutesData,
     checkGeoJsonMapping,
     places,
     itinerary,
     selectedDay,
   });
 
-  // 일정 및 선택된 일자가 변경되면 경로 렌더링
-  useEffect(() => {
-    // useMapDataEffects 훅 내부에서 renderItineraryRoute가 호출되므로,
-    // 이 useEffect 블록은 중복 로직이 될 수 있습니다.
-    // useMapDataEffects 내부의 로직이 의도대로 동작하는지 확인 후, 필요하다면 이 블록을 조정하거나 제거할 수 있습니다.
-    // 현재는 useMapDataEffects에 의존하여 경로 렌더링이 관리되므로, 이 블록은 잠재적으로 중복되거나 충돌을 일으킬 수 있습니다.
-    // 이전 단계에서 useMapDataEffects가 경로 렌더링을 담당하도록 수정되었으므로, 이 useEffect는 제거하거나
-    // 매우 특정한 다른 목적 (예: serverRoutesData가 아직 없을 때의 초기 마커 표시 등)으로 재정의해야 합니다.
-    // 지금은 콘솔 로그를 유지하여 흐름을 관찰합니다.
-    if (itinerary && selectedDay !== null && currentDayItinerary && renderItineraryRoute) {
-      console.log(`[Map Component Effect] Selected day ${selectedDay} has ${currentDayItinerary.places?.length || 0} places. Attempting to render route.`);
-      // renderItineraryRoute(currentDayItinerary, serverRoutesData); // 이 호출은 useMapDataEffects에서 이미 처리될 가능성이 높음
-    }
-  }, [itinerary, selectedDay, currentDayItinerary, serverRoutesData, renderItineraryRoute]);
+  // 일정 및 선택된 일자가 변경되면 경로 렌더링하는 useEffect는 useMapDataEffects로 이전되었으므로 제거.
+  // useEffect(() => {
+  //   if (itinerary && selectedDay !== null && currentDayItinerary && renderItineraryRoute) {
+  //     console.log(`[Map Component Effect] Selected day ${selectedDay} has ${currentDayItinerary.places?.length || 0} places. Attempting to render route.`);
+  //     // renderItineraryRoute(currentDayItinerary, serverRoutesData); // This call is likely handled by useMapDataEffects
+  //   }
+  // }, [itinerary, selectedDay, currentDayItinerary, serverRoutesData, renderItineraryRoute]);
 
   // MapMarkers에 대한 고유 키 생성 - 의존성 배열 확장
   const markersKey = useMemo(() => {
@@ -128,4 +116,3 @@ const Map: React.FC<MapProps> = ({
 };
 
 export default Map;
-

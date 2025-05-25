@@ -1,11 +1,10 @@
-
 import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useServerResponseHandler } from '@/hooks/schedule/useServerResponseHandler';
 import { useScheduleStateAndEffects } from '@/hooks/schedule/useScheduleStateAndEffects';
 import { useScheduleGenerationCore } from '@/hooks/schedule/useScheduleGenerationCore';
 import { useMapContext } from '@/components/rightpanel/MapContext';
-import { type ItineraryDay, type SelectedPlace } from '@/types/core';
+import { type ItineraryDay, type SelectedPlace, type Place } from '@/types/core';
 
 interface ScheduleManagementProps {
   selectedPlaces: SelectedPlace[];
@@ -19,6 +18,18 @@ interface ScheduleManagementProps {
   endDatetime: string | null;
 }
 
+// 제주국제공항 정보
+const JEJU_AIRPORT_TEMPLATE: Omit<SelectedPlace, 'id'> = {
+  name: '제주국제공항',
+  x: 126.4920, // Longitude
+  y: 33.5113,  // Latitude
+  category: '교통', // 또는 '공항' 등 적절한 카테고리
+  address: '제주특별자치도 제주시 공항로 2', // 실제 주소 또는 간략 주소
+  photoUrl: '', // 필요시 이미지 URL
+  // SelectedPlace에 필요한 다른 필드가 있다면 기본값으로 채워줍니다.
+  // 예: mapCategory: 'airport', subCategory: 'international' 등
+};
+
 export const useScheduleManagement = ({
   selectedPlaces,
   dates,
@@ -26,7 +37,7 @@ export const useScheduleManagement = ({
   endDatetime
 }: ScheduleManagementProps) => {
   const [isManuallyGenerating, setIsManuallyGenerating] = useState(false);
-  const { clearMarkersAndUiElements, clearAllRoutes, setServerRoutes } = useMapContext();
+  const { clearMarkersAndUiElements, clearAllRoutes, setServerRoutes, geoJsonNodes } = useMapContext();
   
   const {
     itinerary,
@@ -41,7 +52,7 @@ export const useScheduleManagement = ({
   const { processServerResponse } = useScheduleGenerationCore({
     selectedPlaces,
     startDate: dates?.startDate || new Date(),
-    geoJsonNodes: [], 
+    geoJsonNodes: geoJsonNodes || [], 
     setItinerary,
     setSelectedDay,
     setServerRoutes,
@@ -66,7 +77,7 @@ export const useScheduleManagement = ({
     }
 
     // Validate required data
-    if (selectedPlaces.length === 0) {
+    if (selectedPlaces.length === 0 && !JEJU_AIRPORT_TEMPLATE) { // 공항 정보가 없을 경우 대비
       toast.error("선택된 장소가 없습니다. 장소를 선택해주세요.");
       return;
     }
@@ -107,16 +118,33 @@ export const useScheduleManagement = ({
       // Trigger actual schedule generation with detail
       setTimeout(() => {
         try {
+          // 공항 정보를 포함한 장소 목록 생성
+          const airportStart: SelectedPlace = { ...JEJU_AIRPORT_TEMPLATE, id: `jeju-airport-start-${Date.now()}` };
+          const airportEnd: SelectedPlace = { ...JEJU_AIRPORT_TEMPLATE, id: `jeju-airport-end-${Date.now()}` };
+
+          let placesForGeneration: SelectedPlace[] = selectedPlaces.filter(
+            p => !(p.name === JEJU_AIRPORT_TEMPLATE.name && p.x === JEJU_AIRPORT_TEMPLATE.x && p.y === JEJU_AIRPORT_TEMPLATE.y)
+          );
+          
+          // 사용자 선택 장소가 없어도 공항 출발/도착은 기본으로
+          if (placesForGeneration.length === 0) {
+            placesForGeneration = [airportStart, airportEnd];
+          } else {
+            placesForGeneration = [airportStart, ...placesForGeneration, airportEnd];
+          }
+          
+          console.log("[useScheduleManagement] Places for generation (with airport):", placesForGeneration.map(p=>p.name));
+
           const event = new CustomEvent("startScheduleGeneration", {
             detail: {
-              selectedPlaces,
+              selectedPlaces: placesForGeneration, // 공항이 추가된 장소 목록 사용
               startDatetime,
               endDatetime,
             },
           });
           
           console.log("[useScheduleManagement] Detailed schedule generation event dispatched:", {
-            selectedPlacesCount: selectedPlaces.length,
+            selectedPlacesCount: placesForGeneration.length,
             startDatetime,
             endDatetime,
           });
@@ -143,23 +171,24 @@ export const useScheduleManagement = ({
     
   }, [
     combinedIsLoading,
-    selectedPlaces,
+    selectedPlaces, // 원본 selectedPlaces는 의존성에 유지
     startDatetime, 
     endDatetime, 
     clearMarkersAndUiElements,
     clearAllRoutes,
     setIsLoadingState,
-    isManuallyGenerating,
-    isLoadingState
+    // isManuallyGenerating, // useCallback 내부에서 setIsManuallyGenerating 상태를 변경하므로, 의존성에서 제외하거나 주의해야 함
+    // isLoadingState      // useCallback 내부에서 setIsLoadingState 상태를 변경하므로, 의존성에서 제외하거나 주의해야 함
   ]);
 
   // Reset state when server response is processed
   useEffect(() => {
-    if (itinerary && itinerary.length > 0 && isManuallyGenerating) {
-      console.log("[useScheduleManagement] Server response processed, resetting loading state");
+    if (itinerary && itinerary.length > 0 && (isManuallyGenerating || isLoadingState)) { // isLoadingState도 함께 체크
+      console.log("[useScheduleManagement] Server response processed, resetting loading states");
       setIsManuallyGenerating(false);
+      setIsLoadingState(false); // isLoadingState도 리셋
     }
-  }, [itinerary, isManuallyGenerating]);
+  }, [itinerary, isManuallyGenerating, isLoadingState, setIsManuallyGenerating, setIsLoadingState]); // 의존성 추가
 
   return {
     itinerary,

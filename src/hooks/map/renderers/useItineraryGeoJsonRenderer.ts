@@ -1,6 +1,6 @@
 import { useCallback, useEffect } from 'react';
 import type { Place, ItineraryDay } from '@/types/supabase';
-import type { GeoCoordinates } from '@/components/rightpanel/geojson/GeoJsonTypes';
+import type { GeoCoordinates, GeoNode } from '@/components/rightpanel/geojson/GeoJsonTypes';
 import type { ServerRouteDataForDay } from '@/hooks/map/useServerRoutes';
 import { fitBoundsToCoordinates } from '@/utils/map/mapViewControls';
 import { useGeoJsonContext } from '@/contexts/GeoJsonContext';
@@ -10,6 +10,7 @@ const USER_ROUTE_COLOR = '#2563EB';
 const USER_ROUTE_WEIGHT = 5;
 const USER_ROUTE_OPACITY = 0.7;
 const USER_ROUTE_ZINDEX = 100;
+const FALLBACK_ROUTE_COLOR = '#FF8C00'; // 주황색으로 대체 경로 표시
 
 interface UseItineraryGeoJsonRendererProps {
   map: any;
@@ -41,6 +42,7 @@ export const useItineraryGeoJsonRenderer = ({
   const {
     isGeoJsonLoaded: isContextGeoJsonLoaded,
     getLinkByLinkIdFromContext,
+    getNodeByIdFromContext, // 노드 정보를 가져오기 위해 추가
   } = useGeoJsonContext();
 
   useEffect(() => {
@@ -71,7 +73,7 @@ export const useItineraryGeoJsonRenderer = ({
       const currentDayServerData = allServerRoutes ? allServerRoutes[itineraryDay.day] : null;
       
       if (currentDayServerData && !currentDayServerData.itineraryDayData) {
-          console.warn(`[ItineraryGeoJsonRenderer] Day ${itineraryDay.day}: server data exists but itineraryDayData is missing. This should not happen.`);
+          console.warn(`[ItineraryGeoJsonRenderer] Day ${itineraryDay.day}: server data exists but itineraryDayData is missing.`);
       }
       
       const cachedPolylinePaths = currentDayServerData?.polylinePaths;
@@ -91,10 +93,11 @@ export const useItineraryGeoJsonRenderer = ({
           newCalculatedPolylinePaths = cachedPolylinePaths;
         } else if (itineraryDay.routeData?.linkIds && itineraryDay.routeData.linkIds.length > 0 && isContextGeoJsonLoaded) {
           console.log(`[ItineraryGeoJsonRenderer] Day ${itineraryDay.day}: Link ID 기반 경로 계산. 링크 수: ${itineraryDay.routeData.linkIds.length}`);
-          const { linkIds } = itineraryDay.routeData;
+          const { linkIds, nodeIds } = itineraryDay.routeData; // nodeIds도 사용
+          const interleavedRoute = itineraryDay.interleaved_route || [];
           let missingLinkCount = 0;
           
-          linkIds.forEach((linkIdInput) => {
+          linkIds.forEach((linkIdInput, index) => {
             const stringLinkIdToFind = String(linkIdInput).trim();
             const linkFeature = getLinkByLinkIdFromContext(stringLinkIdToFind);
 
@@ -113,14 +116,44 @@ export const useItineraryGeoJsonRenderer = ({
               }
             } else {
               missingLinkCount++;
-              console.warn(`[ItineraryGeoJsonRenderer] Day ${itineraryDay.day}: GeoJSON Link ID '${stringLinkIdToFind}'에 해당하는 데이터를 찾을 수 없습니다.`);
+              console.warn(`[ItineraryGeoJsonRenderer] Day ${itineraryDay.day}: GeoJSON Link ID '${stringLinkIdToFind}' 없음. Fallback 시도.`);
+
+              // Fallback to direct line using interleaved_route
+              // interleaved_route is [N0, L0, N1, L1, N2, ...]
+              // linkIds[index] is interleaved_route[2*index + 1]
+              // Nodes are interleaved_route[2*index] and interleaved_route[2*index + 2]
+              const prevNodeId = interleavedRoute[2 * index] ? String(interleavedRoute[2 * index]) : null;
+              const nextNodeId = interleavedRoute[2 * index + 2] ? String(interleavedRoute[2 * index + 2]) : null;
+
+              if (prevNodeId && nextNodeId) {
+                const prevNode = getNodeByIdFromContext(prevNodeId);
+                const nextNode = getNodeByIdFromContext(nextNodeId);
+
+                if (prevNode?.geometry?.coordinates && nextNode?.geometry?.coordinates) {
+                  const p1 = { lat: prevNode.geometry.coordinates[1], lng: prevNode.geometry.coordinates[0] };
+                  const p2 = { lat: nextNode.geometry.coordinates[1], lng: nextNode.geometry.coordinates[0] };
+                  if (isValidCoordinate(p1.lat, p1.lng) && isValidCoordinate(p2.lat, p2.lng)) {
+                    const fallbackPath = [p1, p2];
+                    addPolyline(fallbackPath, FALLBACK_ROUTE_COLOR, USER_ROUTE_WEIGHT - 1, USER_ROUTE_OPACITY, USER_ROUTE_ZINDEX -1);
+                    newCalculatedPolylinePaths.push(fallbackPath);
+                    boundsFitCoords.push(...fallbackPath);
+                    console.log(`[ItineraryGeoJsonRenderer] Day ${itineraryDay.day}: Fallback 경로 (직선) ${prevNodeId} -> ${nextNodeId} 생성됨.`);
+                  } else {
+                     console.warn(`[ItineraryGeoJsonRenderer] Day ${itineraryDay.day}: Fallback 위한 노드 좌표 유효하지 않음: ${prevNodeId}, ${nextNodeId}`);
+                  }
+                } else {
+                  console.warn(`[ItineraryGeoJsonRenderer] Day ${itineraryDay.day}: Fallback 위한 노드 ID ${prevNodeId} 또는 ${nextNodeId} 찾을 수 없음.`);
+                }
+              } else {
+                  console.warn(`[ItineraryGeoJsonRenderer] Day ${itineraryDay.day}: Fallback 위한 노드 ID를 interleaved_route에서 추출 불가. Index: ${index}`);
+              }
             }
           });
-          if (missingLinkCount > 0) console.warn(`[ItineraryGeoJsonRenderer] Day ${itineraryDay.day}: 누락된 Link ID 총 ${missingLinkCount}개 (전체: ${linkIds.length}개)`);
+          if (missingLinkCount > 0) console.warn(`[ItineraryGeoJsonRenderer] Day ${itineraryDay.day}: 누락/Fallback 처리된 Link ID 총 ${missingLinkCount}개 (전체: ${linkIds.length}개)`);
           
           if (newCalculatedPolylinePaths.length > 0) {
-            console.log(`[ItineraryGeoJsonRenderer] Day ${itineraryDay.day}: Link ID 기반으로 계산된 폴리라인 경로 ${newCalculatedPolylinePaths.length}개 캐시 업데이트 시도.`);
-            updateDayPolylinePaths(itineraryDay.day, newCalculatedPolylinePaths, itineraryDay); // itineraryDay 전달
+            console.log(`[ItineraryGeoJsonRenderer] Day ${itineraryDay.day}: Link ID/Fallback 기반 계산된 폴리라인 경로 ${newCalculatedPolylinePaths.length}개 캐시 업데이트 시도.`);
+            updateDayPolylinePaths(itineraryDay.day, newCalculatedPolylinePaths, itineraryDay);
           }
         } else {
           console.log(`[ItineraryGeoJsonRenderer] Day ${itineraryDay.day}: Link ID 없거나 GeoJSON 미로드. 장소 간 직선 경로 시도.`);
@@ -174,6 +207,7 @@ export const useItineraryGeoJsonRenderer = ({
         clearAllMapPolylines,
         mapPlacesWithGeoNodesFn,
         getLinkByLinkIdFromContext,
+        getNodeByIdFromContext, // 의존성 배열에 추가
         isContextGeoJsonLoaded,
         updateDayPolylinePaths,
     ]
