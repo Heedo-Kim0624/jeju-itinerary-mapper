@@ -1,6 +1,6 @@
 
 import { useCallback, useEffect } from 'react';
-import { useMapContext } from '../MapContext';
+import { useMapContext } from '../MapContext'; // 경로 수정
 import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/core';
 import { clearMarkers as clearMarkersUtil } from '@/utils/map/mapCleanup';
 
@@ -50,9 +50,9 @@ export const useMapMarkers = (props: UseMapMarkersProps) => {
   const { renderMarkers } = useMarkerRenderLogic({
     places, selectedPlace, itinerary, selectedDay, selectedPlaces,
     onPlaceClick, highlightPlaceId,
-    map,
-    isMapInitialized,
-    isNaverLoaded: !!window.naver?.maps,
+    map, // map prop 추가
+    isMapInitialized, // isMapInitialized prop 추가
+    isNaverLoaded: !!window.naver?.maps, // isNaverLoaded prop 추가 (간단한 확인)
     markersRef,
   });
 
@@ -83,3 +83,4 @@ export const useMapMarkers = (props: UseMapMarkersProps) => {
     forceMarkerUpdate,
   };
 };
+
