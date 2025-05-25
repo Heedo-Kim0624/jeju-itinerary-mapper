@@ -10,6 +10,7 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import { MapProvider } from "@/components/rightpanel/MapContext";
 import { PlaceProvider } from "@/contexts/PlaceContext"; // Import PlaceProvider
+import { GeoJsonProvider } from './contexts/GeoJsonContext'; // Import GeoJsonProvider
 
 const queryClient = new QueryClient();
 
@@ -18,17 +19,19 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <PlaceProvider> {/* Wrap with PlaceProvider */}
         <TooltipProvider>
-          <MapProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </BrowserRouter>
-          </MapProvider>
+          <GeoJsonProvider> {/* Wrap with GeoJsonProvider */}
+            <MapProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </BrowserRouter>
+            </MapProvider>
+          </GeoJsonProvider>
         </TooltipProvider>
       </PlaceProvider>
     </QueryClientProvider>
@@ -36,4 +39,3 @@ const App = () => {
 };
 
 export default App;
-

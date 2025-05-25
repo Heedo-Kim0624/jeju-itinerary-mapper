@@ -1,10 +1,11 @@
 
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import type { Place, ItineraryDay } from '@/types/supabase';
-import type { GeoJsonFeature, GeoJsonLinkProperties, GeoCoordinates } from '@/components/rightpanel/geojson/GeoJsonTypes';
+import type { GeoJsonFeature, GeoJsonLinkProperties, GeoCoordinates, GeoLink } from '@/components/rightpanel/geojson/GeoJsonTypes'; // Added GeoLink
 import type { ServerRouteResponse } from '@/types/schedule';
 import { createNaverLatLng } from '@/utils/map/mapSetup';
 import { fitBoundsToCoordinates } from '@/utils/map/mapViewControls';
+import { useGeoJsonContext } from '@/contexts/GeoJsonContext'; // Import useGeoJsonContext
 
 const USER_ROUTE_COLOR = '#2563EB';
 const USER_ROUTE_WEIGHT = 5;
@@ -14,7 +15,8 @@ const USER_ROUTE_ZINDEX = 100;
 interface UseItineraryGeoJsonRendererProps {
   map: any;
   isNaverLoadedParam: boolean;
-  geoJsonLinks: GeoJsonFeature[];
+  // geoJsonLinks prop is no longer primary; context will be used. Kept for potential fallback or transition.
+  geoJsonLinks: GeoLink[]; // Type updated to GeoLink[]
   mapPlacesWithGeoNodesFn: (places: Place[]) => Place[];
   addPolyline: (
     pathCoordinates: { lat: number; lng: number }[],
@@ -29,15 +31,37 @@ interface UseItineraryGeoJsonRendererProps {
 export const useItineraryGeoJsonRenderer = ({
   map,
   isNaverLoadedParam,
-  geoJsonLinks,
+  geoJsonLinks: propsGeoJsonLinks, // Renamed to distinguish from context
   mapPlacesWithGeoNodesFn,
   addPolyline,
   clearAllMapPolylines,
 }: UseItineraryGeoJsonRendererProps) => {
+  const { 
+    geoJsonLinks: contextGeoJsonLinks, 
+    isGeoJsonLoaded: isContextGeoJsonLoaded,
+    getLinkByLinkIdFromContext 
+  } = useGeoJsonContext();
+
+  // Determine which geoJsonLinks to use (Context first, then props as fallback)
+  const effectiveGeoJsonLinks = isContextGeoJsonLoaded && contextGeoJsonLinks.length > 0 
+    ? contextGeoJsonLinks 
+    : propsGeoJsonLinks;
+
+  useEffect(() => {
+    console.log('[ItineraryGeoJsonRenderer] Effective GeoJSON Links Updated:', {
+      count: effectiveGeoJsonLinks.length,
+      fromContext: isContextGeoJsonLoaded && contextGeoJsonLinks.length > 0,
+      contextCount: contextGeoJsonLinks.length,
+      propsCount: propsGeoJsonLinks.length,
+      firstLinkContextId: contextGeoJsonLinks.length > 0 ? contextGeoJsonLinks[0].id : 'N/A',
+      firstLinkPropsId: propsGeoJsonLinks.length > 0 ? propsGeoJsonLinks[0].id : 'N/A',
+    });
+  }, [effectiveGeoJsonLinks, contextGeoJsonLinks, propsGeoJsonLinks, isContextGeoJsonLoaded]);
+  
   const renderItineraryRoute = useCallback(
     (
       itineraryDay: ItineraryDay | null,
-      _allServerRoutesInput?: Record<number, ServerRouteResponse>, // Kept for signature consistency
+      _allServerRoutesInput?: Record<number, ServerRouteResponse>,
       onComplete?: () => void
     ) => {
       if (!map || !isNaverLoadedParam) {
@@ -50,6 +74,7 @@ export const useItineraryGeoJsonRenderer = ({
 
       if (!itineraryDay || !itineraryDay.routeData || !itineraryDay.routeData.linkIds || itineraryDay.routeData.linkIds.length === 0) {
         console.warn('[ItineraryGeoJsonRenderer] No itinerary day or linkIds to render route.');
+        // ... (fallback to direct lines if no linkIds, existing logic can be kept)
         if (itineraryDay && itineraryDay.places && itineraryDay.places.length > 1) {
             const mappedPlaces = mapPlacesWithGeoNodesFn(itineraryDay.places);
             const validPlaces = mappedPlaces.filter(p =>
@@ -71,38 +96,37 @@ export const useItineraryGeoJsonRenderer = ({
 
       try {
         const { linkIds } = itineraryDay.routeData;
-        console.log(`[ItineraryGeoJsonRenderer] 경로 렌더링: ${linkIds.length}개의 링크 ID 처리 시작. Using geoJsonLinks count: ${geoJsonLinks.length}`);
+        console.log(`[ItineraryGeoJsonRenderer] 경로 렌더링 시작: ${linkIds.length}개의 링크 ID 처리. Using effectiveGeoJsonLinks count: ${effectiveGeoJsonLinks.length}`);
+
+        if (effectiveGeoJsonLinks.length === 0 && linkIds.length > 0) {
+            console.warn('[ItineraryGeoJsonRenderer] effectiveGeoJsonLinks가 비어있지만 linkIds는 존재합니다. 데이터 소스 확인 필요.');
+        }
+        
+        if (effectiveGeoJsonLinks.length > 0 && getLinkByLinkIdFromContext === undefined) {
+            console.warn('[ItineraryGeoJsonRenderer] getLinkByLinkIdFromContext is undefined. Context might not be fully initialized.');
+        }
+
 
         const allRouteCoordinatesForBounds: { lat: number; lng: number }[][] = [];
         let missingLinkCount = 0;
         let drawnPolylinesCount = 0;
 
-        // 개선된 링크 탐색 로직
-        linkIds.forEach(linkId => {
-          const stringLinkId = String(linkId);
+        linkIds.forEach((linkIdInput, index) => {
+          // linkIdInput can be number or string from routeData
+          const stringLinkIdToFind = String(linkIdInput).trim();
           
-          // LINK_ID 필드를 properties 객체에서 정확하게 확인
-          const linkFeature = geoJsonLinks.find(feature => {
-            if (feature && feature.properties) {
-              // 대소문자와 공백을 무시하고 LINK_ID 필드명 검색
-              const props = feature.properties as GeoJsonLinkProperties;
-              
-              // 다양한 필드명 형식 지원 (LINK_ID, link_id, Link_Id 등)
-              const linkIdProperties = [
-                props.LINK_ID, 
-                props.link_id, 
-                props.Link_Id,
-                props.linkId,
-                props.LinkId
-              ];
-              
-              // 숫자나 문자열 타입 모두 지원
-              return linkIdProperties.some(
-                prop => prop !== undefined && String(prop) === stringLinkId
-              );
+          // Use getLinkByLinkIdFromContext for efficient lookup
+          const linkFeature = getLinkByLinkIdFromContext(stringLinkIdToFind);
+
+          if (index < 5) { // Log first few attempts
+            console.log(`[ItineraryGeoJsonRenderer] Attempting to find Link ID: "${stringLinkIdToFind}"`, {
+                found: !!linkFeature,
+                contextMapSize: contextGeoJsonLinks.length // Reflects context map size indirectly
+            });
+            if (linkFeature) {
+                console.log(`[ItineraryGeoJsonRenderer] Found feature for "${stringLinkIdToFind}":`, { id: linkFeature.id, props: linkFeature.properties });
             }
-            return false;
-          });
+          }
 
           if (linkFeature && linkFeature.geometry && linkFeature.geometry.type === 'LineString' && Array.isArray(linkFeature.geometry.coordinates)) {
             const coords = linkFeature.geometry.coordinates as GeoCoordinates[];
@@ -110,7 +134,7 @@ export const useItineraryGeoJsonRenderer = ({
               if (coordPair && typeof coordPair[0] === 'number' && typeof coordPair[1] === 'number') {
                 return { lat: coordPair[1], lng: coordPair[0] };
               }
-              console.warn('[ItineraryGeoJsonRenderer] Invalid coordinate pair encountered in linkFeature geometry:', coordPair);
+              console.warn('[ItineraryGeoJsonRenderer] Invalid coordinate pair in linkFeature geometry:', coordPair, 'for LinkID:', stringLinkIdToFind);
               return null;
             }).filter(c => c !== null) as { lat: number; lng: number }[];
 
@@ -121,31 +145,19 @@ export const useItineraryGeoJsonRenderer = ({
                 allRouteCoordinatesForBounds.push(pathCoordsForPolyline);
               }
             } else {
-                console.warn(`[ItineraryGeoJsonRenderer] LINK_ID ${linkId} has insufficient valid coordinates after processing.`);
+                console.warn(`[ItineraryGeoJsonRenderer] Link ID "${stringLinkIdToFind}" has insufficient valid coordinates after processing. Original coords count: ${coords.length}`);
             }
           } else {
             missingLinkCount++;
-            // 추가적인 디버그 정보 기록
-            if (missingLinkCount <= 5) { // 처음 5개만 상세 로깅하여 로그 폭발 방지
-              console.warn(`[ItineraryGeoJsonRenderer] LINK_ID ${linkId}에 해당하는 데이터를 geoJsonLinks에서 찾지 못했거나 형식이 올바르지 않습니다. Feature:`, linkFeature);
-              
-              // 디버그용: 첫 몇개 geoJsonLinks 항목 구조 확인
-              if (missingLinkCount === 1 && geoJsonLinks.length > 0) {
-                const sampleLink = geoJsonLinks[0];
-                console.log(`[ItineraryGeoJsonRenderer] 샘플 geoJsonLinks 항목 구조:`, 
-                  sampleLink ? {
-                    type: sampleLink.type,
-                    properties_keys: sampleLink.properties ? Object.keys(sampleLink.properties) : 'No properties',
-                    geometry_type: sampleLink.geometry ? sampleLink.geometry.type : 'No geometry'
-                  } : 'No sample link'
-                );
-              }
+            if (missingLinkCount <= 5) {
+              console.warn(`[ItineraryGeoJsonRenderer] Link ID "${stringLinkIdToFind}"에 해당하는 GeoLink 데이터를 찾지 못했거나 형식이 올바르지 않습니다. Looked up in context map.`);
             }
           }
         });
 
         console.log(`[ItineraryGeoJsonRenderer] 경로 좌표 추출 및 폴리라인 생성 결과: ${drawnPolylinesCount}개 폴리라인 (누락된 LINK_ID: ${missingLinkCount}개)`);
 
+        // ... (fitBounds logic, existing code can be kept)
         if (allRouteCoordinatesForBounds.length > 0) {
           const flatCoordsForBounds = allRouteCoordinatesForBounds.flat();
            if (flatCoordsForBounds.length > 0) {
@@ -153,6 +165,7 @@ export const useItineraryGeoJsonRenderer = ({
             if (naverCoords.length > 0) fitBoundsToCoordinates(map, naverCoords);
           }
         } else if (itineraryDay.places && itineraryDay.places.length > 0) {
+            // ... (fallback to fit bounds to places, existing code can be kept)
             const mappedPlaces = mapPlacesWithGeoNodesFn(itineraryDay.places);
             const validPlacesCoords = mappedPlaces
                 .filter(p => typeof p.y === 'number' && typeof p.x === 'number' && !isNaN(p.y) && !isNaN(p.x))
@@ -167,7 +180,19 @@ export const useItineraryGeoJsonRenderer = ({
       }
       if (onComplete) onComplete();
     },
-    [map, isNaverLoadedParam, geoJsonLinks, addPolyline, mapPlacesWithGeoNodesFn, clearAllMapPolylines]
+    // Dependencies updated to use context-derived values
+    [
+        map, 
+        isNaverLoadedParam, 
+        addPolyline, 
+        mapPlacesWithGeoNodesFn, 
+        clearAllMapPolylines,
+        getLinkByLinkIdFromContext, // Added
+        // effectiveGeoJsonLinks is derived, contextGeoJsonLinks / isContextGeoJsonLoaded should be enough
+        // or getLinkByLinkIdFromContext which depends on the internal map.
+        contextGeoJsonLinks, 
+        isContextGeoJsonLoaded
+    ]
   );
 
   return { renderItineraryRoute };
