@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import type { GeoLink } from '@/components/rightpanel/geojson/GeoJsonTypes';
 import type { ItineraryDay } from '@/types/supabase';
@@ -66,22 +65,39 @@ export const useServerRoutes = () => {
     return resolvedLinks;
   }, []);
 
-  const updateDayPolylinePaths = useCallback((day: number, polylinePaths: { lat: number; lng: number }[][]) => {
+  const updateDayPolylinePaths = useCallback(
+    (day: number, polylinePaths: { lat: number; lng: number }[][], currentItineraryDayData: ItineraryDay) => {
     setServerRoutesDataState(prev => {
-      const dayData = prev[day];
-      if (dayData) {
-        console.log(`[useServerRoutes] Day ${day} polylinePaths 업데이트 시도. 이전 경로 수: ${dayData.polylinePaths?.length || 0}, 새 경로 수: ${polylinePaths.length}`);
+      const existingDayData = prev[day];
+
+      if (existingDayData) {
+        // console.log(`[useServerRoutes] Day ${day} polylinePaths 업데이트 시도. 기존 데이터 있음. 이전 경로 수: ${existingDayData.polylinePaths?.length || 0}, 새 경로 수: ${polylinePaths.length}`);
         return {
           ...prev,
           [day]: {
-            ...dayData,
+            ...existingDayData,
             polylinePaths,
           },
         };
+      } else if (currentItineraryDayData && currentItineraryDayData.day === day) {
+        // prev[day]가 없을 때, currentItineraryDayData를 기반으로 새 항목 생성
+        console.warn(`[useServerRoutes] updateDayPolylinePaths: Day ${day} 데이터가 없어 새로 생성합니다. 제공된 itineraryDayData 사용.`);
+        return {
+          ...prev,
+          [day]: {
+            day: day,
+            itineraryDayData: currentItineraryDayData,
+            nodeIds: currentItineraryDayData.routeData?.nodeIds || [],
+            linkIds: currentItineraryDayData.routeData?.linkIds || [],
+            interleaved_route: currentItineraryDayData.interleaved_route || [],
+            polylinePaths, // 새 폴리라인 경로 저장
+          },
+        };
+      } else {
+        // currentItineraryDayData가 없거나 day가 일치하지 않으면 업데이트 불가
+        console.error(`[useServerRoutes] updateDayPolylinePaths: Day ${day} 데이터를 찾을 수 없고, 유효한 currentItineraryDayData가 제공되지 않았습니다. 폴리라인 경로가 캐시되지 않았습니다.`);
+        return prev; // 변경 없음
       }
-      // This case should be rare if useScheduleGenerationCore initializes entries properly.
-      console.warn(`[useServerRoutes] updateDayPolylinePaths: Day ${day} data not found in serverRoutesData. Polyline update failed. This might indicate an issue with initial data population for this day.`);
-      return prev;
     });
   }, []);
 

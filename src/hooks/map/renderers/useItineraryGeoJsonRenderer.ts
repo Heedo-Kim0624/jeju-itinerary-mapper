@@ -1,4 +1,3 @@
-
 import { useCallback, useEffect } from 'react';
 import type { Place, ItineraryDay } from '@/types/supabase';
 import type { GeoCoordinates } from '@/components/rightpanel/geojson/GeoJsonTypes';
@@ -24,7 +23,11 @@ interface UseItineraryGeoJsonRendererProps {
     zIndex?: number
   ) => any | null;
   clearAllMapPolylines: () => void;
-  updateDayPolylinePaths: (day: number, polylinePaths: { lat: number; lng: number }[][]) => void;
+  updateDayPolylinePaths: (
+    day: number, 
+    polylinePaths: { lat: number; lng: number }[][],
+    currentItineraryDayData: ItineraryDay
+  ) => void;
 }
 
 export const useItineraryGeoJsonRenderer = ({
@@ -66,12 +69,11 @@ export const useItineraryGeoJsonRenderer = ({
       
       console.log(`[ItineraryGeoJsonRenderer] 일차 ${itineraryDay.day} 경로 렌더링 시작.`);
       const currentDayServerData = allServerRoutes ? allServerRoutes[itineraryDay.day] : null;
-      // Check if itineraryDayData exists on currentDayServerData, otherwise log a warning.
+      
       if (currentDayServerData && !currentDayServerData.itineraryDayData) {
           console.warn(`[ItineraryGeoJsonRenderer] Day ${itineraryDay.day}: server data exists but itineraryDayData is missing. This should not happen.`);
       }
       
-      // Prefer polylinePaths from currentDayServerData if available.
       const cachedPolylinePaths = currentDayServerData?.polylinePaths;
 
       try {
@@ -86,8 +88,7 @@ export const useItineraryGeoJsonRenderer = ({
               boundsFitCoords.push(...path);
             }
           });
-          // No need to call updateDayPolylinePaths here as we are using cached paths
-          newCalculatedPolylinePaths = cachedPolylinePaths; // Keep this for consistency if bounds fitting logic depends on it
+          newCalculatedPolylinePaths = cachedPolylinePaths;
         } else if (itineraryDay.routeData?.linkIds && itineraryDay.routeData.linkIds.length > 0 && isContextGeoJsonLoaded) {
           console.log(`[ItineraryGeoJsonRenderer] Day ${itineraryDay.day}: Link ID 기반 경로 계산. 링크 수: ${itineraryDay.routeData.linkIds.length}`);
           const { linkIds } = itineraryDay.routeData;
@@ -118,12 +119,12 @@ export const useItineraryGeoJsonRenderer = ({
           if (missingLinkCount > 0) console.warn(`[ItineraryGeoJsonRenderer] Day ${itineraryDay.day}: 누락된 Link ID 총 ${missingLinkCount}개 (전체: ${linkIds.length}개)`);
           
           if (newCalculatedPolylinePaths.length > 0) {
-            console.log(`[ItineraryGeoJsonRenderer] Day ${itineraryDay.day}: Link ID 기반으로 계산된 폴리라인 경로 ${newCalculatedPolylinePaths.length}개 캐시 업데이트.`);
-            updateDayPolylinePaths(itineraryDay.day, newCalculatedPolylinePaths);
+            console.log(`[ItineraryGeoJsonRenderer] Day ${itineraryDay.day}: Link ID 기반으로 계산된 폴리라인 경로 ${newCalculatedPolylinePaths.length}개 캐시 업데이트 시도.`);
+            updateDayPolylinePaths(itineraryDay.day, newCalculatedPolylinePaths, itineraryDay); // itineraryDay 전달
           }
         } else {
           console.log(`[ItineraryGeoJsonRenderer] Day ${itineraryDay.day}: Link ID 없거나 GeoJSON 미로드. 장소 간 직선 경로 시도.`);
-          const placesToDraw = itineraryDay.places; // Use places directly from itineraryDay
+          const placesToDraw = itineraryDay.places;
           const mappedPlaces = mapPlacesWithGeoNodesFn(placesToDraw);
           const validPlaces = mappedPlaces.filter(p =>
               typeof p.x === 'number' && typeof p.y === 'number' &&
@@ -137,7 +138,7 @@ export const useItineraryGeoJsonRenderer = ({
             boundsFitCoords.push(...directPathCoordinates);
             
             console.log(`[ItineraryGeoJsonRenderer] Day ${itineraryDay.day}: 직선 경로 생성됨. 캐시 업데이트 시도.`);
-            updateDayPolylinePaths(itineraryDay.day, newCalculatedPolylinePaths);
+            updateDayPolylinePaths(itineraryDay.day, newCalculatedPolylinePaths, itineraryDay); // itineraryDay 전달
           } else {
             console.warn(`[ItineraryGeoJsonRenderer] Day ${itineraryDay.day}: 직선 경로를 그릴 유효한 장소가 2개 미만입니다. (유효 장소 ${validPlaces.length}개)`);
           }
