@@ -1,27 +1,28 @@
 
-import React, { useEffect } from 'react'; // useMemo removed as markersKey not used now
+import React, { useEffect, useMemo } from 'react';
 import { useMapContext } from './MapContext';
-// MapMarkers component is not directly used if useMapMarkers hook handles everything
-import { useMapMarkers } from '@/hooks/map/useMapMarkers'; 
+import MapMarkers from './MapMarkers';
 import MapLoadingOverlay from './MapLoadingOverlay';
 import GeoJsonLayer from './GeoJsonLayer';
 import MapControls from './MapControls';
-import type { ItineraryDay as CoreItineraryDay } from '@/types/core'; // Place from core, ItineraryDay from core
-import { GlobalEventEmitter } from '@/hooks/events/useEventEmitter'; // For emitting daySelected
-import { useRouteMemoryStore } from '@/hooks/map/useRouteMemoryStore'; 
+import type { Place, ItineraryDay } from '@/types/supabase'; // Assuming this is correct, otherwise use types/core
+import { useMapItineraryVisualization } from '@/hooks/map/useMapItineraryVisualization';
+import { useMapDataEffects } from '@/hooks/map/useMapDataEffects';
 
 interface MapProps {
-  // places: Place[]; // General places, if needed for non-itinerary markers
-  selectedPlace: CoreItineraryDay['places'][0] | null; // More specific type if possible
-  itinerary: CoreItineraryDay[] | null; 
-  selectedDay: number | null; // Primary selected day from parent (e.g., useItinerary)
-  // selectedPlaces?: Place[]; // For general selection, if needed
+  places: Place[];
+  selectedPlace: Place | null;
+  itinerary: ItineraryDay[] | null;
+  selectedDay: number | null;
+  selectedPlaces?: Place[];
 }
 
 const Map: React.FC<MapProps> = ({ 
+  places, 
   selectedPlace, 
   itinerary, 
-  selectedDay, 
+  selectedDay,
+  selectedPlaces = [] 
 }) => {
   const {
     mapContainer,
@@ -31,63 +32,94 @@ const Map: React.FC<MapProps> = ({
     isMapError,
     showGeoJson,
     toggleGeoJsonVisibility,
-    handleGeoJsonLoaded, 
-    renderItineraryRoute, 
+    handleGeoJsonLoaded,
+    isGeoJsonLoaded,
+    checkGeoJsonMapping,
+    serverRoutesData,
+    renderItineraryRoute,
+    geoJsonNodes, 
+    geoJsonLinks,
   } = useMapContext();
 
-  // The useMapMarkers hook now manages markers based on selectedMapDay from the store.
-  // It requires the full itinerary.
-  useMapMarkers({ 
-    map, 
-    itinerary, 
-    onPlaceClick: (place, index) => {
-      console.log('[Map.tsx] Itinerary Marker clicked:', place, 'at index', index);
-      // Potentially update selectedPlace state here or open a detail dialog
-      // This replaces onPlaceClick from useMapDataEffects for itinerary markers.
+  const {
+    itinerary: visualizedItinerary,
+    currentDay: visualizedCurrentDay,
+    totalDistance: visualizedTotalDistance,
+    visualizeDayRoute,
+  } = useMapItineraryVisualization(map, geoJsonNodes, geoJsonLinks);
+
+  // 현재 선택된 일자의 itinerary 데이터
+  const currentDayData = useMemo(() => {
+    if (itinerary && selectedDay !== null) {
+      return itinerary.find(day => day.day === selectedDay);
     }
+    return null;
+  }, [itinerary, selectedDay]);
+
+  const { handlePlaceClick } = useMapDataEffects({
+    isMapInitialized,
+    isGeoJsonLoaded,
+    showGeoJson,
+    toggleGeoJsonVisibility,
+    renderItineraryRoute,
+    serverRoutesData,
+    checkGeoJsonMapping,
+    places,
+    itinerary,
+    selectedDay,
   });
 
-  const { selectedMapDay } = useRouteMemoryStore();
-
-  // Synchronize the primary selectedDay (from props) with the map's selected day in the store.
+  // 일정 및 선택된 일자가 변경되면 경로 렌더링
   useEffect(() => {
-    if (selectedDay !== null && selectedDay !== selectedMapDay) {
-      console.log(`[Map.tsx] Prop 'selectedDay' (${selectedDay}) differs from store 'selectedMapDay' (${selectedMapDay}). Emitting 'daySelected' event.`);
-      GlobalEventEmitter.emit('daySelected', { day: selectedDay });
-    }
-  }, [selectedDay, selectedMapDay]);
-
-  // Route rendering is now mostly driven by useItineraryGeoJsonRenderer (via useRouteManager in context)
-  // which listens to selectedMapDay from the store.
-  // This effect ensures that if renderItineraryRoute is explicitly called (e.g. after data load),
-  // it uses the correct day's data.
-  useEffect(() => {
-    if (map && isMapInitialized && renderItineraryRoute && itinerary && selectedMapDay !== null) {
-      const currentDayItineraryObject = itinerary.find(d => d.day === selectedMapDay);
-      if (currentDayItineraryObject) {
-        console.log(`[Map.tsx] selectedMapDay is ${selectedMapDay}. Calling renderItineraryRoute from context.`);
-        renderItineraryRoute(currentDayItineraryObject, undefined);
-      } else {
-        // This case means selectedMapDay is set, but no corresponding ItineraryDay object found in the itinerary prop.
-        // This could happen if itinerary data is not yet loaded or inconsistent.
-        // The route renderer should handle this by attempting fallback or clearing routes.
-        console.warn(`[Map.tsx] No ItineraryDay object found for selectedMapDay ${selectedMapDay} in the provided itinerary. Route rendering might be empty or fallback.`);
-        // Optionally, explicitly clear or call renderer with null to signify no specific day data
-        // renderItineraryRoute(null, undefined); 
+    if (itinerary && selectedDay !== null && currentDayData && renderItineraryRoute) {
+      console.log(`[Map] Selected day ${selectedDay} has ${currentDayData.places?.length || 0} places`);
+      if (serverRoutesData && serverRoutesData[selectedDay]) { // Ensure serverRoutesData for the day exists
+        renderItineraryRoute(currentDayData, serverRoutesData);
+      } else if (!serverRoutesData || !serverRoutesData[selectedDay]) {
+        // Fallback or alternative logic if serverRoutesData is not ready for the selected day
+        // This might involve rendering a simpler route or just markers
+        console.warn(`[Map] serverRoutesData not available for day ${selectedDay}. Route rendering might be incomplete.`);
+        // Optionally, you could call renderItineraryRoute with a modified call or handle differently
+        // For now, just logging. Depending on requirements, could render markers only, or a direct line.
       }
     }
-  }, [map, isMapInitialized, renderItineraryRoute, itinerary, selectedMapDay]);
+  }, [itinerary, selectedDay, currentDayData, serverRoutesData, renderItineraryRoute]);
 
+  // MapMarkers에 대한 고유 키 생성 - 의존성 배열 확장
+  const markersKey = useMemo(() => {
+    const placesId = places.map(p => p.id).join('_') || 'empty';
+    
+    const itineraryId = itinerary && itinerary.length > 0 && itinerary[0] ? 
+      `${itinerary.length}-${itinerary[0].day}-${itinerary[0].date}` : 
+      'no-itinerary';
+      
+    const dayId = selectedDay !== null ? `day-${selectedDay}` : 'no-day';
+    const selectedPlaceId = selectedPlace ? `place-${selectedPlace.id}` : 'no-selected';
+    const selectedPlacesIds = selectedPlaces.map(p => p.id).join('_') || 'no-selected-places';
+    
+    return `markers-${dayId}-${itineraryId}-${placesId}-${selectedPlaceId}-${selectedPlacesIds}`;
+  }, [places, itinerary, selectedDay, selectedPlace, selectedPlaces]);
 
   return (
     <div ref={mapContainer} className="w-full h-full relative flex-grow">
+      <MapMarkers
+        key={markersKey}
+        places={places}
+        selectedPlace={selectedPlace}
+        itinerary={itinerary}
+        selectedDay={selectedDay}
+        selectedPlaces={selectedPlaces}
+        onPlaceClick={handlePlaceClick}
+        highlightPlaceId={selectedPlace?.id}
+      />
+      
       {map && (
         <GeoJsonLayer 
           map={map} 
           visible={showGeoJson} 
           isMapInitialized={isMapInitialized}
           isNaverLoaded={isNaverLoaded}
-          onGeoJsonLoaded={handleGeoJsonLoaded} 
+          onGeoJsonLoaded={handleGeoJsonLoaded}
         />
       )}
       
@@ -95,6 +127,7 @@ const Map: React.FC<MapProps> = ({
         showGeoJson={showGeoJson}
         onToggleGeoJson={toggleGeoJsonVisibility}
         isMapInitialized={isMapInitialized}
+        isGeoJsonLoaded={isGeoJsonLoaded}
       />
       
       <MapLoadingOverlay
@@ -106,4 +139,3 @@ const Map: React.FC<MapProps> = ({
 };
 
 export default Map;
-

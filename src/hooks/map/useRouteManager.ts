@@ -1,23 +1,19 @@
 
 import { useCallback } from 'react';
-import type { Place, ItineraryDay as SupabaseItineraryDay } from '@/types/supabase';
-import type { GeoJsonFeature, GeoLink } from '@/components/rightpanel/geojson/GeoJsonTypes';
-import type { ServerRouteResponse } from '@/types/schedule';
+import type { Place, ItineraryDay } from '@/types/supabase';
+import type { GeoJsonFeature, GeoLink } from '@/components/rightpanel/geojson/GeoJsonTypes'; // GeoLink 임포트 추가
+import type { ServerRouteResponse, SegmentRoute } from '@/types/schedule';
 import { useRoutePolylines } from './useRoutePolylines';
 import { useItineraryGeoJsonRenderer } from './renderers/useItineraryGeoJsonRenderer';
 import { useSegmentGeoJsonRenderer } from './renderers/useSegmentGeoJsonRenderer';
 import { useDirectPathDrawer } from './renderers/useDirectPathDrawer';
-import { useRouteMemoryStore } from '@/hooks/map/useRouteMemoryStore';
-import type { ItineraryDay as CoreItineraryDay } from '@/types/core';
-
 
 interface UseRouteManagerProps {
   map: any;
   isNaverLoadedParam: boolean;
-  geoJsonLinks: GeoLink[]; 
+  geoJsonLinks: GeoLink[]; // 타입 변경: GeoJsonFeature[] -> GeoLink[]
   geoJsonNodes: GeoJsonFeature[];
   mapPlacesWithGeoNodesFn: (places: Place[]) => Place[];
-  itinerary: CoreItineraryDay[] | null; 
 }
 
 export const useRouteManager = ({
@@ -26,8 +22,7 @@ export const useRouteManager = ({
   geoJsonLinks,
   geoJsonNodes,
   mapPlacesWithGeoNodesFn,
-  itinerary, 
-}: UseRouteManagerProps) => { 
+}: UseRouteManagerProps) => {
   const {
     addPolyline,
     setHighlightedPolyline,
@@ -35,14 +30,13 @@ export const useRouteManager = ({
     clearHighlightedPolyline,
   } = useRoutePolylines({ map, isNaverLoadedParam });
 
-  const { renderExternalTriggeredRoute, isRendering: isItineraryRendering } = useItineraryGeoJsonRenderer({
+  const { renderItineraryRoute } = useItineraryGeoJsonRenderer({
     map,
     isNaverLoadedParam,
-    geoJsonLinksInput: geoJsonLinks, // Pass prop with distinct name
-    mapPlacesWithGeoNodesFn: mapPlacesWithGeoNodesFn as any, // Cast if Place type mismatch
+    geoJsonLinks, // 이제 GeoLink[] 타입으로 전달됨
+    mapPlacesWithGeoNodesFn,
     addPolyline,
     clearAllMapPolylines,
-    itinerary, 
   });
 
   const { renderGeoJsonSegmentRoute, highlightGeoJsonSegment } = useSegmentGeoJsonRenderer({
@@ -60,29 +54,28 @@ export const useRouteManager = ({
     isNaverLoadedParam,
     addPolyline,
   });
-  
-  const { selectedMapDay } = useRouteMemoryStore(); 
 
-  const renderItineraryRouteWithStore = useCallback((
-    itineraryDayData: CoreItineraryDay | null, 
-    _allServerRoutesInput?: Record<number, ServerRouteResponse>, 
+  // 경로 렌더링 함수 - LINK_ID 미탐색 문제 해결
+  const renderItineraryRouteWithLinkIdCheck = useCallback((
+    itineraryDay: ItineraryDay | null, 
+    allServerRoutesInput?: Record<number, ServerRouteResponse>,
     onComplete?: () => void
   ) => {
-    if (!itineraryDayData || typeof itineraryDayData.day !== 'number') {
-      console.warn('[RouteManager] Invalid itineraryDayData or day number for rendering.');
-      if(renderExternalTriggeredRoute && selectedMapDay){ // Fallback to current store day
-        renderExternalTriggeredRoute(selectedMapDay, onComplete);
-      } else if (onComplete) {
-        onComplete();
+    // LINK_ID 검증 로직 추가
+    if (itineraryDay?.routeData?.linkIds && itineraryDay.routeData.linkIds.length > 0) {
+      console.log(`[RouteManager] 일차 ${itineraryDay.day}의 경로 렌더링 - ${itineraryDay.routeData.linkIds.length}개 링크 ID 검증`);
+      
+      // 링크 ID 유효성 검사 (없을 경우 장소 간 직선 연결로 대체)
+      // geoJsonLinks가 GeoLink[] 타입이므로, properties 접근 등이 더 안전해집니다.
+      const hasValidLinks = geoJsonLinks && geoJsonLinks.length > 0;
+      if (!hasValidLinks) {
+        console.warn("[RouteManager] 유효한 GeoJSON 링크 데이터가 없습니다. 장소간 직선 연결로 대체합니다.");
       }
-      return;
     }
     
-    console.log(`[RouteManager] Request to render route for specific day data: ${itineraryDayData.day}. Store selected day: ${selectedMapDay}`);
-    // The renderer listens to selectedMapDay. This call can be for a specific day if needed.
-    renderExternalTriggeredRoute(itineraryDayData.day, onComplete);
-
-  }, [renderExternalTriggeredRoute, selectedMapDay]);
+    // 기존 렌더링 함수 호출
+    renderItineraryRoute(itineraryDay, allServerRoutesInput, onComplete);
+  }, [renderItineraryRoute, geoJsonLinks]);
 
   const clearAllDrawnRoutes = useCallback(() => {
     console.log('[RouteManager] Clearing all routes via useRoutePolylines.');
@@ -94,12 +87,12 @@ export const useRouteManager = ({
   }, [clearHighlightedPolyline]);
 
   return {
-    renderItineraryRoute: renderItineraryRouteWithStore, 
-    renderGeoJsonRoute: renderGeoJsonSegmentRoute,
-    highlightSegment: highlightGeoJsonSegment,
+    renderItineraryRoute: renderItineraryRouteWithLinkIdCheck, // 개선된 함수 사용
+    renderGeoJsonRoute: renderGeoJsonSegmentRoute, // Rename for consistency with original API
+    highlightSegment: highlightGeoJsonSegment, // Rename for consistency
     clearPreviousHighlightedPath,
     clearAllDrawnRoutes,
-    calculateAndDrawDirectRoutes: drawDirectPath,
-    isItineraryRendering, 
+    calculateAndDrawDirectRoutes: drawDirectPath, // Rename for consistency
   };
 };
+
