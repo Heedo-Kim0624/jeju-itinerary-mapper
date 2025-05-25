@@ -1,7 +1,4 @@
 
-// @ts-nocheck
-// TODO: map.js 관련 타입 정의 추가 필요
-
 /**
  * Clears all markers from the map and returns an empty array
  */
@@ -77,4 +74,26 @@ export const clearAllMapElements = (mapElements: {
     infoWindows: [],
     overlays: []
   };
+};
+
+/**
+ * Safely clears any naver maps object that has a setMap method
+ */
+export const safeSetMapNull = (mapObject: any): boolean => {
+  if (mapObject && typeof mapObject.setMap === 'function') {
+    mapObject.setMap(null);
+    return true;
+  }
+  return false;
+};
+
+/**
+ * Safely closes any naver maps info window
+ */
+export const safeCloseInfoWindow = (infoWindow: any): boolean => {
+  if (infoWindow && typeof infoWindow.close === 'function') {
+    infoWindow.close();
+    return true;
+  }
+  return false;
 };

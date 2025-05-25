@@ -1,11 +1,9 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/core';
-// Removed: import { useMapMarkers as useActualMapMarkersHook } from './hooks/useMapMarkers';
 import { useMarkerRenderLogic } from './hooks/marker-utils/useMarkerRenderLogic';
 import { useMarkerEventListeners } from './hooks/marker-utils/useMarkerEventListeners';
 import { useMapContext } from './MapContext';
 import { clearMarkers as clearMarkersUtil } from '@/utils/map/mapCleanup';
-
 
 interface MapMarkersProps {
   places: Place[]; // General search/loaded places
@@ -15,6 +13,7 @@ interface MapMarkersProps {
   selectedPlaces?: Place[]; // For candidate markers (e.g. from category selection)
   onPlaceClick?: (place: Place | ItineraryPlaceWithTime, index: number) => void;
   highlightPlaceId?: string; // For highlighting a marker without opening info window
+  showOnlyCurrentDayMarkers?: boolean; // New flag to control filtering behavior
 }
 
 const MapMarkers: React.FC<MapMarkersProps> = ({
@@ -25,16 +24,28 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
   selectedPlaces = [],
   onPlaceClick,
   highlightPlaceId,
+  showOnlyCurrentDayMarkers = false,
 }) => {
-  console.log(`[MapMarkers] Render. SelectedDay: ${selectedDay}, Itinerary: ${itinerary?.length || 0} days, Highlight: ${highlightPlaceId}, SelectedPlace: ${selectedPlace?.name}`);
+  const loggingPrefix = '[MapMarkers]';
+  console.log(`${loggingPrefix} Render. SelectedDay: ${selectedDay}, Itinerary: ${itinerary?.length || 0} days, Highlight: ${highlightPlaceId}, SelectedPlace: ${selectedPlace?.name}`);
 
   const { map, isMapInitialized, isNaverLoaded } = useMapContext();
   const markersRef = useRef<naver.maps.Marker[]>([]);
   
-  // Removed: useActualMapMarkersHook call and clearAllMarkersFromActualHook
-
+  // Determine which places to render based on the current day selection
+  const placesToRender = useMemo(() => {
+    if (selectedDay !== null && itinerary && showOnlyCurrentDayMarkers) {
+      const currentDay = itinerary.find(day => day.day === selectedDay);
+      if (currentDay && currentDay.places && currentDay.places.length > 0) {
+        console.log(`${loggingPrefix} Using filtered places for day ${selectedDay}. Count: ${currentDay.places.length}`);
+        return currentDay.places;
+      }
+    }
+    return places;
+  }, [places, itinerary, selectedDay, showOnlyCurrentDayMarkers]);
+  
   const { renderMarkers } = useMarkerRenderLogic({
-    places,
+    places: placesToRender,
     selectedPlace,
     itinerary,
     selectedDay,
@@ -49,28 +60,27 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
   
   const forceMarkerUpdate = React.useCallback(() => {
     if (isMapInitialized && isNaverLoaded) {
-      console.log('[MapMarkers] Forcing marker update via renderMarkers()');
+      console.log(`${loggingPrefix} Forcing marker update via renderMarkers()`);
       renderMarkers();
-    } else {
-      console.log('[MapMarkers] Cannot force marker update, map not ready.');
     }
   }, [isMapInitialized, isNaverLoaded, renderMarkers]);
   
   const clearAllMarkers = React.useCallback(() => {
-      console.log('[MapMarkers] Clearing all markers from local markersRef.');
-      // Simplified: clearAllMarkersFromActualHook is removed
-      if (markersRef.current.length > 0) {
-          // Use utility, ensures markersRef.current is reassigned to empty array
-          markersRef.current = clearMarkersUtil(markersRef.current); 
-          console.log('[MapMarkers] Cleared markers from local markersRef.');
-      }
-  }, [markersRef]); // Dependency array updated
+    if (markersRef.current.length > 0) {
+      console.log(`${loggingPrefix} Clearing ${markersRef.current.length} markers`);
+      markersRef.current = clearMarkersUtil(markersRef.current); 
+    }
+  }, [markersRef]);
 
-
+  // Keep track of previous selected day for proper cleanup
   const prevSelectedDayRef = useRef<number | null>(selectedDay);
   useEffect(() => {
-    prevSelectedDayRef.current = selectedDay;
-  }, [selectedDay]);
+    if (prevSelectedDayRef.current !== selectedDay) {
+      console.log(`${loggingPrefix} Selected day changed: ${prevSelectedDayRef.current} -> ${selectedDay}. Clearing markers.`);
+      clearAllMarkers();
+      prevSelectedDayRef.current = selectedDay;
+    }
+  }, [selectedDay, clearAllMarkers]);
 
   useMarkerEventListeners({
     clearAllMarkers, 
@@ -78,22 +88,37 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
     prevSelectedDayRef,
   });
 
-
+  // Main effect for rendering markers
   useEffect(() => {
-    console.log(`[MapMarkers] Props changed. SelectedDay: ${selectedDay}, Itinerary length: ${itinerary?.length}, Places length: ${places.length}, Highlight: ${highlightPlaceId}, SelectedPlace: ${selectedPlace?.id}`);
+    const logProps = {
+      day: selectedDay, 
+      itineraryLength: itinerary?.length, 
+      placesCount: placesToRender.length, 
+      highlight: highlightPlaceId, 
+      selected: selectedPlace?.id
+    };
+    
+    console.log(`${loggingPrefix} Props changed:`, logProps);
     
     if (isMapInitialized && isNaverLoaded) {
-       console.log('[MapMarkers] useEffect[selectedDay, itinerary, places, highlightPlaceId, selectedPlace]: Calling renderMarkers.');
-       renderMarkers();
-    } else {
-       console.log('[MapMarkers] useEffect[...]: Map not ready, skipping renderMarkers.');
+      console.log(`${loggingPrefix} Rendering markers for ${placesToRender.length} places`);
+      clearAllMarkers(); // Always clear before rendering new markers
+      renderMarkers();
     }
-  }, [selectedDay, itinerary, places, highlightPlaceId, selectedPlace, renderMarkers, isMapInitialized, isNaverLoaded]);
+  }, [
+    placesToRender, // Use the filtered places instead of all places
+    selectedPlace,
+    highlightPlaceId,
+    isMapInitialized,
+    isNaverLoaded,
+    renderMarkers,
+    clearAllMarkers
+  ]);
 
-
+  // Unmounting cleanup
   useEffect(() => {
     return () => {
-      console.log("[MapMarkers] Component unmounting - clearing all markers.");
+      console.log(`${loggingPrefix} Component unmounting - clearing all markers.`);
       clearAllMarkers();
     };
   }, [clearAllMarkers]);
@@ -101,17 +126,32 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
   return null; 
 };
 
+// Use React.memo with custom comparison to prevent unnecessary re-renders
 export default React.memo(MapMarkers, (prevProps, nextProps) => {
   const changedProps: string[] = [];
+  
+  // Compare the placesToRender instead of raw places
+  const prevHasSelectedDay = prevProps.selectedDay !== null;
+  const nextHasSelectedDay = nextProps.selectedDay !== null;
+  
   if (prevProps.selectedDay !== nextProps.selectedDay) changedProps.push('selectedDay');
-  if (prevProps.itinerary !== nextProps.itinerary) changedProps.push('itinerary'); // Shallow compare is fine for array/null
-  if (prevProps.places !== nextProps.places) changedProps.push('places'); // Shallow compare
+  if (prevProps.itinerary !== nextProps.itinerary) changedProps.push('itinerary');
+  
+  // For places, we only care if the places we're actually rendering have changed
+  if (prevHasSelectedDay !== nextHasSelectedDay) changedProps.push('placesFilteringMode');
+  
+  // Only compare places if we're in the same mode (selected day vs general places)
+  if (!prevHasSelectedDay && !nextHasSelectedDay && prevProps.places !== nextProps.places) {
+    changedProps.push('places');
+  }
+  
   if (prevProps.selectedPlace?.id !== nextProps.selectedPlace?.id) changedProps.push('selectedPlace');
   if (prevProps.highlightPlaceId !== nextProps.highlightPlaceId) changedProps.push('highlightPlaceId');
-  if (prevProps.selectedPlaces !== nextProps.selectedPlaces) changedProps.push('selectedPlaces'); // Shallow compare
+  if (prevProps.selectedPlaces !== nextProps.selectedPlaces) changedProps.push('selectedPlaces');
+  if (prevProps.showOnlyCurrentDayMarkers !== nextProps.showOnlyCurrentDayMarkers) changedProps.push('showOnlyCurrentDayMarkers');
 
   if (changedProps.length > 0) {
-    console.log("[MapMarkers.memo] Re-rendering due to changed props:", changedProps.join(', '));
+    console.log(`[MapMarkers.memo] Re-rendering due to changed props: ${changedProps.join(', ')}`);
     return false; // Props are different, re-render
   }
   return true; // Props are the same, skip re-render

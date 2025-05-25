@@ -1,3 +1,4 @@
+
 import { useCallback, useState, useEffect, useRef } from 'react';
 import type { Place, ItineraryDay } from '@/types/supabase';
 import type { ServerRouteDataForDay } from '@/hooks/map/useServerRoutes';
@@ -31,73 +32,64 @@ export const useMapDataEffects = ({
   const prevSelectedDayRef = useRef<number | null>(null);
   const prevServerRoutesDataRef = useRef<Record<number, ServerRouteDataForDay> | null>(null);
   const [isRouteVisualized, setIsRouteVisualized] = useState(false);
+  
+  // Reduce number of renders by throttling how often we update this state
+  const routeRenderingInProgressRef = useRef(false);
 
   const handlePlaceClick = useCallback((place: Place, index: number) => {
-    console.log(`[MapDataEffects] 장소 클릭됨: ${place.name} (인덱스: ${index})`);
-    // This function seems more related to individual place clicks, not route rendering.
+    // This function is for individual place clicks
   }, []);
 
+  // Main effect for route visualization
   useEffect(() => {
     if (!isMapInitialized || !renderItineraryRoute) {
-      console.log('[MapDataEffects] Map not initialized or renderItineraryRoute missing, skipping route rendering.');
       return;
     }
 
+    // Only respond to real changes in the data
     const itineraryChanged = prevItineraryRef.current !== itinerary;
     const dayChanged = prevSelectedDayRef.current !== selectedDay;
-    // serverRoutesData can change independently if polylines are cached,
-    // so we still need to consider it.
     const serverRoutesChanged = prevServerRoutesDataRef.current !== serverRoutesData;
-
+    
     if (dayChanged || itineraryChanged || serverRoutesChanged) {
-      console.log(`[MapDataEffects] Route rendering trigger detected:`, {
-        dayChanged,
-        itineraryChanged,
-        serverRoutesChanged,
-        prevDay: prevSelectedDayRef.current,
-        currentDay: selectedDay,
-        hasItinerary: !!itinerary,
-        itineraryLength: itinerary?.length || 0,
-        hasServerRoutesData: !!serverRoutesData,
-      });
+      // Prevent multiple simultaneous route rendering operations
+      if (routeRenderingInProgressRef.current) {
+        console.log('[MapDataEffects] Route rendering already in progress, skipping this update');
+        return;
+      }
 
+      routeRenderingInProgressRef.current = true;
+
+      // Update refs immediately to prevent oscillation
       prevItineraryRef.current = itinerary;
       prevSelectedDayRef.current = selectedDay;
       prevServerRoutesDataRef.current = serverRoutesData;
 
       let effectiveItineraryDay: ItineraryDay | null = null;
 
+      // Find the day to visualize
       if (selectedDay !== null && itinerary && itinerary.length > 0) {
         effectiveItineraryDay = itinerary.find(d => d.day === selectedDay) || null;
-        if (!effectiveItineraryDay) {
-          console.warn(`[MapDataEffects] Itinerary data for selected day ${selectedDay} not found in main 'itinerary' prop. Route will not be rendered for this day.`);
-        }
       }
       
+      // Render the route with proper cleanup of previous route
       if (effectiveItineraryDay) {
-        // If serverRoutesData exists for this day and has polylinePaths,
-        // renderItineraryRoute might use them. But the primary source of places/nodes/links should be effectiveItineraryDay.
-        // The ItineraryDay object from `serverRoutesData[selectedDay]?.itineraryDayData` should ideally be identical
-        // to `effectiveItineraryDay` if data is synced correctly. We prioritize `effectiveItineraryDay` from the main itinerary prop.
-        console.log(`[MapDataEffects] Rendering route for day ${selectedDay} using data from 'itinerary' prop. Places: ${effectiveItineraryDay.places?.length}. Passing serverRoutesData for potential cached polylines.`);
+        console.log(`[MapDataEffects] Rendering route for day ${selectedDay}`);
         renderItineraryRoute(effectiveItineraryDay, serverRoutesData || undefined, () => {
           setIsRouteVisualized(true);
-          console.log(`[MapDataEffects] Day ${selectedDay} route visualization (using main itinerary) completed.`);
+          routeRenderingInProgressRef.current = false;
         });
       } else if (selectedDay === null) {
-        console.log(`[MapDataEffects] No day selected (selectedDay is null), clearing routes.`);
+        console.log(`[MapDataEffects] No day selected, clearing routes`);
         renderItineraryRoute(null, serverRoutesData || undefined, () => {
           setIsRouteVisualized(false);
-          console.log(`[MapDataEffects] Routes cleared due to no selected day.`);
+          routeRenderingInProgressRef.current = false;
         });
       } else {
-        // This case means selectedDay is not null, but no effectiveItineraryDay was found.
-        // This could happen if itinerary is null/empty or selected day is out of bounds.
-        // Or if itinerary is still loading. We should clear routes.
-        console.log(`[MapDataEffects] No valid itinerary data for selected day ${selectedDay}. Clearing routes.`);
+        console.log(`[MapDataEffects] No valid itinerary data for day ${selectedDay}, clearing routes`);
         renderItineraryRoute(null, serverRoutesData || undefined, () => {
           setIsRouteVisualized(false);
-          console.log(`[MapDataEffects] Routes cleared due to missing itinerary data for day ${selectedDay}.`);
+          routeRenderingInProgressRef.current = false;
         });
       }
     }
@@ -109,9 +101,9 @@ export const useMapDataEffects = ({
     serverRoutesData,
   ]);
 
+  // Map geoJSON data to places only when needed 
   useEffect(() => {
     if (isMapInitialized && isGeoJsonLoaded && places.length > 0 && checkGeoJsonMapping) {
-      console.log("[MapDataEffects] Checking GeoJSON mapping for general places list.");
       checkGeoJsonMapping(places);
     }
   }, [isMapInitialized, isGeoJsonLoaded, places, checkGeoJsonMapping]);

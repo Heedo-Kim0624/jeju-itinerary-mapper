@@ -21,7 +21,7 @@ const Map: React.FC<MapProps> = ({
   selectedPlace, 
   itinerary, 
   selectedDay,
-  selectedPlaces // Default will be handled by MapMarkers or its hooks
+  selectedPlaces = [] // Default will be handled by MapMarkers or its hooks
 }) => {
   const {
     mapContainer,
@@ -44,6 +44,14 @@ const Map: React.FC<MapProps> = ({
     return null;
   }, [itinerary, selectedDay]);
 
+  // 현재 선택된 일자의 places만 추출
+  const currentDayPlaces = useMemo(() => {
+    if (currentDayItinerary && currentDayItinerary.places && currentDayItinerary.places.length > 0) {
+      return currentDayItinerary.places;
+    }
+    return places; // fallback to general places when no itinerary day is selected
+  }, [currentDayItinerary, places]);
+
   const { handlePlaceClick } = useMapDataEffects({
     isMapInitialized,
     isGeoJsonLoaded,
@@ -57,7 +65,7 @@ const Map: React.FC<MapProps> = ({
 
   // MapMarkers에 대한 고유 키 생성 - 의존성 배열 확장
   const markersKey = useMemo(() => {
-    const placesId = places.map(p => p.id).join('_') || 'empty';
+    const placesId = currentDayPlaces.map(p => p.id).join('_') || 'empty';
     
     const itineraryId = itinerary && itinerary.length > 0 && itinerary[0] ? 
       `${itinerary.length}-${itinerary[0].day}-${itinerary[0].date}` : 
@@ -69,7 +77,7 @@ const Map: React.FC<MapProps> = ({
     const selectedPlacesIds = (selectedPlaces && selectedPlaces.length > 0) ? selectedPlaces.map(p => p.id).join('_') : 'no-selected-places';
     
     return `markers-${dayId}-${itineraryId}-${placesId}-${selectedPlaceId}-${selectedPlacesIds}`;
-  }, [places, itinerary, selectedDay, selectedPlace, selectedPlaces]);
+  }, [currentDayPlaces, itinerary, selectedDay, selectedPlace, selectedPlaces]);
 
   // Stabilize selectedPlaces prop for MapMarkers
   const stableSelectedPlaces = useMemo(() => selectedPlaces || [], [selectedPlaces]);
@@ -78,13 +86,14 @@ const Map: React.FC<MapProps> = ({
     <div ref={mapContainer} className="w-full h-full relative flex-grow">
       <MapMarkers
         key={markersKey}
-        places={places}
+        places={selectedDay !== null ? currentDayPlaces : places}
         selectedPlace={selectedPlace}
         itinerary={itinerary}
         selectedDay={selectedDay}
         selectedPlaces={stableSelectedPlaces} // Use the stabilized version
         onPlaceClick={handlePlaceClick}
         highlightPlaceId={selectedPlace?.id}
+        showOnlyCurrentDayMarkers={true} // Add this flag to explicitly control the behavior
       />
       
       {map && (
@@ -113,4 +122,3 @@ const Map: React.FC<MapProps> = ({
 };
 
 export default Map;
-
