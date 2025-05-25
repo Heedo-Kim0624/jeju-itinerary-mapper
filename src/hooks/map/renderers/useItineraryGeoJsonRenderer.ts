@@ -11,7 +11,7 @@ import {
 
 interface UseItineraryGeoJsonRendererProps {
   map: any;
-  isNaverLoadedParam: boolean; // isNaverLoadedParam 추가 (내부 유틸리티 함수에서 필요할 수 있음)
+  isNaverLoadedParam: boolean;
   mapPlacesWithGeoNodesFn: (places: Place[]) => Place[];
   addPolyline: (
     pathCoordinates: { lat: number; lng: number }[],
@@ -28,33 +28,30 @@ const RENDERER_LOG_PREFIX = '[ItineraryGeoJsonRenderer]';
 
 export const useItineraryGeoJsonRenderer = ({
   map,
-  isNaverLoadedParam, // 사용
-  // mapPlacesWithGeoNodesFn, // 현재 renderItineraryRoute 콜백 내에서 직접 사용되지 않음
+  isNaverLoadedParam,
   addPolyline,
   clearAllMapPolylines,
   updateDayPolylinePaths,
 }: UseItineraryGeoJsonRendererProps) => {
 
   const renderItineraryRoute = useCallback((
-    itineraryDay: ItineraryDay | null, // 현재 선택된 일자의 데이터만 받도록 함
+    itineraryDay: ItineraryDay | null,
     allServerRoutesInput?: Record<number, ServerRouteDataForDay>,
     onComplete?: () => void
   ) => {
-    console.log(`${RENDERER_LOG_PREFIX} Initiating route rendering. Received ItineraryDay for day: ${itineraryDay?.day}`);
-    
-    // 항상 기존 폴리라인을 먼저 모두 제거
+    // Always clear existing polylines first to prevent route overlap
     console.log(`${RENDERER_LOG_PREFIX} Clearing all map polylines before rendering new route.`);
     clearAllMapPolylines();
-
+    
     if (!map || !isNaverLoadedParam) {
       console.warn(`${RENDERER_LOG_PREFIX} Map or Naver API not ready. Route rendering aborted.`);
       if (onComplete) onComplete();
       return;
     }
 
-    // itineraryDay가 null이거나, 유효한 장소가 없는 경우 경로를 그리지 않음
+    // If no itineraryDay is provided or it has no places, don't render anything
     if (!itineraryDay || !itineraryDay.places || itineraryDay.places.length === 0) {
-      console.log(`${RENDERER_LOG_PREFIX} No valid ItineraryDay or no places in it. No route will be rendered. ItineraryDay:`, itineraryDay);
+      console.log(`${RENDERER_LOG_PREFIX} No valid ItineraryDay or no places to render. Day: ${itineraryDay?.day || 'null'}`);
       if (onComplete) onComplete();
       return;
     }
@@ -70,12 +67,13 @@ export const useItineraryGeoJsonRenderer = ({
       return window.geoJsonLayer?.getLinkById?.(String(linkId));
     };
 
-    // 렌더링 전략 결정 (선택된 일자 데이터만 사용)
+    // Choose rendering strategy
     if (itineraryDay.routeData?.linkIds && itineraryDay.routeData.linkIds.length > 0) {
       console.log(`${RENDERER_LOG_PREFIX} Day ${itineraryDay.day}: Rendering from GeoJSON links.`);
       polylinePathsToCache = renderRouteFromGeoJsonLinks(itineraryDay, addPolyline, getNodeById, getLinkById);
+      
       if (polylinePathsToCache && polylinePathsToCache.length > 0) {
-        console.log(`${RENDERER_LOG_PREFIX} Day ${itineraryDay.day}: Link ID based polylines generated: ${polylinePathsToCache.length}. Attempting cache update.`);
+        console.log(`${RENDERER_LOG_PREFIX} Day ${itineraryDay.day}: Link ID based polylines generated: ${polylinePathsToCache.length}. Updating cache.`);
         updateDayPolylinePaths(itineraryDay.day, polylinePathsToCache, itineraryDay);
       } else {
         console.log(`${RENDERER_LOG_PREFIX} Day ${itineraryDay.day}: No polylines generated from GeoJSON links.`);
@@ -85,16 +83,17 @@ export const useItineraryGeoJsonRenderer = ({
       console.log(`${RENDERER_LOG_PREFIX} Day ${itineraryDay.day}: Rendering from server cache. Segments: ${serverDayData.polylinePaths?.length}`);
       renderRouteFromServerCache(itineraryDay, serverDayData, addPolyline);
     } else if (itineraryDay.places.length > 1) {
-      console.log(`${RENDERER_LOG_PREFIX} Day ${itineraryDay.day}: No GeoJSON links or server cache. Rendering from direct place connections.`);
+      console.log(`${RENDERER_LOG_PREFIX} Day ${itineraryDay.day}: No GeoJSON links or server cache. Rendering direct connections.`);
       polylinePathsToCache = renderRouteFromDirectConnections(itineraryDay, addPolyline);
-       if (polylinePathsToCache && polylinePathsToCache.length > 0) {
-        console.log(`${RENDERER_LOG_PREFIX} Day ${itineraryDay.day}: Direct connection polylines generated: ${polylinePathsToCache.length}. Attempting cache update.`);
+      
+      if (polylinePathsToCache && polylinePathsToCache.length > 0) {
+        console.log(`${RENDERER_LOG_PREFIX} Day ${itineraryDay.day}: Direct connection polylines generated: ${polylinePathsToCache.length}. Updating cache.`);
         updateDayPolylinePaths(itineraryDay.day, polylinePathsToCache, itineraryDay);
       } else {
-         console.log(`${RENDERER_LOG_PREFIX} Day ${itineraryDay.day}: No polylines generated from direct connections.`);
+        console.log(`${RENDERER_LOG_PREFIX} Day ${itineraryDay.day}: No polylines generated from direct connections.`);
       }
     } else {
-      console.log(`${RENDERER_LOG_PREFIX} Day ${itineraryDay.day}: Not enough places for direct connections (found ${itineraryDay.places.length}). No route rendered.`);
+      console.log(`${RENDERER_LOG_PREFIX} Day ${itineraryDay.day}: Not enough places for route rendering (${itineraryDay.places.length}).`);
     }
     
     console.log(`${RENDERER_LOG_PREFIX} Day ${itineraryDay.day} route rendering finished.`);
