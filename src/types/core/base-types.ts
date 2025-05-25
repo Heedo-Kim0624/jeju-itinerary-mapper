@@ -1,15 +1,29 @@
-
 /**
  * Base type definitions for the application
  */
 
 // CategoryName type 
-export type CategoryName = '숙소' | '관광지' | '음식점' | '카페';
+export type CategoryName = '숙소' | '관광지' | '음식점' | '카페' | '교통';
+
+// PlaceId type 
+export type PlaceId = string;
+
+// PlaceName type 
+export type PlaceName = string;
+
+// Coordinate type 
+export type Coordinate = {
+  x: number;
+  y: number;
+};
+
+// PhotoUrl type 
+export type PhotoUrl = string;
 
 // Basic place interface
 export interface Place {
-  id: string;
-  name: string;
+  id: PlaceId;
+  name: PlaceName;
   address: string;
   phone: string;
   category: string;
@@ -17,7 +31,7 @@ export interface Place {
   rating: number;
   x: number;
   y: number;
-  image_url: string;
+  image_url: PhotoUrl;
   road_address: string;
   homepage: string;
   operationTimeData?: {

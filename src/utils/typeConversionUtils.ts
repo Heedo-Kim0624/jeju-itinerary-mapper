@@ -1,14 +1,16 @@
-
 import type { Place, SelectedPlace, CategoryName } from '@/types/core';
-import { englishToKorean } from '@/utils/categoryUtils'; // englishToKorean 임포트
+import { englishToKorean, CATEGORIES } from '@/utils/categoryUtils'; // CATEGORIES 임포트
 
-const VALID_CATEGORY_NAMES: ReadonlyArray<CategoryName> = ['숙소', '관광지', '음식점', '카페'];
+// VALID_CATEGORY_NAMES를 CATEGORIES에서 가져오도록 수정하거나, 직접 업데이트
+// 여기서는 직접 업데이트합니다. 더 나은 방법은 CATEGORIES를 사용하는 것입니다.
+const VALID_CATEGORY_NAMES: ReadonlyArray<CategoryName> = ['숙소', '관광지', '음식점', '카페', '교통']; // '교통' 추가
 
 /**
  * 주어진 문자열이 유효한 CategoryName인지 확인합니다.
  */
 export function isValidCategoryName(category: string): category is CategoryName {
   return VALID_CATEGORY_NAMES.includes(category as CategoryName);
+  // 또는 return CATEGORIES.includes(category as CategoryName); 로 변경 가능
 }
 
 /**
@@ -55,4 +57,3 @@ export function convertPlaceToSelectedPlace(place: Place): SelectedPlace {
 export function convertPlacesToSelectedPlaces(places: Place[]): SelectedPlace[] {
   return places.map(convertPlaceToSelectedPlace);
 }
-
