@@ -1,48 +1,50 @@
 
-import { createNaverLatLng } from '@/utils/map/mapSetup';
-import { createNaverPolyline } from '@/utils/map/polylineUtils';
+import { createNaverPolyline } from './polylineUtils';
+import { createNaverLatLng } from './mapSetup';
+import { isValidCoordinate } from './coordinateUtils'; // 추가
 
-/**
- * Draws a single polyline path on the map.
- * This is an internal utility function.
- */
 export const drawRoutePathInternal = (
-  currentMap: any,
+  map: any,
   isNaverLoaded: boolean,
   pathCoordinates: { lat: number; lng: number }[],
   color: string,
-  weight: number = 5,
-  opacity: number = 0.7,
-  zIndex: number = 1
+  weight?: number,
+  opacity?: number,
+  zIndex?: number
 ): any | null => {
-  if (!currentMap || !isNaverLoaded || pathCoordinates.length < 2) return null;
-
-  const validCoords = pathCoordinates.filter(coord =>
-    coord && typeof coord.lat === 'number' && typeof coord.lng === 'number' &&
-    !isNaN(coord.lat) && !isNaN(coord.lng)
-  );
-
-  if (validCoords.length < 2) {
-    console.warn('[RouteDrawingUtils] drawRoutePathInternal: Not enough valid coordinates for path.');
-    return null;
-  }
-  
-  const naverPath = validCoords.map(coord => createNaverLatLng(coord.lat, coord.lng)).filter(p => p !== null);
-  if (naverPath.length < 2) {
-    console.warn('[RouteDrawingUtils] drawRoutePathInternal: Not enough valid Naver LatLng objects for path.');
+  if (!isNaverLoaded || !map || !pathCoordinates || pathCoordinates.length < 2) {
+    // console.warn('[drawRoutePathInternal] Preconditions not met for drawing route.'); // 너무 빈번할 수 있어 주석 처리
     return null;
   }
 
-  try {
-    const polyline = createNaverPolyline(currentMap, naverPath as any[], {
-      strokeColor: color,
-      strokeWeight: weight,
-      strokeOpacity: opacity,
-      zIndex: zIndex,
-    });
-    return polyline;
-  } catch (error) {
-    console.error('[RouteDrawingUtils] Error creating polyline:', error);
+  const validNaverPath = pathCoordinates
+    .map(coord => {
+      if (!isValidCoordinate(coord.lat, coord.lng)) {
+        console.warn(`[drawRoutePathInternal] Invalid coordinate object: {lat: ${coord.lat}, lng: ${coord.lng}}`);
+        return null;
+      }
+      const latLng = createNaverLatLng(coord.lat, coord.lng);
+      if (!latLng) { // createNaverLatLng 내부에서도 오류가 발생할 수 있음
+        console.warn(`[drawRoutePathInternal] Failed to create Naver LatLng for: {lat: ${coord.lat}, lng: ${coord.lng}}`);
+        return null;
+      }
+      return latLng;
+    })
+    .filter(p => p !== null) as any[]; // naver.maps.LatLng[]
+
+  if (validNaverPath.length < 2) {
+    console.warn('[drawRoutePathInternal] Not enough valid coordinates to draw a polyline after validation.');
     return null;
   }
+
+  return createNaverPolyline(map, validNaverPath, {
+    strokeColor: color,
+    strokeWeight: weight,
+    strokeOpacity: opacity,
+    zIndex: zIndex,
+    clickable: false, // 경로 폴리라인은 보통 클릭 불필요
+  });
 };
+
+// 만약 다른 함수들이 있다면 여기에 위치
+// export const anotherFunction = () => { ... };
