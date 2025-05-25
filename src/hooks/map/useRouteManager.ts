@@ -1,8 +1,8 @@
 import { useCallback } from 'react';
-import type { Place, ItineraryDay } from '@/types/supabase';
+import type { Place, ItineraryDay } from '@/types/core';
 import type { GeoJsonNodeFeature } from '@/components/rightpanel/geojson/GeoJsonTypes';
 import type { ServerRouteDataForDay } from '@/hooks/map/useServerRoutes';
-import type { SegmentRoute } from '@/types/schedule';
+import type { SegmentRoute } from '@/types/core/route-data';
 import { useRoutePolylines } from './useRoutePolylines';
 import { useItineraryGeoJsonRenderer } from './renderers/useItineraryGeoJsonRenderer';
 import { useSegmentGeoJsonRenderer } from './renderers/useSegmentGeoJsonRenderer';
@@ -12,7 +12,6 @@ interface UseRouteManagerProps {
   map: any;
   isNaverLoadedParam: boolean;
   geoJsonNodes: GeoJsonNodeFeature[];
-  mapPlacesWithGeoNodesFn: (places: Place[]) => Place[];
   updateDayPolylinePaths: (day: number, polylinePaths: { lat: number; lng: number }[][], currentItineraryDayData: ItineraryDay) => void;
 }
 
@@ -20,7 +19,6 @@ export const useRouteManager = ({
   map,
   isNaverLoadedParam,
   geoJsonNodes,
-  mapPlacesWithGeoNodesFn,
   updateDayPolylinePaths,
 }: UseRouteManagerProps) => {
   const {
@@ -33,7 +31,6 @@ export const useRouteManager = ({
   const { renderItineraryRoute: renderItineraryRouteFromRenderer } = useItineraryGeoJsonRenderer({
     map,
     isNaverLoadedParam,
-    mapPlacesWithGeoNodesFn,
     addPolyline,
     clearAllMapPolylines: clearAllPolylinesFromHook,
     updateDayPolylinePaths,
@@ -60,12 +57,15 @@ export const useRouteManager = ({
     allServerRoutesInput?: Record<number, ServerRouteDataForDay>,
     onComplete?: () => void
   ) => {
-    if (itineraryDay?.routeData?.linkIds && itineraryDay.routeData.linkIds.length > 0) {
-      console.log(`[RouteManager] 일차 ${itineraryDay.day}의 경로 렌더링 요청 - ${itineraryDay.routeData.linkIds.length}개 링크 ID`);
-    } else if (itineraryDay) {
-      console.log(`[RouteManager] 일차 ${itineraryDay.day}의 경로 렌더링 요청 - 링크 ID 정보 없음 또는 비어있음. 장소 수: ${itineraryDay.places?.length}`);
+    const dayForLog = itineraryDay?.day ?? 'N/A';
+    const routeIdForLog = itineraryDay?.routeId ?? 'N/A';
+    const linkCountForLog = itineraryDay?.routeData?.linkIds?.length ?? 0;
+    const placeCountForLog = itineraryDay?.places?.length ?? 0;
+
+    if (itineraryDay) {
+      console.log(`[RouteManager] 일차 ${dayForLog} (ID: ${routeIdForLog}) 경로 렌더링 요청. 링크: ${linkCountForLog}, 장소: ${placeCountForLog}`);
     } else {
-      console.log(`[RouteManager] 지도 초기화 요청 (itineraryDay is null)`);
+      console.log(`[RouteManager] 지도 초기화 또는 전체 경로 클리어 요청 (itineraryDay is null)`);
     }
     
     renderItineraryRouteFromRenderer(itineraryDay, allServerRoutesInput, onComplete);

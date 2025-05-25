@@ -1,4 +1,3 @@
-
 import React, { useMemo } from 'react';
 import { useMapContext } from './MapContext';
 import MapMarkers from './MapMarkers';
@@ -32,7 +31,6 @@ const Map: React.FC<MapProps> = ({
     showGeoJson,
     toggleGeoJsonVisibility,
     handleGeoJsonLoaded,
-    isGeoJsonLoaded,
     checkGeoJsonMapping,
     renderItineraryRoute, // renderItineraryRoute 직접 가져오기
     serverRoutesData, // serverRoutesData 직접 가져오기
@@ -57,7 +55,6 @@ const Map: React.FC<MapProps> = ({
 
   const { handlePlaceClick } = useMapDataEffects({
     isMapInitialized,
-    isGeoJsonLoaded,
     renderItineraryRoute, // 컨텍스트에서 직접 가져온 함수 사용
     serverRoutesData, // 컨텍스트에서 직접 가져온 데이터 사용
     checkGeoJsonMapping,
@@ -116,7 +113,7 @@ const Map: React.FC<MapProps> = ({
         showGeoJson={showGeoJson}
         onToggleGeoJson={toggleGeoJsonVisibility}
         isMapInitialized={isMapInitialized}
-        isGeoJsonLoaded={isGeoJsonLoaded}
+        isGeoJsonLoaded={isGeoJsonLoaded} // MapControls는 isGeoJsonLoaded가 필요할 수 있음
       />
       
       <MapLoadingOverlay
@@ -128,4 +125,3 @@ const Map: React.FC<MapProps> = ({
 };
 
 export default Map;
-
