@@ -2,6 +2,7 @@
 import { useGeoJsonData } from './useGeoJsonData';
 import { useGeoJsonRendering } from './useGeoJsonRendering';
 import { useGeoJsonGlobalInterface } from './useGeoJsonGlobalInterface';
+// GeoNode, GeoLink, etc., are now imported by the individual hooks.
 
 const useGeoJsonState = (map: naver.maps.Map | null) => {
   const {
@@ -14,7 +15,7 @@ const useGeoJsonState = (map: naver.maps.Map | null) => {
     handleLoadError,
     getNodeById,
     getLinkById,
-    getIsLoaded,
+    getIsLoaded, // Renamed from isLoaded to avoid conflict, and it's a function
   } = useGeoJsonData();
 
   const {
@@ -24,7 +25,7 @@ const useGeoJsonState = (map: naver.maps.Map | null) => {
 
   useGeoJsonGlobalInterface(
     map,
-    getIsLoaded,
+    getIsLoaded, // Pass the function that returns the current isLoaded state
     renderRoute,
     clearDisplayedFeatures,
     getNodeById,
@@ -34,7 +35,7 @@ const useGeoJsonState = (map: naver.maps.Map | null) => {
   return {
     isLoading,
     error,
-    isLoaded,
+    isLoaded, // This is the boolean state for consumers of useGeoJsonState
     nodes,
     links,
     handleLoadSuccess,
