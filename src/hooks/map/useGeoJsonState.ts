@@ -3,17 +3,18 @@ import { useCallback, useState } from 'react';
 import type { GeoJsonFeature, GeoLink } from '@/components/rightpanel/geojson/GeoJsonTypes';
 
 /**
- * GeoJSON 상태를 관리하는 훅
- * @returns {Object} GeoJSON 노드 및 링크와 관련 함수들
+ * GeoJSON 애플리케이션 상태를 관리하는 훅
+ * @returns {Object} GeoJSON 노드, 링크, 로드 상태, 가시성 상태 및 관련 함수들
  */
 export const useGeoJsonState = () => {
   const [isGeoJsonLoaded, setIsGeoJsonLoaded] = useState(false);
   const [geoJsonNodes, setGeoJsonNodes] = useState<GeoJsonFeature[]>([]);
   const [geoJsonLinks, setGeoJsonLinks] = useState<GeoLink[]>([]);
-  
+  const [showGeoJson, setShowGeoJson] = useState(true); // 초기값은 true로 설정 (또는 필요에 따라 false)
+
   // GeoJSON 데이터 로드 완료 처리 함수
   const handleGeoJsonLoaded = useCallback((nodes: GeoJsonFeature[], links: GeoLink[]) => {
-    console.log(`[useGeoJsonState] GeoJSON 데이터 로드됨: 노드 ${nodes.length}개, 링크 ${links.length}개`);
+    console.log(`[useGeoJsonState] 앱 레벨 GeoJSON 데이터 로드됨: 노드 ${nodes.length}개, 링크 ${links.length}개`);
     setGeoJsonNodes(nodes);
     setGeoJsonLinks(links);
     setIsGeoJsonLoaded(true);
@@ -26,7 +27,6 @@ export const useGeoJsonState = () => {
       return false;
     }
     
-    // 매핑 확인 로직 구현
     const mappedCount = places.filter(place => {
       return geoJsonNodes.some(node => node.properties && String(node.properties.NODE_ID) === String(place.id));
     }).length;
@@ -35,11 +35,18 @@ export const useGeoJsonState = () => {
     return mappedCount > 0;
   }, [geoJsonNodes]);
 
+  // GeoJSON 레이어 가시성 토글 함수
+  const toggleGeoJsonVisibility = useCallback(() => {
+    setShowGeoJson(prevShow => !prevShow);
+  }, []);
+
   return {
     isGeoJsonLoaded,
     geoJsonNodes,
     geoJsonLinks,
+    showGeoJson, // 가시성 상태 반환
     handleGeoJsonLoaded,
-    checkGeoJsonMapping
+    checkGeoJsonMapping,
+    toggleGeoJsonVisibility // 가시성 토글 함수 반환
   };
 };
