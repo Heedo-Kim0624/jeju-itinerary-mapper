@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useServerResponseHandler } from '@/hooks/schedule/useServerResponseHandler';
@@ -43,13 +42,14 @@ export const useScheduleManagement = ({
   endDatetime
 }: ScheduleManagementProps) => {
   const [isManuallyGenerating, setIsManuallyGenerating] = useState(false);
+  // clearMarkersAndUiElements from MapContext is expected to clear ALL types of markers
   const { clearMarkersAndUiElements, clearAllRoutes, setServerRoutes, geoJsonNodes } = useMapContext();
   
   const {
     itinerary,
     setItinerary,
     selectedDay,
-    setSelectedDay,
+    // setSelectedDay, // 직접 사용하지 않고 handleSelectDay를 통해
     isLoadingState,
     setIsLoadingState,
     handleSelectDay,
@@ -60,7 +60,7 @@ export const useScheduleManagement = ({
     startDate: dates?.startDate || new Date(),
     geoJsonNodes: geoJsonNodes || [], 
     setItinerary,
-    setSelectedDay,
+    setSelectedDay, // This setSelectedDay is from useScheduleStateAndEffects, used to set the day after generation
     setServerRoutes,
     setIsLoadingState,
   });
@@ -74,47 +74,47 @@ export const useScheduleManagement = ({
 
   // 스케줄 생성 프로세스 실행 함수 개선
   const runScheduleGenerationProcess = useCallback(() => {
-    console.log("[useScheduleManagement] Starting schedule generation process");
+    console.log("[useScheduleManagement] Starting schedule generation process...");
     
-    // 중복 실행 방지
     if (combinedIsLoading) {
-      console.log("[useScheduleManagement] Already generating schedule");
+      console.log("[useScheduleManagement] Already generating schedule, aborting.");
+      toast.info("이미 일정 생성 중입니다.");
       return;
     }
 
-    // 필요한 데이터 검증
     if (selectedPlaces.length === 0 && !JEJU_AIRPORT_TEMPLATE) {
       toast.error("선택된 장소가 없습니다. 장소를 선택해주세요.");
       return;
     }
-
-    // 날짜 정보 검증
     if (!startDatetime || !endDatetime) {
       toast.error("여행 날짜와 시간 정보가 올바르지 않습니다.");
       return;
     }
 
-    // 스텝 로그 초기화
-    console.log("[useScheduleManagement] Starting marker and route cleanup...");
+    console.log("[useScheduleManagement] Clearing existing map elements before generation...");
+    if (clearAllRoutes) {
+      clearAllRoutes();
+      console.log("[useScheduleManagement] All routes cleared.");
+    }
+    if (clearMarkersAndUiElements) {
+      // This should clear general search markers (green ones) AND any existing itinerary markers.
+      clearMarkersAndUiElements();
+      console.log("[useScheduleManagement] All markers and UI elements cleared.");
+    }
     
-    // 기존 마커와 경로 초기화를 위한 이벤트 실행
-    clearAllRoutes();
-    console.log("[useScheduleManagement] All routes cleared");
-    
-    clearMarkersAndUiElements();
-    console.log("[useScheduleManagement] All markers and UI elements cleared");
-    
-    // 마커 초기화 이벤트 실행
+    // Dispatch 'startScheduleGeneration' for any other listeners that need to reset.
+    // MapMarkers' useMarkerEventListeners listens to this.
     const clearEvent = new Event("startScheduleGeneration");
     window.dispatchEvent(clearEvent);
-    console.log("[useScheduleManagement] startScheduleGeneration event dispatched (marker cleanup)");
+    console.log("[useScheduleManagement] Dispatched 'startScheduleGeneration' event.");
     
-    // 로딩 상태 설정
-    setIsManuallyGenerating(true);
-    setIsLoadingState(true);
-    console.log("[useScheduleManagement] Loading state set");
+    setIsManuallyGenerating(true); // Local loading state for this hook
+    setIsLoadingState(true); // Global loading state via useScheduleStateAndEffects
+    console.log("[useScheduleManagement] Loading states set to true.");
     
-    // 실제 스케줄 생성 트리거
+    // 스케줄 생성 트리거 (백엔드 호출 등)
+    // setTimeout is used here to ensure state updates propagate and UI reflects loading state
+    // before potentially blocking operations or async calls are made.
     setTimeout(() => {
       try {
         // 고유 ID로 공항 장소 생성
@@ -143,27 +143,27 @@ export const useScheduleManagement = ({
         
         console.log("[useScheduleManagement] Places for generation (with airport):", placesForGeneration.map(p => ({ name: p.name, x: p.x, y: p.y })));
 
-        // 스케줄 생성 이벤트 발생
-        const event = new CustomEvent("startScheduleGeneration", {
+        const event = new CustomEvent("startScheduleGeneration", { // This event name is overloaded, maybe rename for clarity if it triggers different logic
           detail: {
             selectedPlaces: placesForGeneration,
             startDatetime,
             endDatetime,
+            // Add a flag to differentiate this from a simple "clear markers" event if needed
+            isDataPayloadEvent: true 
           },
         });
         
-        console.log("[useScheduleManagement] Detailed schedule generation event dispatched:", {
+        console.log("[useScheduleManagement] Detailed schedule generation event dispatched (to backend trigger):", {
           selectedPlacesCount: placesForGeneration.length,
           startDatetime,
           endDatetime,
         });
-        
         window.dispatchEvent(event);
         
-        // 타임아웃 안전장치
+        // Timeout safety net
         setTimeout(() => {
           if (isManuallyGenerating || isLoadingState) {
-            console.log("[useScheduleManagement] Schedule generation timed out (30s)");
+            console.warn("[useScheduleManagement] Schedule generation timed out (30s)");
             setIsManuallyGenerating(false);
             setIsLoadingState(false);
             toast.error("일정 생성 시간이 초과되었습니다. 다시 시도해주세요.");
@@ -175,26 +175,26 @@ export const useScheduleManagement = ({
         setIsLoadingState(false);
         toast.error("일정 생성 요청 중 오류가 발생했습니다.");
       }
-    }, 300);
+    }, 100); // Reduced delay from 300 to 100
     
   }, [
-    combinedIsLoading,
+    combinedIsLoading, // Already checks isLoadingState
     selectedPlaces,
     startDatetime, 
     endDatetime, 
     clearMarkersAndUiElements,
     clearAllRoutes,
-    setIsLoadingState,
+    setIsLoadingState, // From useScheduleStateAndEffects
+    // Removed: isManuallyGenerating (it's part of combinedIsLoading check)
   ]);
 
   // 서버 응답 처리 완료 시 상태 리셋
   useEffect(() => {
-    if (itinerary && itinerary.length > 0 && (isManuallyGenerating || isLoadingState)) {
-      console.log("[useScheduleManagement] Server response processed, resetting loading states");
-      setIsManuallyGenerating(false);
-      setIsLoadingState(false);
+    if (itinerary && itinerary.length > 0 && !isLoadingState && !isManuallyGenerating) {
+       console.log("[useScheduleManagement] Itinerary received and loading states are false. Generation process complete from this hook's perspective.");
+       // No need to set loading to false here if processServerResponse already does it via setIsLoadingState
     }
-  }, [itinerary, isManuallyGenerating, isLoadingState]);
+  }, [itinerary, isLoadingState, isManuallyGenerating]);
 
   return {
     itinerary,

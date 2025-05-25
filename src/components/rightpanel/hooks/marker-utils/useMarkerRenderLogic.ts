@@ -1,4 +1,3 @@
-
 import { useCallback } from 'react';
 import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/core';
 import { getMarkerIconOptions, createNaverMarker } from '@/utils/map/markerUtils';
@@ -15,7 +14,7 @@ interface MarkerRenderLogicProps {
   onPlaceClick?: (place: Place | ItineraryPlaceWithTime, index: number) => void;
   highlightPlaceId?: string;
   markersRef: React.MutableRefObject<naver.maps.Marker[]>;
-  map: any; 
+  map: any;
   isMapInitialized: boolean;
   isNaverLoaded: boolean;
 }
@@ -29,9 +28,9 @@ export const useMarkerRenderLogic = ({
   onPlaceClick,
   highlightPlaceId,
   markersRef,
-  map, 
-  isMapInitialized, 
-  isNaverLoaded, 
+  map,
+  isMapInitialized,
+  isNaverLoaded,
 }: MarkerRenderLogicProps) => {
 
   const renderMarkers = useCallback(() => {
@@ -39,53 +38,59 @@ export const useMarkerRenderLogic = ({
       console.log("[useMarkerRenderLogic] Map not initialized or Naver not loaded, cannot render markers.");
       return;
     }
-    
+
     // 항상 먼저 기존 마커 모두 제거
     if (markersRef.current.length > 0) {
-        console.log(`[useMarkerRenderLogic] Clearing ${markersRef.current.length} existing markers from ref.`);
-        markersRef.current = clearMarkersUtil(markersRef.current);
+      console.log(`[useMarkerRenderLogic] Clearing ${markersRef.current.length} existing markers from ref.`);
+      markersRef.current = clearMarkersUtil(markersRef.current); // Ensure this returns the new empty array
+    } else {
+      console.log(`[useMarkerRenderLogic] No existing markers in ref to clear.`);
     }
-    
+
     let placesToDisplay: (Place | ItineraryPlaceWithTime)[] = [];
     let isDisplayingItineraryDay = false;
 
     console.log(`[useMarkerRenderLogic] Determining places to display: selectedDay=${selectedDay}, itinerary items=${itinerary?.length || 0}, general places=${places.length}`);
 
-    // 일정이 있고 선택된 날짜가 있을 때는 그 날짜의 일정 장소만 표시
-    if (itinerary && itinerary.length > 0 && selectedDay !== null) {
+    if (selectedDay !== null && itinerary && itinerary.length > 0) {
       const currentDayData = itinerary.find(day => day.day === selectedDay);
       if (currentDayData && currentDayData.places && currentDayData.places.length > 0) {
         placesToDisplay = currentDayData.places;
         isDisplayingItineraryDay = true;
-        console.log(`[useMarkerRenderLogic] Displaying itinerary for day ${selectedDay}: ${currentDayData.places.length} places.`);
+        console.log(`[useMarkerRenderLogic] Displaying ITINERARY for day ${selectedDay}: ${currentDayData.places.length} places.`);
       } else {
-        // 선택된 날짜에 일정이 없는 경우, 빈 배열로 설정 (초록 마커 방지)
-        placesToDisplay = []; 
-        console.log(`[useMarkerRenderLogic] No places found for itinerary day ${selectedDay}. Displaying 0 markers.`);
+        // 선택된 날짜에 일정이 없거나 장소가 없는 경우 (일정 생성 중이거나 빈 날짜일 수 있음)
+        placesToDisplay = []; // 일반 장소 마커를 표시하지 않음
+        console.log(`[useMarkerRenderLogic] No ITINERARY places for day ${selectedDay} or day data missing. Displaying 0 markers.`);
       }
-    } else if (places.length > 0 && selectedDay === null) { 
-      // 일정이 선택되지 않았을 때만 일반 장소 표시
+    } else if (selectedDay === null && places.length > 0) {
+      // 선택된 일자가 없을 때만 일반 검색 결과 (초록색) 장소 표시
       placesToDisplay = places;
-      console.log(`[useMarkerRenderLogic] No active itinerary day. Displaying ${places.length} general places from search/props.`);
+      isDisplayingItineraryDay = false; // 명시적으로 false 설정
+      console.log(`[useMarkerRenderLogic] No active itinerary day. Displaying ${places.length} GENERAL places from search/props.`);
     } else {
-      console.log("[useMarkerRenderLogic] No itinerary day selected or no general places to display. Displaying 0 markers.");
+      // 그 외의 모든 경우 (예: selectedDay는 null이고 places도 비어있음)
+      placesToDisplay = [];
+      console.log("[useMarkerRenderLogic] No itinerary day selected AND no general places, OR itinerary data structure issue. Displaying 0 markers.");
     }
-    
+
     if (placesToDisplay.length === 0) {
-      console.log("[useMarkerRenderLogic] No places to display after filtering logic. Returning.");
+      console.log("[useMarkerRenderLogic] No places to display after filtering logic. Map will be empty of these markers.");
+      // markersRef.current should already be empty from clearMarkersUtil above
       return;
     }
-    
-    const validPlacesToDisplay = placesToDisplay.filter(p => 
-        p.x != null && p.y != null && !isNaN(Number(p.x)) && !isNaN(Number(p.y))
+
+    const validPlacesToDisplay = placesToDisplay.filter(p =>
+      p.x != null && p.y != null && !isNaN(Number(p.x)) && !isNaN(Number(p.y))
     );
 
     if (validPlacesToDisplay.length === 0) {
-      console.log("[useMarkerRenderLogic] No valid coordinates found in places to display. Returning.");
+      console.log("[useMarkerRenderLogic] No valid coordinates found in places to display. Map will be empty of these markers.");
+      // markersRef.current should already be empty
       return;
     }
-    
-    console.log(`[useMarkerRenderLogic] Creating ${validPlacesToDisplay.length} new markers.`);
+
+    console.log(`[useMarkerRenderLogic] Creating ${validPlacesToDisplay.length} new markers. Mode: ${isDisplayingItineraryDay ? 'Itinerary' : 'General'}`);
     const newMarkers: naver.maps.Marker[] = [];
 
     validPlacesToDisplay.forEach((place, index) => {
@@ -102,8 +107,8 @@ export const useMarkerRenderLogic = ({
         place,
         isInfoWindowTarget || isGeneralHighlightTarget, // isSelected
         isGloballySelectedCandidate && !isInfoWindowTarget && !isGeneralHighlightTarget, // isCandidate
-        isDisplayingItineraryDay,
-        isDisplayingItineraryDay ? index + 1 : undefined // itineraryOrder
+        isDisplayingItineraryDay, // True if displaying itinerary day places
+        isDisplayingItineraryDay ? index + 1 : undefined // itineraryOrder only for itinerary days
       );
       
       // Z-index 결정 로직
@@ -127,26 +132,23 @@ export const useMarkerRenderLogic = ({
     });
     
     markersRef.current = newMarkers;
-    console.log(`[useMarkerRenderLogic] ${newMarkers.length} markers added to ref.`);
+    console.log(`[useMarkerRenderLogic] ${newMarkers.length} markers added to ref. Total in ref: ${markersRef.current.length}`);
 
     if (newMarkers.length > 0) {
-      if (!(selectedPlace || highlightPlaceId) && isDisplayingItineraryDay) { // 일정 표시 중이고 특정 장소 하이라이트가 아닐 때만 전체 핏
-        console.log("[useMarkerRenderLogic] Fitting map bounds to displayed itinerary markers.");
+      const placeToFocus = selectedPlace || (highlightPlaceId ? validPlacesToDisplay.find(p => p.id === highlightPlaceId) : null);
+
+      if (placeToFocus && placeToFocus.y != null && placeToFocus.x != null) {
+        console.log(`[useMarkerRenderLogic] Panning to focused place: ${placeToFocus.name}`);
+        if (map.getZoom() < 15) map.setZoom(15, true);
+        panToPosition(map, placeToFocus.y, placeToFocus.x);
+      } else {
+        // 포커스할 특정 장소가 없을 때만 전체 뷰 조정
+        console.log(`[useMarkerRenderLogic] Fitting map bounds to ${isDisplayingItineraryDay ? 'itinerary' : 'general'} markers.`);
         fitBoundsToPlaces(map, validPlacesToDisplay as Place[]);
-      } else if (newMarkers.length > 0 && !isDisplayingItineraryDay && !(selectedPlace || highlightPlaceId) ) { // 일반 장소 표시 중
-         console.log("[useMarkerRenderLogic] Fitting map bounds to displayed general places markers.");
-         fitBoundsToPlaces(map, validPlacesToDisplay as Place[]);
       }
     }
-    
-    const placeToFocus = selectedPlace || (highlightPlaceId ? validPlacesToDisplay.find(p => p.id === highlightPlaceId) : null);
-    if (placeToFocus && placeToFocus.y != null && placeToFocus.x != null) {
-      console.log(`[useMarkerRenderLogic] Panning to focused place: ${placeToFocus.name}`);
-      if (map.getZoom() < 15) map.setZoom(15, true); // 확대 레벨 조정
-      panToPosition(map, placeToFocus.y, placeToFocus.x);
-    }
   }, [
-    map, isMapInitialized, isNaverLoaded, markersRef, 
+    map, isMapInitialized, isNaverLoaded, markersRef,
     places, selectedPlace, itinerary, selectedDay, selectedPlaces,
     onPlaceClick, highlightPlaceId,
   ]);

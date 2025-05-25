@@ -1,16 +1,20 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/core';
-import { useMapMarkers } from './hooks/useMapMarkers';
+import { useMapMarkers as useActualMapMarkersHook } from './hooks/useMapMarkers'; // Renamed to avoid confusion
+import { useMarkerRenderLogic } from './hooks/marker-utils/useMarkerRenderLogic';
+import { useMarkerEventListeners } from './hooks/marker-utils/useMarkerEventListeners'; // If still needed
+import { useMapContext } from './MapContext';
+
 
 interface MapMarkersProps {
-  places: Place[];
-  selectedPlace: Place | null;
+  places: Place[]; // General search/loaded places
+  selectedPlace: Place | null; // For highlighting a specific place's info window
   itinerary: ItineraryDay[] | null;
-  selectedDay: number | null;
-  selectedPlaces?: Place[]; 
+  selectedDay: number | null; // Currently selected itinerary day
+  selectedPlaces?: Place[]; // For candidate markers (e.g. from category selection)
   onPlaceClick?: (place: Place | ItineraryPlaceWithTime, index: number) => void;
-  highlightPlaceId?: string;
+  highlightPlaceId?: string; // For highlighting a marker without opening info window
 }
 
 const MapMarkers: React.FC<MapMarkersProps> = ({
@@ -22,10 +26,16 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
   onPlaceClick,
   highlightPlaceId,
 }) => {
-  // 컴포넌트 렌더링 로그
-  console.log(`[MapMarkers] Component rendered with selectedDay: ${selectedDay}, itinerary: ${itinerary?.length || 0} days`);
+  console.log(`[MapMarkers] Render. SelectedDay: ${selectedDay}, Itinerary: ${itinerary?.length || 0} days, Highlight: ${highlightPlaceId}, SelectedPlace: ${selectedPlace?.name}`);
+
+  const { map, isMapInitialized, isNaverLoaded } = useMapContext();
+  const markersRef = useRef<naver.maps.Marker[]>([]);
   
-  const { forceMarkerUpdate, clearAllMarkers } = useMapMarkers({
+  // This hook (`useActualMapMarkersHook`) primarily provides `clearMarkersAndUiElements`.
+  // The actual rendering logic is in `useMarkerRenderLogic`.
+  const { clearMarkersAndUiElements: clearAllMarkersFromActualHook } = useActualMapMarkersHook(map);
+
+  const { renderMarkers } = useMarkerRenderLogic({
     places,
     selectedPlace,
     itinerary,
@@ -33,170 +43,98 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
     selectedPlaces,
     onPlaceClick,
     highlightPlaceId,
+    markersRef,
+    map,
+    isMapInitialized,
+    isNaverLoaded,
+  });
+  
+  // forceMarkerUpdate function for event listeners
+  const forceMarkerUpdate = React.useCallback(() => {
+    if (isMapInitialized && isNaverLoaded) {
+      console.log('[MapMarkers] Forcing marker update via renderMarkers()');
+      renderMarkers();
+    } else {
+      console.log('[MapMarkers] Cannot force marker update, map not ready.');
+    }
+  }, [isMapInitialized, isNaverLoaded, renderMarkers]);
+  
+  const clearAllMarkers = React.useCallback(() => {
+      console.log('[MapMarkers] Clearing all markers via clearAllMarkersFromActualHook.');
+      if (clearAllMarkersFromActualHook) {
+        clearAllMarkersFromActualHook(); // Clears markers managed by useActualMapMarkersHook
+      }
+      // Also clear markersRef which is used by useMarkerRenderLogic
+      if (markersRef.current.length > 0) {
+          markersRef.current.forEach(marker => {
+              if(marker && typeof marker.setMap === 'function') marker.setMap(null);
+          });
+          markersRef.current = [];
+          console.log('[MapMarkers] Cleared markers from local markersRef.');
+      }
+  }, [clearAllMarkersFromActualHook, markersRef]);
+
+
+  // Event listeners for global state changes (e.g., generation start, external day selection)
+  // These might be redundant if prop changes are handled well.
+  // prevSelectedDayRef is used by useMarkerEventListeners
+  const prevSelectedDayRef = useRef<number | null>(selectedDay);
+  useEffect(() => {
+    prevSelectedDayRef.current = selectedDay;
+  }, [selectedDay]);
+
+  useMarkerEventListeners({
+    clearAllMarkers, // Pass our combined clearAllMarkers
+    forceMarkerUpdate,
+    prevSelectedDayRef,
   });
 
-  // 주요 props 변경 감지 및 마커 업데이트 - 더 엄격한 디펜던시 트래킹
+
+  // Main effect for re-rendering markers when relevant props change
   useEffect(() => {
-    console.log(`[MapMarkers] selectedDay changed to: ${selectedDay}`);
+    console.log(`[MapMarkers] Props changed. SelectedDay: ${selectedDay}, Itinerary length: ${itinerary?.length}, Places length: ${places.length}, Highlight: ${highlightPlaceId}, SelectedPlace: ${selectedPlace?.id}`);
+    // No need to call clearAllMarkers here if renderMarkers itself handles clearing.
+    // renderMarkers (from useMarkerRenderLogic) should be responsible for clearing its own markers before drawing new ones.
+    // clearAllMarkers(); // This might be redundant if renderMarkers clears its own.
+    // Let's test if renderMarkers handles clearing sufficiently.
+    // If renderMarkers always clears existing markers in markersRef.current, this is fine.
     
-    // 마커 초기화 및 업데이트
-    clearAllMarkers();
-    
-    // 약간의 지연 후 마커 업데이트 수행 (상태 업데이트 전파 시간 확보)
-    const timer = setTimeout(() => {
-      console.log('[MapMarkers] Forcing marker update due to selectedDay change');
-      forceMarkerUpdate();
-    }, 100);
-    
-    return () => clearTimeout(timer);
-  }, [selectedDay, forceMarkerUpdate, clearAllMarkers]);
-  
-  // 일정 변경 감지 및 마커 업데이트
-  useEffect(() => {
-    if (itinerary) {
-      console.log(`[MapMarkers] itinerary updated: ${itinerary.length} days`);
-      
-      // 일정 변경 시에도 마커 초기화 및 업데이트
-      clearAllMarkers();
-      
-      const timer = setTimeout(() => {
-        console.log('[MapMarkers] Forcing marker update due to itinerary change');
-        forceMarkerUpdate();
-      }, 100);
-      
-      return () => clearTimeout(timer);
+    // The `renderMarkers` function (from `useMarkerRenderLogic`) is designed to clear `markersRef.current` internally first.
+    // So, just calling `renderMarkers` should be sufficient.
+    if (isMapInitialized && isNaverLoaded) {
+       console.log('[MapMarkers] useEffect[selectedDay, itinerary, places, highlightPlaceId, selectedPlace]: Calling renderMarkers.');
+       renderMarkers();
+    } else {
+       console.log('[MapMarkers] useEffect[...]: Map not ready, skipping renderMarkers.');
     }
-  }, [itinerary, forceMarkerUpdate, clearAllMarkers]);
+    // The dependencies array ensures this runs when any of these key props change.
+  }, [selectedDay, itinerary, places, highlightPlaceId, selectedPlace, renderMarkers, isMapInitialized, isNaverLoaded]);
 
-  // 일정 생성 이벤트 핸들러
-  useEffect(() => {
-    const handleStartScheduleGeneration = () => {
-      console.log("[MapMarkers] startScheduleGeneration event detected - clearing all markers");
-      clearAllMarkers();
-    };
-    
-    // 일차 선택 이벤트 핸들러
-    const handleDaySelected = (event: any) => {
-      if (event.detail && typeof event.detail.day === 'number') {
-        console.log(`[MapMarkers] itineraryDaySelected event detected - day: ${event.detail.day}`);
-        
-        // 확실한 마커 초기화 및 새로고침
-        clearAllMarkers();
-        
-        setTimeout(() => {
-          console.log('[MapMarkers] Forcing marker update due to day selection event');
-          forceMarkerUpdate();
-        }, 100);
-      }
-    };
-    
-    // 시각화 시작 이벤트 처리
-    const handleStartVisualization = () => {
-      console.log("[MapMarkers] startScheduleVisualization event detected");
-      
-      // 모든 마커 초기화 후 새로고침
-      clearAllMarkers();
-      
-      setTimeout(() => {
-        forceMarkerUpdate();
-      }, 50);
-    };
-    
-    console.log("[MapMarkers] Registering direct event handlers");
-    window.addEventListener('startScheduleGeneration', handleStartScheduleGeneration);
-    window.addEventListener('itineraryDaySelected', handleDaySelected);
-    window.addEventListener('startScheduleVisualization', handleStartVisualization);
-    
-    return () => {
-      console.log("[MapMarkers] Removing direct event handlers");
-      window.removeEventListener('startScheduleGeneration', handleStartScheduleGeneration);
-      window.removeEventListener('itineraryDaySelected', handleDaySelected);
-      window.removeEventListener('startScheduleVisualization', handleStartVisualization);
-    };
-  }, [clearAllMarkers, forceMarkerUpdate]);
 
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      console.log("[MapMarkers] Component unmounting - cleaning up");
+      console.log("[MapMarkers] Component unmounting - clearing all markers.");
       clearAllMarkers();
     };
   }, [clearAllMarkers]);
 
-  return null;
+  return null; // This component doesn't render DOM itself
 };
 
+// React.memo comparison function
 export default React.memo(MapMarkers, (prevProps, nextProps) => {
-  // 메모이제이션 비교 로직 - 더 엄격하게 재작성
-  
-  // 기본 항목 비교
-  const isSameSelectedDay = prevProps.selectedDay === nextProps.selectedDay;
-  const isSameSelectedPlace = prevProps.selectedPlace?.id === nextProps.selectedPlace?.id;
-  const isSameHighlightId = prevProps.highlightPlaceId === nextProps.highlightPlaceId;
-  
-  const prevItineraryLength = prevProps.itinerary?.length || 0;
-  const nextItineraryLength = nextProps.itinerary?.length || 0;
-  const isSameItineraryLength = prevItineraryLength === nextItineraryLength;
-  
-  // 선택된 일자의 장소 비교 - 보다 정확한 검사
-  let isSameDayContents = true;
-  if (isSameSelectedDay && 
-      prevProps.selectedDay !== null && 
-      nextProps.selectedDay !== null && 
-      prevProps.itinerary && 
-      nextProps.itinerary) {
-    
-    const prevDay = prevProps.itinerary.find(d => d.day === prevProps.selectedDay);
-    const nextDay = nextProps.itinerary.find(d => d.day === nextProps.selectedDay);
-    
-    if (prevDay && nextDay) {
-      // 장소 길이 비교
-      if (prevDay.places.length !== nextDay.places.length) {
-        isSameDayContents = false;
-      } else {
-        // 동일 길이일 경우 모든 장소 ID 비교
-        isSameDayContents = prevDay.places.every((place, idx) => 
-          place.id === nextDay.places[idx]?.id
-        );
-      }
-    } else if (prevDay || nextDay) {
-      // 한쪽만 존재할 경우 다르다고 간주
-      isSameDayContents = false;
-    }
+  const changedProps: string[] = [];
+  if (prevProps.selectedDay !== nextProps.selectedDay) changedProps.push('selectedDay');
+  if (prevProps.itinerary !== nextProps.itinerary) changedProps.push('itinerary'); // Shallow compare is fine for array/null
+  if (prevProps.places !== nextProps.places) changedProps.push('places'); // Shallow compare
+  if (prevProps.selectedPlace?.id !== nextProps.selectedPlace?.id) changedProps.push('selectedPlace');
+  if (prevProps.highlightPlaceId !== nextProps.highlightPlaceId) changedProps.push('highlightPlaceId');
+  if (prevProps.selectedPlaces !== nextProps.selectedPlaces) changedProps.push('selectedPlaces'); // Shallow compare
+
+  if (changedProps.length > 0) {
+    console.log("[MapMarkers.memo] Re-rendering due to changed props:", changedProps.join(', '));
+    return false; // Props are different, re-render
   }
-  
-  // 일반 장소 배열 비교
-  const isSamePlacesLength = prevProps.places.length === nextProps.places.length;
-  let isSamePlacesContents = isSamePlacesLength;
-  if (isSamePlacesLength && prevProps.places.length > 0) {
-    isSamePlacesContents = prevProps.places.every((place, idx) => 
-      place.id === nextProps.places[idx]?.id
-    );
-  }
-  
-  // 선택된 장소들 비교
-  const prevSelectedCount = prevProps.selectedPlaces?.length || 0;
-  const nextSelectedCount = nextProps.selectedPlaces?.length || 0;
-  const isSameSelectedCount = prevSelectedCount === nextSelectedCount;
-  
-  // 컴포넌트 리렌더링 결정
-  const shouldUpdate = 
-    !isSameSelectedDay || 
-    !isSameItineraryLength || 
-    !isSameDayContents ||
-    !isSamePlacesContents ||
-    !isSameSelectedCount;
-  
-  if (shouldUpdate) {
-    console.log("[MapMarkers] Memo comparison detected change - will re-render", {
-      isSameSelectedDay,
-      isSameItineraryLength,
-      isSameDayContents,
-      isSamePlacesContents,
-      prevSelectedDay: prevProps.selectedDay,
-      nextSelectedDay: nextProps.selectedDay,
-    });
-  }
-  
-  // 변경이 감지되지 않으면 리렌더링 방지 (true 반환)
-  return !shouldUpdate;
+  return true; // Props are the same, skip re-render
 });
