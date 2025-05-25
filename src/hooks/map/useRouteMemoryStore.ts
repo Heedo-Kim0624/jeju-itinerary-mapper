@@ -1,5 +1,6 @@
 
 import { create } from 'zustand';
+// DayRouteData, DayMarkerData, ItineraryPlace 타입을 types/core/route-data.ts 에서 가져옵니다.
 import type { DayRouteData, DayMarkerData, ItineraryPlace } from '@/types/core/route-data';
 import { dayStringToIndex } from '@/utils/date/dayMapping';
 
@@ -7,8 +8,8 @@ interface RouteMemoryState {
   routeDataByDay: Record<number, DayRouteData>;
   markerDataByDay: Record<number, DayMarkerData>;
   selectedDay: number;
-  setDayRouteData: (day: number, data: Partial<DayRouteData>) => void; // Allow partial updates
-  setDayMarkerData: (day: number, data: Partial<DayMarkerData>) => void; // Allow partial updates
+  setDayRouteData: (day: number, data: Partial<DayRouteData>) => void; // Partial 허용
+  setDayMarkerData: (day: number, data: Partial<DayMarkerData>) => void; // Partial 허용
   setSelectedDay: (day: number) => void;
   getDayRouteData: (day: number) => DayRouteData | undefined;
   getDayMarkerData: (day: number) => DayMarkerData | undefined;
@@ -22,7 +23,7 @@ export const useRouteMemoryStore = create<RouteMemoryState>((set, get) => ({
   selectedDay: 1,
   
   setDayRouteData: (day, data) => set(state => {
-    const existingData = state.routeDataByDay[day] || { day, nodeIds: [], linkIds: [] };
+    const existingData = state.routeDataByDay[day] || { day, nodeIds: [], linkIds: [] }; // 기본값 설정
     return {
       routeDataByDay: {
         ...state.routeDataByDay,
@@ -32,7 +33,7 @@ export const useRouteMemoryStore = create<RouteMemoryState>((set, get) => ({
   }),
   
   setDayMarkerData: (day, data) => set(state => {
-    const existingData = state.markerDataByDay[day] || { day, places: [] };
+    const existingData = state.markerDataByDay[day] || { day, places: [] }; // 기본값 설정
     return {
       markerDataByDay: {
         ...state.markerDataByDay,
@@ -72,7 +73,7 @@ export const useRouteMemoryStore = create<RouteMemoryState>((set, get) => ({
       if (dayNumber > 0) {
         newRouteDataByDay[dayNumber] = {
           day: dayNumber,
-          nodeIds: summary.nodeIds || summary.node_ids || summary.places_routed || [], // Added places_routed as a fallback
+          nodeIds: summary.nodeIds || summary.node_ids || summary.places_routed || [],
           linkIds: summary.linkIds || summary.link_ids || (summary.interleaved_route || []).filter((_:any, idx:number) => idx % 2 === 1).map(String),
           interleaved_route: summary.interleaved_route || [],
           totalDistance: summary.total_distance_m || 0,
@@ -94,11 +95,11 @@ export const useRouteMemoryStore = create<RouteMemoryState>((set, get) => ({
         }
         
         const place: ItineraryPlace = {
-          id: item.id?.toString() || item.place_name, // Ensure ID is string
+          id: item.id?.toString() || item.place_name, 
           name: item.place_name || '정보 없음',
           category: item.place_type || '기타',
           time: timeBlock,
-          timeBlock: timeBlock, // For ItineraryPlaceWithTime compatibility
+          timeBlock: timeBlock,
           x: parseFloat(item.longitude || item.x || '0'), 
           y: parseFloat(item.latitude || item.y || '0'),  
           address: item.address || item.road_address || '정보 없음',
@@ -108,7 +109,7 @@ export const useRouteMemoryStore = create<RouteMemoryState>((set, get) => ({
           phone: item.phone,
           rating: item.rating,
           homepage: item.homepage,
-          geoNodeId: item.id?.toString(), // Ensure string
+          geoNodeId: item.id?.toString(),
           isFallback: !item.id,
           details: {
             categories: item.categories_details || '',

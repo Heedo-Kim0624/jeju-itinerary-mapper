@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useMemo } from 'react';
 import { useMapContext } from './MapContext'; // Keep for other context values if needed
 import MapLoadingOverlay from './MapLoadingOverlay';
