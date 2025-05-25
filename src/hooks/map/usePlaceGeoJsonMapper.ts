@@ -1,11 +1,11 @@
 
 import { useCallback } from 'react';
 import type { Place } from '@/types/supabase';
-// GeoNodeFeature 대신 GeoJsonFeature, GeoJsonNodeProperties, GeoCoordinates를 가져옵니다.
-import type { GeoJsonFeature, GeoJsonNodeProperties, GeoCoordinates } from '@/components/rightpanel/geojson/GeoJsonTypes';
+// GeoJsonNodeFeature, GeoCoordinates를 가져옵니다. GeoJsonNodeProperties는 GeoJsonNodeFeature 내에 포함.
+import type { GeoJsonNodeFeature, GeoCoordinates } from '@/components/rightpanel/geojson/GeoJsonTypes';
 
 interface UsePlaceGeoJsonMapperProps {
-  geoJsonNodes: GeoJsonFeature[]; // GeoNodeFeature[] 대신 GeoJsonFeature[] 사용
+  geoJsonNodes: GeoJsonNodeFeature[]; // GeoJsonNodeFeature[] 사용
 }
 
 export const usePlaceGeoJsonMapper = ({ geoJsonNodes }: UsePlaceGeoJsonMapperProps) => {
@@ -21,13 +21,13 @@ export const usePlaceGeoJsonMapper = ({ geoJsonNodes }: UsePlaceGeoJsonMapperPro
 
     return places.map(place => {
       if (place.geoNodeId) {
-        const node = geoJsonNodes.find(n => {
-          // n.properties를 GeoJsonNodeProperties로 타입 변환하여 NODE_ID에 접근합니다.
-          const props = n.properties as GeoJsonNodeProperties;
-          return String(props.NODE_ID) === String(place.geoNodeId);
-        });
+        // geoJsonNodes는 이미 GeoJsonNodeFeature[] 타입이므로, properties는 GeoJsonNodeProperties 타입입니다.
+        const node = geoJsonNodes.find(n => String(n.properties.NODE_ID) === String(place.geoNodeId));
+        
         if (node && node.geometry.type === 'Point') {
           // node.geometry.coordinates를 GeoCoordinates로 타입 변환하고, 객체 속성으로 접근합니다.
+          // GeoJsonNodeFeature의 geometry.coordinates는 GeoCoordinates | GeoCoordinates[] | GeoCoordinates[][] 타입.
+          // Point의 경우 GeoCoordinates.
           const geoCoords = node.geometry.coordinates as GeoCoordinates;
           if (geoCoords && typeof geoCoords[0] === 'number' && typeof geoCoords[1] === 'number') {
             return { ...place, x: geoCoords[0], y: geoCoords[1] }; // lng: geoCoords[0], lat: geoCoords[1]

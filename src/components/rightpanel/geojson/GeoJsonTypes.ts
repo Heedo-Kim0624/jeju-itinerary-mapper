@@ -6,7 +6,7 @@ export interface GeoCoordinates {
 }
 
 export interface GeoJsonGeometry {
-  type: string;
+  type: 'Point' | 'LineString' | 'Polygon' | 'MultiPoint' | 'MultiLineString' | 'MultiPolygon' | string; // 구체적인 타입 명시
   coordinates: GeoCoordinates | GeoCoordinates[] | GeoCoordinates[][];
 }
 
@@ -25,15 +25,42 @@ export interface GeoJsonLinkProperties {
   [key: string]: any;
 }
 
-export interface GeoJsonFeature {
-  type: string;
-  properties: GeoJsonNodeProperties | GeoJsonLinkProperties;
-  geometry: GeoJsonGeometry;
-  id?: string | number; // id 속성 추가
+// 기본 GeoJsonFeature 구조
+interface BaseGeoJsonFeature<P, G extends GeoJsonGeometry> {
+  type: 'Feature';
+  properties: P;
+  geometry: G;
+  id?: string | number;
+}
+
+// 노드를 위한 GeoJsonFeature
+export type GeoJsonNodeFeature = BaseGeoJsonFeature<GeoJsonNodeProperties, GeoJsonGeometry & { type: 'Point' | string }>; // 노드는 보통 Point
+
+// 링크를 위한 GeoJsonFeature
+export type GeoJsonLinkFeature = BaseGeoJsonFeature<GeoJsonLinkProperties, GeoJsonGeometry & { type: 'LineString' | string }>; // 링크는 보통 LineString
+
+// GeoJsonFeature 유니언 타입
+export type GeoJsonFeature = GeoJsonNodeFeature | GeoJsonLinkFeature;
+
+// 타입 가드 함수
+export function isGeoJsonNodeProperties(props: any): props is GeoJsonNodeProperties {
+  return props && typeof props.NODE_ID === 'number';
+}
+
+export function isGeoJsonLinkProperties(props: any): props is GeoJsonLinkProperties {
+  return props && typeof props.LINK_ID === 'number';
+}
+
+export function isGeoJsonNodeFeature(feature: GeoJsonFeature): feature is GeoJsonNodeFeature {
+  return isGeoJsonNodeProperties(feature.properties);
+}
+
+export function isGeoJsonLinkFeature(feature: GeoJsonFeature): feature is GeoJsonLinkFeature {
+  return isGeoJsonLinkProperties(feature.properties);
 }
 
 export interface GeoJsonCollection {
-  type: string;
+  type: 'FeatureCollection'; // FeatureCollection으로 명시
   features: GeoJsonFeature[];
 }
 
@@ -41,9 +68,9 @@ export interface GeoJsonCollection {
 export interface GeoNode {
   id: string;
   type: 'node';
-  geometry: GeoJsonGeometry;
+  geometry: GeoJsonGeometry; // GeoJsonGeometry로 유지, 실제 사용시 Point로 캐스팅 가능
   properties: GeoJsonNodeProperties;
-  coordinates: GeoCoordinates;
+  coordinates: GeoCoordinates; // geometry.coordinates[0], geometry.coordinates[1]과 중복될 수 있으나, 편의성을 위해 유지
   adjacentLinks: string[];
   adjacentNodes: string[];
   naverMarker?: any;
@@ -53,9 +80,9 @@ export interface GeoNode {
 export interface GeoLink {
   id: string;
   type: 'link';
-  geometry: GeoJsonGeometry;
+  geometry: GeoJsonGeometry; // GeoJsonGeometry로 유지, 실제 사용시 LineString으로 캐스팅 가능
   properties: GeoJsonLinkProperties;
-  coordinates: GeoCoordinates[];
+  coordinates: GeoCoordinates[]; // geometry.coordinates와 중복될 수 있으나, 편의성을 위해 유지
   fromNode: string;
   toNode: string;
   length: number;

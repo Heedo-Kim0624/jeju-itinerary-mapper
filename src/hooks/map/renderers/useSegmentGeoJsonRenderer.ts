@@ -1,6 +1,7 @@
 
 import { useCallback } from 'react';
-import type { GeoJsonFeature, GeoJsonNodeProperties, GeoCoordinates } from '@/components/rightpanel/geojson/GeoJsonTypes';
+// GeoJsonNodeFeature와 GeoCoordinates 타입을 import 합니다.
+import type { GeoJsonNodeFeature, GeoCoordinates } from '@/components/rightpanel/geojson/GeoJsonTypes';
 import type { SegmentRoute } from '@/types/schedule';
 import { createNaverLatLng } from '@/utils/map/mapSetup';
 import { fitBoundsToCoordinates } from '@/utils/map/mapViewControls';
@@ -11,7 +12,7 @@ const HIGHLIGHT_COLOR = '#ffc107'; // Standard highlight color
 interface UseSegmentGeoJsonRendererProps {
   map: any;
   isNaverLoadedParam: boolean;
-  geoJsonNodes: GeoJsonFeature[];
+  geoJsonNodes: GeoJsonNodeFeature[]; // GeoJsonNodeFeature[] 사용
   addPolyline: (
     pathCoordinates: { lat: number; lng: number }[],
     color: string,
@@ -47,12 +48,10 @@ export const useSegmentGeoJsonRenderer = ({
 
     clearAllMapPolylines();
 
+    // geoJsonNodes는 GeoJsonNodeFeature[] 타입입니다. properties는 GeoJsonNodeProperties 타입입니다.
     const routeNodes = route.nodeIds.map(nodeId => {
-      return geoJsonNodes.find(node => {
-        const props = node.properties as GeoJsonNodeProperties;
-        return String(props.NODE_ID) === String(nodeId);
-      });
-    }).filter(Boolean) as GeoJsonFeature[];
+      return geoJsonNodes.find(node => String(node.properties.NODE_ID) === String(nodeId));
+    }).filter(Boolean) as GeoJsonNodeFeature[]; // filter(Boolean) 후 타입 단언 유지
 
     if (routeNodes.length < 2) {
       console.warn('[SegmentGeoJsonRenderer] Not enough valid nodes to render GeoJSON route');
@@ -60,7 +59,8 @@ export const useSegmentGeoJsonRenderer = ({
     }
 
     const coordinates = routeNodes.map(node => {
-      if (node && node.geometry.type === 'Point') {
+      // node는 GeoJsonNodeFeature 타입
+      if (node.geometry.type === 'Point') {
         const geoCoords = node.geometry.coordinates as GeoCoordinates;
         if (geoCoords && typeof geoCoords[0] === 'number' && typeof geoCoords[1] === 'number') {
           return { lat: geoCoords[1], lng: geoCoords[0] };
@@ -89,12 +89,10 @@ export const useSegmentGeoJsonRenderer = ({
       return;
     }
 
+    // geoJsonNodes는 GeoJsonNodeFeature[] 타입. properties는 GeoJsonNodeProperties
     const segmentNodes = segment.nodeIds.map(nodeId => {
-      return geoJsonNodes.find(node => {
-        const props = node.properties as GeoJsonNodeProperties;
-        return String(props.NODE_ID) === String(nodeId);
-      });
-    }).filter(Boolean) as GeoJsonFeature[];
+      return geoJsonNodes.find(node => String(node.properties.NODE_ID) === String(nodeId));
+    }).filter(Boolean) as GeoJsonNodeFeature[]; // filter(Boolean) 후 타입 단언 유지
 
     if (segmentNodes.length < 2) {
       console.warn('[SegmentGeoJsonRenderer] Not enough valid nodes to highlight segment');
@@ -102,7 +100,8 @@ export const useSegmentGeoJsonRenderer = ({
     }
 
     const coordinates = segmentNodes.map(node => {
-      if (node && node.geometry.type === 'Point') {
+      // node는 GeoJsonNodeFeature 타입
+      if (node.geometry.type === 'Point') {
         const geoCoords = node.geometry.coordinates as GeoCoordinates;
         if (geoCoords && typeof geoCoords[0] === 'number' && typeof geoCoords[1] === 'number') {
           return { lat: geoCoords[1], lng: geoCoords[0] };
