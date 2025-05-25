@@ -1,6 +1,6 @@
 
 import { useCallback, useRef } from 'react';
-import type { GeoNode, GeoLink, RouteStyle, GeoCoordinates } from './GeoJsonTypes';
+import type { GeoNode, GeoLink, RouteStyle, GeoCoordinates, RenderingCompleteCallback } from './GeoJsonTypes'; // RenderingCompleteCallback 추가
 
 const defaultRouteStyle: RouteStyle = {
   strokeColor: '#2196F3',
@@ -16,7 +16,7 @@ export const useGeoJsonRendering = (
   isLoaded: boolean,
   getNodeById: (id: string) => GeoNode | undefined,
   getLinkById: (id: string) => GeoLink | undefined,
-  onRenderingComplete?: () => void // Make callback optional, to be provided by MapContext/useMapCore
+  onExternalRenderingComplete?: RenderingCompleteCallback // 외부에서 제공되는 콜백 명칭 변경
 ) => {
   const activeMarkersRef = useRef<naver.maps.Marker[]>([]);
   const activePolylinesRef = useRef<naver.maps.Polyline[]>([]);
@@ -33,14 +33,18 @@ export const useGeoJsonRendering = (
   const renderRoute = useCallback((
     nodeIds: string[], 
     linkIds: string[], 
-    dayForLogging: number | null, // 일자 정보 (로깅용)
-    style: RouteStyle = defaultRouteStyle
+    dayForLogging: number | null, // 명시적인 일자 정보 (로깅용)
+    styleParam?: RouteStyle, // 스타일 파라미터 명확화
+    onCurrentRenderComplete?: RenderingCompleteCallback // 이 호출에 대한 특정 콜백
   ): (naver.maps.Marker | naver.maps.Polyline)[] => {
+    const effectiveStyle = styleParam || defaultRouteStyle;
+    const finalCallback = onCurrentRenderComplete || onExternalRenderingComplete; // 콜백 우선순위 정의
+
     const loggingPrefix = `[GeoJsonRendering Day ${dayForLogging ?? 'N/A'}]`;
 
     if (!map || !isLoaded || !window.naver || !window.naver.maps) {
       console.warn(`${loggingPrefix} renderRoute: Map not initialized, GeoJSON not loaded, or Naver API not ready.`);
-      if (onRenderingComplete) onRenderingComplete(); // Still call complete if skipping
+      if (finalCallback) finalCallback(); // 조건부 콜백 호출
       return [];
     }
 
@@ -70,10 +74,10 @@ export const useGeoJsonRendering = (
         const polyline = new window.naver.maps.Polyline({
           map,
           path,
-          strokeColor: style.strokeColor || defaultRouteStyle.strokeColor,
-          strokeWeight: style.strokeWeight || defaultRouteStyle.strokeWeight,
-          strokeOpacity: style.strokeOpacity || defaultRouteStyle.strokeOpacity,
-          zIndex: style.zIndex || defaultRouteStyle.zIndex,
+          strokeColor: effectiveStyle.strokeColor || defaultRouteStyle.strokeColor,
+          strokeWeight: effectiveStyle.strokeWeight || defaultRouteStyle.strokeWeight,
+          strokeOpacity: effectiveStyle.strokeOpacity || defaultRouteStyle.strokeOpacity,
+          zIndex: effectiveStyle.zIndex || defaultRouteStyle.zIndex,
         });
         newPolylines.push(polyline);
         newRenderedFeatures.push(polyline);
@@ -98,10 +102,10 @@ export const useGeoJsonRendering = (
           map,
           position,
           icon: {
-            content: `<div style="width: 8px; height: 8px; background-color: ${style.fillColor || defaultRouteStyle.fillColor}; border-radius: 50%; border: 1px solid white; box-shadow: 0 0 2px rgba(0,0,0,0.5);"></div>`,
+            content: `<div style="width: 8px; height: 8px; background-color: ${effectiveStyle.fillColor || defaultRouteStyle.fillColor}; border-radius: 50%; border: 1px solid white; box-shadow: 0 0 2px rgba(0,0,0,0.5);"></div>`,
             anchor: new window.naver.maps.Point(4, 4)
           },
-          zIndex: (style.zIndex || defaultRouteStyle.zIndex || 100) + 1
+          zIndex: (effectiveStyle.zIndex || defaultRouteStyle.zIndex || 100) + 1
         });
         newMarkers.push(marker);
         newRenderedFeatures.push(marker);
@@ -115,12 +119,12 @@ export const useGeoJsonRendering = (
     activeMarkersRef.current = newMarkers;
     console.log(`${loggingPrefix} Route rendering complete: ${newPolylines.length} links, ${newMarkers.length} nodes. (Missing: ${missingLinkCount} links, ${missingNodeCount} nodes)`);
     
-    if (onRenderingComplete) {
-      onRenderingComplete(); // Call the completion callback
+    if (finalCallback) {
+      finalCallback(); // 최종 콜백 호출
     }
     
     return newRenderedFeatures;
-  }, [map, isLoaded, clearDisplayedFeatures, getLinkById, getNodeById, onRenderingComplete]);
+  }, [map, isLoaded, clearDisplayedFeatures, getLinkById, getNodeById, onExternalRenderingComplete]);
 
   return {
     renderRoute,

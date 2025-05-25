@@ -1,3 +1,4 @@
+
 /**
  * Types related to itinerary structure and places with time
  */
@@ -58,6 +59,7 @@ export interface ItineraryDay {
   interleaved_route: (string | number)[];
   dayOfWeek: string; // e.g., "Mon", "Tue"
   date: string;      // e.g., "05/21" (MM/DD format)
+  routeId?: string; // 경로 고유 식별자 추가
 }
 
 // Response parsing result

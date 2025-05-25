@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react';
 import { Place, ItineraryDay } from '@/types/supabase';
 import useMapCore from './useMapCore';
 import { SegmentRoute } from '@/types/schedule';
@@ -107,7 +107,6 @@ export const useMapContext = () => useContext(MapContext);
 export const MapProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
   const mapCoreValues = useMapCore();
 
-  // 일자별 렌더링 상태 추가
   const [currentRenderingDay, setCurrentRenderingDay] = useState<number | null>(null);
   const [renderingComplete, setRenderingComplete] = useState({
     route: false,
@@ -115,28 +114,40 @@ export const MapProvider: React.FC<{children: React.ReactNode}> = ({ children })
   });
   
   const startDayRendering = useCallback((day: number | null) => {
-    console.log(`[MapProvider] Starting rendering process for day: ${day}`);
-    setCurrentRenderingDay(day);
+    console.log(`[MapProvider] Starting rendering process for day: ${day} (from MapContext)`);
+    setCurrentRenderingDay(day); // 중요: currentRenderingDay를 여기서 설정해야 이벤트 발생 시 올바른 day 값 사용
     setRenderingComplete({ route: false, markers: false });
     
-    // MapCore에서 제공하는 함수 사용
-    if (mapCoreValues.clearAllRoutes) mapCoreValues.clearAllRoutes();
-    if (mapCoreValues.clearMarkersAndUiElements) mapCoreValues.clearMarkersAndUiElements();
+    if (mapCoreValues.clearAllRoutes) {
+        console.log(`[MapProvider] Calling clearAllRoutes for day ${day}`);
+        mapCoreValues.clearAllRoutes();
+    }
+    if (mapCoreValues.clearMarkersAndUiElements) {
+        console.log(`[MapProvider] Calling clearMarkersAndUiElements for day ${day}`);
+        mapCoreValues.clearMarkersAndUiElements();
+    }
     
+    // clearAllRoutes 와 clearMarkersAndUiElements가 동기적으로 실행되므로,
+    // 바로 이어서 dayRenderingStarted 이벤트를 발생시켜도 됩니다.
+    // 만약 해당 함수들이 비동기라면, 완료된 후 이벤트를 발생시켜야 합니다.
     window.dispatchEvent(new CustomEvent('dayRenderingStarted', { detail: { day } }));
-  }, [mapCoreValues.clearAllRoutes, mapCoreValues.clearMarkersAndUiElements]);
+    console.log(`[MapProvider] Dispatched 'dayRenderingStarted' for day ${day}. CurrentRenderingDay is now: ${day}`);
+  }, [mapCoreValues.clearAllRoutes, mapCoreValues.clearMarkersAndUiElements]); // setCurrentRenderingDay 제거, currentRenderingDay 의존성 제거
   
   const handleRouteRenderingCompleteForContext = useCallback(() => {
-    console.log(`[MapProvider] Route rendering completed for day: ${currentRenderingDay}`);
+    // 이 시점의 currentRenderingDay가 중요
+    console.log(`[MapProvider] Route rendering completed for day: ${currentRenderingDay} (received in MapContext)`);
     setRenderingComplete(prev => ({ ...prev, route: true }));
     
+    // 이벤트 발생 시점의 currentRenderingDay 값 사용
     window.dispatchEvent(new CustomEvent('routeRenderingCompleteInternal', { 
       detail: { day: currentRenderingDay, source: 'MapContext' } 
     }));
-  }, [currentRenderingDay]);
+    console.log(`[MapProvider] Dispatched 'routeRenderingCompleteInternal' for day ${currentRenderingDay}`);
+  }, [currentRenderingDay]); // currentRenderingDay 의존성 추가
   
   const handleMarkerRenderingCompleteForContext = useCallback(() => {
-    console.log(`[MapProvider] Marker rendering completed for day: ${currentRenderingDay}`);
+    console.log(`[MapProvider] Marker rendering completed for day: ${currentRenderingDay} (received in MapContext)`);
     setRenderingComplete(prev => {
       const newState = { ...prev, markers: true };
       if (newState.route && newState.markers) {
@@ -144,11 +155,14 @@ export const MapProvider: React.FC<{children: React.ReactNode}> = ({ children })
         window.dispatchEvent(new CustomEvent('dayRenderingCompleted', { 
           detail: { day: currentRenderingDay } 
         }));
+        console.log(`[MapProvider] Dispatched 'dayRenderingCompleted' for day ${currentRenderingDay}`);
       }
       return newState;
     });
-  }, [currentRenderingDay]); // renderingComplete.route was removed from deps, check if it's ok
+  }, [currentRenderingDay]); // currentRenderingDay 의존성 추가 및 renderingComplete.route 제거
 
+  // ... keep existing code (contextValue definition and return statement)
+  // ... useEffect for logging can be kept or removed
   const contextValue = useMemo(() => ({
     ...mapCoreValues,
     currentRenderingDay,

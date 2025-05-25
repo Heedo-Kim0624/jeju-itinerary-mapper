@@ -1,4 +1,3 @@
-
 // GeoJSON 노드/링크 타입 정의
 export interface GeoCoordinates {
   0: number; // 경도 (longitude)
@@ -117,3 +116,6 @@ export interface GeoJsonLayerProps {
   isNaverLoaded: boolean;
   onGeoJsonLoaded?: (nodes: GeoNode[], links: GeoLink[]) => void;
 }
+
+// 렌더링 완료 콜백 타입 정의
+export type RenderingCompleteCallback = () => void;
