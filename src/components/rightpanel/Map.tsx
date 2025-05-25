@@ -1,4 +1,3 @@
-
 import React, { useEffect, useMemo } from 'react';
 import { useMapContext } from './MapContext';
 import MapMarkers from './MapMarkers';
@@ -6,7 +5,6 @@ import MapLoadingOverlay from './MapLoadingOverlay';
 import GeoJsonLayer from './GeoJsonLayer';
 import MapControls from './MapControls';
 import type { Place, ItineraryDay } from '@/types/supabase'; // Assuming this is correct, otherwise use types/core
-import { useMapItineraryVisualization } from '@/hooks/map/useMapItineraryVisualization';
 import { useMapDataEffects } from '@/hooks/map/useMapDataEffects';
 
 interface MapProps {
@@ -30,26 +28,18 @@ const Map: React.FC<MapProps> = ({
     isMapInitialized,
     isNaverLoaded,
     isMapError,
-    showGeoJson,
-    toggleGeoJsonVisibility,
+    showGeoJson, // This prop is used by MapControls and GeoJsonLayer
+    toggleGeoJsonVisibility, // This prop is used by MapControls
     handleGeoJsonLoaded,
     isGeoJsonLoaded,
     checkGeoJsonMapping,
     serverRoutesData,
     renderItineraryRoute,
-    geoJsonNodes, 
-    geoJsonLinks,
+    updateDayPolylinePaths,
   } = useMapContext();
 
-  const {
-    itinerary: visualizedItinerary,
-    currentDay: visualizedCurrentDay,
-    totalDistance: visualizedTotalDistance,
-    visualizeDayRoute,
-  } = useMapItineraryVisualization(map, geoJsonNodes, geoJsonLinks);
-
   // 현재 선택된 일자의 itinerary 데이터
-  const currentDayData = useMemo(() => {
+  const currentDayItinerary = useMemo(() => {
     if (itinerary && selectedDay !== null) {
       return itinerary.find(day => day.day === selectedDay);
     }
@@ -59,9 +49,8 @@ const Map: React.FC<MapProps> = ({
   const { handlePlaceClick } = useMapDataEffects({
     isMapInitialized,
     isGeoJsonLoaded,
-    showGeoJson,
-    toggleGeoJsonVisibility,
     renderItineraryRoute,
+    updateDayPolylinePaths, 
     serverRoutesData,
     checkGeoJsonMapping,
     places,
@@ -71,10 +60,10 @@ const Map: React.FC<MapProps> = ({
 
   // 일정 및 선택된 일자가 변경되면 경로 렌더링
   useEffect(() => {
-    if (itinerary && selectedDay !== null && currentDayData && renderItineraryRoute) {
-      console.log(`[Map] Selected day ${selectedDay} has ${currentDayData.places?.length || 0} places`);
+    if (itinerary && selectedDay !== null && currentDayItinerary && renderItineraryRoute) {
+      console.log(`[Map] Selected day ${selectedDay} has ${currentDayItinerary.places?.length || 0} places`);
       if (serverRoutesData && serverRoutesData[selectedDay]) { // Ensure serverRoutesData for the day exists
-        renderItineraryRoute(currentDayData, serverRoutesData);
+        renderItineraryRoute(currentDayItinerary, serverRoutesData);
       } else if (!serverRoutesData || !serverRoutesData[selectedDay]) {
         // Fallback or alternative logic if serverRoutesData is not ready for the selected day
         // This might involve rendering a simpler route or just markers
@@ -83,7 +72,7 @@ const Map: React.FC<MapProps> = ({
         // For now, just logging. Depending on requirements, could render markers only, or a direct line.
       }
     }
-  }, [itinerary, selectedDay, currentDayData, serverRoutesData, renderItineraryRoute]);
+  }, [itinerary, selectedDay, currentDayItinerary, serverRoutesData, renderItineraryRoute]);
 
   // MapMarkers에 대한 고유 키 생성 - 의존성 배열 확장
   const markersKey = useMemo(() => {

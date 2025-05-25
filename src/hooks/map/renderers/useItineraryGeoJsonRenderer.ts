@@ -1,8 +1,6 @@
-
 import { useCallback, useEffect } from 'react';
 import type { Place, ItineraryDay } from '@/types/supabase';
 import type { GeoCoordinates } from '@/components/rightpanel/geojson/GeoJsonTypes';
-// ServerRouteResponse는 이제 직접 사용되지 않음. ServerRouteDataForDay 구조체 사용.
 import type { ServerRouteDataForDay } from '@/hooks/map/useServerRoutes';
 import { fitBoundsToCoordinates } from '@/utils/map/mapViewControls';
 import { useGeoJsonContext } from '@/contexts/GeoJsonContext';
@@ -25,7 +23,6 @@ interface UseItineraryGeoJsonRendererProps {
     zIndex?: number
   ) => any | null;
   clearAllMapPolylines: () => void;
-  // updateDayPolylinePaths 함수를 props로 받도록 추가
   updateDayPolylinePaths: (day: number, polylinePaths: { lat: number; lng: number }[][]) => void;
 }
 
@@ -35,7 +32,7 @@ export const useItineraryGeoJsonRenderer = ({
   mapPlacesWithGeoNodesFn,
   addPolyline,
   clearAllMapPolylines,
-  updateDayPolylinePaths, // props로 받음
+  updateDayPolylinePaths,
 }: UseItineraryGeoJsonRendererProps) => {
   const {
     isGeoJsonLoaded: isContextGeoJsonLoaded,
@@ -49,7 +46,7 @@ export const useItineraryGeoJsonRenderer = ({
   const renderItineraryRoute = useCallback(
     (
       itineraryDay: ItineraryDay | null,
-      allServerRoutes?: Record<number, ServerRouteDataForDay>, // 전체 서버 경로 데이터
+      allServerRoutes?: Record<number, ServerRouteDataForDay>,
       onComplete?: () => void
     ) => {
       if (!map || !isNaverLoadedParam || !window.naver || !window.naver.maps) {
@@ -82,7 +79,7 @@ export const useItineraryGeoJsonRenderer = ({
               boundsFitCoords.push(...path);
             }
           });
-          newCalculatedPolylinePaths = cachedPolylinePaths; // 이미 캐시된 경로 사용
+          newCalculatedPolylinePaths = cachedPolylinePaths;
         } else if (itineraryDay.routeData?.linkIds && itineraryDay.routeData.linkIds.length > 0 && isContextGeoJsonLoaded) {
           console.log(`[ItineraryGeoJsonRenderer] Day ${itineraryDay.day}: Link ID 기반 경로 계산. 링크 수: ${itineraryDay.routeData.linkIds.length}`);
           const { linkIds } = itineraryDay.routeData;
@@ -95,7 +92,8 @@ export const useItineraryGeoJsonRenderer = ({
             if (linkFeature?.geometry?.type === 'LineString' && Array.isArray(linkFeature.geometry.coordinates)) {
               const coords = linkFeature.geometry.coordinates as GeoCoordinates[];
               const pathCoordsForPolyline = coords.map((coordPair: GeoCoordinates) => {
-                const [lng, lat] = coordPair;
+                const lng = coordPair[0];
+                const lat = coordPair[1];
                 return isValidCoordinate(lat, lng) ? { lat, lng } : null;
               }).filter(c => c !== null) as { lat: number; lng: number }[];
 
@@ -110,12 +108,11 @@ export const useItineraryGeoJsonRenderer = ({
           });
           if (missingLinkCount > 0) console.warn(`[ItineraryGeoJsonRenderer] 누락된 Link ID 수: ${missingLinkCount}`);
           
-          if (newCalculatedPolylinePaths.length > 0) {
+          if (newCalculatedPolylinePaths.length > 0 && !cachedPolylinePaths) {
             console.log(`[ItineraryGeoJsonRenderer] Day ${itineraryDay.day}: 계산된 폴리라인 경로 ${newCalculatedPolylinePaths.length}개 캐시 업데이트.`);
             updateDayPolylinePaths(itineraryDay.day, newCalculatedPolylinePaths);
           }
         } else {
-          // 링크 ID가 없거나 GeoJSON이 로드되지 않은 경우, 장소 간 직선 경로 (Fallback)
           console.log(`[ItineraryGeoJsonRenderer] Day ${itineraryDay.day}: Link ID 없거나 GeoJSON 미로드. 장소 간 직선 경로 시도.`);
           const mappedPlaces = mapPlacesWithGeoNodesFn(itineraryDay.places);
           const validPlaces = mappedPlaces.filter(p =>
@@ -124,11 +121,13 @@ export const useItineraryGeoJsonRenderer = ({
           );
           if (validPlaces.length >= 2) {
             const directPathCoordinates = validPlaces.map(p => ({ lat: p.y as number, lng: p.x as number }));
-            addPolyline(directPathCoordinates, USER_ROUTE_COLOR, 3, USER_ROUTE_OPACITY - 0.1, USER_ROUTE_ZINDEX - 10); // 약간 다른 스타일
-            newCalculatedPolylinePaths.push(directPathCoordinates); // 직선 경로도 캐시 가능 (선택적)
+            addPolyline(directPathCoordinates, USER_ROUTE_COLOR, 3, USER_ROUTE_OPACITY - 0.1, USER_ROUTE_ZINDEX - 10);
+            newCalculatedPolylinePaths.push(directPathCoordinates); 
             boundsFitCoords.push(...directPathCoordinates);
-            // 직선 경로의 경우 updateDayPolylinePaths 호출 여부는 정책에 따라 결정
-            // updateDayPolylinePaths(itineraryDay.day, newCalculatedPolylinePaths); 
+            // 직선 경로도 필요시 캐시 업데이트
+            // if (!cachedPolylinePaths) { // Only update if not already cached (though direct paths might not be cached often)
+            //   updateDayPolylinePaths(itineraryDay.day, newCalculatedPolylinePaths);
+            // }
             console.log(`[ItineraryGeoJsonRenderer] Day ${itineraryDay.day}: 직선 경로 ${newCalculatedPolylinePaths.length > 0 ? '생성됨' : '생성 실패'}`);
           } else {
             console.warn(`[ItineraryGeoJsonRenderer] Day ${itineraryDay.day}: 직선 경로를 그릴 유효한 장소가 2개 미만입니다.`);
@@ -139,7 +138,6 @@ export const useItineraryGeoJsonRenderer = ({
           const naverCoords = coordsToNaverLatLngArray(boundsFitCoords, window.naver.maps);
           if (naverCoords.length > 0) fitBoundsToCoordinates(map, naverCoords);
         } else if (itineraryDay.places && itineraryDay.places.length > 0) {
-            // 폴리라인이 없어도 장소 마커 기준으로 fitBounds 시도
             const mappedPlaces = mapPlacesWithGeoNodesFn(itineraryDay.places);
             const validPlacesCoords = mappedPlaces
                 .filter(p => typeof p.y === 'number' && typeof p.x === 'number' && isValidCoordinate(p.y,p.x))

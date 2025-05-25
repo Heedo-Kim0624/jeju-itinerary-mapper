@@ -1,7 +1,6 @@
-
 import { useCallback } from 'react';
 import { toast } from 'sonner';
-import type { ItineraryDay, Place as SelectedPlace, NewServerScheduleResponse } from '@/types/core';
+import type { ItineraryDay, Place as SelectedPlace, NewServerScheduleResponse, ServerScheduleItem } from '@/types/core';
 import type { GeoJsonNodeFeature } from '@/components/rightpanel/geojson/GeoJsonTypes';
 import { useItineraryParser } from '@/hooks/itinerary/useItineraryParser';
 import type { ServerRouteDataForDay } from '@/hooks/map/useServerRoutes';
@@ -19,13 +18,13 @@ interface UseScheduleGenerationCoreProps {
 export const useScheduleGenerationCore = ({
   selectedPlaces,
   startDate,
-  geoJsonNodes, // 사용되지 않지만 시그니처 유지
+  geoJsonNodes,
   setItinerary,
   setSelectedDay,
   setServerRoutes,
   setIsLoadingState,
 }: UseScheduleGenerationCoreProps) => {
-  const { parseItinerary } = useItineraryParser();
+  const { parseServerResponse } = useItineraryParser();
 
   const processServerResponse = useCallback(async (response: NewServerScheduleResponse) => {
     console.log('[ScheduleGenCore] 서버 응답 수신:', response);
@@ -39,7 +38,7 @@ export const useScheduleGenerationCore = ({
     }
 
     try {
-      const parsedItineraryDays = await parseItinerary(response, selectedPlaces, startDate);
+      const parsedItineraryDays = parseServerResponse(response, startDate);
 
       if (!parsedItineraryDays || parsedItineraryDays.length === 0) {
         toast.error('일정 생성에 실패했습니다. 입력값을 확인해주세요.');
@@ -55,12 +54,11 @@ export const useScheduleGenerationCore = ({
       parsedItineraryDays.forEach(dayData => {
         newServerRoutesData[dayData.day] = {
           day: dayData.day,
-          itineraryDayData: dayData, // 전체 ItineraryDay 객체 저장
-          // 서버 원본 경로 데이터는 ItineraryDay의 routeData 또는 interleaved_route에서 가져옴
+          itineraryDayData: dayData,
           nodeIds: dayData.routeData?.nodeIds || [],
           linkIds: dayData.routeData?.linkIds || [],
           interleaved_route: dayData.interleaved_route || [], 
-          polylinePaths: [], // 초기에는 빈 배열 (경로 렌더링 시 채워짐)
+          polylinePaths: [], 
         };
       });
 
@@ -85,8 +83,7 @@ export const useScheduleGenerationCore = ({
       console.log('[ScheduleGenCore] Process server response finished.');
     }
   }, [
-    parseItinerary,
-    selectedPlaces,
+    parseServerResponse,
     startDate,
     setItinerary,
     setSelectedDay,
