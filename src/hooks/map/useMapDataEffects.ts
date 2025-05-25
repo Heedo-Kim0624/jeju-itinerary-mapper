@@ -1,32 +1,27 @@
 
-import { useEffect, useCallback, useState, useRef } from 'react';
-import type { Place, ItineraryDay } from '@/types/core';
-import { useMapContext } from '@/components/rightpanel/MapContext';
-import { ServerRouteDataForDay } from '@/hooks/map/useServerRoutes';
+import { useCallback, useState, useEffect, useRef } from 'react';
+import type { Place, ItineraryDay } from '@/types/supabase'; // or @/types/core
+import type { ServerRouteDataForDay } from '@/hooks/map/useServerRoutes';
+import { useMapContext } from '@/components/rightpanel/MapContext'; 
 
 interface UseMapDataEffectsProps {
   isMapInitialized: boolean;
-  renderItineraryRoute: (
+  // isGeoJsonLoaded 제거 (MapContext 통해 간접적으로 확인 가능 또는 GeoJson 자체 로딩 상태 사용)
+  renderItineraryRoute: ( 
     itineraryDay: ItineraryDay | null,
     allServerRoutes?: Record<number, ServerRouteDataForDay>,
-    onComplete?: () => void
+    onComplete?: () => void 
   ) => void;
-  serverRoutesData: Record<number, ServerRouteDataForDay>;
-  checkGeoJsonMapping?: (places: Place[]) => {
-    mappedPlaces: number;
-    totalPlaces: number;
-    mappingRate: string;
-    averageDistance: number | string;
-    success: boolean;
-    message: string;
-  };
-  places: Place[];
-  itinerary: ItineraryDay[] | null;
+  serverRoutesData: Record<number, ServerRouteDataForDay> | null;
+  checkGeoJsonMapping: (places: Place[]) => void; // 이 함수는 GeoJson 로드 상태를 내부적으로 확인해야 함
+  places: Place[]; 
+  itinerary: ItineraryDay[] | null; 
   selectedDay: number | null;
 }
 
 export const useMapDataEffects = ({
   isMapInitialized,
+  // isGeoJsonLoaded, // 제거
   renderItineraryRoute,
   serverRoutesData,
   checkGeoJsonMapping,
@@ -34,85 +29,111 @@ export const useMapDataEffects = ({
   itinerary,
   selectedDay,
 }: UseMapDataEffectsProps) => {
-  const [previousDay, setPreviousDay] = useState<number | null>(null);
-  const renderingInProgress = useRef<boolean>(false);
+  const prevItineraryRef = useRef<ItineraryDay[] | null>(null);
+  const prevSelectedDayRef = useRef<number | null>(null);
+  const prevServerRoutesDataRef = useRef<Record<number, ServerRouteDataForDay> | null>(null);
   
-  // 장소 클릭 핸들러
+  const routeRenderingInProgressRef = useRef(false);
+  // handleRouteRenderingCompleteForContext 는 MapContext에서 직접 가져오므로, 여기서 상태를 중복 관리할 필요는 없음.
+  // MapContext의 currentRenderingDay, renderingComplete.route 상태를 참조하여 로직을 구성할 수 있음.
+  const { handleRouteRenderingCompleteForContext, isGeoJsonLoaded } = useMapContext(); // isGeoJsonLoaded 추가
+
   const handlePlaceClick = useCallback((place: Place, index: number) => {
-    // 여기서 place 클릭 시 처리 로직 구현 가능 (필요시)
-    console.log(`[useMapDataEffects] Place clicked: ${place.name} (${index})`);
+    console.log(`[MapDataEffects] Place clicked: ${place.name}, index: ${index}`);
   }, []);
 
-  // 일정 일자가 변경될 때 해당 일자의 경로 렌더링
   useEffect(() => {
-    if (!isMapInitialized || !itinerary || selectedDay === null) return;
-    
-    console.log(`[useMapDataEffects] selectedDay changed to: ${selectedDay}, previousDay: ${previousDay}`);
-    
-    if (renderingInProgress.current) {
-      console.log("[useMapDataEffects] Rendering still in progress, waiting...");
+    if (!isMapInitialized || !renderItineraryRoute) {
+      console.log('[MapDataEffects] Effect skipped: Map not initialized or renderItineraryRoute not available.');
       return;
     }
+
+    const itineraryActuallyChanged = prevItineraryRef.current !== itinerary;
+    const dayActuallyChanged = prevSelectedDayRef.current !== selectedDay;
+    const serverRoutesActuallyChanged = prevServerRoutesDataRef.current !== serverRoutesData;
     
-    // 선택한 일자의 itinerary 데이터 찾기
-    const currentDayData = itinerary.find(day => day.day === selectedDay);
-    if (!currentDayData) {
-      console.warn(`[useMapDataEffects] No itinerary data found for day ${selectedDay}`);
-      return;
+    let timeoutId: NodeJS.Timeout | undefined;
+
+    if (dayActuallyChanged || itineraryActuallyChanged || serverRoutesActuallyChanged) {
+      // console.log(`[MapDataEffects] Change detected. Day: ${dayActuallyChanged}, Itin: ${itineraryActuallyChanged}, ServerRoutes: ${serverRoutesActuallyChanged}`);
+      if (routeRenderingInProgressRef.current) {
+        console.log('[MapDataEffects] Route rendering already in progress (ref lock), skipping this update.');
+        return;
+      }
+      routeRenderingInProgressRef.current = true;
+      console.log('[MapDataEffects] routeRenderingInProgressRef SET TO TRUE');
+
+      prevItineraryRef.current = itinerary;
+      prevSelectedDayRef.current = selectedDay;
+      prevServerRoutesDataRef.current = serverRoutesData;
+
+      timeoutId = setTimeout(() => {
+        console.log(`[MapDataEffects] Starting route processing for day: ${selectedDay}. Clearing old routes first.`);
+        
+        // 1. 이전 경로 클리어 (renderItineraryRoute(null, ...) 호출)
+        renderItineraryRoute(null, serverRoutesData || undefined, () => {
+          console.log(`[MapDataEffects] Old routes cleared for day: ${selectedDay}. Now checking for new route.`);
+          
+          let effectiveItineraryDay: ItineraryDay | null = null;
+          if (selectedDay !== null && itinerary && itinerary.length > 0) {
+            effectiveItineraryDay = itinerary.find(d => d.day === selectedDay) || null;
+          }
+          
+          if (effectiveItineraryDay) {
+            console.log(`[MapDataEffects] Rendering new route for day ${selectedDay}. Route ID: ${effectiveItineraryDay.routeId}`);
+            // 2. 새 경로 렌더링
+            renderItineraryRoute(effectiveItineraryDay, serverRoutesData || undefined, () => {
+              // 이 onComplete는 *새로운* 경로 렌더링 완료 시 호출됨
+              console.log(`[MapDataEffects] Route for day ${selectedDay} (Route ID: ${effectiveItineraryDay?.routeId}) rendered. Notifying MapContext.`);
+              routeRenderingInProgressRef.current = false;
+              console.log('[MapDataEffects] routeRenderingInProgressRef SET TO FALSE (new route rendered)');
+              if (handleRouteRenderingCompleteForContext) {
+                handleRouteRenderingCompleteForContext(); // MapContext에 경로 렌더링 완료 알림
+              }
+            });
+          } else {
+            console.log(`[MapDataEffects] No valid itinerary data for day ${selectedDay}, routes remain cleared. Notifying MapContext.`);
+            routeRenderingInProgressRef.current = false;
+            console.log('[MapDataEffects] routeRenderingInProgressRef SET TO FALSE (no new route)');
+            if (handleRouteRenderingCompleteForContext) {
+                handleRouteRenderingCompleteForContext(); // 경로 없어도 완료 알림 (마커 진행 위해)
+            }
+          }
+        });
+      }, 0); 
+    } else {
+      // console.log('[MapDataEffects] No relevant changes detected for route visualization.');
     }
-    
-    // 경로 렌더링 시작
-    renderingInProgress.current = true;
-    console.log(`[useMapDataEffects] Rendering route for day ${selectedDay}:`, 
-      {
-        dayInfo: `${currentDayData.dayOfWeek} (${currentDayData.date})`,
-        routeId: currentDayData.routeId,
-        placesCount: currentDayData.places.length,
-        nodeIdsCount: currentDayData.routeData.nodeIds.length,
-        linkIdsCount: currentDayData.routeData.linkIds.length,
-        interleavedRouteLength: currentDayData.interleaved_route.length,
-        serverRouteDataEntries: Object.keys(serverRoutesData).length
-      }
-    );
-    
-    // 실제 렌더링 함수 호출
-    renderItineraryRoute(
-      currentDayData,
-      serverRoutesData,
-      () => {
-        console.log(`[useMapDataEffects] Route rendering completed for day ${selectedDay}`);
-        renderingInProgress.current = false;
-        setPreviousDay(selectedDay);
-      }
-    );
-  }, [isMapInitialized, itinerary, selectedDay, renderItineraryRoute, serverRoutesData, previousDay]);
 
-  // GeoJSON 매핑 품질 체크 (옵션)
-  useEffect(() => {
-    if (isMapInitialized && checkGeoJsonMapping && places.length > 0) {
-      const mappingResult = checkGeoJsonMapping(places);
-      console.log(`[useMapDataEffects] GeoJSON mapping quality: ${mappingResult.mappingRate} (${mappingResult.mappedPlaces}/${mappingResult.totalPlaces})`);
-    }
-  }, [isMapInitialized, checkGeoJsonMapping, places]);
-
-  // 일자 선택 이벤트 리스너
-  useEffect(() => {
-    const handleItineraryDaySelected = (event: Event) => {
-      const customEvent = event as CustomEvent<{day: number, timestamp: number}>;
-      const selectedDayFromEvent = customEvent.detail?.day;
-      
-      if (selectedDayFromEvent !== undefined && selectedDayFromEvent !== null) {
-        console.log(`[useMapDataEffects] 'itineraryDaySelected' event received for day: ${selectedDayFromEvent}`);
-        // 일자 선택 이벤트가 발생하면 renderItineraryRoute는 selectedDay가 변경될 때 호출되므로
-        // 여기서는 추가 처리가 필요 없음
-      }
-    };
-
-    window.addEventListener('itineraryDaySelected', handleItineraryDaySelected);
     return () => {
-      window.removeEventListener('itineraryDaySelected', handleItineraryDaySelected);
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      // Unmounting or re-running: if a render was pending, release lock.
+      // This might be aggressive if another effect could also control this ref.
+      // For now, assume this is the primary controller of the ref.
+      // if (routeRenderingInProgressRef.current) {
+      //   console.log('[MapDataEffects] Cleanup: routeRenderingInProgressRef was true, setting to false.');
+      //   routeRenderingInProgressRef.current = false;
+      // }
     };
-  }, [renderItineraryRoute, serverRoutesData]);
+  }, [
+    isMapInitialized,
+    renderItineraryRoute,
+    itinerary,
+    selectedDay,
+    serverRoutesData,
+    handleRouteRenderingCompleteForContext, 
+  ]);
 
-  return { handlePlaceClick };
+  useEffect(() => {
+    if (isMapInitialized && isGeoJsonLoaded && places.length > 0 && checkGeoJsonMapping) {
+      console.log('[MapDataEffects] Checking GeoJSON mapping due to dependencies change.');
+      checkGeoJsonMapping(places);
+    }
+  }, [isMapInitialized, isGeoJsonLoaded, places, checkGeoJsonMapping]);
+
+  return {
+    handlePlaceClick,
+  };
 };
