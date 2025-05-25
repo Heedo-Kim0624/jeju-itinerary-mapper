@@ -4,7 +4,7 @@
  */
 
 // CategoryName type 
-export type CategoryName = '숙소' | '관광지' | '음식점' | '카페';
+export type CategoryName = '숙소' | '관광지' | '음식점' | '카페'; // '교통' 제거
 
 // Basic place interface
 export interface Place {
@@ -12,7 +12,7 @@ export interface Place {
   name: string;
   address: string;
   phone: string;
-  category: string;
+  category: string; // 일반 string으로 유지하여 CategoryName으로 변환은 유틸리티에서 처리
   description: string;
   rating: number;
   x: number;
@@ -39,7 +39,7 @@ export interface Place {
 
 // Selected place interface
 export interface SelectedPlace extends Place {
-  category: CategoryName;
+  category: CategoryName; // 여기는 CategoryName 타입으로 유지
   isSelected: boolean;
   isCandidate: boolean;
 }
@@ -57,3 +57,4 @@ export interface TripDateTime {
   startTime: string;
   endTime: string;
 }
+

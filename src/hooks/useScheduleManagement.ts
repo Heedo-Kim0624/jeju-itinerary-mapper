@@ -1,10 +1,11 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useServerResponseHandler } from '@/hooks/schedule/useServerResponseHandler';
 import { useScheduleStateAndEffects } from '@/hooks/schedule/useScheduleStateAndEffects';
 import { useScheduleGenerationCore } from '@/hooks/schedule/useScheduleGenerationCore';
 import { useMapContext } from '@/components/rightpanel/MapContext';
-import { type ItineraryDay, type SelectedPlace, type Place } from '@/types/core';
+import { type ItineraryDay, type SelectedPlace, type Place, CategoryName } from '@/types/core'; // CategoryName 임포트
 
 interface ScheduleManagementProps {
   selectedPlaces: SelectedPlace[];
@@ -23,11 +24,18 @@ const JEJU_AIRPORT_TEMPLATE: Omit<SelectedPlace, 'id'> = {
   name: '제주국제공항',
   x: 126.4920, // Longitude
   y: 33.5113,  // Latitude
-  category: '교통', // 또는 '공항' 등 적절한 카테고리
-  address: '제주특별자치도 제주시 공항로 2', // 실제 주소 또는 간략 주소
-  photoUrl: '', // 필요시 이미지 URL
-  // SelectedPlace에 필요한 다른 필드가 있다면 기본값으로 채워줍니다.
-  // 예: mapCategory: 'airport', subCategory: 'international' 등
+  category: '관광지' as CategoryName, // '관광지'로 변경 및 타입 단언
+  address: '제주특별자치도 제주시 공항로 2',
+  image_url: '', // photoUrl -> image_url로 변경
+  // SelectedPlace에 필요한 나머지 필드들의 기본값 설정
+  phone: '',
+  description: '제주도의 관문 국제공항',
+  rating: 0, // 기본값 또는 실제 평점
+  road_address: '제주특별자치도 제주시 공항로 2',
+  homepage: '',
+  isSelected: false, // SelectedPlace 필드
+  isCandidate: false, // SelectedPlace 필드
+  // operationTimeData, geoNodeId, geoNodeDistance, weight, raw, categoryDetail, reviewCount, naverLink, instaLink, operatingHours 등은 필요에 따라 추가
 };
 
 export const useScheduleManagement = ({
