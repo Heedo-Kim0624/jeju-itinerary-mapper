@@ -32,16 +32,17 @@ export const useScheduleStateAndEffects = () => {
   const handleSelectDay = useCallback((day: number) => {
     console.log(`[useScheduleStateAndEffects] handleSelectDay called with day: ${day}, prevDay: ${prevSelectedDayRef.current}`);
     
+    // 동일한 일차 재선택 시에도 경로와 마커를 새로고침하기 위해 항상 처리
     // 마커와 경로를 초기화하여 깨끗한 상태에서 시작
     if (clearAllRoutes) {
       clearAllRoutes();
+      console.log(`[useScheduleStateAndEffects] All routes cleared for day: ${day}`);
     }
     
     // 이전 마커 모두 제거
     if (clearMarkersAndUiElements) {
-      setTimeout(() => {
-        clearMarkersAndUiElements();
-      }, 0);
+      clearMarkersAndUiElements();
+      console.log(`[useScheduleStateAndEffects] All markers and UI elements cleared for day: ${day}`);
     }
     
     // 상태와 레퍼런스 업데이트
@@ -63,7 +64,9 @@ export const useScheduleStateAndEffects = () => {
         window.dispatchEvent(daySelectedEvent);
         
         // 추가: startScheduleVisualization 이벤트 발생 (마커와 경로 동기화용)
-        const visualizationEvent = new Event('startScheduleVisualization');
+        const visualizationEvent = new CustomEvent('startScheduleVisualization', { 
+          detail: { day, timestamp: now }
+        });
         console.log(`[useScheduleStateAndEffects] Dispatching startScheduleVisualization event for day ${day}`);
         window.dispatchEvent(visualizationEvent);
       }, 50);
@@ -101,7 +104,9 @@ export const useScheduleStateAndEffects = () => {
           window.dispatchEvent(daySelectedEvent);
           
           // 추가: 마커와 경로 동기화를 위한 시각화 시작 이벤트
-          const visualizationEvent = new Event('startScheduleVisualization');
+          const visualizationEvent = new CustomEvent('startScheduleVisualization', { 
+            detail: { day: firstDay, timestamp: now, initialSelection: true }
+          });
           window.dispatchEvent(visualizationEvent);
         }, 100);
       }
@@ -138,7 +143,7 @@ export const useScheduleStateAndEffects = () => {
         console.log(`[useScheduleStateAndEffects] Rendering route for day ${selectedDay} after short delay`);
         renderItineraryRoute(currentDayData);
       }
-    }, 150);
+    }, 200); // 지연 시간 약간 증가
   }, [selectedDay, itinerary, renderItineraryRoute, clearAllRoutes]);
 
   return {

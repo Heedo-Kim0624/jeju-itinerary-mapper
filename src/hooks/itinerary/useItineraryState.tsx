@@ -29,6 +29,11 @@ export const useItineraryState = () => {
       if (now - lastEventDispatchTimestamp.current > 300) {
         lastEventDispatchTimestamp.current = now;
         
+        // 경로 명시적 초기화 (일차 변경 전)
+        if (clearAllRoutes) {
+          clearAllRoutes();
+        }
+        
         // 명확한 이름의 커스텀 이벤트 발생
         const daySelectedEvent = new CustomEvent('itineraryDaySelected', { 
           detail: { 
@@ -39,15 +44,23 @@ export const useItineraryState = () => {
         });
         
         console.log(`[useItineraryState] Dispatching itineraryDaySelected event for day ${day} with ${selectedDayData.places.length} places`);
+        
         // 비동기로 이벤트 실행하여 상태 업데이트와 동시에 발생하는 문제 방지
         setTimeout(() => {
           window.dispatchEvent(daySelectedEvent);
-        }, 0);
+          
+          // 시각화 트리거 이벤트도 함께 발송 (마커+경로 동기화용)
+          const visualizationEvent = new CustomEvent('startScheduleVisualization', {
+            detail: { day, timestamp: now }
+          });
+          window.dispatchEvent(visualizationEvent);
+          console.log(`[useItineraryState] Dispatching visualization event for day ${day}`);
+        }, 50);
       }
     } else {
       console.warn(`[useItineraryState] Selected day ${day} not found in itinerary`);
     }
-  }, [itinerary]);
+  }, [itinerary, clearAllRoutes]);
 
   // 일정이 변경되면 경로 지우고 첫째 날 선택
   useEffect(() => {
@@ -78,7 +91,14 @@ export const useItineraryState = () => {
             } 
           });
           window.dispatchEvent(firstDaySelectedEvent);
-          console.log(`[useItineraryState] 일정 로드 후 자동 첫째날(${firstDay}) 선택 이벤트 발행`);
+          
+          // 시각화 트리거 이벤트도 함께 발송
+          const visualizationEvent = new CustomEvent('startScheduleVisualization', {
+            detail: { day: firstDay, initialSelection: true }
+          });
+          window.dispatchEvent(visualizationEvent);
+          
+          console.log(`[useItineraryState] 일정 로드 후 자동 첫째날(${firstDay}) 선택 및 시각화 이벤트 발행`);
         }, 100);
       } else {
         // 기존 선택일 유지하고 재선택 이벤트 발생

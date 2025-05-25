@@ -51,8 +51,13 @@ export const useMapMarkers = (props: UseMapMarkersProps) => {
   });
 
   const { renderMarkers } = useMarkerRenderLogic({
-    places, selectedPlace, itinerary, selectedDay, selectedPlaces,
-    onPlaceClick, highlightPlaceId,
+    places, 
+    selectedPlace, 
+    itinerary, 
+    selectedDay,
+    selectedPlaces,
+    onPlaceClick, 
+    highlightPlaceId,
     map, 
     isMapInitialized,
     isNaverLoaded: !!window.naver?.maps,
@@ -60,9 +65,15 @@ export const useMapMarkers = (props: UseMapMarkersProps) => {
   });
 
   useMarkerLifecycleManager({
-    selectedDay, itinerary, places, isMapInitialized, map,
+    selectedDay, 
+    itinerary, 
+    places, 
+    isMapInitialized, 
+    map,
     forceMarkerUpdate,
-    prevSelectedDayRef, prevItineraryRef, prevPlacesRef,
+    prevSelectedDayRef, 
+    prevItineraryRef, 
+    prevPlacesRef,
   });
 
   // Add special diagnostic effect to log marker updates
@@ -71,9 +82,10 @@ export const useMapMarkers = (props: UseMapMarkersProps) => {
     
     if (updateTriggerId > 0 && isMapInitialized) {
       console.log(`[useMapMarkers] Main hook: Updating markers due to trigger ID change: ${updateTriggerId}`);
+      clearAllMarkers(); // Always clear markers before rendering new ones
       renderMarkers();
     }
-  }, [updateTriggerId, isMapInitialized, renderMarkers]);
+  }, [updateTriggerId, isMapInitialized, renderMarkers, clearAllMarkers]);
   
   // 초기 마운트 시 강제 렌더링
   useEffect(() => {

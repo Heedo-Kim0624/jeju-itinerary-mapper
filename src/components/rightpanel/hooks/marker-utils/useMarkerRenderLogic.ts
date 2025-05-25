@@ -51,7 +51,7 @@ export const useMarkerRenderLogic = ({
 
     console.log(`[useMarkerRenderLogic] Determining places to display: selectedDay=${selectedDay}, itinerary items=${itinerary?.length || 0}, general places=${places.length}`);
 
-    // 중요: 일정이 있고 선택된 날짜가 있을 때는 그 날짜의 일정 장소만 표시
+    // 일정이 있고 선택된 날짜가 있을 때는 그 날짜의 일정 장소만 표시
     if (itinerary && itinerary.length > 0 && selectedDay !== null) {
       const currentDayData = itinerary.find(day => day.day === selectedDay);
       if (currentDayData && currentDayData.places && currentDayData.places.length > 0) {
@@ -64,7 +64,7 @@ export const useMarkerRenderLogic = ({
         console.log(`[useMarkerRenderLogic] No places found for itinerary day ${selectedDay}. Displaying 0 markers.`);
       }
     } else if (places.length > 0 && selectedDay === null) { 
-      // 일정이 선택되지 않았을 때만 일반 장소 표시 - 이 부분이 핵심
+      // 일정이 선택되지 않았을 때만 일반 장소 표시
       placesToDisplay = places;
       console.log(`[useMarkerRenderLogic] No active itinerary day. Displaying ${places.length} general places from search/props.`);
     } else {

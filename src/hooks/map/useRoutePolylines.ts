@@ -57,6 +57,7 @@ export const useRoutePolylines = ({ map, isNaverLoadedParam }: UseRoutePolylines
   }, [map, isNaverLoadedParam]);
 
   const clearActivePolylines = useCallback(() => {
+    console.log(`[RoutePolylines] Clearing ${activePolylinesRef.current.length} active polylines`);
     activePolylinesRef.current.forEach(p => {
       if (p && typeof p.setMap === 'function') p.setMap(null);
     });
@@ -65,6 +66,7 @@ export const useRoutePolylines = ({ map, isNaverLoadedParam }: UseRoutePolylines
 
   const clearHighlightedPolyline = useCallback(() => {
     if (highlightedPathRef.current && typeof highlightedPathRef.current.setMap === 'function') {
+      console.log(`[RoutePolylines] Clearing highlighted polyline`);
       highlightedPathRef.current.setMap(null);
     }
     highlightedPathRef.current = null;

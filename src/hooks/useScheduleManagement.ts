@@ -22,8 +22,8 @@ interface ScheduleManagementProps {
 // 제주국제공항 정보 - 정확한 데이터로 업데이트
 const JEJU_AIRPORT_TEMPLATE: Omit<SelectedPlace, 'id'> = {
   name: '제주국제공항',
-  x: 126.4920, // 정확한 경도 좌표
-  y: 33.5113,  // 정확한 위도 좌표
+  x: 126.49278,  // 정확한 경도 좌표
+  y: 33.51135,   // 정확한 위도 좌표
   category: '관광지' as CategoryName, // CategoryName 타입으로 명시적 타입 단언
   address: '제주특별자치도 제주시 공항로 2',
   image_url: 'https://ldb-phinf.pstatic.net/20150831_15/1441006911611CNxnQ_JPEG/11570553_0.jpg',
@@ -97,93 +97,85 @@ export const useScheduleManagement = ({
     // 스텝 로그 초기화
     console.log("[useScheduleManagement] Starting marker and route cleanup...");
     
+    // 기존 마커와 경로 초기화를 위한 이벤트 실행
+    clearAllRoutes();
+    console.log("[useScheduleManagement] All routes cleared");
+    
+    clearMarkersAndUiElements();
+    console.log("[useScheduleManagement] All markers and UI elements cleared");
+    
     // 마커 초기화 이벤트 실행
     const clearEvent = new Event("startScheduleGeneration");
     window.dispatchEvent(clearEvent);
     console.log("[useScheduleManagement] startScheduleGeneration event dispatched (marker cleanup)");
     
-    // 단계적으로 초기화 작업 수행
+    // 로딩 상태 설정
+    setIsManuallyGenerating(true);
+    setIsLoadingState(true);
+    console.log("[useScheduleManagement] Loading state set");
+    
+    // 실제 스케줄 생성 트리거
     setTimeout(() => {
-      // 모든 경로 명시적 초기화
-      if (clearAllRoutes) {
-        clearAllRoutes();
-        console.log("[useScheduleManagement] All routes cleared");
-      }
-      
-      // 모든 마커와 UI 요소 초기화
-      if (clearMarkersAndUiElements) {
-        clearMarkersAndUiElements();
-        console.log("[useScheduleManagement] All markers and UI elements cleared");
-      }
-      
-      // 로딩 상태 설정
-      setIsManuallyGenerating(true);
-      setIsLoadingState(true);
-      console.log("[useScheduleManagement] Loading state set");
-      
-      // 실제 스케줄 생성 트리거
-      setTimeout(() => {
-        try {
-          // 고유 ID로 공항 장소 생성
-          const airportStart: SelectedPlace = { 
-            ...JEJU_AIRPORT_TEMPLATE, 
-            id: `jeju-airport-start-${Date.now()}` 
-          };
-          const airportEnd: SelectedPlace = { 
-            ...JEJU_AIRPORT_TEMPLATE, 
-            id: `jeju-airport-end-${Date.now()}`
-          };
+      try {
+        // 고유 ID로 공항 장소 생성
+        const airportStart: SelectedPlace = { 
+          ...JEJU_AIRPORT_TEMPLATE, 
+          id: `jeju-airport-start-${Date.now()}` 
+        };
+        const airportEnd: SelectedPlace = { 
+          ...JEJU_AIRPORT_TEMPLATE, 
+          id: `jeju-airport-end-${Date.now()}`
+        };
 
-          // 이미 공항과 동일한 장소는 필터링
-          let placesForGeneration: SelectedPlace[] = selectedPlaces.filter(
-            p => !(p.name === JEJU_AIRPORT_TEMPLATE.name && 
-                  Math.abs(p.x - JEJU_AIRPORT_TEMPLATE.x) < 0.001 && 
-                  Math.abs(p.y - JEJU_AIRPORT_TEMPLATE.y) < 0.001)
-          );
-          
-          // 사용자 선택 장소가 없어도 공항 출발/도착은 기본으로 포함
-          if (placesForGeneration.length === 0) {
-            placesForGeneration = [airportStart, airportEnd];
-          } else {
-            placesForGeneration = [airportStart, ...placesForGeneration, airportEnd];
-          }
-          
-          console.log("[useScheduleManagement] Places for generation (with airport):", placesForGeneration.map(p => p.name));
+        // 이미 공항과 동일한 장소는 필터링
+        let placesForGeneration: SelectedPlace[] = selectedPlaces.filter(
+          p => !(p.name === JEJU_AIRPORT_TEMPLATE.name && 
+                Math.abs(p.x - JEJU_AIRPORT_TEMPLATE.x) < 0.001 && 
+                Math.abs(p.y - JEJU_AIRPORT_TEMPLATE.y) < 0.001)
+        );
+        
+        // 사용자 선택 장소가 없어도 공항 출발/도착은 기본으로 포함
+        if (placesForGeneration.length === 0) {
+          placesForGeneration = [airportStart, airportEnd];
+        } else {
+          placesForGeneration = [airportStart, ...placesForGeneration, airportEnd];
+        }
+        
+        console.log("[useScheduleManagement] Places for generation (with airport):", placesForGeneration.map(p => ({ name: p.name, x: p.x, y: p.y })));
 
-          // 스케줄 생성 이벤트 발생
-          const event = new CustomEvent("startScheduleGeneration", {
-            detail: {
-              selectedPlaces: placesForGeneration,
-              startDatetime,
-              endDatetime,
-            },
-          });
-          
-          console.log("[useScheduleManagement] Detailed schedule generation event dispatched:", {
-            selectedPlacesCount: placesForGeneration.length,
+        // 스케줄 생성 이벤트 발생
+        const event = new CustomEvent("startScheduleGeneration", {
+          detail: {
+            selectedPlaces: placesForGeneration,
             startDatetime,
             endDatetime,
-          });
-          
-          window.dispatchEvent(event);
-          
-          // 타임아웃 안전장치
-          setTimeout(() => {
-            if (isManuallyGenerating || isLoadingState) {
-              console.log("[useScheduleManagement] Schedule generation timed out (30s)");
-              setIsManuallyGenerating(false);
-              setIsLoadingState(false);
-              toast.error("일정 생성 시간이 초과되었습니다. 다시 시도해주세요.");
-            }
-          }, 30000);
-        } catch (error) {
-          console.error("[useScheduleManagement] Error dispatching schedule generation event:", error);
-          setIsManuallyGenerating(false);
-          setIsLoadingState(false);
-          toast.error("일정 생성 요청 중 오류가 발생했습니다.");
-        }
-      }, 300);
-    }, 100);
+          },
+        });
+        
+        console.log("[useScheduleManagement] Detailed schedule generation event dispatched:", {
+          selectedPlacesCount: placesForGeneration.length,
+          startDatetime,
+          endDatetime,
+        });
+        
+        window.dispatchEvent(event);
+        
+        // 타임아웃 안전장치
+        setTimeout(() => {
+          if (isManuallyGenerating || isLoadingState) {
+            console.log("[useScheduleManagement] Schedule generation timed out (30s)");
+            setIsManuallyGenerating(false);
+            setIsLoadingState(false);
+            toast.error("일정 생성 시간이 초과되었습니다. 다시 시도해주세요.");
+          }
+        }, 30000);
+      } catch (error) {
+        console.error("[useScheduleManagement] Error dispatching schedule generation event:", error);
+        setIsManuallyGenerating(false);
+        setIsLoadingState(false);
+        toast.error("일정 생성 요청 중 오류가 발생했습니다.");
+      }
+    }, 300);
     
   }, [
     combinedIsLoading,
