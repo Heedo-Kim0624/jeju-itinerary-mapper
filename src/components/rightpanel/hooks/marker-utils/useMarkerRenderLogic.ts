@@ -1,4 +1,3 @@
-
 import { useCallback, useRef, useEffect } from 'react';
 import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/core';
 import { getMarkerIconOptions, createNaverMarker } from '@/utils/map/markerUtils';
@@ -7,10 +6,10 @@ import { fitBoundsToPlaces, panToPosition } from '@/utils/map/mapViewControls';
 import { clearMarkers as clearMarkersUtil, clearInfoWindows as clearInfoWindowsUtil } from '@/utils/map/mapCleanup';
 
 interface MarkerRenderLogicProps {
-  places: Place[];
+  places: Place[]; // These are expected to be pre-filtered by the caller if needed
   selectedPlace: Place | null;
-  itinerary: ItineraryDay[] | null;
-  selectedDay: number | null;
+  itinerary: ItineraryDay[] | null; // Full itinerary for context
+  selectedDay: number | null; // To determine if we are in "itinerary day mode"
   selectedPlaces?: Place[];
   onPlaceClick?: (place: Place | ItineraryPlaceWithTime, index: number) => void;
   highlightPlaceId?: string;
@@ -21,10 +20,10 @@ interface MarkerRenderLogicProps {
 }
 
 export const useMarkerRenderLogic = ({
-  places,
+  places, // Assumed to be correctly filtered by MapMarkers.tsx for the selected day, or general places
   selectedPlace,
-  itinerary,
-  selectedDay,
+  itinerary, // Full itinerary passed for context
+  selectedDay, // Used to determine if it's a day-specific view
   selectedPlaces = [],
   onPlaceClick,
   highlightPlaceId,
@@ -35,9 +34,9 @@ export const useMarkerRenderLogic = ({
 }: MarkerRenderLogicProps) => {
   const infoWindowsRef = useRef<naver.maps.InfoWindow[]>([]);
   const userHasInteractedWithMapRef = useRef(false);
-  const prevSelectedDayRef = useRef<number | null>(null);
-  const prevPlacesLengthRef = useRef<number>(0);
-  
+  const prevSelectedDayRef = useRef<number | null>(null); // Tracks changes in selectedDay
+  const prevPlacesRef = useRef<Place[]>([]); // Tracks changes in the places array itself
+
   // Track user interaction with the map to prevent automatic re-centering
   useEffect(() => {
     if (map && isMapInitialized && window.naver?.maps?.Event) {
@@ -68,38 +67,33 @@ export const useMarkerRenderLogic = ({
       return;
     }
     
-    // Clear existing markers and info windows AT THE START
     markersRef.current = clearMarkersUtil(markersRef.current);
     infoWindowsRef.current = clearInfoWindowsUtil(infoWindowsRef.current);
 
-    let placesToDisplay: (Place | ItineraryPlaceWithTime)[] = [];
-    let isDisplayingItineraryDay = false;
+    // The 'places' prop is now assumed to be the correct set of places to display
+    // (e.g., filtered for selectedDay by MapMarkers.tsx, or general places).
+    const placesToDisplay = places; 
+    // Determine if displaying an itinerary day based on selectedDay and itinerary context
+    const isDisplayingItineraryDay = selectedDay !== null && !!itinerary?.find(d => d.day === selectedDay);
     let viewResetNeeded = false;
 
-    // Determine which places to display based on the current selection
-    if (selectedDay !== null && itinerary && itinerary.length > 0) {
-      const currentDayData = itinerary.find(day => day.day === selectedDay);
-      if (currentDayData && currentDayData.places && currentDayData.places.length > 0) {
-        placesToDisplay = currentDayData.places;
-        isDisplayingItineraryDay = true;
-        
-        if (prevSelectedDayRef.current !== selectedDay) {
-          userHasInteractedWithMapRef.current = false; // Reset interaction state on day change
-          viewResetNeeded = true;
-        }
-      }
-    } else {
-      placesToDisplay = places; // General search places
-      
-      if (prevSelectedDayRef.current !== null || prevPlacesLengthRef.current !== places.length) {
+    // Check if view reset is needed due to day change or significant places change
+    if (prevSelectedDayRef.current !== selectedDay) {
+      userHasInteractedWithMapRef.current = false; 
+      viewResetNeeded = true;
+    } else if (placesToDisplay !== prevPlacesRef.current) { 
+      // Basic check if place list reference or content changed.
+      // A more sophisticated check might involve lengths or IDs if needed,
+      // but for now, if places array changes, consider a view reset.
+      if (placesToDisplay.length !== prevPlacesRef.current.length || 
+          placesToDisplay.some((p, i) => p.id !== prevPlacesRef.current[i]?.id)) {
         userHasInteractedWithMapRef.current = false;
         viewResetNeeded = true;
       }
     }
     
-    // Update tracking references *after* comparison
     prevSelectedDayRef.current = selectedDay;
-    prevPlacesLengthRef.current = places.length;
+    prevPlacesRef.current = placesToDisplay; // Store the current set of places
 
     const validPlacesToDisplay = placesToDisplay.filter(p =>
       p.x != null && p.y != null && !isNaN(Number(p.x)) && !isNaN(Number(p.y))
@@ -119,20 +113,20 @@ export const useMarkerRenderLogic = ({
       if (!position) return;
       
       const isGloballySelectedCandidate = selectedPlaces.some(sp => sp.id === place.id);
-      const isInfoWindowTargetGlobal = selectedPlace?.id === place.id; // This is for opening info window automatically
-      const isGeneralHighlightTarget = highlightPlaceId === place.id; // This is for styling highlight
+      const isInfoWindowTargetGlobal = selectedPlace?.id === place.id;
+      const isGeneralHighlightTarget = highlightPlaceId === place.id;
       
       const iconOptions = getMarkerIconOptions(
         place,
-        isInfoWindowTargetGlobal || isGeneralHighlightTarget, // isSelected for styling
-        isGloballySelectedCandidate && !isInfoWindowTargetGlobal && !isGeneralHighlightTarget, // isCandidate for styling
-        isDisplayingItineraryDay,
-        isDisplayingItineraryDay ? index + 1 : undefined // itineraryOrder
+        isInfoWindowTargetGlobal || isGeneralHighlightTarget,
+        isGloballySelectedCandidate && !isInfoWindowTargetGlobal && !isGeneralHighlightTarget,
+        isDisplayingItineraryDay, // Correctly determined now
+        isDisplayingItineraryDay ? index + 1 : undefined
       );
       
-      let zIndex = 50; // Default for general markers
-      if (isDisplayingItineraryDay) zIndex = 150 - index; // Itinerary markers get higher z-index, ordered
-      if (isInfoWindowTargetGlobal || isGeneralHighlightTarget) zIndex = 200; // Highlighted/selected on top
+      let zIndex = 50;
+      if (isDisplayingItineraryDay) zIndex = 150 - index;
+      if (isInfoWindowTargetGlobal || isGeneralHighlightTarget) zIndex = 200;
 
       const marker = createNaverMarker(map, position, iconOptions, place.name, true, true, zIndex);
       if (!marker) return;
@@ -155,7 +149,7 @@ export const useMarkerRenderLogic = ({
         anchorSize: new window.naver.maps.Size(12, 12),
         anchorSkew: true,
         anchorColor: "#fff",
-        pixelOffset: new window.naver.maps.Point(0, - (iconOptions.size?.height || 32) / 2 - 10) // Adjust based on actual marker size
+        pixelOffset: new window.naver.maps.Point(0, - (iconOptions.size?.height || 32) / 2 - 10)
       });
 
       newInfoWindows.push(infoWindow);
@@ -163,7 +157,6 @@ export const useMarkerRenderLogic = ({
       if (window.naver?.maps?.Event) {
         window.naver.maps.Event.addListener(marker, 'click', () => {
           newInfoWindows.forEach((iw) => {
-            // Only close other info windows, not this one if it's already open (to allow toggling)
             if (iw !== infoWindow && iw.getMap()) {
               iw.close();
             }
@@ -176,14 +169,12 @@ export const useMarkerRenderLogic = ({
           }
           
           if (onPlaceClick) {
-            onPlaceClick(place, index); // Pass original place object
+            onPlaceClick(place, index);
           }
         });
       }
       
-      // Automatically open info window if it's the selectedPlace
       if (isInfoWindowTargetGlobal && map) {
-        // Ensure other info windows are closed before opening a new one.
         newInfoWindows.forEach(iw => { if (iw !== infoWindow) iw.close(); });
         infoWindow.open(map, marker);
       }
@@ -191,14 +182,14 @@ export const useMarkerRenderLogic = ({
     });
     
     markersRef.current = newMarkers;
-    infoWindowsRef.current = newInfoWindows; // Store all created info windows
+    infoWindowsRef.current = newInfoWindows;
 
     if ((viewResetNeeded || !userHasInteractedWithMapRef.current) && validPlacesToDisplay.length > 0) {
       const placeToFocus = selectedPlace && validPlacesToDisplay.some(p => p.id === selectedPlace.id) ? selectedPlace : 
                            (highlightPlaceId ? validPlacesToDisplay.find(p => p.id === highlightPlaceId) : null);
 
       if (placeToFocus && placeToFocus.y != null && placeToFocus.x != null) {
-        if (map.getZoom() < 15) map.setZoom(15, true); // Ensure a reasonable zoom level
+        if (map.getZoom() < 15) map.setZoom(15, true);
         panToPosition(map, placeToFocus.y, placeToFocus.x);
       } else {
         fitBoundsToPlaces(map, validPlacesToDisplay as Place[]);
@@ -206,8 +197,14 @@ export const useMarkerRenderLogic = ({
     }
   }, [
     map, isMapInitialized, isNaverLoaded,
-    places, selectedPlace, itinerary, selectedDay, selectedPlaces,
-    onPlaceClick, highlightPlaceId,
+    places, // Direct dependency on the (expected pre-filtered) places array
+    selectedPlace?.id, // Depend on ID for stability if object reference changes
+    itinerary, // Full itinerary for context
+    selectedDay,
+    selectedPlaces,
+    onPlaceClick, // This should be stable if defined via useCallback higher up
+    highlightPlaceId,
+    // markersRef and infoWindowsRef are refs, not dependencies for useCallback itself
   ]);
 
   return { renderMarkers };

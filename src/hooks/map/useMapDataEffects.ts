@@ -33,7 +33,6 @@ export const useMapDataEffects = ({
   const prevServerRoutesDataRef = useRef<Record<number, ServerRouteDataForDay> | null>(null);
   const [isRouteVisualized, setIsRouteVisualized] = useState(false);
   
-  // Reduce number of renders by throttling how often we update this state
   const routeRenderingInProgressRef = useRef(false);
 
   const handlePlaceClick = useCallback((place: Place, index: number) => {
@@ -46,53 +45,60 @@ export const useMapDataEffects = ({
       return;
     }
 
-    // Only respond to real changes in the data
-    const itineraryChanged = prevItineraryRef.current !== itinerary;
-    const dayChanged = prevSelectedDayRef.current !== selectedDay;
-    const serverRoutesChanged = prevServerRoutesDataRef.current !== serverRoutesData;
+    const itineraryActuallyChanged = prevItineraryRef.current !== itinerary;
+    const dayActuallyChanged = prevSelectedDayRef.current !== selectedDay;
+    const serverRoutesActuallyChanged = prevServerRoutesDataRef.current !== serverRoutesData;
     
-    if (dayChanged || itineraryChanged || serverRoutesChanged) {
-      // Prevent multiple simultaneous route rendering operations
+    let timeoutId: NodeJS.Timeout | undefined;
+
+    if (dayActuallyChanged || itineraryActuallyChanged || serverRoutesActuallyChanged) {
       if (routeRenderingInProgressRef.current) {
-        console.log('[MapDataEffects] Route rendering already in progress, skipping this update');
+        console.log('[MapDataEffects] Route rendering already in progress, skipping this update due to ref lock.');
         return;
       }
-
       routeRenderingInProgressRef.current = true;
 
-      // Update refs immediately to prevent oscillation
+      // Update refs immediately to prevent re-entry with stale ref values
+      // These refs track the state for which processing has started.
       prevItineraryRef.current = itinerary;
       prevSelectedDayRef.current = selectedDay;
       prevServerRoutesDataRef.current = serverRoutesData;
 
-      let effectiveItineraryDay: ItineraryDay | null = null;
+      // Defer the actual rendering logic to ensure it happens after potential state updates settle
+      timeoutId = setTimeout(() => {
+        console.log(`[MapDataEffects] Starting route processing for day: ${selectedDay}. Clearing old routes first.`);
+        // Clear existing polylines by rendering null.
+        // The renderItineraryRoute function should handle actual polyline clearing.
+        renderItineraryRoute(null, serverRoutesData || undefined, () => {
+          console.log(`[MapDataEffects] Old routes cleared for day: ${selectedDay}. Now checking for new route.`);
+          let effectiveItineraryDay: ItineraryDay | null = null;
 
-      // Find the day to visualize
-      if (selectedDay !== null && itinerary && itinerary.length > 0) {
-        effectiveItineraryDay = itinerary.find(d => d.day === selectedDay) || null;
-      }
-      
-      // Render the route with proper cleanup of previous route
-      if (effectiveItineraryDay) {
-        console.log(`[MapDataEffects] Rendering route for day ${selectedDay}`);
-        renderItineraryRoute(effectiveItineraryDay, serverRoutesData || undefined, () => {
-          setIsRouteVisualized(true);
-          routeRenderingInProgressRef.current = false;
+          if (selectedDay !== null && itinerary && itinerary.length > 0) {
+            effectiveItineraryDay = itinerary.find(d => d.day === selectedDay) || null;
+          }
+          
+          if (effectiveItineraryDay) {
+            console.log(`[MapDataEffects] Rendering new route for day ${selectedDay}`);
+            renderItineraryRoute(effectiveItineraryDay, serverRoutesData || undefined, () => {
+              setIsRouteVisualized(true);
+              routeRenderingInProgressRef.current = false;
+              console.log(`[MapDataEffects] Route for day ${selectedDay} rendered. Dispatching event.`);
+              window.dispatchEvent(new CustomEvent('routeRenderingComplete', { detail: { day: selectedDay, status: 'rendered' } }));
+            });
+          } else {
+            console.log(`[MapDataEffects] No valid itinerary data for day ${selectedDay}, routes remain cleared. Dispatching event.`);
+            setIsRouteVisualized(false); // No route is visualized
+            routeRenderingInProgressRef.current = false;
+            window.dispatchEvent(new CustomEvent('routeRenderingComplete', { detail: { day: selectedDay, status: 'cleared' } }));
+          }
         });
-      } else if (selectedDay === null) {
-        console.log(`[MapDataEffects] No day selected, clearing routes`);
-        renderItineraryRoute(null, serverRoutesData || undefined, () => {
-          setIsRouteVisualized(false);
-          routeRenderingInProgressRef.current = false;
-        });
-      } else {
-        console.log(`[MapDataEffects] No valid itinerary data for day ${selectedDay}, clearing routes`);
-        renderItineraryRoute(null, serverRoutesData || undefined, () => {
-          setIsRouteVisualized(false);
-          routeRenderingInProgressRef.current = false;
-        });
-      }
+      }, 0); // setTimeout 0 to defer to next tick
     }
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
   }, [
     isMapInitialized,
     renderItineraryRoute,
@@ -113,3 +119,4 @@ export const useMapDataEffects = ({
     handlePlaceClick,
   };
 };
+
