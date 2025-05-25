@@ -11,14 +11,14 @@ interface ItineraryViewProps {
   itinerary: ItineraryDay[] | null;
   selectedDay: number | null;
   onSelectDay: (day: number) => void;
-  onClose?: () => void; // onClose를 선택적으로 변경
+  onClose?: () => void; 
 }
 
 const ItineraryView: React.FC<ItineraryViewProps> = ({
   itinerary,
   selectedDay,
   onSelectDay,
-  // onClose, // onClose는 이제 선택적
+  // onClose, 
 }) => {
   const { isPopupOpen, selectedPlace, openPopup, handleOpenChange } = usePopup();
 
@@ -43,8 +43,8 @@ const ItineraryView: React.FC<ItineraryViewProps> = ({
     <div className="h-full flex flex-col pb-16">
       <DaySelector
         itinerary={itinerary}
-        selectedDay={selectedDay}
-        onSelectDay={onSelectDay}
+        // selectedDay and onSelectDay props are removed
+        // DaySelector now uses useMapDaySelector hook internally
       />
       
       <div className="overflow-auto flex-1 px-4 pt-4 mt-16">
