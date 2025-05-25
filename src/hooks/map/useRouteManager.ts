@@ -1,9 +1,8 @@
-
 import { useCallback } from 'react';
 import type { Place, ItineraryDay } from '@/types/supabase';
-// GeoJsonNodeFeature 타입을 import 합니다.
 import type { GeoJsonNodeFeature } from '@/components/rightpanel/geojson/GeoJsonTypes';
-import type { ServerRouteResponse, SegmentRoute } from '@/types/schedule';
+import type { ServerRouteDataForDay } from '@/hooks/map/useServerRoutes';
+import type { SegmentRoute } from '@/types/schedule';
 import { useRoutePolylines } from './useRoutePolylines';
 import { useItineraryGeoJsonRenderer } from './renderers/useItineraryGeoJsonRenderer';
 import { useSegmentGeoJsonRenderer } from './renderers/useSegmentGeoJsonRenderer';
@@ -12,8 +11,9 @@ import { useDirectPathDrawer } from './renderers/useDirectPathDrawer';
 interface UseRouteManagerProps {
   map: any;
   isNaverLoadedParam: boolean;
-  geoJsonNodes: GeoJsonNodeFeature[]; // GeoJsonNodeFeature[] 사용
+  geoJsonNodes: GeoJsonNodeFeature[];
   mapPlacesWithGeoNodesFn: (places: Place[]) => Place[];
+  updateDayPolylinePaths: (day: number, polylinePaths: { lat: number; lng: number }[][]) => void;
 }
 
 export const useRouteManager = ({
@@ -21,30 +21,32 @@ export const useRouteManager = ({
   isNaverLoadedParam,
   geoJsonNodes,
   mapPlacesWithGeoNodesFn,
+  updateDayPolylinePaths,
 }: UseRouteManagerProps) => {
   const {
     addPolyline,
     setHighlightedPolyline,
-    clearAllMapPolylines,
+    clearAllMapPolylines: clearAllPolylinesFromHook,
     clearHighlightedPolyline,
   } = useRoutePolylines({ map, isNaverLoadedParam });
 
-  const { renderItineraryRoute } = useItineraryGeoJsonRenderer({
+  const { renderItineraryRoute: renderItineraryRouteFromRenderer } = useItineraryGeoJsonRenderer({
     map,
     isNaverLoadedParam,
     mapPlacesWithGeoNodesFn,
     addPolyline,
-    clearAllMapPolylines,
+    clearAllMapPolylines: clearAllPolylinesFromHook,
+    updateDayPolylinePaths,
   });
 
   const { renderGeoJsonSegmentRoute, highlightGeoJsonSegment } = useSegmentGeoJsonRenderer({
     map,
     isNaverLoadedParam,
-    geoJsonNodes, // GeoJsonNodeFeature[]를 그대로 전달
+    geoJsonNodes,
     addPolyline,
     setHighlightedPolyline,
     clearHighlightedPolyline,
-    clearAllMapPolylines,
+    clearAllMapPolylines: clearAllPolylinesFromHook,
   });
   
   const { drawDirectPath } = useDirectPathDrawer({
@@ -55,20 +57,24 @@ export const useRouteManager = ({
 
   const renderItineraryRouteWithLinkIdCheck = useCallback((
     itineraryDay: ItineraryDay | null, 
-    allServerRoutesInput?: Record<number, ServerRouteResponse>,
+    allServerRoutesInput?: Record<number, ServerRouteDataForDay>,
     onComplete?: () => void
   ) => {
     if (itineraryDay?.routeData?.linkIds && itineraryDay.routeData.linkIds.length > 0) {
       console.log(`[RouteManager] 일차 ${itineraryDay.day}의 경로 렌더링 요청 - ${itineraryDay.routeData.linkIds.length}개 링크 ID`);
+    } else if (itineraryDay) {
+      console.log(`[RouteManager] 일차 ${itineraryDay.day}의 경로 렌더링 요청 - 링크 ID 정보 없음 또는 비어있음. 장소 수: ${itineraryDay.places?.length}`);
+    } else {
+      console.log(`[RouteManager] 지도 초기화 요청 (itineraryDay is null)`);
     }
     
-    renderItineraryRoute(itineraryDay, allServerRoutesInput, onComplete);
-  }, [renderItineraryRoute]);
+    renderItineraryRouteFromRenderer(itineraryDay, allServerRoutesInput, onComplete);
+  }, [renderItineraryRouteFromRenderer]);
 
   const clearAllDrawnRoutes = useCallback(() => {
     console.log('[RouteManager] Clearing all routes via useRoutePolylines.');
-    clearAllMapPolylines();
-  }, [clearAllMapPolylines]);
+    clearAllPolylinesFromHook();
+  }, [clearAllPolylinesFromHook]);
 
   const clearPreviousHighlightedPath = useCallback(() => {
     clearHighlightedPolyline();

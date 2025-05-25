@@ -1,14 +1,15 @@
 import { useState, useCallback } from 'react';
-import type { ServerRouteResponse } from '@/types/schedule'; // Ensure this type is correct
-import type { GeoLink } from '@/components/rightpanel/geojson/GeoJsonTypes'; // Use correct type for GeoLink
+import type { GeoLink } from '@/components/rightpanel/geojson/GeoJsonTypes';
+import type { ItineraryDay } from '@/types/supabase';
 
-// ServerRouteDataForDay 인터페이스를 export 합니다.
+// ServerRouteDataForDay 인터페이스 정의 (이전 단계에서 확장됨)
 export interface ServerRouteDataForDay {
-  day: number;
-  nodeIds: string[];
-  linkIds: string[];
-  interleaved_route?: (string | number)[]; // From ItineraryDay
-  // Potentially other fields like total_distance_m
+  day: number; 
+  nodeIds?: string[]; 
+  linkIds?: string[];
+  interleaved_route?: (string | number)[];
+  itineraryDayData: ItineraryDay; // 해당 날짜의 전체 일정 정보
+  polylinePaths?: { lat: number; lng: number }[][]; // 캐시된 폴리라인 경로 데이터
 }
 
 export const useServerRoutes = () => {
@@ -27,7 +28,6 @@ export const useServerRoutes = () => {
     console.log('[useServerRoutes] 모든 서버 경로 데이터가 지워졌습니다.');
   }, []);
 
-  // Function to set all server routes data at once
   const setAllServerRoutesData = useCallback((
     newRoutes: Record<number, ServerRouteDataForDay> | ((prevState: Record<number, ServerRouteDataForDay>) => Record<number, ServerRouteDataForDay>)
   ) => {
@@ -37,7 +37,7 @@ export const useServerRoutes = () => {
   
   const getLinksForRoute = useCallback((
     linkIdsFromRoute: string[],
-    getLinkByIdFunction: (id: string) => GeoLink | undefined, // Ensure GeoLink can be undefined
+    getLinkByIdFunction: (id: string) => GeoLink | undefined,
     geoJsonIsLoaded: boolean
   ): GeoLink[] => {
     if (!geoJsonIsLoaded) {
@@ -66,11 +66,30 @@ export const useServerRoutes = () => {
     return resolvedLinks;
   }, []);
 
+  const updateDayPolylinePaths = useCallback((day: number, polylinePaths: { lat: number; lng: number }[][]) => {
+    setServerRoutesDataState(prev => {
+      const dayData = prev[day];
+      if (dayData) {
+        console.log(`[useServerRoutes] Day ${day} polylinePaths 업데이트 시도. 이전 경로 수: ${dayData.polylinePaths?.length || 0}, 새 경로 수: ${polylinePaths.length}`);
+        return {
+          ...prev,
+          [day]: {
+            ...dayData,
+            polylinePaths,
+          },
+        };
+      }
+      console.warn(`[useServerRoutes] updateDayPolylinePaths: Day ${day} data not found. 업데이트 실패.`);
+      return prev;
+    });
+  }, []);
+
   return {
     serverRoutesData, 
     setDayRouteData, 
     clearAllServerRoutes,
     getLinksForRoute, 
-    setAllServerRoutesData, // Export the new setter
+    setAllServerRoutesData,
+    updateDayPolylinePaths,
   };
 };

@@ -1,40 +1,47 @@
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { useGeoJsonState } from '@/hooks/map/useGeoJsonState';
 import { usePlaceGeoJsonMapper } from './usePlaceGeoJsonMapper';
 import { useMapInteractionManager } from './useMapInteractionManager';
 import { useRouteManager } from './useRouteManager';
 import { useMapMarkers } from './useMapMarkers';
 import type { Place } from '@/types/supabase';
-// GeoJsonNodeFeature 타입을 import합니다.
 import type { GeoNode, GeoJsonNodeFeature } from '@/components/rightpanel/geojson/GeoJsonTypes';
 
-export const useMapFeatures = (map: any, isNaverLoadedParam: boolean) => {
-  const geoJsonState = useGeoJsonState();
+// useMapFeaturesProps 인터페이스 정의하여 updateDayPolylinePaths 함수 타입 명시
+interface UseMapFeaturesProps {
+  map: any;
+  isNaverLoadedParam: boolean;
+  updateDayPolylinePaths: (day: number, polylinePaths: { lat: number; lng: number }[][]) => void;
+}
 
-  // GeoNode[]를 GeoJsonNodeFeature[]로 변환합니다.
+export const useMapFeatures = ({ 
+  map, 
+  isNaverLoadedParam, 
+  updateDayPolylinePaths // props로 받음
+}: UseMapFeaturesProps) => {
+  const geoJsonState = useGeoJsonState(); // app-level GeoJSON state
+
   const geoJsonNodeFeatures = useMemo((): GeoJsonNodeFeature[] => {
     if (!geoJsonState.geoJsonNodes || geoJsonState.geoJsonNodes.length === 0) {
       return [];
     }
-    // GeoNode를 GeoJsonNodeFeature로 변환할 때, properties와 geometry 타입이 호환되어야 합니다.
-    // GeoNode.properties는 GeoJsonNodeProperties와 호환되며,
-    // GeoNode.geometry는 GeoJsonGeometry와 호환됩니다.
     return geoJsonState.geoJsonNodes.map((node: GeoNode): GeoJsonNodeFeature => ({
       type: "Feature",
-      geometry: node.geometry, // GeoNode의 geometry는 GeoJsonGeometry 타입이므로 직접 할당 가능
-      properties: node.properties, // GeoNode의 properties는 GeoJsonNodeProperties 타입이므로 직접 할당 가능
+      geometry: node.geometry,
+      properties: node.properties,
       id: node.id,
     }));
   }, [geoJsonState.geoJsonNodes]);
 
   const { mapPlacesWithGeoNodes } = usePlaceGeoJsonMapper({
-    // usePlaceGeoJsonMapper는 GeoJsonNodeFeature[]를 기대하도록 수정될 것입니다.
     geoJsonNodes: geoJsonNodeFeatures, 
   });
 
-  const { addMarkers, showRouteForPlaceIndex } = useMapInteractionManager({
+  // useMapInteractionManager는 isNaverLoadedParam 대신 isNaverLoaded를 사용하도록 되어있을 수 있음. 확인 필요.
+  // 여기서는 isNaverLoadedParam을 그대로 전달.
+  const { addMarkers: addMarkersFromInteractionManager, showRouteForPlaceIndex } = useMapInteractionManager({
     map,
-    isNaverLoadedParam,
+    isNaverLoadedParam, // 또는 isNaverLoaded
   });
 
   const {
@@ -47,15 +54,14 @@ export const useMapFeatures = (map: any, isNaverLoadedParam: boolean) => {
   } = useRouteManager({
     map,
     isNaverLoadedParam,
-    geoJsonNodes: geoJsonNodeFeatures, // 변환된 GeoJsonNodeFeature[]를 전달합니다.
+    geoJsonNodes: geoJsonNodeFeatures,
     mapPlacesWithGeoNodesFn: mapPlacesWithGeoNodes,
+    updateDayPolylinePaths, // 전달받은 함수를 다시 전달
   });
 
-  // Use the marker management from useMapMarkers hook
   const { clearMarkersAndUiElements: clearAllMapMarkers } = useMapMarkers(map);
 
-  // Create a comprehensive function that clears both markers and routes
-  const clearMarkersAndUiElements = () => {
+  const clearMarkersAndUiElements = useCallback(() => { // useCallback 추가
     console.log("[useMapFeatures] Clearing all markers and UI elements");
     if (clearAllMapMarkers) {
       clearAllMapMarkers();
@@ -63,16 +69,14 @@ export const useMapFeatures = (map: any, isNaverLoadedParam: boolean) => {
       console.warn("[useMapFeatures] clearAllMapMarkers function is not available");
     }
     clearAllDrawnRoutes();
-  };
-
-  const clearAllRoutes = clearAllDrawnRoutes;
+  }, [clearAllMapMarkers, clearAllDrawnRoutes]);
 
   return {
-    addMarkers,
+    addMarkers: addMarkersFromInteractionManager, // useMapInteractionManager에서 온 addMarkers 사용
     clearMarkersAndUiElements,
     calculateRoutes: calculateAndDrawDirectRoutes,
     renderItineraryRoute,
-    clearAllRoutes,
+    clearAllRoutes: clearAllDrawnRoutes, // clearAllDrawnRoutes를 clearAllRoutes로 반환
     highlightSegment,
     clearPreviousHighlightedPath,
     showRouteForPlaceIndex,

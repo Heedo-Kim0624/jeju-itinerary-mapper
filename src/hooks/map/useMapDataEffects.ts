@@ -1,19 +1,16 @@
 import { useCallback, useState, useEffect, useRef } from 'react';
 import type { Place, ItineraryDay } from '@/types/supabase';
 import type { ServerRouteDataForDay } from '@/hooks/map/useServerRoutes'; 
-// ServerRouteResponse 임포트는 renderItineraryRoute의 시그니처가 변경되므로 더 이상 직접 필요하지 않을 수 있음
-// import type { ServerRouteResponse } from '@/types/schedule'; 
 
 interface UseMapDataEffectsProps {
   isMapInitialized: boolean;
   isGeoJsonLoaded: boolean;
-  showGeoJson: boolean;
-  toggleGeoJsonVisibility: () => void;
-  renderItineraryRoute: ( // allServerRoutes 파라미터 타입 변경
+  renderItineraryRoute: (
     itineraryDay: ItineraryDay | null,
     allServerRoutes?: Record<number, ServerRouteDataForDay>, 
     onComplete?: () => void
   ) => void;
+  updateDayPolylinePaths: (day: number, polylinePaths: { lat: number; lng: number }[][]) => void;
   serverRoutesData: Record<number, ServerRouteDataForDay> | null; 
   checkGeoJsonMapping: (places: Place[]) => void;
   places: Place[];
@@ -24,31 +21,26 @@ interface UseMapDataEffectsProps {
 export const useMapDataEffects = ({
   isMapInitialized,
   isGeoJsonLoaded,
-  showGeoJson,
-  toggleGeoJsonVisibility,
   renderItineraryRoute,
+  updateDayPolylinePaths,
   serverRoutesData,
   checkGeoJsonMapping,
   places,
   itinerary,
   selectedDay,
 }: UseMapDataEffectsProps) => {
-  // Track previous values to detect changes
   const prevItineraryRef = useRef<ItineraryDay[] | null>(null);
   const prevSelectedDayRef = useRef<number | null>(null);
-  const visRenderedRef = useRef(false);
 
-  // 경로 시각화가 완료되었는지 여부
   const [isRouteVisualized, setIsRouteVisualized] = useState(false);
 
-  // 장소 클릭 핸들러
   const handlePlaceClick = useCallback((place: Place, index: number) => {
     console.log(`[MapDataEffects] 장소 클릭됨: ${place.name} (인덱스: ${index})`);
   }, []);
 
-  // 일정이 변경되거나 선택된 일자가 변경될 때 경로 렌더링
   useEffect(() => {
-    if (!isMapInitialized || !isGeoJsonLoaded || !renderItineraryRoute || !itinerary) {
+    if (!isMapInitialized || !renderItineraryRoute) {
+      console.log('[MapDataEffects] 초기화 안됨 또는 renderItineraryRoute 없음, 경로 렌더링 스킵.');
       return;
     }
 
@@ -60,39 +52,58 @@ export const useMapDataEffects = ({
         itineraryChanged, 
         dayChanged,
         prevDay: prevSelectedDayRef.current,
-        currentDay: selectedDay
+        currentDay: selectedDay,
+        hasItinerary: !!itinerary,
+        itineraryLength: itinerary?.length || 0,
+        hasServerRoutesData: !!serverRoutesData,
+        serverRoutesDataKeys: serverRoutesData ? Object.keys(serverRoutesData) : [],
       });
       
       prevItineraryRef.current = itinerary;
       prevSelectedDayRef.current = selectedDay;
       
-      if (itinerary && itinerary.length > 0 && selectedDay !== null) {
-        const currentDayData = itinerary.find(d => d.day === selectedDay);
-        if (currentDayData) {
-          console.log(`[MapDataEffects] ${selectedDay}일차 일정 경로 시각화 시작`);
-          // allServerRoutes 파라미터에는 serverRoutesData (이미 ServerRouteDataForDay 타입) 또는 undefined 전달
-          // 현재는 undefined를 전달하고 있으므로, 타입 변경으로 인한 직접적 영향은 없음
-          renderItineraryRoute(currentDayData, serverRoutesData || undefined, () => {
+      if (selectedDay !== null && itinerary && itinerary.length > 0) {
+        const currentServerRouteData = serverRoutesData ? serverRoutesData[selectedDay] : null;
+        
+        if (currentServerRouteData && currentServerRouteData.itineraryDayData) {
+          console.log(`[MapDataEffects] ${selectedDay}일차 경로 시각화 시작. 사용될 ItineraryDay 데이터:`, currentServerRouteData.itineraryDayData);
+          renderItineraryRoute(currentServerRouteData.itineraryDayData, serverRoutesData || undefined, () => {
             setIsRouteVisualized(true);
-            visRenderedRef.current = true;
-            console.log(`[MapDataEffects] ${selectedDay}일차 일정 경로 시각화 완료`);
+            console.log(`[MapDataEffects] ${selectedDay}일차 경로 시각화 완료 콜백.`);
           });
         } else {
-          renderItineraryRoute(null, serverRoutesData || undefined, () => {
-             setIsRouteVisualized(false);
-             console.log(`[MapDataEffects] ${selectedDay}일차 데이터 없음, 경로 시각화 스킵 또는 초기화`);
-          });
+          const fallbackItineraryDay = itinerary.find(d => d.day === selectedDay);
+          if (fallbackItineraryDay) {
+            console.warn(`[MapDataEffects] ${selectedDay}일차 데이터가 serverRoutesData에 완전하지 않음. itinerary에서 직접 찾아 사용.`, { fallbackItineraryDay });
+            renderItineraryRoute(fallbackItineraryDay, serverRoutesData || undefined, () => {
+              setIsRouteVisualized(true);
+              console.log(`[MapDataEffects] ${selectedDay}일차 경로 시각화 (fallback) 완료 콜백.`);
+            });
+          } else {
+            console.warn(`[MapDataEffects] ${selectedDay}일차에 대한 ItineraryDay 데이터를 serverRoutesData 및 itinerary 모두에서 찾을 수 없음. 경로 렌더링 스킵.`);
+            renderItineraryRoute(null, serverRoutesData || undefined, () => {
+               setIsRouteVisualized(false);
+               console.log(`[MapDataEffects] ${selectedDay}일차 데이터 없음, 지도 초기화됨.`);
+            });
+          }
         }
-      } else if (selectedDay === null && itinerary && itinerary.length > 0) {
+      } else if (selectedDay === null) {
+        console.log(`[MapDataEffects] 선택된 일자 없음, 지도 초기화 시도.`);
         renderItineraryRoute(null, serverRoutesData || undefined, () => {
           setIsRouteVisualized(false);
-          console.log(`[MapDataEffects] 선택된 일자 없음, 모든 경로 초기화 시도`);
         });
       }
     }
-  }, [isMapInitialized, isGeoJsonLoaded, renderItineraryRoute, itinerary, selectedDay, serverRoutesData]);
+  }, [
+    isMapInitialized, 
+    isGeoJsonLoaded, 
+    renderItineraryRoute, 
+    itinerary, 
+    selectedDay, 
+    serverRoutesData,
+    updateDayPolylinePaths
+  ]);
 
-  // GeoJson 데이터와 장소 매핑 확인
   useEffect(() => {
     if (isMapInitialized && isGeoJsonLoaded && places.length > 0 && checkGeoJsonMapping) {
       checkGeoJsonMapping(places);

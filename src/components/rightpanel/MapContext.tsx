@@ -1,9 +1,9 @@
 
 import React, { createContext, useContext } from 'react';
 import { Place, ItineraryDay } from '@/types/supabase';
-import useMapCore from './useMapCore';
-import { ServerRouteResponse, SegmentRoute } from '@/types/schedule'; // SegmentRoute는 유지, ServerRouteResponse는 점진적으로 ServerRouteDataForDay로 대체될 것
-import type { ServerRouteDataForDay } from '@/hooks/map/useServerRoutes'; // ServerRouteDataForDay 임포트
+import useMapCore from './useMapCore'; // useMapCore 임포트
+import { SegmentRoute } from '@/types/schedule'; 
+import type { ServerRouteDataForDay } from '@/hooks/map/useServerRoutes';
 
 interface MapContextType {
   map: any;
@@ -16,7 +16,8 @@ interface MapContextType {
     isItinerary?: boolean; 
     useRecommendedStyle?: boolean;
     useColorByCategory?: boolean;
-    onClick?: (place: Place, index: number) => void;
+    // onClick 콜백의 place 타입을 Place | ItineraryPlaceWithTime 으로 확장 가능성 고려
+    onClick?: (place: Place /* | ItineraryPlaceWithTime */, index: number) => void;
   }) => any[];
   calculateRoutes: (placesToRoute: Place[]) => void;
   clearMarkersAndUiElements: () => void;
@@ -25,11 +26,12 @@ interface MapContextType {
   toggleGeoJsonVisibility: () => void;
   renderItineraryRoute: ( 
     itineraryDay: ItineraryDay | null, 
-    allServerRoutes?: Record<number, ServerRouteDataForDay>, // 타입 변경
+    allServerRoutes?: Record<number, ServerRouteDataForDay>,
     onComplete?: () => void
   ) => void;
   clearAllRoutes: () => void;
-  handleGeoJsonLoaded: (nodes: any[], links: any[]) => void;
+  // handleGeoJsonLoaded 파라미터 타입 구체화 (GeoNode[], GeoLink[] 등)
+  handleGeoJsonLoaded: (nodes: any[], links: any[]) => void; 
   highlightSegment: (segment: SegmentRoute | null) => void;
   clearPreviousHighlightedPath: () => void;
   isGeoJsonLoaded: boolean;
@@ -44,15 +46,17 @@ interface MapContextType {
   mapPlacesWithGeoNodes: (places: Place[]) => Place[];
   showRouteForPlaceIndex: (placeIndex: number, itineraryDay: ItineraryDay, onComplete?: () => void) => void;
   renderGeoJsonRoute: (route: SegmentRoute) => void;
-  geoJsonNodes: any[];
-  geoJsonLinks: any[];
-  setServerRoutes: ( // 타입 변경
+  geoJsonNodes: any[]; // 실제 타입으로 변경 (e.g., GeoJsonNodeFeature[])
+  geoJsonLinks: any[]; // 실제 타입으로 변경 (e.g., GeoJsonLinkFeature[])
+  setServerRoutes: (
     dayRoutes: Record<number, ServerRouteDataForDay> | 
                ((prevRoutes: Record<number, ServerRouteDataForDay>) => Record<number, ServerRouteDataForDay>)
   ) => void;
-  serverRoutesData: Record<number, ServerRouteDataForDay>; // 타입 변경
+  serverRoutesData: Record<number, ServerRouteDataForDay>;
+  updateDayPolylinePaths: (day: number, polylinePaths: { lat: number; lng: number }[][]) => void;
 }
 
+// defaultContext의 geoJsonNodes, geoJsonLinks, addMarkers onClick 타입을 좀 더 명확히 하거나 실제 타입과 일치시킵니다.
 const defaultContext: MapContextType = {
   map: null,
   mapContainer: { current: null } as React.RefObject<HTMLDivElement>,
@@ -60,15 +64,15 @@ const defaultContext: MapContextType = {
   isNaverLoaded: false,
   isMapError: false,
   addMarkers: () => [],
-  calculateRoutes: (placesToRoute: Place[]) => {},
+  calculateRoutes: () => {},
   clearMarkersAndUiElements: () => {},
   panTo: () => {},
   showGeoJson: false,
   toggleGeoJsonVisibility: () => {},
-  renderItineraryRoute: (itineraryDay, allServerRoutes, onComplete) => {}, 
+  renderItineraryRoute: () => {}, 
   clearAllRoutes: () => {},
-  handleGeoJsonLoaded: (nodes, links) => {},
-  highlightSegment: (segment) => {}, 
+  handleGeoJsonLoaded: () => {},
+  highlightSegment: () => {}, 
   clearPreviousHighlightedPath: () => {},
   isGeoJsonLoaded: false,
   checkGeoJsonMapping: (places) => ({ 
@@ -80,12 +84,13 @@ const defaultContext: MapContextType = {
     message: 'GeoJSON 데이터가 로드되지 않았습니다.'
   }),
   mapPlacesWithGeoNodes: (places) => places,
-  showRouteForPlaceIndex: (placeIndex, itineraryDay, onComplete) => {},
-  renderGeoJsonRoute: (route) => {}, 
-  geoJsonNodes: [],
-  geoJsonLinks: [],
-  setServerRoutes: (dayRoutes) => {}, // 시그니처는 타입 정의를 따름
-  serverRoutesData: {} // 타입은 Record<number, ServerRouteDataForDay>
+  showRouteForPlaceIndex: () => {},
+  renderGeoJsonRoute: () => {}, 
+  geoJsonNodes: [], // 초기값
+  geoJsonLinks: [], // 초기값
+  setServerRoutes: () => {},
+  serverRoutesData: {},
+  updateDayPolylinePaths: () => {},
 };
 
 const MapContext = createContext<MapContextType>(defaultContext);
@@ -95,26 +100,32 @@ export const useMapContext = () => useContext(MapContext);
 export const MapProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
   const mapCoreValues = useMapCore(); 
   
-  // Debug output for GeoJSON loading
-  console.log("[MapProvider] MapContext 제공 상태:", {
-    isMapInitialized: mapCoreValues.isMapInitialized,
-    isNaverLoaded: mapCoreValues.isNaverLoaded,
-    isGeoJsonLoaded: mapCoreValues.isGeoJsonLoaded,
-    geoJsonNodesCount: mapCoreValues.geoJsonNodes?.length || 0,
-    geoJsonLinksCount: mapCoreValues.geoJsonLinks?.length || 0,
-    // serverRoutesData의 타입이 변경되었으므로, mapCoreValues에서 오는 실제 데이터 구조와 일치하는지 확인 필요
-    // 만약 mapCoreValues.serverRoutesData가 여전히 ServerRouteResponse 형태라면 추가 변환 또는 useMapCore 수정 필요
-    // 여기서는 MapContextType 정의에 맞춰 mapCoreValues가 ServerRouteDataForDay 형태로 제공한다고 가정
-    serverRoutesDataCount: Object.keys(mapCoreValues.serverRoutesData || {}).length || 0,
-    highlightSegmentType: typeof mapCoreValues.highlightSegment
-  });
+  // useMapCore의 실제 반환 타입과 MapContextType 간의 불일치 가능성 때문에 타입 단언 사용.
+  // useMapCore가 MapContextType에 정의된 모든 속성 (특히 updateDayPolylinePaths)을 반환하도록 수정되면
+  // 이 타입 단언은 제거할 수 있습니다.
+  const contextValue = mapCoreValues as unknown as MapContextType;
+
+  // 디버깅 로그 추가하여 contextValue의 실제 내용을 확인
+  if (process.env.NODE_ENV === 'development') { // 개발 모드에서만 로그 실행
+    console.log("[MapProvider] 제공되는 Context 값:", {
+      isMapInitialized: contextValue.isMapInitialized,
+      isNaverLoaded: contextValue.isNaverLoaded,
+      isGeoJsonLoaded: contextValue.isGeoJsonLoaded,
+      geoJsonNodesCount: contextValue.geoJsonNodes?.length || 0,
+      geoJsonLinksCount: contextValue.geoJsonLinks?.length || 0,
+      serverRoutesDataKeys: Object.keys(contextValue.serverRoutesData || {}),
+      hasRenderItineraryRoute: typeof contextValue.renderItineraryRoute === 'function',
+      hasUpdateDayPolylinePaths: typeof contextValue.updateDayPolylinePaths === 'function',
+      hasSetServerRoutes: typeof contextValue.setServerRoutes === 'function',
+    });
+    if (typeof contextValue.updateDayPolylinePaths !== 'function') {
+        console.warn("[MapProvider] updateDayPolylinePaths 함수가 context에 제공되지 않았습니다. useMapCore 반환값을 확인하세요.");
+    }
+  }
   
   return (
-    // @ts-ignore TODO: useMapCore가 반환하는 값의 serverRoutesData 타입을 ServerRouteDataForDay로 맞춰야 함.
-    // 현재 useMapCore는 read-only이므로, 임시로 @ts-ignore 처리. 근본적으로는 useMapCore 수정 필요.
-    <MapContext.Provider value={mapCoreValues}>
+    <MapContext.Provider value={contextValue}>
       {children}
     </MapContext.Provider>
   );
 };
-
