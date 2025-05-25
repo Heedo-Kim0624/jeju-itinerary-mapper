@@ -1,7 +1,18 @@
 
-import { parseServerResponse } from './useServerResponseHandler';
+import { useCallback } from 'react';
+import { parseServerResponse as actualParseFn } from './useServerResponseHandler';
+import type { ItineraryDay, NewServerScheduleResponse } from '@/types/core';
 
-// This file acts as a shim to provide `parseServerResponse`
-// for read-only files that still import from `useScheduleParser`.
-// The actual implementation is in `useServerResponseHandler`.
-export { parseServerResponse };
+export const useScheduleParser = () => {
+  const parseScheduleResponse = useCallback(
+    (
+      serverResponse: NewServerScheduleResponse,
+      startDate: Date
+    ): ItineraryDay[] => {
+      return actualParseFn(serverResponse, startDate);
+    },
+    []
+  );
+
+  return { parseScheduleResponse };
+};

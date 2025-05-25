@@ -7,7 +7,7 @@ import { useRouteMemoryStore } from '@/hooks/map/useRouteMemoryStore';
 import { dayStringToIndex } from '@/utils/date/dayMapping';
 
 interface ServerResponseHandlerProps {
-  onServerResponse: (response: NewServerScheduleResponse, startDate: Date) => ItineraryDay[];
+  onServerResponse: (response: NewServerScheduleResponse, startDate: Date) => Promise<ItineraryDay[]>;
   enabled: boolean;
 }
 
@@ -136,8 +136,8 @@ export const parseServerResponse = (
       const currentDayDate = new Date(startDate.getTime() + index * 24 * 60 * 60 * 1000);
       const dateStr = getDateStringMMDD(currentDayDate);
       
-      const placesForDay: ItineraryPlaceWithTime[] = dayScheduleItems.map((scheduleItem: ServerScheduleItem) => ({
-        id: scheduleItem.id?.toString() || `fallback_${scheduleItem.place_name.replace(/\s+/g, '')}_${dayNumber}_${index}`,
+      const placesForDay: ItineraryPlaceWithTime[] = dayScheduleItems.map((scheduleItem: ServerScheduleItem, placeIndex: number) => ({ // added placeIndex for unique key generation
+        id: scheduleItem.id?.toString() || `fallback_${scheduleItem.place_name.replace(/\s+/g, '')}_${dayNumber}_${placeIndex}`,
         name: scheduleItem.place_name,
         category: scheduleItem.place_type,
         timeBlock: scheduleItem.time_block,
