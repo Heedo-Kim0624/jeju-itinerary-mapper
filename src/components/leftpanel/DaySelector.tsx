@@ -2,12 +2,12 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { ItineraryDay } from '@/types';
-import { useMapDaySelector } from '@/hooks/map/useMapDaySelector'; // Changed
-import { useRouteMemoryStore } from '@/hooks/map/useRouteMemoryStore'; // Added
+import { useMapDaySelector } from '@/hooks/map/useMapDaySelector'; 
+import { useRouteMemoryStore } from '@/hooks/map/useRouteMemoryStore'; 
 
 interface DaySelectorProps {
   itinerary: ItineraryDay[] | null;
-  // selectedDay and onSelectDay are now handled by useMapDaySelector
+  // These props are no longer required since we're using the hook internally
 }
 
 const DaySelector: React.FC<DaySelectorProps> = ({ itinerary }) => {
@@ -32,7 +32,7 @@ const DaySelector: React.FC<DaySelectorProps> = ({ itinerary }) => {
               key={dayItem.day}
               variant={selectedDayFromUI === dayItem.day ? "default" : "outline"}
               size="sm"
-              className={`min-w-20 h-16 rounded-md flex flex-col items-center justify-center gap-0.5 px-3 relative ${ // Increased min-w for indicator
+              className={`min-w-20 h-16 rounded-md flex flex-col items-center justify-center gap-0.5 px-3 relative ${ 
                 selectedDayFromUI === dayItem.day ? 'bg-primary text-primary-foreground' : ''
               }`}
               onClick={() => handleDaySelect(dayItem.day)}

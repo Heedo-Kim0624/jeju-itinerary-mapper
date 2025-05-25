@@ -37,9 +37,6 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
       <div className="flex-1 overflow-auto">
         <DaySelector
           itinerary={itinerary}
-          selectedDay={selectedDay}
-          onSelectDay={onSelectDay}
-          // startDate prop 제거
         />
         
         <div className="p-4 pt-2">
@@ -57,4 +54,3 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
 };
 
 export default ItineraryPanel;
-

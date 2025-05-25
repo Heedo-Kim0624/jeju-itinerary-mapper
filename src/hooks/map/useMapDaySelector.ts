@@ -4,7 +4,6 @@ import { useRouteMemoryStore } from '@/hooks/map/useRouteMemoryStore';
 import { EventEmitter } from '@/hooks/events/useEventEmitter'; // Using static emitter for simplicity here
 import { useScheduleStateAndEffects } from '@/hooks/schedule/useScheduleStateAndEffects';
 
-
 export const useMapDaySelector = () => {
   // Assuming useScheduleStateAndEffects is the source of truth for selectedDay for UI
   const { selectedDay, setSelectedDay: setUiSelectedDay } = useScheduleStateAndEffects();

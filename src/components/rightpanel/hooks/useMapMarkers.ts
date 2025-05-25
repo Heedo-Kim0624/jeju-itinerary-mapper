@@ -1,5 +1,5 @@
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useMapContext } from '../MapContext';
 import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/core';
 import { clearMarkers as clearMarkersUtil } from '@/utils/map/mapCleanup';
