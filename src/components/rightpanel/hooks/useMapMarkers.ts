@@ -1,3 +1,4 @@
+
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useMapContext } from '../MapContext';
 import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/core';
@@ -13,15 +14,10 @@ import { useRouteMemoryStore } from '@/hooks/map/useRouteMemoryStore';
 import { EventEmitter } from '@/hooks/events/useEventEmitter';
 
 interface UseMapMarkersProps {
-  // These props might still be relevant for general place display, outside of itinerary context
-  places: Place[]; // General places, e.g. from search results
-  selectedPlace: Place | null; // A single selected place, not necessarily from itinerary
-  
-  // Itinerary related props - these will now be mainly driven by the store for the *selected day*
-  itinerary: ItineraryDay[] | null; // Full itinerary data, needed to get place details for a day
-  // selectedDay: number | null; // This prop will now be taken from useRouteMemoryStore
-
-  selectedPlaces?: Place[]; // Places selected in UI, e.g. for cart (might be different from itinerary)
+  places: Place[]; 
+  selectedPlace: Place | null; 
+  itinerary: ItineraryDay[] | null;
+  selectedPlaces?: Place[];
   onPlaceClick?: (place: Place | ItineraryPlaceWithTime, index: number) => void;
   highlightPlaceId?: string;
 }
@@ -29,15 +25,14 @@ interface UseMapMarkersProps {
 export const useMapMarkers = (props: UseMapMarkersProps) => {
   const { map, isMapInitialized, isNaverLoaded } = useMapContext();
   const {
-    itinerary, // Full itinerary is needed to find details for places of the selected day
+    itinerary,
     onPlaceClick,
     highlightPlaceId,
-    // `places`, `selectedPlace`, `selectedPlacesUi` might be for non-itinerary markers
   } = props;
 
   // Zustand store for day-specific data
   const { 
-    selectedDay, // This is obtained from the store
+    selectedDay, 
     getDayRouteData, 
     setDayRouteData,
     clearDayMarkers: clearDayMarkersFromStore 
@@ -137,6 +132,7 @@ export const useMapMarkers = (props: UseMapMarkersProps) => {
         renderMarkersForSelectedDay();
       }
     };
+    
     const unsubscribe = EventEmitter.subscribe('mapDayChanged', handleMapDayChanged);
     return () => unsubscribe();
   }, [isMapInitialized, renderMarkersForSelectedDay]);
@@ -147,14 +143,10 @@ export const useMapMarkers = (props: UseMapMarkersProps) => {
     return () => {
       console.log("[useMapMarkers] Unmounting, clearing current day markers from map.");
       clearAllCurrentDayMarkersFromMap();
-      // If generalMarkersRef is used for non-itinerary markers, clear them too if needed
-      // generalMarkersRef.current = clearMarkersUtil(generalMarkersRef.current);
     };
   }, [clearAllCurrentDayMarkersFromMap]);
 
 
-  // The `forceMarkerUpdate` and `clearAllMarkers` might need to be re-evaluated.
-  // `clearAllMarkers` should perhaps clear data from the store for all days.
   const forceMarkerUpdate = useCallback(() => {
     console.log("[useMapMarkers] forceMarkerUpdate called. Re-rendering markers for current day.");
     renderMarkersForSelectedDay();
@@ -163,19 +155,18 @@ export const useMapMarkers = (props: UseMapMarkersProps) => {
   const clearAllMarkersAndStore = useCallback(() => {
      console.log("[useMapMarkers] Clearing all markers from map and store.");
      const store = useRouteMemoryStore.getState();
-     store.routeDataByDay.forEach((_dayData, dayIdx) => { // Iterate using dayIdx from map keys or a range
-        const dayRouteD = store.getDayRouteData(dayIdx); // Get specific day data
+     store.routeDataByDay.forEach((_dayData, dayIdx) => {
+        const dayRouteD = store.getDayRouteData(dayIdx);
         if (dayRouteD && dayRouteD.markers) {
           dayRouteD.markers.forEach(m => m.setMap(null));
         }
-        store.setDayRouteData(dayIdx, { markers: [] }); // Clear from store
+        store.setDayRouteData(dayIdx, { markers: [] });
      });
      setCurrentDayMarkers([]);
   }, []);
 
   return {
-    // markers: currentDayMarkers, // markers for the currently selected day
-    clearAllMarkers: clearAllMarkersAndStore, // Clears all markers from store and map
-    forceMarkerUpdate, // Triggers re-render for current day
+    clearAllMarkers: clearAllMarkersAndStore, 
+    forceMarkerUpdate,
   };
 };

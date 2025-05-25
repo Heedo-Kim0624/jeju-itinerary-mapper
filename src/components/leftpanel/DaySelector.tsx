@@ -7,7 +7,6 @@ import { useRouteMemoryStore } from '@/hooks/map/useRouteMemoryStore';
 
 interface DaySelectorProps {
   itinerary: ItineraryDay[] | null;
-  // These props are no longer required since we're using the hook internally
 }
 
 const DaySelector: React.FC<DaySelectorProps> = ({ itinerary }) => {

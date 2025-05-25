@@ -1,6 +1,8 @@
+
 import React, { useEffect } from 'react';
 import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/core';
 import { useMapMarkers } from './hooks/useMapMarkers';
+import { EventEmitter } from '@/hooks/events/useEventEmitter';
 
 interface MapMarkersProps {
   places: Place[];
@@ -61,7 +63,7 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
     console.log("[MapMarkers] Registering direct event handlers for window events and custom EventEmitter");
     window.addEventListener('startScheduleGeneration', handleStartScheduleGeneration);
     
-    const { EventEmitter } = await import('@/hooks/events/useEventEmitter');
+    // 비동기 코드 제거하고 EventEmitter 직접 import
     const unsubscribe = EventEmitter.subscribe('mapDayChanged', handleDaySelected);
     
     return () => {
