@@ -15,32 +15,27 @@ const DaySelector: React.FC<DaySelectorProps> = ({
   selectedDay,
   onSelectDay,
 }) => {
-  const { startDayRendering, clearAllRoutes, clearMarkersAndUiElements } = useMapContext(); // MapContext에서 필요한 함수들 가져오기
+  const { startDayRendering } = useMapContext(); // MapContext에서 startDayRendering 가져오기
 
   const handleDayClick = useCallback((day: number) => { // 함수 이름 변경 및 useCallback 사용
     console.log(`[DaySelector] Day ${day} selected by user.`);
     
-    // 1. 지도 요소들 초기화 (경로와 마커)
-    if (clearAllRoutes) clearAllRoutes();
-    if (clearMarkersAndUiElements) clearMarkersAndUiElements();
-    
-    // 2. 상위 컴포넌트에 일자 변경 알림 (예: App State 업데이트)
+    // 1. 상위 컴포넌트에 일자 변경 알림 (예: App State 업데이트)
     onSelectDay(day); 
     
-    // 3. MapContext를 통해 중앙화된 렌더링 프로세스 시작
-    if (startDayRendering) {
-      startDayRendering(day);
-      console.log(`[DaySelector] Called startDayRendering for day ${day}`);
-    }
+    // 2. MapContext를 통해 중앙화된 렌더링 프로세스 시작
+    // 이 호출은 MapContext 내부에서 상태를 설정하고, 필요한 클리어 작업 및
+    // 'dayRenderingStarted' 이벤트를 발생시킴.
+    startDayRendering(day);
 
-    // 4. 명시적으로 itineraryDaySelected 이벤트 발생시켜 다른 컴포넌트들에게 알림
-    const daySelectedEvent = new CustomEvent('itineraryDaySelected', { 
-      detail: { day, timestamp: Date.now() } 
-    });
-    window.dispatchEvent(daySelectedEvent);
-    console.log(`[DaySelector] Dispatched 'itineraryDaySelected' event for day ${day}`);
+    // 'itineraryDaySelected' 이벤트 직접 발생시키는 로직은 MapContext 내부나
+    // App 레벨 상태 변경에 따른 useEffect에서 처리하는 것이 더 적절할 수 있음.
+    // 현재는 startDayRendering이 그 역할을 일부 대신함.
+    // 필요하다면, onSelectDay 이후 App 레ikulum에서 이벤트를 발생시킬 수 있음.
+    // window.dispatchEvent(new CustomEvent('itineraryDaySelected', { detail: { day, timestamp: Date.now() } }));
+    // console.log(`[DaySelector] Dispatched 'itineraryDaySelected' event for day ${day}`);
 
-  }, [onSelectDay, startDayRendering, clearAllRoutes, clearMarkersAndUiElements]);
+  }, [onSelectDay, startDayRendering]);
 
   if (!itinerary || itinerary.length === 0) {
     return null;
