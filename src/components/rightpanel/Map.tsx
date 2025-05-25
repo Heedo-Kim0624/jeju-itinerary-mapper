@@ -5,7 +5,7 @@ import MapMarkers from './MapMarkers';
 import MapLoadingOverlay from './MapLoadingOverlay';
 import GeoJsonLayer from './GeoJsonLayer';
 import MapControls from './MapControls';
-import type { Place, ItineraryDay } from '@/types/supabase';
+import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/core'; // ItineraryPlaceWithTime 추가
 import { useMapDataEffects } from '@/hooks/map/useMapDataEffects';
 
 interface MapProps {
@@ -21,7 +21,7 @@ const Map: React.FC<MapProps> = ({
   selectedPlace, 
   itinerary, 
   selectedDay,
-  selectedPlaces = [] // Default will be handled by MapMarkers or its hooks
+  selectedPlaces = []
 }) => {
   const {
     mapContainer,
@@ -34,6 +34,8 @@ const Map: React.FC<MapProps> = ({
     handleGeoJsonLoaded,
     isGeoJsonLoaded,
     checkGeoJsonMapping,
+    renderItineraryRoute, // renderItineraryRoute 직접 가져오기
+    serverRoutesData, // serverRoutesData 직접 가져오기
   } = useMapContext();
 
   // 현재 선택된 일자의 itinerary 데이터
@@ -45,7 +47,8 @@ const Map: React.FC<MapProps> = ({
   }, [itinerary, selectedDay]);
 
   // 현재 선택된 일자의 places만 추출
-  const currentDayPlaces = useMemo(() => {
+  // ItineraryPlaceWithTime[] 또는 Place[] 타입을 명시적으로 지정
+  const currentDayPlaces = useMemo((): ItineraryPlaceWithTime[] | Place[] => {
     if (currentDayItinerary && currentDayItinerary.places && currentDayItinerary.places.length > 0) {
       return currentDayItinerary.places;
     }
@@ -55,16 +58,17 @@ const Map: React.FC<MapProps> = ({
   const { handlePlaceClick } = useMapDataEffects({
     isMapInitialized,
     isGeoJsonLoaded,
-    renderItineraryRoute: useMapContext().renderItineraryRoute,
-    serverRoutesData: useMapContext().serverRoutesData,
+    renderItineraryRoute, // 컨텍스트에서 직접 가져온 함수 사용
+    serverRoutesData, // 컨텍스트에서 직접 가져온 데이터 사용
     checkGeoJsonMapping,
-    places,
+    places, // 일반 장소 목록 전달
     itinerary,
     selectedDay,
   });
 
   // MapMarkers에 대한 고유 키 생성 - 의존성 배열 확장
   const markersKey = useMemo(() => {
+    // currentDayPlaces가 Place[] 또는 ItineraryPlaceWithTime[] 일 수 있으므로, 타입 가드 없이 id 접근
     const placesId = currentDayPlaces.map(p => p.id).join('_') || 'empty';
     
     const itineraryId = itinerary && itinerary.length > 0 && itinerary[0] ? 
@@ -73,27 +77,29 @@ const Map: React.FC<MapProps> = ({
       
     const dayId = selectedDay !== null ? `day-${selectedDay}` : 'no-day';
     const selectedPlaceId = selectedPlace ? `place-${selectedPlace.id}` : 'no-selected';
-    // Memoize selectedPlaces to prevent it from causing unnecessary re-renders if it's an empty array literal
     const selectedPlacesIds = (selectedPlaces && selectedPlaces.length > 0) ? selectedPlaces.map(p => p.id).join('_') : 'no-selected-places';
     
     return `markers-${dayId}-${itineraryId}-${placesId}-${selectedPlaceId}-${selectedPlacesIds}`;
   }, [currentDayPlaces, itinerary, selectedDay, selectedPlace, selectedPlaces]);
 
-  // Stabilize selectedPlaces prop for MapMarkers
   const stableSelectedPlaces = useMemo(() => selectedPlaces || [], [selectedPlaces]);
 
   return (
     <div ref={mapContainer} className="w-full h-full relative flex-grow">
       <MapMarkers
         key={markersKey}
-        places={selectedDay !== null ? currentDayPlaces : places}
+        // places prop은 Place[] 타입이어야 하므로, currentDayPlaces를 Place[]로 캐스팅하거나 타입을 맞춰야합니다.
+        // MapMarkers는 Place[]를 받도록 되어 있으므로, currentDayPlaces가 ItineraryPlaceWithTime[]이면 변환 또는 캐스팅 필요
+        // 여기서는 currentDayPlaces가 Place[]의 부분집합이라고 가정하고 전달합니다.
+        // 만약 ItineraryPlaceWithTime의 추가 속성이 MapMarkers에서 필요하다면 MapMarkers의 props 타입 수정 필요
+        places={selectedDay !== null ? (currentDayPlaces as Place[]) : places}
         selectedPlace={selectedPlace}
         itinerary={itinerary}
         selectedDay={selectedDay}
-        selectedPlaces={stableSelectedPlaces} // Use the stabilized version
-        onPlaceClick={handlePlaceClick}
+        selectedPlaces={stableSelectedPlaces}
+        onPlaceClick={handlePlaceClick as (place: Place | ItineraryPlaceWithTime, index: number) => void} // 타입 단언 추가
         highlightPlaceId={selectedPlace?.id}
-        showOnlyCurrentDayMarkers={true} // Add this flag to explicitly control the behavior
+        // showOnlyCurrentDayMarkers={true} // 이 prop은 MapMarkersProps에 없으므로 제거
       />
       
       {map && (
@@ -122,3 +128,4 @@ const Map: React.FC<MapProps> = ({
 };
 
 export default Map;
+
