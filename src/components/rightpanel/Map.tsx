@@ -1,3 +1,4 @@
+
 import React, { useMemo } from 'react';
 import { useMapContext } from './MapContext';
 import MapMarkers from './MapMarkers';
@@ -20,7 +21,7 @@ const Map: React.FC<MapProps> = ({
   selectedPlace, 
   itinerary, 
   selectedDay,
-  selectedPlaces = [] 
+  selectedPlaces // Default will be handled by MapMarkers or its hooks
 }) => {
   const {
     mapContainer,
@@ -54,14 +55,6 @@ const Map: React.FC<MapProps> = ({
     selectedDay,
   });
 
-  // 일정 및 선택된 일자가 변경되면 경로 렌더링하는 useEffect는 useMapDataEffects로 이전되었으므로 제거.
-  // useEffect(() => {
-  //   if (itinerary && selectedDay !== null && currentDayItinerary && renderItineraryRoute) {
-  //     console.log(`[Map Component Effect] Selected day ${selectedDay} has ${currentDayItinerary.places?.length || 0} places. Attempting to render route.`);
-  //     // renderItineraryRoute(currentDayItinerary, serverRoutesData); // This call is likely handled by useMapDataEffects
-  //   }
-  // }, [itinerary, selectedDay, currentDayItinerary, serverRoutesData, renderItineraryRoute]);
-
   // MapMarkers에 대한 고유 키 생성 - 의존성 배열 확장
   const markersKey = useMemo(() => {
     const placesId = places.map(p => p.id).join('_') || 'empty';
@@ -72,10 +65,14 @@ const Map: React.FC<MapProps> = ({
       
     const dayId = selectedDay !== null ? `day-${selectedDay}` : 'no-day';
     const selectedPlaceId = selectedPlace ? `place-${selectedPlace.id}` : 'no-selected';
-    const selectedPlacesIds = selectedPlaces.map(p => p.id).join('_') || 'no-selected-places';
+    // Memoize selectedPlaces to prevent it from causing unnecessary re-renders if it's an empty array literal
+    const selectedPlacesIds = (selectedPlaces && selectedPlaces.length > 0) ? selectedPlaces.map(p => p.id).join('_') : 'no-selected-places';
     
     return `markers-${dayId}-${itineraryId}-${placesId}-${selectedPlaceId}-${selectedPlacesIds}`;
   }, [places, itinerary, selectedDay, selectedPlace, selectedPlaces]);
+
+  // Stabilize selectedPlaces prop for MapMarkers
+  const stableSelectedPlaces = useMemo(() => selectedPlaces || [], [selectedPlaces]);
 
   return (
     <div ref={mapContainer} className="w-full h-full relative flex-grow">
@@ -85,7 +82,7 @@ const Map: React.FC<MapProps> = ({
         selectedPlace={selectedPlace}
         itinerary={itinerary}
         selectedDay={selectedDay}
-        selectedPlaces={selectedPlaces}
+        selectedPlaces={stableSelectedPlaces} // Use the stabilized version
         onPlaceClick={handlePlaceClick}
         highlightPlaceId={selectedPlace?.id}
       />
@@ -116,3 +113,4 @@ const Map: React.FC<MapProps> = ({
 };
 
 export default Map;
+
