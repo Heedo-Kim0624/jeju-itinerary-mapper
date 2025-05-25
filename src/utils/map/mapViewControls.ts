@@ -1,3 +1,4 @@
+
 import type { Place } from '@/types/supabase';
 
 export const panToPosition = (map: any, lat: number, lng: number) => {
@@ -47,55 +48,42 @@ export const fitBoundsToPlaces = (map: any, places: Place[]) => {
   }
 };
 
-export const fitBoundsToCoordinates = (map: any, naverLatLngArray: any[]) => {
-  if (!map || !window.naver || !window.naver.maps || !naverLatLngArray || !Array.isArray(naverLatLngArray) || naverLatLngArray.length === 0) {
-    console.warn("[mapViewControls] fitBoundsToCoordinates: 지도 객체가 없거나, Naver LatLng 좌표 목록이 비어 있습니다.");
+export const fitBoundsToCoordinates = (map: any, coordinates: { lat: number; lng: number }[]) => { 
+  if (!map || !window.naver || !window.naver.maps || !coordinates || !Array.isArray(coordinates) || coordinates.length === 0) {
+    console.warn("[mapViewControls] fitBoundsToCoordinates: 지도 객체가 없거나, 좌표 목록이 비어 있습니다.");
     return;
   }
 
   try {
     const bounds = new window.naver.maps.LatLngBounds();
-    let validCoordsCount = 0;
+    let hasValidCoords = false;
 
-    naverLatLngArray.forEach(coord => {
-      if (coord && typeof coord.lat === 'function' && typeof coord.lng === 'function') {
-        try {
-          const lat = coord.lat();
-          const lng = coord.lng();
-          if (typeof lat === 'number' && typeof lng === 'number' &&
-              !isNaN(lat) && !isNaN(lng) &&
-              isFinite(lat) && isFinite(lng) &&
-              lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-            bounds.extend(coord);
-            validCoordsCount++;
-          } else {
-            console.warn(`[mapViewControls] fitBoundsToCoordinates: 유효하지 않은 LatLng 내부 값: lat=${lat}, lng=${lng}`);
-          }
-        } catch (e) {
-          console.warn("[mapViewControls] fitBoundsToCoordinates: LatLng 객체 값 접근 중 오류:", e, coord);
-        }
+    coordinates.forEach(coord => {
+      if (coord && typeof coord.lat === 'number' && typeof coord.lng === 'number' && !isNaN(coord.lat) && !isNaN(coord.lng)) {
+        bounds.extend(new window.naver.maps.LatLng(coord.lat, coord.lng));
+        hasValidCoords = true;
       } else {
-        console.warn("[mapViewControls] fitBoundsToCoordinates: 유효하지 않은 Naver LatLng 객체 전달됨:", coord);
+        console.warn("[mapViewControls] fitBoundsToCoordinates: Invalid coordinate object passed:", coord);
       }
     });
     
-    if (validCoordsCount > 0) {
+    if (hasValidCoords) {
       const ne = bounds.getNE();
       const sw = bounds.getSW();
       
-      if (ne && sw && !ne.equals(sw)) { // 여러 유효한 좌표가 있는 경우
+      if (ne && sw && !ne.equals(sw)) {
         map.fitBounds(bounds, { top: 50, right: 50, bottom: 50, left: 50 });
-      } else if (ne && sw && ne.equals(sw) && validCoordsCount === 1) { // 단일 유효 좌표
+      } else if (ne && sw && ne.equals(sw) && coordinates.length === 1) { 
         map.setCenter(ne);
-        map.setZoom(14); // 단일 지점일 경우 적절한 줌 레벨 설정
+        map.setZoom(14);
       } else {
-         // 이 경우는 bounds가 비어있거나 모든 점이 동일한 경우인데, validCoordsCount > 0 조건으로 이미 필터링되었을 수 있음
-        console.warn(`[mapViewControls] fitBoundsToCoordinates: 유효한 경계를 계산할 수 없거나 모든 좌표가 동일합니다. Valid coords: ${validCoordsCount}`);
+        console.warn("[mapViewControls] fitBoundsToCoordinates: 유효한 경계를 계산할 수 없거나 단일 지점입니다.");
       }
     } else {
-      console.warn("[mapViewControls] fitBoundsToCoordinates: 유효한 Naver LatLng 좌표가 없습니다.");
+      console.warn("[mapViewControls] fitBoundsToCoordinates: 유효한 좌표가 없습니다.");
     }
   } catch (error) {
     console.error("[mapViewControls] fitBoundsToCoordinates 중 오류 발생:", error);
   }
 };
+

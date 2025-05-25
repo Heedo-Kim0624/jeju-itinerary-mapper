@@ -1,13 +1,12 @@
+
 import { useCallback, useEffect, useRef } from 'react';
 import { NewServerScheduleResponse, ItineraryDay, ServerScheduleItem, ItineraryPlaceWithTime, RouteData, ServerRouteSummaryItem } from '@/types/core';
 import { getDateStringMMDD, getDayOfWeekString } from '../itinerary/parser-utils/timeUtils';
 import { useSupabaseDataFetcher } from '../data/useSupabaseDataFetcher';
 import { useItineraryEnricher } from '../itinerary/useItineraryEnricher';
-import { useRouteMemoryStore } from '@/hooks/map/useRouteMemoryStore';
-import { dayStringToIndex } from '@/utils/date/dayMapping';
 
 interface ServerResponseHandlerProps {
-  onServerResponse: (response: NewServerScheduleResponse, startDate: Date) => Promise<ItineraryDay[]>;
+  onServerResponse: (response: NewServerScheduleResponse) => void;
   enabled: boolean;
 }
 
@@ -22,13 +21,11 @@ export const useServerResponseHandler = ({
   const listenerRegistered = useRef(false);
   const { fetchAllCategoryData } = useSupabaseDataFetcher();
   const { enrichItineraryData } = useItineraryEnricher();
-  const { initializeFromServerResponse: initializeRouteMemory } = useRouteMemoryStore();
-
+  
   // 서버 응답 이벤트 핸들러
   const handleRawServerResponse = useCallback(async (event: Event) => {
-    const customEvent = event as CustomEvent<{response: NewServerScheduleResponse, startDate: Date}>;
+    const customEvent = event as CustomEvent<{response: NewServerScheduleResponse}>;
     const serverResponse = customEvent.detail?.response;
-    const startDate = customEvent.detail?.startDate || new Date(); 
     
     console.log('[useServerResponseHandler] rawServerResponseReceived 이벤트 받음:', serverResponse);
     
@@ -36,15 +33,14 @@ export const useServerResponseHandler = ({
       try {
         // Ensure Supabase data is loaded before processing
         await fetchAllCategoryData();
-        initializeRouteMemory(serverResponse, startDate);
-        onServerResponse(serverResponse, startDate);
+        onServerResponse(serverResponse);
       } catch (error) {
         console.error("[useServerResponseHandler] 서버 응답 처리 중 오류:", error);
       }
     } else {
       console.error("[useServerResponseHandler] 서버 응답 이벤트에 올바른 응답이 포함되어 있지 않습니다");
     }
-  }, [onServerResponse, fetchAllCategoryData, initializeRouteMemory]);
+  }, [onServerResponse, fetchAllCategoryData]);
 
   // 이벤트 리스너 등록 및 해제
   useEffect(() => {
@@ -114,55 +110,91 @@ export const parseServerResponse = (
         return [];
     }
     
-    const scheduleByDayKey = serverResponse.schedule.reduce((acc, item) => {
-      const dayKey = item.time_block.split('_')[0]; // e.g., 'Tue'
-      if (!acc[dayKey]) acc[dayKey] = [];
+    // 요일별로 schedule 항목 그룹화
+    const scheduleByDay = serverResponse.schedule.reduce((acc, item) => {
+      const dayKey = item.time_block.split('_')[0]; // 'Tue_0900' -> 'Tue'
+      if (!acc[dayKey]) {
+        acc[dayKey] = [];
+      }
       acc[dayKey].push(item);
       return acc;
     }, {} as Record<string, ServerScheduleItem[]>);
     
-    const routeSummaryByDayKey = serverResponse.route_summary.reduce((acc, item) => {
-      acc[item.day] = item; // item.day is "Mon", "Tue" etc.
+    // route_summary를 요일별로 매핑
+    const routeSummaryByDay = serverResponse.route_summary.reduce((acc, item) => {
+      acc[item.day] = item; // item.day is like "Tue", "Wed"
       return acc;
     }, {} as Record<string, ServerRouteSummaryItem>);
     
-    // Use the order from route_summary to build days
-    return serverResponse.route_summary.map((summaryItem, index) => {
-      const dayKey = summaryItem.day; // "Mon", "Tue", etc.
-      const dayNumber = index + 1; // Chronological day number (1-based)
-
-      const dayScheduleItems = scheduleByDayKey[dayKey] || [];
+    // 요일 목록 (route_summary의 day 필드 기준, 순서 유지)
+    const daysOfWeekFromSummary = serverResponse.route_summary.map(item => item.day);
+    
+    // 각 요일에 대한 ItineraryDay 객체 생성
+    return daysOfWeekFromSummary.map((dayOfWeekKey, index) => {
+      const dayScheduleItems = scheduleByDay[dayOfWeekKey] || [];
+      const dayRouteSummary = routeSummaryByDay[dayOfWeekKey];
       
       const currentDayDate = new Date(startDate.getTime() + index * 24 * 60 * 60 * 1000);
-      const dateStr = getDateStringMMDD(currentDayDate);
+      const dateStr = getDateStringMMDD(currentDayDate); // MM/DD 형식
+      // getDayOfWeekString(currentDayDate)를 사용할 수도 있으나, route_summary의 dayKey를 사용
       
-      const placesForDay: ItineraryPlaceWithTime[] = dayScheduleItems.map((scheduleItem: ServerScheduleItem, placeIndex: number) => ({ // added placeIndex for unique key generation
-        id: scheduleItem.id?.toString() || `fallback_${scheduleItem.place_name.replace(/\s+/g, '')}_${dayNumber}_${placeIndex}`,
-        name: scheduleItem.place_name,
-        category: scheduleItem.place_type,
-        timeBlock: scheduleItem.time_block,
-        x: 0, y: 0, address: '', road_address: '', phone: '', description: '', rating: 0, 
-        image_url: '', homepage: '',
-        isFallback: true, // Will be updated by enricher
-        numericDbId: typeof scheduleItem.id === 'number' ? scheduleItem.id : null,
-        // other fields like arriveTime, departTime are populated by enricher
-      }));
+      const placesForDay: ItineraryPlaceWithTime[] = dayScheduleItems.map((scheduleItem: ServerScheduleItem) => {
+        const placeId = scheduleItem.id?.toString() || scheduleItem.place_name; // Fallback to place_name if id is missing
+        return {
+          id: placeId,
+          name: scheduleItem.place_name,
+          category: scheduleItem.place_type, // Ensure this aligns with CategoryName if strict typing needed
+          timeBlock: scheduleItem.time_block,
+          // Default values, to be populated later with actual data
+          x: 0, 
+          y: 0, 
+          address: '', 
+          road_address: '', 
+          phone: '', 
+          description: '', 
+          rating: 0, 
+          image_url: '', 
+          homepage: '', 
+          // Optional fields
+          arriveTime: undefined,
+          departTime: undefined,
+          stayDuration: undefined,
+          travelTimeToNext: undefined,
+          geoNodeId: placeId,
+          isFallback: true,
+          isSelected: false,
+          isCandidate: false,
+          numericDbId: typeof scheduleItem.id === 'number' ? scheduleItem.id : null,
+        };
+      });
 
-      // Extract nodeIds and linkIds from interleaved_route for this day from the store's source
-      const interleavedRoute = summaryItem.interleaved_route || [];
-      const nodeIds = interleavedRoute.filter((_, idx) => idx % 2 === 0).map(String);
-      const linkIds = interleavedRoute.filter((_, idx) => idx % 2 === 1).map(String);
+      const currentInterleavedRoute = dayRouteSummary?.interleaved_route || [];
+      const nodeIds = currentInterleavedRoute
+        .filter((_id, idx) => idx % 2 === 0)
+        .map(id => String(id));
+      const linkIds = currentInterleavedRoute
+        .filter((_id, idx) => idx % 2 === 1)
+        .map(id => String(id));
       
-      const routeData: RouteData = { nodeIds, linkIds, segmentRoutes: [] };
+      // For consistency with other parsers, map all to string.
+      // The type ItineraryDay.interleaved_route allows (string | number)[]
+      // but other parts like formatServerItinerary.ts use string[].
+      const finalInterleavedRoute = currentInterleavedRoute.map(id => String(id));
+
+      const routeData: RouteData = {
+        nodeIds,
+        linkIds,
+        segmentRoutes: [], // Initialize segmentRoutes
+      };
 
       return {
-        day: dayNumber,
+        day: index + 1,
         date: dateStr,
-        dayOfWeek: dayKey, // "Mon", "Tue", etc.
+        dayOfWeek: dayOfWeekKey, // Use the day string from route_summary (e.g., "Tue")
         places: placesForDay,
-        totalDistance: summaryItem.total_distance_m ? summaryItem.total_distance_m / 1000 : 0,
+        totalDistance: dayRouteSummary?.total_distance_m ? dayRouteSummary.total_distance_m / 1000 : 0, // km
         routeData: routeData,
-        interleaved_route: interleavedRoute.map(String),
+        interleaved_route: finalInterleavedRoute,
       };
     });
   } catch (error) {

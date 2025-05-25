@@ -260,10 +260,11 @@ const MobileStepView: React.FC<MobileStepViewProps> = ({
         )}
       </div>
       
-      {isPanelHidden && itinerary && (
+      {isPanelHidden && itinerary && selectedItineraryDay !== null && (
         <DaySelector 
           itinerary={itinerary}
-          // selectedDay and onSelectDay props are removed as DaySelector uses a hook internally
+          selectedDay={selectedItineraryDay}
+          onSelectDay={onSelectItineraryDay}
         />
       )}
       

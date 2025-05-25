@@ -16,7 +16,7 @@ interface ItineraryPanelProps {
 
 const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
   itinerary,
-  startDate,
+  startDate, // 이 startDate는 ScheduleViewer에서 사용됩니다. DaySelector에서는 사용되지 않습니다.
   onSelectDay,
   onClose,
   selectedDay
@@ -37,8 +37,9 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
       <div className="flex-1 overflow-auto">
         <DaySelector
           itinerary={itinerary}
-          // selectedDay and onSelectDay props are removed
-          // DaySelector now uses useMapDaySelector hook internally
+          selectedDay={selectedDay}
+          onSelectDay={onSelectDay}
+          // startDate prop 제거
         />
         
         <div className="p-4 pt-2">
@@ -46,7 +47,7 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
             schedule={itinerary}
             selectedDay={selectedDay}
             onDaySelect={onSelectDay}
-            startDate={startDate}
+            startDate={startDate} // ScheduleViewer는 startDate를 사용합니다.
             itineraryDay={currentDayItinerary}
           />
         </div>
@@ -56,3 +57,4 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
 };
 
 export default ItineraryPanel;
+

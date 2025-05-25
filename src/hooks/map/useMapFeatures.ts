@@ -1,3 +1,4 @@
+
 import { useGeoJsonState } from '@/hooks/map/useGeoJsonState';
 import { usePlaceGeoJsonMapper } from './usePlaceGeoJsonMapper';
 import { useMapInteractionManager } from './useMapInteractionManager';
@@ -27,6 +28,7 @@ export const useMapFeatures = (map: any, isNaverLoadedParam: boolean) => {
   } = useRouteManager({
     map,
     isNaverLoadedParam,
+    geoJsonLinks: geoJsonState.geoJsonLinks,
     geoJsonNodes: geoJsonState.geoJsonNodes,
     mapPlacesWithGeoNodesFn: mapPlacesWithGeoNodes,
   });

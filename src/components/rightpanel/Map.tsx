@@ -1,3 +1,4 @@
+
 import React, { useEffect, useMemo } from 'react';
 import { useMapContext } from './MapContext';
 import MapMarkers from './MapMarkers';
@@ -12,7 +13,7 @@ interface MapProps {
   places: Place[];
   selectedPlace: Place | null;
   itinerary: ItineraryDay[] | null;
-  selectedDay: number | null; // This selectedDay is from props, MapMarkers will use store's selectedDay
+  selectedDay: number | null;
   selectedPlaces?: Place[];
 }
 
@@ -20,7 +21,7 @@ const Map: React.FC<MapProps> = ({
   places, 
   selectedPlace, 
   itinerary, 
-  selectedDay, // This prop is used by Map component logic, not directly passed to MapMarkers anymore
+  selectedDay,
   selectedPlaces = [] 
 }) => {
   const {
@@ -106,7 +107,7 @@ const Map: React.FC<MapProps> = ({
         places={places}
         selectedPlace={selectedPlace}
         itinerary={itinerary}
-        // selectedDay prop removed here as MapMarkers gets it from the store
+        selectedDay={selectedDay}
         selectedPlaces={selectedPlaces}
         onPlaceClick={handlePlaceClick}
         highlightPlaceId={selectedPlace?.id}
