@@ -1,15 +1,15 @@
+
 import { useState, useCallback } from 'react';
 import type { GeoLink } from '@/components/rightpanel/geojson/GeoJsonTypes';
 import type { ItineraryDay } from '@/types/supabase';
 
-// ServerRouteDataForDay 인터페이스 정의 (이전 단계에서 확장됨)
 export interface ServerRouteDataForDay {
   day: number; 
   nodeIds?: string[]; 
   linkIds?: string[];
   interleaved_route?: (string | number)[];
-  itineraryDayData: ItineraryDay; // 해당 날짜의 전체 일정 정보
-  polylinePaths?: { lat: number; lng: number }[][]; // 캐시된 폴리라인 경로 데이터
+  itineraryDayData: ItineraryDay; 
+  polylinePaths?: { lat: number; lng: number }[][]; 
 }
 
 export const useServerRoutes = () => {
@@ -32,7 +32,7 @@ export const useServerRoutes = () => {
     newRoutes: Record<number, ServerRouteDataForDay> | ((prevState: Record<number, ServerRouteDataForDay>) => Record<number, ServerRouteDataForDay>)
   ) => {
     setServerRoutesDataState(newRoutes);
-    console.log('[useServerRoutes] 모든 서버 경로 데이터가 업데이트 되었습니다.');
+    console.log('[useServerRoutes] 모든 서버 경로 데이터가 업데이트 되었습니다. 키:', newRoutes ? (typeof newRoutes === 'function' ? 'function' : Object.keys(newRoutes)) : 'null');
   }, []);
   
   const getLinksForRoute = useCallback((
@@ -79,7 +79,8 @@ export const useServerRoutes = () => {
           },
         };
       }
-      console.warn(`[useServerRoutes] updateDayPolylinePaths: Day ${day} data not found. 업데이트 실패.`);
+      // This case should be rare if useScheduleGenerationCore initializes entries properly.
+      console.warn(`[useServerRoutes] updateDayPolylinePaths: Day ${day} data not found in serverRoutesData. Polyline update failed. This might indicate an issue with initial data population for this day.`);
       return prev;
     });
   }, []);
