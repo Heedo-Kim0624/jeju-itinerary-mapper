@@ -1,5 +1,6 @@
+
 import { useCallback, useEffect, useRef } from 'react';
-import { NewServerScheduleResponse, ItineraryDay, ServerScheduleItem, ItineraryPlaceWithTime, RouteData, ServerRouteSummaryItem } from '@/types/core';
+import { NewServerScheduleResponse, ItineraryDay, ServerScheduleItem, ItineraryPlaceWithTime } from '@/types/core';
 import { getDateStringMMDD, getDayOfWeekString } from '../itinerary/parser-utils/timeUtils';
 import { useSupabaseDataFetcher } from '../data/useSupabaseDataFetcher';
 import { useItineraryEnricher } from '../itinerary/useItineraryEnricher';
@@ -9,19 +10,14 @@ interface ServerResponseHandlerProps {
   enabled: boolean;
 }
 
-/**
- * 서버 응답 이벤트를 처리하는 훅
- */
 export const useServerResponseHandler = ({
   onServerResponse,
   enabled = true
 }: ServerResponseHandlerProps) => {
-  // 이벤트 리스너가 이미 등록되었는지 추적
   const listenerRegistered = useRef(false);
   const { fetchAllCategoryData } = useSupabaseDataFetcher();
   const { enrichItineraryData } = useItineraryEnricher();
   
-  // 서버 응답 이벤트 핸들러
   const handleRawServerResponse = useCallback(async (event: Event) => {
     const customEvent = event as CustomEvent<{response: NewServerScheduleResponse}>;
     const serverResponse = customEvent.detail?.response;
@@ -30,7 +26,6 @@ export const useServerResponseHandler = ({
     
     if (serverResponse) {
       try {
-        // Ensure Supabase data is loaded before processing
         await fetchAllCategoryData();
         onServerResponse(serverResponse);
       } catch (error) {
@@ -41,7 +36,6 @@ export const useServerResponseHandler = ({
     }
   }, [onServerResponse, fetchAllCategoryData]);
 
-  // 이벤트 리스너 등록 및 해제
   useEffect(() => {
     if (enabled && !listenerRegistered.current) {
       console.log('[useServerResponseHandler] 서버 응답 이벤트 리스너 등록');
@@ -60,7 +54,6 @@ export const useServerResponseHandler = ({
     }
   }, [enabled, handleRawServerResponse]);
 
-  // 서버 응답을 파싱하고 데이터를 Supabase로 보강하는 함수
   const processServerResponse = useCallback((
     serverResponse: NewServerScheduleResponse,
     startDate: Date
@@ -68,14 +61,11 @@ export const useServerResponseHandler = ({
     console.log("[processServerResponse] 서버 응답 처리 시작");
     
     try {
-      // 1. 기본 서버 응답 파싱하여 itineraryDays 생성
-      const parsedItinerary = parseServerResponse(serverResponse, startDate); // 이 함수가 이제 routeId를 포함한 ItineraryDay[] 반환
+      // 경로 데이터 없이 시간표 데이터만 파싱
+      const parsedItinerary = parseServerResponseSimple(serverResponse, startDate);
       console.log("[processServerResponse] 기본 파싱 완료:", parsedItinerary.length, "일차 생성됨");
-      parsedItinerary.forEach(day => {
-        console.log(`[processServerResponse] Day ${day.day} - Route ID: ${day.routeId}, Nodes: ${day.routeData.nodeIds.length}, Links: ${day.routeData.linkIds.length}`);
-      });
       
-      // 2. Supabase 데이터로 보강
+      // Supabase 데이터로 보강
       const enrichedItinerary = enrichItineraryData(parsedItinerary);
       console.log("[processServerResponse] Supabase 데이터 보강 완료");
       
@@ -92,26 +82,25 @@ export const useServerResponseHandler = ({
   };
 };
 
-/**
- * 서버 응답을 파싱하여 일정 데이터로 변환하는 함수
- * 외부 모듈에서 참조할 수 있도록 명시적으로 내보냄
- */
-export const parseServerResponse = (
+// 간소화된 서버 응답 파싱 함수 (경로 데이터 제외)
+export const parseServerResponseSimple = (
   serverResponse: NewServerScheduleResponse,
   startDate: Date
 ): ItineraryDay[] => {
-  console.log("[parseServerResponse] 서버 응답 파싱 시작:", serverResponse);
+  console.log("[parseServerResponseSimple] 서버 응답 파싱 시작:", serverResponse);
   
   try {
     if (!serverResponse || !serverResponse.schedule || !serverResponse.route_summary) {
-      console.error("[parseServerResponse] 서버 응답에 schedule 또는 route_summary 데이터가 없습니다");
+      console.error("[parseServerResponseSimple] 서버 응답에 schedule 또는 route_summary 데이터가 없습니다");
       return [];
     }
+    
     if (serverResponse.route_summary.length === 0) {
-        console.warn("[parseServerResponse] route_summary is empty, returning empty itinerary.");
-        return [];
+      console.warn("[parseServerResponseSimple] route_summary is empty, returning empty itinerary.");
+      return [];
     }
     
+    // 요일별로 일정 그룹화
     const scheduleByDay = serverResponse.schedule.reduce((acc, item) => {
       const dayKey = item.time_block.split('_')[0]; 
       if (!acc[dayKey]) {
@@ -121,28 +110,21 @@ export const parseServerResponse = (
       return acc;
     }, {} as Record<string, ServerScheduleItem[]>);
     
-    const dayRouteMappings = serverResponse.route_summary.reduce((acc, routeSummaryItem, index) => {
-      const dayKey = routeSummaryItem.day; // "Mon", "Tue" 등
-      const dayNumberForRouteId = index + 1; // routeId 생성 시 사용할 일자 번호
-      const routeId = `route_${dayKey}_${dayNumberForRouteId}_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
-      
-      console.log(`[parseServerResponse] Mapping route for dayKey: ${dayKey}, dayNumberForRouteId: ${dayNumberForRouteId}, generated routeId: ${routeId}`);
-
+    // 경로 요약에서 거리 정보만 추출 (노드/링크 데이터 제외)
+    const dayRouteMappings = serverResponse.route_summary.reduce((acc, routeSummaryItem) => {
+      const dayKey = routeSummaryItem.day;
       acc[dayKey] = {
         totalDistance: routeSummaryItem.total_distance_m / 1000, // m -> km
-        interleaved_route: routeSummaryItem.interleaved_route || [],
-        routeId: routeId 
       };
       return acc;
-    }, {} as Record<string, { totalDistance: number; interleaved_route: (string | number)[]; routeId: string }>);
+    }, {} as Record<string, { totalDistance: number }>);
 
     const daysOfWeekFromSummary = serverResponse.route_summary.map(item => item.day);
     
     return daysOfWeekFromSummary.map((dayOfWeekKey, index) => {
-      const dayNumber = index + 1; // 1-based day number
+      const dayNumber = index + 1;
       const dayScheduleItems = scheduleByDay[dayOfWeekKey] || [];
-      // dayRouteMappings에서 routeId를 포함한 정보를 가져옴
-      const routeInfo = dayRouteMappings[dayOfWeekKey] || { totalDistance: 0, interleaved_route: [], routeId: `empty_route_${dayNumber}_${Date.now()}` };
+      const routeInfo = dayRouteMappings[dayOfWeekKey] || { totalDistance: 0 };
       
       const currentDayDate = new Date(startDate.getTime() + index * 24 * 60 * 60 * 1000);
       const dateStr = getDateStringMMDD(currentDayDate);
@@ -164,8 +146,13 @@ export const parseServerResponse = (
         };
       });
       
-      // convertInterleavedRouteToRouteData에 routeId 전달
-      const routeData = convertInterleavedRouteToRouteData(routeInfo.interleaved_route, dayNumber, routeInfo.routeId);
+      // 경로 데이터 없이 기본 RouteData 구조만 유지
+      const emptyRouteData = {
+        nodeIds: [],
+        linkIds: [],
+        day: dayNumber,
+        routeId: `simple_route_${dayNumber}_${Date.now()}`
+      };
       
       return {
         day: dayNumber,
@@ -173,38 +160,13 @@ export const parseServerResponse = (
         dayOfWeek: dayOfWeekKey,
         places: placesForDay,
         totalDistance: routeInfo.totalDistance,
-        routeData: routeData, // routeId가 포함된 routeData
-        interleaved_route: routeInfo.interleaved_route.map(String),
-        routeId: routeInfo.routeId, // ItineraryDay 객체에도 routeId 저장
+        routeData: emptyRouteData, // 빈 경로 데이터
+        interleaved_route: [], // 빈 배열
+        routeId: emptyRouteData.routeId,
       };
     });
   } catch (error) {
-    console.error("[parseServerResponse] 서버 응답 파싱 중 오류:", error);
+    console.error("[parseServerResponseSimple] 서버 응답 파싱 중 오류:", error);
     return [];
   }
-};
-
-// Helper function to convert interleaved route to RouteData
-const convertInterleavedRouteToRouteData = (
-  interleavedRoute: (string | number)[],
-  day: number, // 일자 정보 추가
-  routeId: string // routeId 추가
-): RouteData => {
-  const loggingPrefix = `[RouteDataConverter Day ${day} RouteID ${routeId}]`;
-  console.log(`${loggingPrefix} Converting route data. Items: ${interleavedRoute.length}`);
-  
-  const nodeIds: string[] = [];
-  const linkIds: string[] = [];
-  
-  interleavedRoute.forEach((item, index) => {
-    if (index % 2 === 0) { // Node ID
-      nodeIds.push(String(item));
-    } else { // Link ID
-      linkIds.push(String(item));
-    }
-  });
-  
-  console.log(`${loggingPrefix} Extracted ${nodeIds.length} nodes and ${linkIds.length} links.`);
-  
-  return { nodeIds, linkIds, day, routeId }; // routeId 포함하여 반환
 };
