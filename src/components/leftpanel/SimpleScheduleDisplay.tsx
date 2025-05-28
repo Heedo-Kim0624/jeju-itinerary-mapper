@@ -72,27 +72,34 @@ const SimpleScheduleDisplay: React.FC<SimpleScheduleDisplayProps> = ({
     );
   }
 
+  console.log('[SimpleScheduleDisplay] schedule data:', schedule);
+
   return (
     <div className="h-full flex flex-col">
       {/* 날짜 선택 버튼들 */}
       <div className="flex gap-2 p-4 overflow-x-auto">
-        {schedule.map((day) => (
-          <button
-            key={day.day}
-            onClick={() => onDaySelect?.(day.day)}
-            className={`min-w-20 h-20 rounded-md flex flex-col items-center justify-center gap-0.5 px-3 border transition-colors ${
-              selectedDay === day.day 
-                ? 'bg-primary text-primary-foreground border-primary' 
-                : 'bg-white hover:bg-gray-50 border-gray-200'
-            }`}
-          >
-            <span className="font-bold text-sm">{day.day}일차</span>
-            <span className="text-xs">{day.date}({day.dayOfWeek})</span>
-            <span className="text-xs text-muted-foreground">
-              {day.totalDistance.toFixed(1)}km
-            </span>
-          </button>
-        ))}
+        {schedule.map((day) => {
+          const distance = day.totalDistance || 0;
+          console.log(`[SimpleScheduleDisplay] Day ${day.day} totalDistance:`, distance);
+          
+          return (
+            <button
+              key={day.day}
+              onClick={() => onDaySelect?.(day.day)}
+              className={`min-w-20 h-20 rounded-md flex flex-col items-center justify-center gap-0.5 px-3 border transition-colors ${
+                selectedDay === day.day 
+                  ? 'bg-primary text-primary-foreground border-primary' 
+                  : 'bg-white hover:bg-gray-50 border-gray-200'
+              }`}
+            >
+              <span className="font-bold text-sm">{day.day}일차</span>
+              <span className="text-xs">{day.date}({day.dayOfWeek})</span>
+              <span className="text-xs text-muted-foreground">
+                {distance.toFixed(1)}km
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       <ScrollArea className="flex-1">
@@ -103,7 +110,7 @@ const SimpleScheduleDisplay: React.FC<SimpleScheduleDisplayProps> = ({
                 <CardTitle className="flex items-center justify-between">
                   <span>DAY {day.day} ({day.date}, {day.dayOfWeek})</span>
                   <div className="flex items-center text-sm text-muted-foreground">
-                    총 거리: {day.totalDistance.toFixed(1)}km
+                    총 거리: {(day.totalDistance || 0).toFixed(1)}km
                   </div>
                 </CardTitle>
               </CardHeader>
