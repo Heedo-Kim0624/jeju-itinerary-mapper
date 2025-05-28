@@ -1,3 +1,4 @@
+
 import { useCallback, useRef, useEffect } from 'react';
 import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/core';
 import { getMarkerIconOptions, createNaverMarker } from '@/utils/map/markerUtils';
@@ -71,11 +72,21 @@ export const useMarkerRenderLogic = ({
     infoWindowsRef.current = clearInfoWindowsUtil(infoWindowsRef.current);
 
     // The 'places' prop is now assumed to be the correct set of places to display
-    // (e.g., filtered for selectedDay by MapMarkers.tsx, or general places).
     const placesToDisplay = places; 
     // Determine if displaying an itinerary day based on selectedDay and itinerary context
     const isDisplayingItineraryDay = selectedDay !== null && !!itinerary?.find(d => d.day === selectedDay);
     let viewResetNeeded = false;
+
+    console.log('[useMarkerRenderLogic] Rendering markers:', {
+      placesToDisplayCount: placesToDisplay.length,
+      isDisplayingItineraryDay,
+      selectedDay,
+      places: placesToDisplay.map((p, idx) => ({ 
+        order: idx + 1, 
+        name: p.name, 
+        coordinates: { x: p.x, y: p.y } 
+      }))
+    });
 
     // Check if view reset is needed due to day change or significant places change
     if (prevSelectedDayRef.current !== selectedDay) {
@@ -83,8 +94,6 @@ export const useMarkerRenderLogic = ({
       viewResetNeeded = true;
     } else if (placesToDisplay !== prevPlacesRef.current) { 
       // Basic check if place list reference or content changed.
-      // A more sophisticated check might involve lengths or IDs if needed,
-      // but for now, if places array changes, consider a view reset.
       if (placesToDisplay.length !== prevPlacesRef.current.length || 
           placesToDisplay.some((p, i) => p.id !== prevPlacesRef.current[i]?.id)) {
         userHasInteractedWithMapRef.current = false;
@@ -100,6 +109,7 @@ export const useMarkerRenderLogic = ({
     );
 
     if (validPlacesToDisplay.length === 0) {
+      console.log('[useMarkerRenderLogic] No valid places to display');
       return;
     }
     
@@ -116,16 +126,17 @@ export const useMarkerRenderLogic = ({
       const isInfoWindowTargetGlobal = selectedPlace?.id === place.id;
       const isGeneralHighlightTarget = highlightPlaceId === place.id;
       
+      // For itinerary days, always show numbered markers in chronological order
       const iconOptions = getMarkerIconOptions(
         place,
         isInfoWindowTargetGlobal || isGeneralHighlightTarget,
         isGloballySelectedCandidate && !isInfoWindowTargetGlobal && !isGeneralHighlightTarget,
-        isDisplayingItineraryDay, // Correctly determined now
-        isDisplayingItineraryDay ? index + 1 : undefined
+        isDisplayingItineraryDay, // This determines if we show numbered markers
+        isDisplayingItineraryDay ? index + 1 : undefined // Chronological order number (1, 2, 3, etc.)
       );
       
       let zIndex = 50;
-      if (isDisplayingItineraryDay) zIndex = 150 - index;
+      if (isDisplayingItineraryDay) zIndex = 150 - index; // Higher numbers appear on top for earlier places
       if (isInfoWindowTargetGlobal || isGeneralHighlightTarget) zIndex = 200;
 
       const marker = createNaverMarker(map, position, iconOptions, place.name, true, true, zIndex);
@@ -136,7 +147,7 @@ export const useMarkerRenderLogic = ({
           <strong style="font-size:16px;display:block;margin-bottom:6px;color:#1a1a1a;">${place.name || '이름 없음'}</strong>
           ${place.address ? `<p style="margin:0 0 4px;color:#444;font-size:12px;"><i class="lucide lucide-map-pin" style="font-size:12px;vertical-align:middle;margin-right:3px;"></i>${place.address}</p>` : ''}
           ${(place as ItineraryPlaceWithTime).category ? `<p style="margin:0 0 4px;color:#007bff;font-size:12px;font-weight:500;">${(place as ItineraryPlaceWithTime).category}</p>` : ''}
-          ${isDisplayingItineraryDay ? `<div style="margin-top:8px;padding:3px 8px;background:#f0f4ff;color:#333;font-size:12px;border-radius:4px;display:inline-block;">순서: ${index + 1}</div>` : ''}
+          ${isDisplayingItineraryDay ? `<div style="margin-top:8px;padding:4px 8px;background:#e3f2fd;color:#1976d2;font-size:12px;border-radius:4px;display:inline-block;font-weight:600;">방문 순서: ${index + 1}</div>` : ''}
           ${place.phone ? `<p style="margin:4px 0 0;color:#666;font-size:12px;"><i class="lucide lucide-phone" style="font-size:12px;vertical-align:middle;margin-right:3px;"></i>${place.phone}</p>` : ''}
         </div>`;
       
@@ -179,10 +190,14 @@ export const useMarkerRenderLogic = ({
         infoWindow.open(map, marker);
       }
       newMarkers.push(marker);
+
+      console.log(`[useMarkerRenderLogic] Created marker ${index + 1} for ${place.name} at (${place.y}, ${place.x})`);
     });
     
     markersRef.current = newMarkers;
     infoWindowsRef.current = newInfoWindows;
+
+    console.log(`[useMarkerRenderLogic] Successfully created ${newMarkers.length} markers for day ${selectedDay}`);
 
     if ((viewResetNeeded || !userHasInteractedWithMapRef.current) && validPlacesToDisplay.length > 0) {
       const placeToFocus = selectedPlace && validPlacesToDisplay.some(p => p.id === selectedPlace.id) ? selectedPlace : 

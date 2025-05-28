@@ -1,6 +1,8 @@
+
 import React, { useMemo } from 'react';
 import { useMapContext } from './MapContext';
 import MapLoadingOverlay from './MapLoadingOverlay';
+import MapMarkers from './MapMarkers'; // Re-enable MapMarkers
 import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/core';
 import { useMapDataEffects } from '@/hooks/map/useMapDataEffects';
 
@@ -62,7 +64,15 @@ const Map: React.FC<MapProps> = ({
 
   return (
     <div ref={mapContainer} className="w-full h-full relative flex-grow">
-      {/* 마커와 GeoJSON 레이어 렌더링 제거 */}
+      {/* Render numbered markers for itinerary places */}
+      <MapMarkers
+        places={currentDayPlaces}
+        selectedPlace={selectedPlace}
+        itinerary={itinerary}
+        selectedDay={selectedDay}
+        selectedPlaces={selectedPlaces}
+        onPlaceClick={handlePlaceClick}
+      />
       
       <MapLoadingOverlay
         isNaverLoaded={isNaverLoaded}
