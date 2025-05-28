@@ -1,7 +1,7 @@
 
-import { parseServerResponse } from './useServerResponseHandler';
+import { parseServerResponseSimple } from './useServerResponseHandler';
 
-// This file acts as a shim to provide `parseServerResponse`
+// This file acts as a shim to provide `parseServerResponseSimple`
 // for read-only files that still import from `useScheduleParser`.
 // The actual implementation is in `useServerResponseHandler`.
-export { parseServerResponse };
+export { parseServerResponseSimple as parseServerResponse };
