@@ -32,6 +32,27 @@ const SimpleScheduleDisplay: React.FC<SimpleScheduleDisplayProps> = ({
     return timePart;
   };
 
+  const formatTimeRange = (timeBlock: string, stayDuration?: number): string => {
+    const startTime = formatTimeBlock(timeBlock);
+    
+    if (!stayDuration || stayDuration <= 0) {
+      return startTime;
+    }
+
+    // 시작 시간을 분 단위로 변환
+    const [startHour, startMinute] = startTime.split(':').map(Number);
+    const startTotalMinutes = startHour * 60 + startMinute;
+    
+    // 체류 시간을 더해서 종료 시간 계산
+    const endTotalMinutes = startTotalMinutes + stayDuration;
+    const endHour = Math.floor(endTotalMinutes / 60) % 24;
+    const endMinute = endTotalMinutes % 60;
+    
+    const endTime = `${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`;
+    
+    return `${startTime} ~ ${endTime}`;
+  };
+
   const categoryToKorean = (category: string): string => {
     const categoryMap: Record<string, string> = {
       'accommodation': '숙소',
@@ -59,7 +80,7 @@ const SimpleScheduleDisplay: React.FC<SimpleScheduleDisplayProps> = ({
           <button
             key={day.day}
             onClick={() => onDaySelect?.(day.day)}
-            className={`min-w-16 h-16 rounded-md flex flex-col items-center justify-center gap-0.5 px-3 border transition-colors ${
+            className={`min-w-20 h-20 rounded-md flex flex-col items-center justify-center gap-0.5 px-3 border transition-colors ${
               selectedDay === day.day 
                 ? 'bg-primary text-primary-foreground border-primary' 
                 : 'bg-white hover:bg-gray-50 border-gray-200'
@@ -67,6 +88,9 @@ const SimpleScheduleDisplay: React.FC<SimpleScheduleDisplayProps> = ({
           >
             <span className="font-bold text-sm">{day.day}일차</span>
             <span className="text-xs">{day.date}({day.dayOfWeek})</span>
+            <span className="text-xs text-muted-foreground">
+              {day.totalDistance.toFixed(1)}km
+            </span>
           </button>
         ))}
       </div>
@@ -97,7 +121,7 @@ const SimpleScheduleDisplay: React.FC<SimpleScheduleDisplayProps> = ({
                           <div className="flex items-center gap-2 mb-1">
                             <Clock className="w-4 h-4 text-muted-foreground" />
                             <span className="font-medium text-primary">
-                              {formatTimeBlock(place.timeBlock)}
+                              {formatTimeRange(place.timeBlock, place.stayDuration)}
                             </span>
                           </div>
                           

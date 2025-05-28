@@ -11,6 +11,7 @@ export interface SimpleItineraryDay {
     name: string;
     category: string;
     timeBlock: string;
+    stayDuration?: number;
   }>;
   totalDistance: number;
 }
@@ -60,6 +61,7 @@ export const useSimpleScheduleParser = () => {
         name: scheduleItem.place_name,
         category: scheduleItem.place_type,
         timeBlock: scheduleItem.time_block,
+        stayDuration: scheduleItem.stay_duration_minutes || 60, // 기본 1시간
       }));
 
       return {
