@@ -68,6 +68,7 @@ export const useMarkerRenderLogic = ({
       return;
     }
     
+    // Always clear existing markers first
     markersRef.current = clearMarkersUtil(markersRef.current);
     infoWindowsRef.current = clearInfoWindowsUtil(infoWindowsRef.current);
 
@@ -88,21 +89,16 @@ export const useMarkerRenderLogic = ({
       }))
     });
 
-    // Check if view reset is needed due to day change or significant places change
+    // Check if view reset is needed due to day change
     if (prevSelectedDayRef.current !== selectedDay) {
+      console.log(`[useMarkerRenderLogic] Day changed from ${prevSelectedDayRef.current} to ${selectedDay}, resetting view`);
       userHasInteractedWithMapRef.current = false; 
       viewResetNeeded = true;
-    } else if (placesToDisplay !== prevPlacesRef.current) { 
-      // Basic check if place list reference or content changed.
-      if (placesToDisplay.length !== prevPlacesRef.current.length || 
-          placesToDisplay.some((p, i) => p.id !== prevPlacesRef.current[i]?.id)) {
-        userHasInteractedWithMapRef.current = false;
-        viewResetNeeded = true;
-      }
+      prevSelectedDayRef.current = selectedDay;
     }
     
-    prevSelectedDayRef.current = selectedDay;
-    prevPlacesRef.current = placesToDisplay; // Store the current set of places
+    // Update places reference
+    prevPlacesRef.current = placesToDisplay;
 
     const validPlacesToDisplay = placesToDisplay.filter(p =>
       p.x != null && p.y != null && !isNaN(Number(p.x)) && !isNaN(Number(p.y))
@@ -199,6 +195,7 @@ export const useMarkerRenderLogic = ({
 
     console.log(`[useMarkerRenderLogic] Successfully created ${newMarkers.length} markers for day ${selectedDay}`);
 
+    // Reset view when day changes or if user hasn't interacted
     if ((viewResetNeeded || !userHasInteractedWithMapRef.current) && validPlacesToDisplay.length > 0) {
       const placeToFocus = selectedPlace && validPlacesToDisplay.some(p => p.id === selectedPlace.id) ? selectedPlace : 
                            (highlightPlaceId ? validPlacesToDisplay.find(p => p.id === highlightPlaceId) : null);
@@ -219,7 +216,6 @@ export const useMarkerRenderLogic = ({
     selectedPlaces,
     onPlaceClick, // This should be stable if defined via useCallback higher up
     highlightPlaceId,
-    // markersRef and infoWindowsRef are refs, not dependencies for useCallback itself
   ]);
 
   return { renderMarkers };

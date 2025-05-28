@@ -34,7 +34,6 @@ export const useMapMarkers = (props: UseMapMarkersProps) => {
 
   const { updateTriggerId, forceMarkerUpdate } = useMarkerUpdater({ updateRequestIdRef });
 
-  // Diagnostics log to verify hook execution
   console.log(`[useMapMarkers] Hook execution - selectedDay: ${selectedDay}, triggerId: ${updateTriggerId}, markers count: ${markersRef.current.length}`);
 
   const clearAllMarkers = useCallback(() => {
@@ -76,35 +75,24 @@ export const useMapMarkers = (props: UseMapMarkersProps) => {
     prevPlacesRef,
   });
 
-  // Add special diagnostic effect to log marker updates
+  // Main effect to handle marker updates - simplified and more direct
   useEffect(() => {
-    console.log(`[useMapMarkers] Update trigger changed: ${updateTriggerId}. Ready to render? ${isMapInitialized}`);
-    
-    if (updateTriggerId > 0 && isMapInitialized) {
-      console.log(`[useMapMarkers] Main hook: Updating markers due to trigger ID change: ${updateTriggerId}`);
-      clearAllMarkers(); // Always clear markers before rendering new ones
+    if (isMapInitialized && map && window.naver?.maps) {
+      console.log(`[useMapMarkers] Triggering marker render for day ${selectedDay}`);
       renderMarkers();
     }
-  }, [updateTriggerId, isMapInitialized, renderMarkers, clearAllMarkers]);
-  
-  // 초기 마운트 시 강제 렌더링
-  useEffect(() => {
-    if (isMapInitialized && updateTriggerId === 0) { 
-        console.log('[useMapMarkers] Initial mount render logic trigger.');
-        forceMarkerUpdate();
-    }
-  }, [isMapInitialized, map, forceMarkerUpdate, updateTriggerId]);
+  }, [selectedDay, isMapInitialized, map, renderMarkers]);
 
-  // 일정 일자 변경을 위한 명시적 이벤트 리스너
+  // Handle day selection events from the schedule viewer
   useEffect(() => {
     const handleItineraryDaySelectedEvent = (event: any) => {
       if (event.detail && typeof event.detail.day === 'number') {
-        console.log(`[useMapMarkers] itineraryDaySelected 이벤트 감지됨 - 일차: ${event.detail.day}, 타임스탬프: ${event.detail.timestamp || 'unknown'}`);
-        // 약간의 지연 후 마커 업데이트 강제 실행 (상태 변경 전파 시간 확보)
+        console.log(`[useMapMarkers] Day selection event received - Day: ${event.detail.day}`);
+        // Clear and re-render markers immediately
+        clearAllMarkers();
         setTimeout(() => {
-          clearAllMarkers(); // 기존 마커 명시적 제거
-          forceMarkerUpdate(); // 마커 새로 그리기
-        }, 50);
+          renderMarkers();
+        }, 100);
       }
     };
     
@@ -113,7 +101,7 @@ export const useMapMarkers = (props: UseMapMarkersProps) => {
     return () => {
       window.removeEventListener('itineraryDaySelected', handleItineraryDaySelectedEvent);
     };
-  }, [clearAllMarkers, forceMarkerUpdate]);
+  }, [clearAllMarkers, renderMarkers]);
 
   return {
     markers: markersRef.current,

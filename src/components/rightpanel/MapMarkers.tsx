@@ -52,15 +52,17 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
     highlightPlaceId,
   });
 
-  // Force marker update when selectedDay changes
+  // Force marker update when selectedDay changes - this is the key fix
   useEffect(() => {
-    if (selectedDay !== null) {
-      console.log(`[MapMarkers] Selected day changed to ${selectedDay}, forcing marker update`);
-      clearAllMarkers();
-      setTimeout(() => {
-        forceMarkerUpdate();
-      }, 100);
-    }
+    console.log(`[MapMarkers] Selected day changed to ${selectedDay}, forcing immediate marker update`);
+    clearAllMarkers(); // Clear existing markers immediately
+    
+    // Use a very short delay to ensure state is updated
+    const timeoutId = setTimeout(() => {
+      forceMarkerUpdate(); // Force new markers to render
+    }, 50);
+    
+    return () => clearTimeout(timeoutId);
   }, [selectedDay, clearAllMarkers, forceMarkerUpdate]);
 
   // Log marker count for debugging
