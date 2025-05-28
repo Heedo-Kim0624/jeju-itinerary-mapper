@@ -4,6 +4,21 @@ import type { ItineraryPlaceWithTime } from '@/types/core';
 import { createNaverLatLng } from './mapSetup';
 import { getCategoryColor, mapCategoryNameToKey } from '@/utils/categoryColors';
 
+// 일차별 마커 색상 정의
+const getDayMarkerColor = (day: number): string => {
+  const dayColors = {
+    1: '#FF5A5F', // 1일차 - 빨간색
+    2: '#007BFF', // 2일차 - 파란색  
+    3: '#28A745', // 3일차 - 초록색
+    4: '#FFA500', // 4일차 - 주황색
+    5: '#6F42C1', // 5일차 - 보라색
+    6: '#20C997', // 6일차 - 청록색
+    7: '#FD7E14', // 7일차 - 주황-빨강
+  };
+  
+  return dayColors[day as keyof typeof dayColors] || '#FF5A5F'; // 기본값은 빨간색
+};
+
 // SVG 마커 생성 유틸리티
 const createCircleMarkerSvg = (
   color: string,
@@ -48,13 +63,14 @@ const createCircleMarkerSvg = (
   `;
 };
 
-// 마커 아이콘 옵션 결정 함수
+// 마커 아이콘 옵션 결정 함수 - day 매개변수 추가
 export const getMarkerIconOptions = (
   place: Place | ItineraryPlaceWithTime,
   isSelected: boolean,
   isCandidate: boolean,
   isItineraryDayPlace: boolean,
-  itineraryOrder?: number
+  itineraryOrder?: number,
+  selectedDay?: number | null // 선택된 일차 추가
 ): { content: string; anchor: { x: number; y: number }; size?: {width: number; height: number} } => {
   let pinColor: string;
   let pinSize = 28;
@@ -62,7 +78,12 @@ export const getMarkerIconOptions = (
 
   // 마커 타입에 따른 색상과 크기 결정
   if (isItineraryDayPlace) {
-    pinColor = (place as ItineraryPlaceWithTime).isFallback ? '#757575' : '#FF5A5F'; // 일정 마커는 빨강, 폴백 마커는 회색
+    // 일정 마커의 경우 선택된 일차에 따라 색상 결정
+    pinColor = selectedDay ? getDayMarkerColor(selectedDay) : '#FF5A5F';
+    // 폴백 마커는 회색으로 유지
+    if ((place as ItineraryPlaceWithTime).isFallback) {
+      pinColor = '#757575';
+    }
     pinSize = 36; // 일정 마커는 크게
     label = itineraryOrder; // 순서 번호 표시
   } else if (isSelected) {

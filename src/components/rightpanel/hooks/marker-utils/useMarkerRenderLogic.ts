@@ -123,12 +123,14 @@ export const useMarkerRenderLogic = ({
       const isGeneralHighlightTarget = highlightPlaceId === place.id;
       
       // For itinerary days, always show numbered markers in chronological order
+      // selectedDay 매개변수를 getMarkerIconOptions에 전달
       const iconOptions = getMarkerIconOptions(
         place,
         isInfoWindowTargetGlobal || isGeneralHighlightTarget,
         isGloballySelectedCandidate && !isInfoWindowTargetGlobal && !isGeneralHighlightTarget,
         isDisplayingItineraryDay, // This determines if we show numbered markers
-        isDisplayingItineraryDay ? index + 1 : undefined // Chronological order number (1, 2, 3, etc.)
+        isDisplayingItineraryDay ? index + 1 : undefined, // Chronological order number (1, 2, 3, etc.)
+        selectedDay // 선택된 일차 전달
       );
       
       let zIndex = 50;
