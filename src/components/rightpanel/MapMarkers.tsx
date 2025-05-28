@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useMapMarkers } from './hooks/useMapMarkers';
 import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/core';
 
