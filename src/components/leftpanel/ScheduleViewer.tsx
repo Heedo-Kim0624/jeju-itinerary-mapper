@@ -2,7 +2,7 @@
 import React, { useEffect } from 'react';
 import { ItineraryDay, ItineraryPlaceWithTime } from '@/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Clock, Navigation, MapPin } from 'lucide-react';
+import { Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface ScheduleViewerProps {
@@ -75,7 +75,6 @@ const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
                 <CardTitle className="flex items-center justify-between">
                   <span>DAY {currentDayToDisplay.day} ({currentDayToDisplay.date}, {currentDayToDisplay.dayOfWeek})</span>
                   <div className="flex items-center text-sm text-muted-foreground">
-                    <MapPin className="w-4 h-4 mr-1" />
                     총 거리: {currentDayToDisplay.totalDistance ? currentDayToDisplay.totalDistance.toFixed(1) : 'N/A'}km
                   </div>
                 </CardTitle>
@@ -110,13 +109,6 @@ const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
                             <div className="text-sm text-muted-foreground">
                               {categoryToKorean(place.category)}
                             </div>
-                            
-                            {place.travelTimeToNext && place.travelTimeToNext !== "-" && (
-                              <div className="flex items-center mt-1 text-xs text-gray-600">
-                                <Navigation className="w-3 h-3 mr-1.5" />
-                                <span>다음 장소까지: {place.travelTimeToNext}</span>
-                              </div>
-                            )}
                           </div>
                         </div>
                       );

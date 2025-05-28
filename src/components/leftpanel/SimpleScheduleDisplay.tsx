@@ -2,7 +2,7 @@
 import React from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Clock, MapPin } from 'lucide-react';
+import { Clock } from 'lucide-react';
 import { SimpleItineraryDay } from '@/hooks/schedule/useSimpleScheduleParser';
 
 interface SimpleScheduleDisplayProps {
@@ -79,7 +79,6 @@ const SimpleScheduleDisplay: React.FC<SimpleScheduleDisplayProps> = ({
                 <CardTitle className="flex items-center justify-between">
                   <span>DAY {day.day} ({day.date}, {day.dayOfWeek})</span>
                   <div className="flex items-center text-sm text-muted-foreground">
-                    <MapPin className="w-4 h-4 mr-1" />
                     총 거리: {day.totalDistance.toFixed(1)}km
                   </div>
                 </CardTitle>
