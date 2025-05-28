@@ -28,7 +28,13 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
     : null;
 
   // Determine which places to display based on whether we're viewing a specific day
-  const placesToDisplay = currentDayItinerary?.places || places;
+  const placesToDisplay = useMemo(() => {
+  if (selectedDay !== null && itinerary) {
+    const found = itinerary.find(day => day.day === selectedDay);
+    return found?.places || [];
+  }
+  return places;
+}, [selectedDay, itinerary, places]);
   
   console.log('[MapMarkers] Rendering markers for:', {
     selectedDay,
