@@ -38,7 +38,7 @@ export const useScheduleGenerator = () => {
       });
       console.table(candidateMapping);
     }
-    console.groupEnd();
+    console.groupEnd(); 
     
     setIsGenerating(true);
     
