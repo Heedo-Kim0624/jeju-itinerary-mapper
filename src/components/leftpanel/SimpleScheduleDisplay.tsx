@@ -2,8 +2,10 @@
 import React from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Clock } from 'lucide-react';
 import { SimpleItineraryDay } from '@/hooks/schedule/useSimpleScheduleParser';
+import { categoryColors, getCategoryName } from '@/utils/categoryColors';
 
 interface SimpleScheduleDisplayProps {
   schedule: SimpleItineraryDay[];
@@ -53,15 +55,21 @@ const SimpleScheduleDisplay: React.FC<SimpleScheduleDisplayProps> = ({
     return `${startTime} ~ ${endTime}`;
   };
 
-  const categoryToKorean = (category: string): string => {
-    const categoryMap: Record<string, string> = {
-      'accommodation': '숙소',
-      'attraction': '관광지',
-      'restaurant': '음식점',
-      'cafe': '카페',
-      'unknown': '기타'
+  const getCategoryStyle = (category: string) => {
+    const categoryKey = category.toLowerCase();
+    const colors = categoryColors[categoryKey];
+    
+    if (colors) {
+      return {
+        backgroundColor: colors.marker,
+        color: 'white'
+      };
+    }
+    
+    return {
+      backgroundColor: '#6B7280',
+      color: 'white'
     };
-    return categoryMap[category.toLowerCase()] || category;
   };
 
   if (!schedule || schedule.length === 0) {
@@ -118,27 +126,43 @@ const SimpleScheduleDisplay: React.FC<SimpleScheduleDisplayProps> = ({
               <CardContent>
                 <div className="space-y-3">
                   {day.places.length > 0 ? (
-                    day.places.map((place, index) => (
-                      <div key={`${place.id}-${index}`} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                        <div className="flex items-center justify-center w-8 h-8 bg-primary text-primary-foreground rounded-full text-sm font-bold shrink-0">
-                          {index + 1}
-                        </div>
-                        
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Clock className="w-4 h-4 text-muted-foreground" />
-                            <span className="font-medium text-primary">
-                              {formatTimeRange(place.timeBlock, place.stayDuration)}
-                            </span>
+                    day.places.map((place, index) => {
+                      const categoryStyle = getCategoryStyle(place.category);
+                      
+                      return (
+                        <div key={`${place.id}-${index}`} className="flex items-start gap-3 p-4 bg-gray-50 rounded-lg border-l-4" style={{ borderLeftColor: categoryStyle.backgroundColor }}>
+                          <div 
+                            className="flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold shrink-0"
+                            style={categoryStyle}
+                          >
+                            {index + 1}
                           </div>
                           
-                          <div className="font-medium">{place.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {categoryToKorean(place.category)}
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Clock className="w-4 h-4 text-muted-foreground" />
+                              <span className="font-medium text-primary">
+                                {formatTimeRange(place.timeBlock, place.stayDuration)}
+                              </span>
+                              <Badge 
+                                className="text-xs" 
+                                style={categoryStyle}
+                              >
+                                {getCategoryName(place.category)}
+                              </Badge>
+                            </div>
+                            
+                            <div className="font-medium text-lg">{place.name}</div>
+                            
+                            {place.stayDuration && place.stayDuration > 0 && (
+                              <div className="text-sm text-muted-foreground mt-1">
+                                체류시간: {Math.floor(place.stayDuration / 60)}시간 {place.stayDuration % 60 > 0 ? `${place.stayDuration % 60}분` : ''}
+                              </div>
+                            )}
                           </div>
                         </div>
-                      </div>
-                    ))
+                      );
+                    })
                   ) : (
                     <div className="text-center text-muted-foreground py-4">
                       이 날에는 일정이 없습니다
