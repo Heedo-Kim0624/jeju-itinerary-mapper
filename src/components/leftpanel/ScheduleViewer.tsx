@@ -1,12 +1,14 @@
 
-import React, { useEffect } from 'react';
-import { ItineraryDay, ItineraryPlaceWithTime } from '@/types';
+import React from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Clock } from 'lucide-react';
+import { ItineraryDay } from '@/types';
+import { categoryColors, getCategoryName } from '@/utils/categoryColors';
 
 interface ScheduleViewerProps {
-  schedule?: ItineraryDay[];
+  schedule: ItineraryDay[];
   selectedDay?: number | null;
   onDaySelect?: (day: number) => void;
   onClose?: () => void;
@@ -18,19 +20,8 @@ const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
   schedule,
   selectedDay,
   onDaySelect,
-  onClose,
-  startDate = new Date(),
-  itineraryDay
+  startDate,
 }) => {
-  useEffect(() => {
-    console.log("ScheduleViewer 마운트/업데이트:", {
-      scheduleLength: schedule?.length || 0,
-      selectedDay,
-      itineraryDayPresent: !!itineraryDay,
-      startDate: startDate.toISOString()
-    });
-  }, [schedule, selectedDay, itineraryDay, startDate]);
-
   const formatTimeBlock = (timeBlock: string): string => {
     const parts = timeBlock.split('_');
     if (parts.length < 2) return timeBlock;
@@ -43,72 +34,132 @@ const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
       return `${hour}:${minute}`;
     }
     
+    // 기타 형태는 그대로 반환
     return timePart;
   };
 
-  const categoryToKorean = (category: string): string => {
-    const categoryMap: Record<string, string> = {
-      'accommodation': '숙소',
-      'attraction': '관광지',
-      'restaurant': '음식점',
-      'cafe': '카페',
-      'unknown': '기타'
-    };
-    return categoryMap[category.toLowerCase()] || category;
+  const formatTimeRange = (timeBlock: string, stayDuration?: number): string => {
+    const startTime = formatTimeBlock(timeBlock);
+    
+    if (!stayDuration || stayDuration <= 0) {
+      return startTime;
+    }
+
+    // 시작 시간을 분 단위로 변환
+    const [startHour, startMinute] = startTime.split(':').map(Number);
+    const startTotalMinutes = startHour * 60 + startMinute;
+    
+    // 체류 시간을 더해서 종료 시간 계산
+    const endTotalMinutes = startTotalMinutes + stayDuration;
+    const endHour = Math.floor(endTotalMinutes / 60) % 24;
+    const endMinute = endTotalMinutes % 60;
+    
+    const endTime = `${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`;
+    
+    return `${startTime} ~ ${endTime}`;
   };
 
-  const currentDayToDisplay = itineraryDay || 
-    (selectedDay !== null && schedule && schedule.length > 0 ? 
-      schedule.find(d => d.day === selectedDay) : null);
+  const getCategoryStyle = (category: string) => {
+    const categoryKey = category.toLowerCase();
+    const colors = categoryColors[categoryKey];
+    
+    if (colors) {
+      return {
+        backgroundColor: colors.marker,
+        color: 'white'
+      };
+    }
+    
+    return {
+      backgroundColor: '#6B7280',
+      color: 'white'
+    };
+  };
 
-  if (!currentDayToDisplay && selectedDay !== null) {
-    console.warn(`ScheduleViewer: 선택된 날짜(${selectedDay})에 해당하는 일정 데이터가 없습니다.`);
+  if (!schedule || schedule.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64 text-muted-foreground">
+        <p>생성된 일정이 없습니다</p>
+      </div>
+    );
   }
-  
+
   return (
     <div className="h-full flex flex-col">
+      {/* 날짜 선택 버튼들 */}
+      <div className="flex gap-2 p-4 overflow-x-auto">
+        {schedule.map((day) => {
+          const distance = day.totalDistance || 0;
+          
+          return (
+            <button
+              key={day.day}
+              onClick={() => onDaySelect?.(day.day)}
+              className={`min-w-20 h-20 rounded-md flex flex-col items-center justify-center gap-0.5 px-3 border transition-colors ${
+                selectedDay === day.day 
+                  ? 'bg-primary text-primary-foreground border-primary' 
+                  : 'bg-white hover:bg-gray-50 border-gray-200'
+              }`}
+            >
+              <span className="font-bold text-sm">{day.day}일차</span>
+              <span className="text-xs">{day.date}({day.dayOfWeek})</span>
+              <span className="text-xs text-muted-foreground">
+                {distance.toFixed(1)}km
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
       <ScrollArea className="flex-1">
-        {currentDayToDisplay ? (
-          <div className="p-4">
-            <Card>
+        <div className="p-4 space-y-4">
+          {schedule.map((day) => (
+            <Card key={day.day} className={selectedDay === day.day ? 'ring-2 ring-primary' : ''}>
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center justify-between">
-                  <span>DAY {currentDayToDisplay.day} ({currentDayToDisplay.date}, {currentDayToDisplay.dayOfWeek})</span>
+                  <span>DAY {day.day} ({day.date}, {day.dayOfWeek})</span>
                   <div className="flex items-center text-sm text-muted-foreground">
-                    총 거리: {currentDayToDisplay.totalDistance ? currentDayToDisplay.totalDistance.toFixed(1) : 'N/A'}km
+                    총 거리: {typeof day.totalDistance === 'number' ? `${day.totalDistance.toFixed(1)}km` : '정보 없음'}
                   </div>
                 </CardTitle>
               </CardHeader>
               
               <CardContent>
                 <div className="space-y-3">
-                  {currentDayToDisplay.places.length > 0 ? (
-                    currentDayToDisplay.places.map((place, idx) => {
-                      const uniquePlaceKey = `place-${place.numericDbId || place.id || place.name.replace(/\s+/g, '')}-${idx}-day${currentDayToDisplay.day}`;
+                  {day.places.length > 0 ? (
+                    day.places.map((place, index) => {
+                      const categoryStyle = getCategoryStyle(place.category);
                       
                       return (
-                        <div key={uniquePlaceKey} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                          <div className="flex items-center justify-center w-8 h-8 bg-primary text-primary-foreground rounded-full text-sm font-bold shrink-0">
-                            {idx + 1}
+                        <div key={`${place.id}-${index}`} className="flex items-start gap-3 p-4 bg-gray-50 rounded-lg border-l-4" style={{ borderLeftColor: categoryStyle.backgroundColor }}>
+                          <div 
+                            className="flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold shrink-0"
+                            style={categoryStyle}
+                          >
+                            {index + 1}
                           </div>
                           
                           <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
+                            <div className="flex items-center gap-2 mb-2">
                               <Clock className="w-4 h-4 text-muted-foreground" />
                               <span className="font-medium text-primary">
-                                {place.arriveTime || formatTimeBlock(place.timeBlock)}
+                                {formatTimeRange(place.timeBlock, place.stayDuration)}
                               </span>
-                              {place.stayDuration && place.stayDuration > 0 && (
-                                <span className="text-xs text-muted-foreground">
-                                  ({Math.floor(place.stayDuration / 60)}시간 {place.stayDuration % 60 > 0 ? `${place.stayDuration % 60}분` : ''} 체류)
-                                </span>
-                              )}
+                              <Badge 
+                                className="text-xs" 
+                                style={categoryStyle}
+                              >
+                                {getCategoryName(place.category)}
+                              </Badge>
                             </div>
                             
-                            <div className="font-medium">{place.name}</div>
-                            <div className="text-sm text-muted-foreground">
-                              {categoryToKorean(place.category)}
-                            </div>
+                            <div className="font-medium text-lg">{place.name}</div>
+                            
+                            {place.stayDuration && place.stayDuration > 0 && (
+                              <div className="text-sm text-muted-foreground mt-1">
+                                체류시간: {Math.floor(place.stayDuration / 60)}시간 {place.stayDuration % 60 > 0 ? `${place.stayDuration % 60}분` : ''}
+                              </div>
+                            )}
                           </div>
                         </div>
                       );
@@ -121,12 +172,8 @@ const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
                 </div>
               </CardContent>
             </Card>
-          </div>
-        ) : (
-          <div className="h-full flex items-center justify-center text-muted-foreground p-4 text-center">
-            {selectedDay ? `선택된 ${selectedDay}일차의 일정을 불러오는 중이거나 데이터가 없습니다.` : '표시할 일정이 없습니다. 날짜를 선택해주세요.'}
-          </div>
-        )}
+          ))}
+        </div>
       </ScrollArea>
     </div>
   );
