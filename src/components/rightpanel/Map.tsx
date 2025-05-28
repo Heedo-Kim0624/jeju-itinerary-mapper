@@ -44,13 +44,23 @@ const Map: React.FC<MapProps> = ({
     return null;
   }, [itinerary, selectedDay]);
 
-  // 현재 선택된 일자의 places만 추출
-  const currentDayPlaces = useMemo((): ItineraryPlaceWithTime[] | Place[] => {
-    if (currentDayItinerary && currentDayItinerary.places && currentDayItinerary.places.length > 0) {
+  // 표시할 장소들 결정 - selectedDay에 따라 올바른 장소들을 선택
+  const placesToDisplay = useMemo((): ItineraryPlaceWithTime[] | Place[] => {
+    console.log('[Map] Computing placesToDisplay:', {
+      selectedDay,
+      hasItinerary: !!itinerary,
+      currentDayItinerary: !!currentDayItinerary,
+      currentDayPlacesCount: currentDayItinerary?.places?.length || 0
+    });
+    
+    if (selectedDay !== null && currentDayItinerary && currentDayItinerary.places && currentDayItinerary.places.length > 0) {
+      console.log(`[Map] Using day ${selectedDay} places:`, currentDayItinerary.places.map(p => ({ name: p.name, x: p.x, y: p.y })));
       return currentDayItinerary.places;
     }
+    
+    console.log('[Map] Using general places:', places.map(p => ({ name: p.name, x: p.x, y: p.y })));
     return places;
-  }, [currentDayItinerary, places]);
+  }, [selectedDay, currentDayItinerary, places]);
 
   const { handlePlaceClick } = useMapDataEffects({
     isMapInitialized,
@@ -62,11 +72,13 @@ const Map: React.FC<MapProps> = ({
     selectedDay,
   });
 
+  console.log('[Map] Rendering with selectedDay:', selectedDay, 'placesToDisplay count:', placesToDisplay.length);
+
   return (
     <div ref={mapContainer} className="w-full h-full relative flex-grow">
       {/* Render numbered markers for itinerary places */}
       <MapMarkers
-        places={currentDayPlaces}
+        places={placesToDisplay}
         selectedPlace={selectedPlace}
         itinerary={itinerary}
         selectedDay={selectedDay}

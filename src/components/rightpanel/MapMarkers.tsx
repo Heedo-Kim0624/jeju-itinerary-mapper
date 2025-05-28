@@ -27,16 +27,11 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
     ? itinerary.find(day => day.day === selectedDay) 
     : null;
 
-  // Determine which places to display based on whether we're viewing a specific day
-  const placesToDisplay = useMemo(() => {
-  if (selectedDay !== null && itinerary) {
-    const found = itinerary.find(day => day.day === selectedDay);
-    return found?.places || [];
-  }
-  return places;
-}, [selectedDay, itinerary, places]);
+  // MapMarkers는 이제 Map.tsx에서 전달받은 places를 그대로 사용
+  // Map.tsx에서 이미 올바른 일차의 장소들을 필터링해서 전달함
+  const placesToDisplay = places;
   
-  console.log('[MapMarkers] Rendering markers for:', {
+  console.log('[MapMarkers] Received props:', {
     selectedDay,
     placesToDisplayCount: placesToDisplay.length,
     isItineraryDay: !!currentDayItinerary,
