@@ -110,7 +110,7 @@ const SimpleScheduleDisplay: React.FC<SimpleScheduleDisplayProps> = ({
                 <CardTitle className="flex items-center justify-between">
                   <span>DAY {day.day} ({day.date}, {day.dayOfWeek})</span>
                   <div className="flex items-center text-sm text-muted-foreground">
-                    총 거리: {(day.totalDistance || 0).toFixed(1)}km
+                    총 거리: {typeof day.totalDistance === 'number' ? `${day.totalDistance.toFixed(1)}km` : '정보 없음'}
                   </div>
                 </CardTitle>
               </CardHeader>
