@@ -1,4 +1,3 @@
-
 import { useCallback, useRef, useEffect } from 'react';
 import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/core';
 import { getMarkerIconOptions, createNaverMarker } from '@/utils/map/markerUtils';
@@ -122,15 +121,14 @@ export const useMarkerRenderLogic = ({
       const isInfoWindowTargetGlobal = selectedPlace?.id === place.id;
       const isGeneralHighlightTarget = highlightPlaceId === place.id;
       
-      // For itinerary days, always show numbered markers in chronological order
-      // selectedDay 매개변수를 getMarkerIconOptions에 전달
+      // 올바른 매개변수 순서로 getMarkerIconOptions 호출
       const iconOptions = getMarkerIconOptions(
         place,
         isInfoWindowTargetGlobal || isGeneralHighlightTarget,
         isGloballySelectedCandidate && !isInfoWindowTargetGlobal && !isGeneralHighlightTarget,
-        isDisplayingItineraryDay, // This determines if we show numbered markers
-        isDisplayingItineraryDay ? index + 1 : undefined, // Chronological order number (1, 2, 3, etc.)
-        selectedDay // 선택된 일차 전달
+        isDisplayingItineraryDay,
+        isDisplayingItineraryDay ? index + 1 : undefined,
+        selectedDay // 선택된 일차를 마지막 매개변수로 전달
       );
       
       let zIndex = 50;
@@ -189,7 +187,7 @@ export const useMarkerRenderLogic = ({
       }
       newMarkers.push(marker);
 
-      console.log(`[useMarkerRenderLogic] Created marker ${index + 1} for ${place.name} at (${place.y}, ${place.x})`);
+      console.log(`[useMarkerRenderLogic] Created marker ${index + 1} for ${place.name} at (${place.y}, ${place.x}) with selectedDay: ${selectedDay}`);
     });
     
     markersRef.current = newMarkers;

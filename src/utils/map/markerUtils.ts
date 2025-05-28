@@ -76,13 +76,23 @@ export const getMarkerIconOptions = (
   let pinSize = 28;
   let label: string | number | undefined = undefined;
 
+  console.log('[getMarkerIconOptions] Called with:', {
+    placeName: place.name,
+    isItineraryDayPlace,
+    selectedDay,
+    itineraryOrder
+  });
+
   // 마커 타입에 따른 색상과 크기 결정
   if (isItineraryDayPlace) {
     // 일정 마커의 경우 선택된 일차에 따라 색상 결정
     pinColor = selectedDay ? getDayMarkerColor(selectedDay) : '#FF5A5F';
+    console.log(`[getMarkerIconOptions] Day ${selectedDay} marker color: ${pinColor}`);
+    
     // 폴백 마커는 회색으로 유지
     if ((place as ItineraryPlaceWithTime).isFallback) {
       pinColor = '#757575';
+      console.log('[getMarkerIconOptions] Fallback marker, using gray color');
     }
     pinSize = 36; // 일정 마커는 크게
     label = itineraryOrder; // 순서 번호 표시
@@ -102,6 +112,13 @@ export const getMarkerIconOptions = (
 
   // 원형 마커 SVG 생성
   const markerContent = createCircleMarkerSvg(pinColor, pinSize, label);
+  
+  console.log(`[getMarkerIconOptions] Final marker config:`, {
+    placeName: place.name,
+    pinColor,
+    pinSize,
+    label
+  });
   
   return {
     content: markerContent,
