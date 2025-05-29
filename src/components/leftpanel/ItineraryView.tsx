@@ -5,10 +5,32 @@ import PlaceDetailDialog from '@/components/places/PlaceDetailDialog';
 import { Button } from '@/components/ui/button';
 import { Info } from 'lucide-react';
 import { useItineraryMapContext } from '@/contexts/ItineraryMapContext';
+import { ItineraryDay } from '@/types/core';
 
-const ItineraryView: React.FC = () => {
-  const { selectedDay, getCurrentDayData } = useItineraryMapContext();
+// props 타입 정의 추가
+interface ItineraryViewProps {
+  itinerary?: ItineraryDay[];
+  selectedDay?: number;
+  onSelectDay?: (day: number) => void;
+  onClose?: () => void;
+}
+
+const ItineraryView: React.FC<ItineraryViewProps> = (props) => {
+  // context 사용과 props 사용을 병행
+  const contextValues = useItineraryMapContext();
+  
+  // props가 전달되면 props 우선, 아니면 context 사용
+  const selectedDay = props.selectedDay !== undefined ? props.selectedDay : contextValues.selectedDay;
+  const itinerary = props.itinerary || contextValues.itinerary;
+  const selectDay = props.onSelectDay || contextValues.selectDay;
+  
   const { isPopupOpen, selectedPlace, openPopup, handleOpenChange } = usePopup();
+  
+  // 현재 일자 데이터 가져오기
+  const getCurrentDayData = () => {
+    if (!itinerary || selectedDay === null) return null;
+    return itinerary.find(day => day.day === selectedDay) || null;
+  };
   
   const currentDayData = getCurrentDayData();
   
@@ -22,7 +44,18 @@ const ItineraryView: React.FC = () => {
   
   return (
     <div className="h-full flex flex-col pb-16">
-      <DaySelector />
+      {/* props로 전달된 값이 있으면 사용하고, 없으면 context 기반 DaySelector 사용 */}
+      {props.itinerary && props.onSelectDay ? (
+        <div className="mb-4">
+          <DaySelector 
+            itinerary={props.itinerary}
+            selectedDay={props.selectedDay || 0}
+            onSelectDay={props.onSelectDay}
+          />
+        </div>
+      ) : (
+        <DaySelector />
+      )}
       
       <div className="overflow-auto flex-1 px-4 pt-4 mt-16">
         <h2 className="text-lg font-semibold mb-4">

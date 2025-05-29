@@ -1,4 +1,3 @@
-
 /**
  * Types related to itinerary structure and places with time
  */
@@ -30,6 +29,7 @@ export interface ItineraryPlaceWithTime {
   homepage: string;            // URL for the place's homepage (required)
   naverLink?: string;           // Naver Maps link for the place (optional)
   instaLink?: string;           // Instagram link for the place (optional)
+  url?: string;                // URL for the place (optional, used in MarkerInfoWindow)
 
   // For GeoJSON based routing if applicable
   geoNodeId?: string;

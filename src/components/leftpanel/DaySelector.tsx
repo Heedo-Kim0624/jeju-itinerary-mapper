@@ -1,9 +1,23 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { useItineraryMapContext } from '@/contexts/ItineraryMapContext';
+import { ItineraryDay } from '@/types/core';
 
-const DaySelector: React.FC = () => {
-  const { itinerary, selectedDay, selectDay } = useItineraryMapContext();
+// props 타입 정의 추가
+interface DaySelectorProps {
+  itinerary?: ItineraryDay[];
+  selectedDay?: number;
+  onSelectDay?: (day: number) => void;
+}
+
+const DaySelector: React.FC<DaySelectorProps> = (props) => {
+  // context 사용과 props 사용을 병행
+  const contextValues = useItineraryMapContext();
+  
+  // props가 전달되면 props 우선, 아니면 context 사용
+  const itinerary = props.itinerary || contextValues.itinerary;
+  const selectedDay = props.selectedDay !== undefined ? props.selectedDay : contextValues.selectedDay;
+  const selectDay = props.onSelectDay || contextValues.selectDay;
   
   if (!itinerary || itinerary.length === 0) {
     return null;
