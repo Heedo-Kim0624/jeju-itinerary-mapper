@@ -30,6 +30,9 @@ const Map: React.FC<MapProps> = (props) => {
     isMapInitialized,
     isNaverLoaded,
     isMapError,
+    renderItineraryRoute, // MapContext에서 함수 가져오기
+    checkGeoJsonMapping, // MapContext에서 함수 가져오기
+    serverRoutesData, // MapContext에서 객체 가져오기
   } = useMapContext();
   
   // useMapDataEffects에 필요한 모든 props 전달
@@ -37,9 +40,9 @@ const Map: React.FC<MapProps> = (props) => {
     isMapInitialized,
     places: currentDayPlaces as ItineraryPlaceWithTime[],
     selectedDay: selectedDay || 0,
-    renderItineraryRoute: true,
-    serverRoutesData: props.itinerary?.[selectedDay || 0]?.routeData || null,
-    checkGeoJsonMapping: true,
+    renderItineraryRoute, // 실제 함수 전달
+    serverRoutesData, // 실제 객체 전달
+    checkGeoJsonMapping, // 실제 함수 전달
     itinerary: props.itinerary || contextValues.itinerary
   };
   
