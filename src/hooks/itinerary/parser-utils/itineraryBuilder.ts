@@ -55,6 +55,13 @@ export const buildItineraryDays = (
     // processRouteData can handle undefined routeInfo gracefully
     const { nodeIds, linkIds, interleaved_route, totalDistance, segmentRoutes } = processRouteData(routeInfo);
 
+    // 각 일자별 데이터 로깅
+    console.log(`[buildItineraryDays] 일자 ${dayNumber}(${dayOfWeekKey}) 데이터 생성:`, {
+      placesCount: groupedPlaces.length,
+      firstPlaceId: groupedPlaces[0]?.id,
+      lastPlaceId: groupedPlaces[groupedPlaces.length - 1]?.id
+    });
+
     return {
       day: dayNumber,
       dayOfWeek: dayOfWeekKey,
@@ -73,5 +80,25 @@ export const buildItineraryDays = (
   // Sort the final ItineraryDay array by the 'day' number to be absolutely sure
   const sortedItineraryDays = itineraryDaysUnsorted.sort((a, b) => a.day - b.day);
 
-  return sortedItineraryDays;
+  // 최종 데이터 구조 로깅
+  console.log('[buildItineraryDays] 최종 itinerary 데이터 구조:', 
+    sortedItineraryDays.map(day => ({
+      day: day.day,
+      placesCount: day.places.length,
+      placesIds: day.places.map(p => p.id).slice(0, 3) // 처음 3개 ID만 로깅
+    }))
+  );
+
+  // 각 일자별 places 배열이 서로 다른 참조인지 확인
+  const placesReferences: any = {};
+  sortedItineraryDays.forEach(day => {
+    placesReferences[`day${day.day}`] = {
+      reference: day.places,
+      count: day.places.length
+    };
+  });
+  console.log('[buildItineraryDays] 일자별 places 배열 참조 확인:', placesReferences);
+
+  // 깊은 복사를 통해 완전히 새로운 객체 반환
+  return JSON.parse(JSON.stringify(sortedItineraryDays));
 };

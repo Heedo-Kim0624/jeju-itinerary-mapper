@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { useMapContext } from '../MapContext';
 import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/core';
 import { clearMarkers as clearMarkersUtil } from '@/utils/map/mapCleanup';
@@ -33,11 +33,23 @@ export const useMapMarkers = (props: UseMapMarkersProps) => {
 
   const { updateTriggerId, forceMarkerUpdate } = useMarkerUpdater({ updateRequestIdRef });
 
-  console.log(`[useMapMarkers] Hook execution - selectedDay: ${selectedDay}, currentRenderingDay: ${currentRenderingDay}, triggerId: ${updateTriggerId}, markers count: ${markersRef.current.length}`);
+  // 디버깅을 위한 로깅 강화
+  console.log(`[useMapMarkers] Hook 실행 - selectedDay: ${selectedDay}, currentRenderingDay: ${currentRenderingDay}, triggerId: ${updateTriggerId}, markers 개수: ${markersRef.current.length}`);
+  
+  // places 데이터 로깅
+  useEffect(() => {
+    if (places && places.length > 0) {
+      console.log(`[useMapMarkers] places 데이터 변경 감지:`, {
+        count: places.length,
+        firstPlace: places[0] ? { id: places[0].id, name: places[0].name } : null,
+        lastPlace: places.length > 1 ? { id: places[places.length-1].id, name: places[places.length-1].name } : null
+      });
+    }
+  }, [places]);
 
   const clearAllMarkers = useCallback(() => {
     if (markersRef.current.length > 0) {
-      console.log(`[useMapMarkers] Clearing all existing markers: ${markersRef.current.length}`);
+      console.log(`[useMapMarkers] 기존 마커 모두 제거: ${markersRef.current.length}개`);
       markersRef.current = clearMarkersUtil(markersRef.current);
     }
   }, [markersRef]);
@@ -77,7 +89,7 @@ export const useMapMarkers = (props: UseMapMarkersProps) => {
   // Main effect to handle marker updates - simplified and more direct
   useEffect(() => {
     if (isMapInitialized && map && window.naver?.maps) {
-      console.log(`[useMapMarkers] Triggering marker render for day ${selectedDay}`);
+      console.log(`[useMapMarkers] selectedDay 변경 감지: ${selectedDay} - 마커 렌더링 트리거`);
       
       // 기존 마커 모두 제거
       clearAllMarkers();
@@ -85,7 +97,7 @@ export const useMapMarkers = (props: UseMapMarkersProps) => {
       // 약간의 지연 후 마커 렌더링 실행
       const timeoutId = setTimeout(() => {
         renderMarkers();
-        console.log(`[useMapMarkers] Rendered markers for day ${selectedDay} after clearing`);
+        console.log(`[useMapMarkers] 일자 ${selectedDay}의 마커 렌더링 완료`);
       }, 50);
       
       return () => clearTimeout(timeoutId);
@@ -96,12 +108,12 @@ export const useMapMarkers = (props: UseMapMarkersProps) => {
   useEffect(() => {
     const handleItineraryDaySelectedEvent = (event: any) => {
       if (event.detail && typeof event.detail.day === 'number') {
-        console.log(`[useMapMarkers] Day selection event received - Day: ${event.detail.day}`);
+        console.log(`[useMapMarkers] 일자 선택 이벤트 수신 - 일자: ${event.detail.day}, 타임스탬프: ${event.detail.timestamp || 'N/A'}`);
         // Clear and re-render markers immediately
         clearAllMarkers();
         setTimeout(() => {
           renderMarkers();
-          console.log(`[useMapMarkers] Re-rendered markers after day selection event for day ${event.detail.day}`);
+          console.log(`[useMapMarkers] 일자 선택 이벤트 후 마커 재렌더링 완료 - 일자: ${event.detail.day}`);
         }, 100);
       }
     };
@@ -117,18 +129,18 @@ export const useMapMarkers = (props: UseMapMarkersProps) => {
   useEffect(() => {
     const handleDayRenderingStarted = (event: any) => {
       if (event.detail && typeof event.detail.day === 'number') {
-        console.log(`[useMapMarkers] dayRenderingStarted event received - Day: ${event.detail.day}`);
+        console.log(`[useMapMarkers] dayRenderingStarted 이벤트 수신 - 일자: ${event.detail.day}, 타임스탬프: ${event.detail.timestamp || 'N/A'}`);
         // 기존 마커 모두 제거
         clearAllMarkers();
         
         // 약간의 지연 후 마커 렌더링 실행
         setTimeout(() => {
           renderMarkers();
-          console.log(`[useMapMarkers] Re-rendered markers after dayRenderingStarted event for day ${event.detail.day}`);
+          console.log(`[useMapMarkers] dayRenderingStarted 이벤트 후 마커 재렌더링 완료 - 일자: ${event.detail.day}`);
           
           // 마커 렌더링 완료 이벤트 발생
           window.dispatchEvent(new CustomEvent('markerRenderingComplete', { 
-            detail: { day: event.detail.day } 
+            detail: { day: event.detail.day, timestamp: Date.now() } 
           }));
         }, 100);
       }
