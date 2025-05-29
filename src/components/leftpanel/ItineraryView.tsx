@@ -1,51 +1,28 @@
-
 import React from 'react';
 import DaySelector from './DaySelector';
 import { usePopup } from '@/hooks/ui/usePopup'; 
 import PlaceDetailDialog from '@/components/places/PlaceDetailDialog';
 import { Button } from '@/components/ui/button';
 import { Info } from 'lucide-react';
-import { ItineraryDay, ItineraryPlaceWithTime } from '@/types/core'; // ItineraryPlaceWithTime 추가
+import { useItineraryMapContext } from '@/contexts/ItineraryMapContext';
 
-interface ItineraryViewProps {
-  itinerary: ItineraryDay[] | null;
-  selectedDay: number | null;
-  onSelectDay: (day: number) => void;
-  onClose?: () => void; // onClose를 선택적으로 변경
-}
-
-const ItineraryView: React.FC<ItineraryViewProps> = ({
-  itinerary,
-  selectedDay,
-  onSelectDay,
-  // onClose, // onClose는 이제 선택적
-}) => {
+const ItineraryView: React.FC = () => {
+  const { selectedDay, getCurrentDayData } = useItineraryMapContext();
   const { isPopupOpen, selectedPlace, openPopup, handleOpenChange } = usePopup();
-
-  if (!itinerary || itinerary.length === 0 || selectedDay === null) {
-    return (
-      <div className="flex flex-col h-full items-center justify-center text-muted-foreground">
-        <p>일정이 비어있습니다</p>
-      </div>
-    );
-  }
-
-  const currentDayData = itinerary.find((day) => day.day === selectedDay);
+  
+  const currentDayData = getCurrentDayData();
+  
   if (!currentDayData) {
     return (
       <div className="flex flex-col h-full items-center justify-center text-muted-foreground">
-        <p>선택된 일정을 찾을 수 없습니다</p>
+        <p>일정이 비어있거나 선택된 일자가 없습니다</p>
       </div>
     );
   }
-
+  
   return (
     <div className="h-full flex flex-col pb-16">
-      <DaySelector
-        itinerary={itinerary}
-        selectedDay={selectedDay}
-        onSelectDay={onSelectDay}
-      />
+      <DaySelector />
       
       <div className="overflow-auto flex-1 px-4 pt-4 mt-16">
         <h2 className="text-lg font-semibold mb-4">
