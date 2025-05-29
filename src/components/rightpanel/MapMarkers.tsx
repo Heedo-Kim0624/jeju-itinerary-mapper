@@ -1,6 +1,7 @@
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { useMapContext } from './MapContext';
 import type { ItineraryPlaceWithTime } from '@/types/core';
+import MarkerInfoWindow from './MarkerInfoWindow';
 
 interface MapMarkersProps {
   places: ItineraryPlaceWithTime[];
@@ -15,6 +16,18 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
 }) => {
   const { map, isMapInitialized } = useMapContext();
   const markersRef = useRef<naver.maps.Marker[]>([]);
+  
+  // 선택된 마커 상태 관리
+  const [selectedMarkerIndex, setSelectedMarkerIndex] = useState<number | null>(null);
+  const [selectedPlace, setSelectedPlace] = useState<ItineraryPlaceWithTime | null>(null);
+  const [markerPosition, setMarkerPosition] = useState<{ x: number, y: number } | null>(null);
+  
+  // InfoWindow 닫기 함수
+  const handleCloseInfoWindow = useCallback(() => {
+    setSelectedMarkerIndex(null);
+    setSelectedPlace(null);
+    setMarkerPosition(null);
+  }, []);
   
   // 마커 생성 함수
   const createMarkers = useCallback(() => {
@@ -62,12 +75,18 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
       
       const marker = new window.naver.maps.Marker(markerOptions);
       
-      // 클릭 이벤트 추가
-      if (onPlaceClick) {
-        window.naver.maps.Event.addListener(marker, 'click', () => {
+      // 마커 클릭 이벤트 추가
+      window.naver.maps.Event.addListener(marker, 'click', () => {
+        // InfoWindow 표시를 위한 상태 업데이트
+        setSelectedMarkerIndex(index);
+        setSelectedPlace(place);
+        setMarkerPosition({ x: place.x, y: place.y });
+        
+        // 상위 컴포넌트의 onPlaceClick 콜백 호출 (있는 경우)
+        if (onPlaceClick) {
           onPlaceClick(place, index);
-        });
-      }
+        }
+      });
       
       newMarkers.push(marker);
     });
@@ -91,6 +110,9 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
     console.log(`[MapMarkers] useEffect 실행 - 일자: ${selectedDay}, 장소 개수: ${places.length}`);
     createMarkers();
     
+    // 일자 변경 시 InfoWindow 닫기
+    handleCloseInfoWindow();
+    
     // 컴포넌트 언마운트 시 마커 제거
     return () => {
       console.log('[MapMarkers] 컴포넌트 언마운트 - 마커 정리');
@@ -103,9 +125,21 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
         markersRef.current = [];
       }
     };
-  }, [createMarkers]);
+  }, [createMarkers, handleCloseInfoWindow]);
   
-  return null; // 실제 DOM 요소는 렌더링하지 않음
+  return (
+    <>
+      {/* 선택된 마커가 있을 때만 InfoWindow 표시 */}
+      {selectedMarkerIndex !== null && selectedPlace && markerPosition && (
+        <MarkerInfoWindow
+          selectedMarkerIndex={selectedMarkerIndex}
+          place={selectedPlace}
+          position={markerPosition}
+          onClose={handleCloseInfoWindow}
+        />
+      )}
+    </>
+  );
 };
 
 export default React.memo(MapMarkers);
