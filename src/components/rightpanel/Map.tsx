@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useRef, useState } from 'react';
+import React, { useMemo, useEffect, useRef } from 'react';
 import { useMapContext } from './MapContext';
 import MapLoadingOverlay from './MapLoadingOverlay';
 import MapMarkers from './MapMarkers'; // Re-enable MapMarkers
@@ -35,9 +35,6 @@ const Map: React.FC<MapProps> = ({
     isGeoJsonLoaded,
   } = useMapContext();
 
-  // 마커 렌더링 강제 트리거를 위한 상태
-  const [mapKey, setMapKey] = useState<number>(0);
-  
   // 이전 선택 일자 추적을 위한 ref
   const prevSelectedDayRef = useRef<number | null>(null);
 
@@ -94,9 +91,6 @@ const Map: React.FC<MapProps> = ({
     if (selectedDay !== prevSelectedDayRef.current) {
       console.log(`[Map] 선택된 일자가 ${prevSelectedDayRef.current} → ${selectedDay}로 변경됨`);
       
-      // 마커 렌더링 강제 트리거
-      setMapKey(prev => prev + 1);
-      
       if (itinerary) {
         // 각 일자별 places 배열이 서로 다른 참조인지 확인
         const placesReferences: any = {};
@@ -114,24 +108,6 @@ const Map: React.FC<MapProps> = ({
     }
   }, [selectedDay, itinerary]);
 
-  // dayRenderingStarted 이벤트 리스너
-  useEffect(() => {
-    const handleDayRenderingStarted = (event: any) => {
-      if (event.detail && typeof event.detail.day === 'number') {
-        console.log(`[Map] dayRenderingStarted 이벤트 수신 - 일자: ${event.detail.day}`);
-        
-        // 마커 렌더링 강제 트리거
-        setMapKey(prev => prev + 1);
-      }
-    };
-    
-    window.addEventListener('dayRenderingStarted', handleDayRenderingStarted);
-    
-    return () => {
-      window.removeEventListener('dayRenderingStarted', handleDayRenderingStarted);
-    };
-  }, []);
-
   const { handlePlaceClick } = useMapDataEffects({
     isMapInitialized,
     renderItineraryRoute,
@@ -142,13 +118,12 @@ const Map: React.FC<MapProps> = ({
     selectedDay,
   });
 
-  console.log('[Map] 렌더링 - selectedDay:', selectedDay, 'placesToDisplay 개수:', placesToDisplay.length, 'mapKey:', mapKey);
+  console.log('[Map] 렌더링 - selectedDay:', selectedDay, 'placesToDisplay 개수:', placesToDisplay.length);
 
   return (
     <div ref={mapContainer} className="w-full h-full relative flex-grow">
       {/* Render numbered markers for itinerary places */}
       <MapMarkers
-        key={`map-markers-${mapKey}-${selectedDay}`}
         places={placesToDisplay}
         selectedPlace={selectedPlace}
         itinerary={itinerary}

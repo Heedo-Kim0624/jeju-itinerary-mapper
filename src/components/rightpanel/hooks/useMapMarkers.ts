@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { useMapContext } from '../MapContext';
 import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/core';
 import { clearMarkers as clearMarkersUtil } from '@/utils/map/mapCleanup';
@@ -26,9 +26,6 @@ export const useMapMarkers = (props: UseMapMarkersProps) => {
     selectedPlaces = [], onPlaceClick, highlightPlaceId,
   } = props;
 
-  // 마커 렌더링 강제 트리거를 위한 상태
-  const [renderTrigger, setRenderTrigger] = useState<number>(0);
-
   const {
     markersRef, prevSelectedDayRef, prevItineraryRef,
     prevPlacesRef, updateRequestIdRef,
@@ -37,7 +34,7 @@ export const useMapMarkers = (props: UseMapMarkersProps) => {
   const { updateTriggerId, forceMarkerUpdate } = useMarkerUpdater({ updateRequestIdRef });
 
   // 디버깅을 위한 로깅 강화
-  console.log(`[useMapMarkers] Hook 실행 - selectedDay: ${selectedDay}, currentRenderingDay: ${currentRenderingDay}, triggerId: ${updateTriggerId}, renderTrigger: ${renderTrigger}, markers 개수: ${markersRef.current.length}`);
+  console.log(`[useMapMarkers] Hook 실행 - selectedDay: ${selectedDay}, currentRenderingDay: ${currentRenderingDay}, triggerId: ${updateTriggerId}, markers 개수: ${markersRef.current.length}`);
   
   // places 데이터 로깅
   useEffect(() => {
@@ -47,41 +44,13 @@ export const useMapMarkers = (props: UseMapMarkersProps) => {
         firstPlace: places[0] ? { id: places[0].id, name: places[0].name } : null,
         lastPlace: places.length > 1 ? { id: places[places.length-1].id, name: places[places.length-1].name } : null
       });
-      
-      // places 변경 시 마커 렌더링 강제 트리거
-      setRenderTrigger(prev => prev + 1);
     }
   }, [places]);
-
-  // 일자 변경 감지 및 마커 렌더링 강제 트리거
-  useEffect(() => {
-    if (selectedDay !== prevSelectedDayRef.current) {
-      console.log(`[useMapMarkers] 일자 변경 감지: ${prevSelectedDayRef.current} → ${selectedDay}, 마커 렌더링 강제 트리거`);
-      
-      // 마커 렌더링 강제 트리거
-      setRenderTrigger(prev => prev + 1);
-      
-      // 현재 일자 저장
-      prevSelectedDayRef.current = selectedDay;
-    }
-  }, [selectedDay]);
 
   const clearAllMarkers = useCallback(() => {
     if (markersRef.current.length > 0) {
       console.log(`[useMapMarkers] 기존 마커 모두 제거: ${markersRef.current.length}개`);
-      
-      // 각 마커에 대해 명시적으로 setMap(null) 호출
-      markersRef.current.forEach(marker => {
-        if (marker && typeof marker.setMap === 'function') {
-          marker.setMap(null);
-        }
-      });
-      
-      // 마커 배열 비우기
-      markersRef.current = [];
-      
-      // 마커 렌더링 강제 트리거
-      setRenderTrigger(prev => prev + 1);
+      markersRef.current = clearMarkersUtil(markersRef.current);
     }
   }, [markersRef]);
 
@@ -120,7 +89,7 @@ export const useMapMarkers = (props: UseMapMarkersProps) => {
   // Main effect to handle marker updates - simplified and more direct
   useEffect(() => {
     if (isMapInitialized && map && window.naver?.maps) {
-      console.log(`[useMapMarkers] 마커 렌더링 트리거 - renderTrigger: ${renderTrigger}, selectedDay: ${selectedDay}`);
+      console.log(`[useMapMarkers] selectedDay 변경 감지: ${selectedDay} - 마커 렌더링 트리거`);
       
       // 기존 마커 모두 제거
       clearAllMarkers();
@@ -128,12 +97,12 @@ export const useMapMarkers = (props: UseMapMarkersProps) => {
       // 약간의 지연 후 마커 렌더링 실행
       const timeoutId = setTimeout(() => {
         renderMarkers();
-        console.log(`[useMapMarkers] 일자 ${selectedDay}의 마커 렌더링 완료 - renderTrigger: ${renderTrigger}`);
-      }, 100);
+        console.log(`[useMapMarkers] 일자 ${selectedDay}의 마커 렌더링 완료`);
+      }, 50);
       
       return () => clearTimeout(timeoutId);
     }
-  }, [selectedDay, isMapInitialized, map, renderMarkers, clearAllMarkers, renderTrigger]);
+  }, [selectedDay, isMapInitialized, map, renderMarkers, clearAllMarkers]);
 
   // Handle day selection events from the schedule viewer
   useEffect(() => {
