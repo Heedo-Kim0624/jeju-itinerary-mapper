@@ -64,7 +64,7 @@ export const useItinerary = () => {
 
     if (!parsedItineraryDays || parsedItineraryDays.length === 0 || parsedItineraryDays.every(day => day.places.length === 0)) {
       console.warn("[useItinerary] handleServerItineraryResponse: 유효하지만 장소가 없는 빈 일정이거나 모든 날에 장소가 없습니다.");
-      toast.info("생성된 일정에 장소가 없습니다. 다른 조건으로 시도해보세요.");
+      toast.info("개발자가 일정 생성 서버를 열지 않아서 일정 생성이 불가합니다. 상주 인원에게 문의부탁드립니다!!.");
       setItinerary(parsedItineraryDays); // 빈 일정이라도 상태는 반영
       setShowItinerary(true); // 패널은 보여주되, 내용이 없음을 표시
       setIsItineraryCreated(true); // 생성은 되었다고 간주 (빈 일정으로)
