@@ -42,7 +42,7 @@ export const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({
 
   useEffect(() => {
     if (!startDatetimeLocal || !endDatetimeLocal) {
-      toast.error("여행 날짜와 시간 정보가 올바르지 않아 일정을 생성할 수 없습니다.");
+      toast.error("개발자가 일정 생성 서버를 열지 않아서 일정 생성이 불가합니다. 상주 인원에게 문의부탁드립니다.");
       onClose();
       return;
     }
