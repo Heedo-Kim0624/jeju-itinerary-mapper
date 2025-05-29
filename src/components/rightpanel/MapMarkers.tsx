@@ -1,7 +1,7 @@
-
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { useMapMarkers } from './hooks/useMapMarkers';
 import type { Place, ItineraryDay, ItineraryPlaceWithTime } from '@/types/core';
+import { useMapContext } from './MapContext';
 
 interface MapMarkersProps {
   places: Place[]; 
@@ -22,6 +22,10 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
   onPlaceClick,
   highlightPlaceId,
 }) => {
+  // 이전 selectedDay 값을 추적하기 위한 ref
+  const prevSelectedDayRef = useRef<number | null>(null);
+  const { currentRenderingDay } = useMapContext();
+  
   // Get the current day's itinerary data
   const currentDayItinerary = selectedDay !== null && itinerary 
     ? itinerary.find(day => day.day === selectedDay) 
@@ -33,6 +37,7 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
   
   console.log('[MapMarkers] Received props:', {
     selectedDay,
+    currentRenderingDay,
     placesToDisplayCount: placesToDisplay.length,
     isItineraryDay: !!currentDayItinerary,
     places: placesToDisplay.map((p, idx) => ({ 
@@ -53,17 +58,55 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
     highlightPlaceId,
   });
 
+  // 일자 변경 이벤트 리스너 추가
+  useEffect(() => {
+    const handleDayRenderingStarted = (event: CustomEvent) => {
+      if (event.detail && typeof event.detail.day === 'number') {
+        console.log(`[MapMarkers] 'dayRenderingStarted' event received for day ${event.detail.day}`);
+        clearAllMarkers(); // 즉시 기존 마커 제거
+        
+        // 약간의 지연 후 마커 업데이트 강제 실행
+        setTimeout(() => {
+          forceMarkerUpdate();
+        }, 50);
+      }
+    };
+    
+    window.addEventListener('dayRenderingStarted', handleDayRenderingStarted as EventListener);
+    
+    return () => {
+      window.removeEventListener('dayRenderingStarted', handleDayRenderingStarted as EventListener);
+    };
+  }, [clearAllMarkers, forceMarkerUpdate]);
+
   // Force marker update when selectedDay or places change - this is the key fix
   useEffect(() => {
-    console.log(`[MapMarkers] Selected day or places changed (day: ${selectedDay}, places count: ${places.length}), forcing immediate marker update`);
-    clearAllMarkers(); // Clear existing markers immediately
+    // selectedDay가 변경되었는지 확인
+    const dayChanged = prevSelectedDayRef.current !== selectedDay;
     
-    // Use a very short delay to ensure state is updated
-    const timeoutId = setTimeout(() => {
-      forceMarkerUpdate(); // Force new markers to render
-    }, 50);
-    
-    return () => clearTimeout(timeoutId);
+    if (dayChanged) {
+      console.log(`[MapMarkers] Selected day changed from ${prevSelectedDayRef.current} to ${selectedDay}, forcing immediate marker update`);
+      clearAllMarkers(); // Clear existing markers immediately
+      
+      // Use a very short delay to ensure state is updated
+      const timeoutId = setTimeout(() => {
+        forceMarkerUpdate(); // Force new markers to render
+        console.log(`[MapMarkers] Forced marker update after day change to ${selectedDay}`);
+      }, 50);
+      
+      // 현재 selectedDay를 ref에 저장
+      prevSelectedDayRef.current = selectedDay;
+      
+      return () => clearTimeout(timeoutId);
+    } else if (places.length > 0) {
+      // 일자는 같지만 places가 변경된 경우에도 마커 업데이트
+      console.log(`[MapMarkers] Places changed (count: ${places.length}) for day ${selectedDay}, updating markers`);
+      const timeoutId = setTimeout(() => {
+        forceMarkerUpdate();
+      }, 50);
+      
+      return () => clearTimeout(timeoutId);
+    }
   }, [selectedDay, places, clearAllMarkers, forceMarkerUpdate]);
 
   // Log marker count for debugging

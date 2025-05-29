@@ -115,9 +115,8 @@ export const MapProvider: React.FC<{children: React.ReactNode}> = ({ children })
   
   const startDayRendering = useCallback((day: number | null) => {
     console.log(`[MapProvider] Starting rendering process for day: ${day} (from MapContext)`);
-    setCurrentRenderingDay(day); // 중요: currentRenderingDay를 여기서 설정해야 이벤트 발생 시 올바른 day 값 사용
-    setRenderingComplete({ route: false, markers: false });
     
+    // 기존 마커와 경로를 모두 제거
     if (mapCoreValues.clearAllRoutes) {
         console.log(`[MapProvider] Calling clearAllRoutes for day ${day}`);
         mapCoreValues.clearAllRoutes();
@@ -127,12 +126,27 @@ export const MapProvider: React.FC<{children: React.ReactNode}> = ({ children })
         mapCoreValues.clearMarkersAndUiElements();
     }
     
-    // clearAllRoutes 와 clearMarkersAndUiElements가 동기적으로 실행되므로,
-    // 바로 이어서 dayRenderingStarted 이벤트를 발생시켜도 됩니다.
-    // 만약 해당 함수들이 비동기라면, 완료된 후 이벤트를 발생시켜야 합니다.
-    window.dispatchEvent(new CustomEvent('dayRenderingStarted', { detail: { day } }));
-    console.log(`[MapProvider] Dispatched 'dayRenderingStarted' for day ${day}. CurrentRenderingDay is now: ${day}`);
-  }, [mapCoreValues.clearAllRoutes, mapCoreValues.clearMarkersAndUiElements]); // setCurrentRenderingDay 제거, currentRenderingDay 의존성 제거
+    // 렌더링 상태 초기화
+    setRenderingComplete({ route: false, markers: false });
+    
+    // 현재 렌더링 중인 일자 설정
+    setCurrentRenderingDay(day);
+    
+    // 약간의 지연 후 dayRenderingStarted 이벤트 발생
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('dayRenderingStarted', { 
+        detail: { day, timestamp: Date.now() } 
+      }));
+      console.log(`[MapProvider] Dispatched 'dayRenderingStarted' for day ${day}. CurrentRenderingDay is now: ${day}`);
+      
+      // 추가: 일자 선택 이벤트도 함께 발생
+      window.dispatchEvent(new CustomEvent('itineraryDaySelected', { 
+        detail: { day, timestamp: Date.now() } 
+      }));
+      console.log(`[MapProvider] Dispatched 'itineraryDaySelected' for day ${day}`);
+    }, 50);
+    
+  }, [mapCoreValues.clearAllRoutes, mapCoreValues.clearMarkersAndUiElements]);
   
   const handleRouteRenderingCompleteForContext = useCallback(() => {
     // 이 시점의 currentRenderingDay가 중요
@@ -144,7 +158,7 @@ export const MapProvider: React.FC<{children: React.ReactNode}> = ({ children })
       detail: { day: currentRenderingDay, source: 'MapContext' } 
     }));
     console.log(`[MapProvider] Dispatched 'routeRenderingCompleteInternal' for day ${currentRenderingDay}`);
-  }, [currentRenderingDay]); // currentRenderingDay 의존성 추가
+  }, [currentRenderingDay]);
   
   const handleMarkerRenderingCompleteForContext = useCallback(() => {
     console.log(`[MapProvider] Marker rendering completed for day: ${currentRenderingDay} (received in MapContext)`);
@@ -159,10 +173,24 @@ export const MapProvider: React.FC<{children: React.ReactNode}> = ({ children })
       }
       return newState;
     });
-  }, [currentRenderingDay]); // currentRenderingDay 의존성 추가 및 renderingComplete.route 제거
+  }, [currentRenderingDay]);
+  
+  // 마커 렌더링 완료 이벤트 리스너 추가
+  useEffect(() => {
+    const handleMarkerRenderingComplete = (event: any) => {
+      if (event.detail && typeof event.detail.day === 'number') {
+        console.log(`[MapProvider] markerRenderingComplete event received for day ${event.detail.day}`);
+        handleMarkerRenderingCompleteForContext();
+      }
+    };
+    
+    window.addEventListener('markerRenderingComplete', handleMarkerRenderingComplete);
+    
+    return () => {
+      window.removeEventListener('markerRenderingComplete', handleMarkerRenderingComplete);
+    };
+  }, [handleMarkerRenderingCompleteForContext]);
 
-  // ... keep existing code (contextValue definition and return statement)
-  // ... useEffect for logging can be kept or removed
   const contextValue = useMemo(() => ({
     ...mapCoreValues,
     currentRenderingDay,

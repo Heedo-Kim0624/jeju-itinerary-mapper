@@ -1,13 +1,12 @@
-
-import React, { useCallback } from 'react'; // useCallback 추가
+import React, { useCallback, useEffect, useRef } from 'react'; // useEffect, useRef 추가
 import { Button } from '@/components/ui/button';
 import { ItineraryDay } from '@/types';
-import { useMapContext } from '@/components/rightpanel/MapContext'; // useMapContext 추가
+import { useMapContext } from '@/components/rightpanel/MapContext';
 
 interface DaySelectorProps {
   itinerary: ItineraryDay[] | null;
   selectedDay: number | null;
-  onSelectDay: (day: number) => void; // Prop 이름 onSelectDay로 유지 (기존 사용처와 일관성)
+  onSelectDay: (day: number) => void;
 }
 
 const DaySelector: React.FC<DaySelectorProps> = ({
@@ -15,26 +14,44 @@ const DaySelector: React.FC<DaySelectorProps> = ({
   selectedDay,
   onSelectDay,
 }) => {
-  const { startDayRendering } = useMapContext(); // MapContext에서 startDayRendering 가져오기
+  const { startDayRendering } = useMapContext();
+  const prevSelectedDayRef = useRef<number | null>(null);
+  
+  // 컴포넌트 마운트 시 또는 selectedDay가 변경될 때 마커 갱신 로직 실행
+  useEffect(() => {
+    // selectedDay가 유효하고 이전 값과 다른 경우에만 실행
+    if (selectedDay !== null && selectedDay !== prevSelectedDayRef.current) {
+      console.log(`[DaySelector] selectedDay changed to ${selectedDay}, triggering marker update`);
+      
+      // 마커 갱신 프로세스 시작
+      startDayRendering(selectedDay);
+      
+      // 이벤트 발생
+      window.dispatchEvent(new CustomEvent('itineraryDaySelected', { 
+        detail: { day: selectedDay, timestamp: Date.now() } 
+      }));
+      console.log(`[DaySelector] Dispatched 'itineraryDaySelected' event for day ${selectedDay}`);
+      
+      // 현재 값을 ref에 저장
+      prevSelectedDayRef.current = selectedDay;
+    }
+  }, [selectedDay, startDayRendering]);
 
-  const handleDayClick = useCallback((day: number) => { // 함수 이름 변경 및 useCallback 사용
+  const handleDayClick = useCallback((day: number) => {
     console.log(`[DaySelector] Day ${day} selected by user.`);
     
-    // 1. 상위 컴포넌트에 일자 변경 알림 (예: App State 업데이트)
-    onSelectDay(day); 
+    // 상위 컴포넌트에 일자 변경 알림
+    onSelectDay(day);
     
-    // 2. MapContext를 통해 중앙화된 렌더링 프로세스 시작
-    // 이 호출은 MapContext 내부에서 상태를 설정하고, 필요한 클리어 작업 및
-    // 'dayRenderingStarted' 이벤트를 발생시킴.
+    // MapContext를 통해 중앙화된 렌더링 프로세스 시작
     startDayRendering(day);
-
-    // 'itineraryDaySelected' 이벤트 직접 발생시키는 로직은 MapContext 내부나
-    // App 레벨 상태 변경에 따른 useEffect에서 처리하는 것이 더 적절할 수 있음.
-    // 현재는 startDayRendering이 그 역할을 일부 대신함.
-    // 필요하다면, onSelectDay 이후 App 레ikulum에서 이벤트를 발생시킬 수 있음.
-    // window.dispatchEvent(new CustomEvent('itineraryDaySelected', { detail: { day, timestamp: Date.now() } }));
-    // console.log(`[DaySelector] Dispatched 'itineraryDaySelected' event for day ${day}`);
-
+    
+    // 일자 선택 이벤트 발생
+    window.dispatchEvent(new CustomEvent('itineraryDaySelected', { 
+      detail: { day, timestamp: Date.now() } 
+    }));
+    console.log(`[DaySelector] Dispatched 'itineraryDaySelected' event for day ${day}`);
+    
   }, [onSelectDay, startDayRendering]);
 
   if (!itinerary || itinerary.length === 0) {
@@ -52,7 +69,7 @@ const DaySelector: React.FC<DaySelectorProps> = ({
             className={`min-w-16 h-16 rounded-md flex flex-col items-center justify-center gap-0.5 px-3 ${
               selectedDay === dayItem.day ? 'bg-primary text-primary-foreground' : ''
             }`}
-            onClick={() => handleDayClick(dayItem.day)} // 변경된 핸들러 사용
+            onClick={() => handleDayClick(dayItem.day)}
           >
             <span className="font-bold text-sm">{dayItem.day}일차</span>
             <span className="text-xs">{`${dayItem.date || ''}(${dayItem.dayOfWeek || ''})`}</span>
