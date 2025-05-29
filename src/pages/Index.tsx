@@ -48,6 +48,8 @@ const Index: React.FC = () => {
         <RightPanel
           places={selectedPlaces}
           selectedPlace={null}
+          itinerary={itinerary}
+          selectedDay={selectedItineraryDay}
         />
 
         {/* 오른쪽에 붙는 지역 슬라이드 패널 */}

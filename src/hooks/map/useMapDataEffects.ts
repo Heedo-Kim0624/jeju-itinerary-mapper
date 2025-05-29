@@ -1,21 +1,21 @@
-
 import { useCallback, useState, useEffect, useRef } from 'react';
 import type { Place, ItineraryDay } from '@/types/supabase'; // or @/types/core
 import type { ServerRouteDataForDay } from '@/hooks/map/useServerRoutes';
 import { useMapContext } from '@/components/rightpanel/MapContext'; 
 
-interface UseMapDataEffectsProps {
+// export 키워드 추가
+export interface UseMapDataEffectsProps {
   isMapInitialized: boolean;
   // isGeoJsonLoaded 제거 (MapContext 통해 간접적으로 확인 가능 또는 GeoJson 자체 로딩 상태 사용)
-  renderItineraryRoute: ( 
+  renderItineraryRoute?: ( 
     itineraryDay: ItineraryDay | null,
     allServerRoutes?: Record<number, ServerRouteDataForDay>,
     onComplete?: () => void 
   ) => void;
-  serverRoutesData: Record<number, ServerRouteDataForDay> | null;
-  checkGeoJsonMapping: (places: Place[]) => void; // 이 함수는 GeoJson 로드 상태를 내부적으로 확인해야 함
+  serverRoutesData?: Record<number, ServerRouteDataForDay> | null;
+  checkGeoJsonMapping?: (places: Place[]) => void; // 이 함수는 GeoJson 로드 상태를 내부적으로 확인해야 함
   places: Place[]; 
-  itinerary: ItineraryDay[] | null; 
+  itinerary?: ItineraryDay[] | null; 
   selectedDay: number | null;
 }
 
