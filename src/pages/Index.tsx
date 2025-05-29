@@ -5,6 +5,7 @@ import RegionSlidePanel from '@/components/middlepanel/RegionSlidePanel';
 import { useItinerary } from '@/hooks/use-itinerary';
 import { useSelectedPlaces } from '@/hooks/use-selected-places';
 import { ItineraryMapProvider } from '@/contexts/ItineraryMapContext';
+import { useItineraryMapContext } from '@/hooks/useItineraryMapContext';
 
 const Index: React.FC = () => {
   const [showRegionPanel, setShowRegionPanel] = useState(false);
