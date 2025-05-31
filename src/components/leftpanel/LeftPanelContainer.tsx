@@ -51,7 +51,6 @@ const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
     const handleForceRerender = () => {
       console.log("[LeftPanelContainer] forceRerender event received, checking loading state");
       if (localIsGenerating) {
-        // 이 부분은 rerender를 강제하는 이벤트이므로 로컬 상태만 업데이트
         setLocalIsGenerating(false);
       }
     };
@@ -78,7 +77,7 @@ const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
   if (showItinerary && itinerary && itinerary.length > 0) {
     console.log("LeftPanelContainer: Rendering ContainedScheduleViewer");
     return (
-      <div className="fixed top-0 left-0 w-[300px] h-full bg-white border-r border-gray-200 z-[60] shadow-lg">
+      <div className="w-full h-full bg-white flex flex-col">
         <ContainedScheduleViewer
           itinerary={itinerary}
           selectedItineraryDay={selectedItineraryDay}
@@ -92,7 +91,7 @@ const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
 
   // 일정이 없거나 보여지지 않는 상태에서는 기본 패널 렌더링
   return (
-    <div className="fixed top-0 left-0 w-[300px] h-full bg-white border-l border-r border-gray-200 z-40 shadow-md flex flex-col">
+    <div className="w-full h-full bg-white flex flex-col">
       <div className="flex-1 overflow-auto">
         {children}
       </div>
