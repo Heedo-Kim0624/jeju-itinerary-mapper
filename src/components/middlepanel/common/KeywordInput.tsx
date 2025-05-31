@@ -24,8 +24,7 @@ const KeywordInput: React.FC<KeywordInputProps> = ({ value, onChange, onAdd }) =
           onChange={(e) => onChange(e.target.value)}
           onKeyPress={handleKeyPress}
           placeholder="키워드를 입력하세요"
-          className="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-transparent text-sm"
-          autoComplete="off"
+          className="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-transparent"
         />
         <button
           type="button"
