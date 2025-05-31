@@ -10,8 +10,13 @@ interface KeywordInputProps {
 const KeywordInput: React.FC<KeywordInputProps> = ({ value, onChange, onAdd }) => {
   const handleKeyPress = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && value.trim() !== '') {
+      e.preventDefault();
       onAdd();
     }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    onChange(e.target.value);
   };
 
   return (
@@ -21,7 +26,7 @@ const KeywordInput: React.FC<KeywordInputProps> = ({ value, onChange, onAdd }) =
         <input
           type="text"
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={handleInputChange}
           onKeyPress={handleKeyPress}
           placeholder="키워드를 입력하세요"
           className="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-transparent"

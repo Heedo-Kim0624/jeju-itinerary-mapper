@@ -37,8 +37,14 @@ export const useInputState = () => {
     }
   };
 
+  // 직접 입력 키워드 추가 후 초기화
+  const clearDirectInput = (category: string) => {
+    onDirectInputChange(category, '');
+  };
+
   return {
     directInputValues,
-    onDirectInputChange
+    onDirectInputChange,
+    clearDirectInput
   };
 };
