@@ -20,10 +20,10 @@ const ToggleableSidePanel: React.FC<ToggleableSidePanelProps> = ({
 
   return (
     <div className="relative">
-      {/* Toggle Button - Always visible */}
+      {/* Toggle Button - Changed from red to blue */}
       <button
         onClick={togglePanel}
-        className={`fixed top-4 z-[70] bg-red-500 hover:bg-red-600 text-white p-2 rounded transition-all duration-300 ${
+        className={`fixed top-4 z-[70] bg-blue-500 hover:bg-blue-600 text-white p-2 rounded transition-all duration-300 ${
           isOpen ? 'left-[260px]' : 'left-2'
         }`}
         style={{ width: '32px', height: '32px' }}
@@ -43,7 +43,7 @@ const ToggleableSidePanel: React.FC<ToggleableSidePanelProps> = ({
         style={{ width: '300px' }}
       >
         <LeftPanelContainer {...leftPanelProps}>
-          <div className="pt-12"> {/* Add padding-top to avoid overlap with toggle button */}
+          <div className="pt-12">
             {children}
           </div>
         </LeftPanelContainer>

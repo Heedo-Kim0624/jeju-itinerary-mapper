@@ -1,3 +1,4 @@
+
 //DatePicker.tsx
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
@@ -108,7 +109,7 @@ const DatePicker: React.FC<DatePickerProps> = ({ onDatesSelected }) => {
           </div>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0 glass-panel" align="start">
+      <PopoverContent className="w-auto p-0 glass-panel z-[80]" align="start">
         <div className="p-4 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -131,7 +132,7 @@ const DatePicker: React.FC<DatePickerProps> = ({ onDatesSelected }) => {
                 <SelectTrigger id="start-time">
                   <SelectValue placeholder="시작 시간" />
                 </SelectTrigger>
-                <SelectContent className="overflow-y-auto max-h-60">
+                <SelectContent className="overflow-y-auto max-h-60 z-[90]">
                   {timeOptions.map((time) => (
                     <SelectItem key={`start-${time}`} value={time} disabled={startDate && isDateTimeInPast(startDate, time)}>
                       {time}
@@ -146,7 +147,7 @@ const DatePicker: React.FC<DatePickerProps> = ({ onDatesSelected }) => {
                 <SelectTrigger id="end-time">
                   <SelectValue placeholder="종료 시간" />
                 </SelectTrigger>
-                <SelectContent className="overflow-y-auto max-h-60">
+                <SelectContent className="overflow-y-auto max-h-60 z-[90]">
                   {timeOptions.map((time) => (
                     <SelectItem key={`end-${time}`} value={time}>
                       {time}

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import LeftPanel from '@/components/leftpanel/LeftPanel';
 import RightPanel from '@/components/rightpanel/RightPanel';
@@ -48,6 +49,8 @@ const Index: React.FC = () => {
         <RightPanel
           places={selectedPlaces}
           selectedPlace={null}
+          itinerary={itinerary}
+          selectedDay={selectedItineraryDay || 0}
         />
 
         {/* 오른쪽에 붙는 지역 슬라이드 패널 */}

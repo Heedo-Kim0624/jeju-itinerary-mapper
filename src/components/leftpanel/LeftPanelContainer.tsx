@@ -73,7 +73,7 @@ const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
     isGenerating: localIsGenerating
   });
 
-  // 일정이 보여지는 상태일 때만 ContainedScheduleViewer를 렌더링
+  // Show itinerary view when available
   if (showItinerary && itinerary && itinerary.length > 0) {
     console.log("LeftPanelContainer: Rendering ContainedScheduleViewer");
     return (
@@ -89,7 +89,7 @@ const LeftPanelContainer: React.FC<LeftPanelContainerProps> = ({
     );
   }
 
-  // 일정이 없거나 보여지지 않는 상태에서는 기본 패널 렌더링
+  // Default panel view - removed duplicate PlaceCart section
   return (
     <div className="w-full h-full bg-white flex flex-col">
       <div className="flex-1 overflow-auto">
