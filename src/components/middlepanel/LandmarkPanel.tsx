@@ -39,7 +39,7 @@ const LandmarkPanel: React.FC<{
       categoryId="landmark"
       selectedKeywords={selectedKeywords}
       onToggleKeyword={onToggleKeyword}
-      directInputValue={directInputValues['landmark']} // ✅ 정확한 상태 전달
+      directInputValue={directInputValue} 
       onDirectInputChange={(val) => onDirectInputChange('landmark', val)} // ✅ categoryId 명시하여 호출
       onConfirm={onConfirmLandmark}
       onClose={onClose}

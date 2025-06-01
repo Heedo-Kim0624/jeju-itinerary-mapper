@@ -42,7 +42,7 @@ const RestaurantPanel: React.FC<{
       categoryId="restaurant"
       selectedKeywords={selectedKeywords}
       onToggleKeyword={onToggleKeyword}
-      directInputValue={directInputValues['restaurant']} // ✅ 정확한 상태 전달
+      directInputValue={directInputValue} 
       onDirectInputChange={(val) => onDirectInputChange('restaurant', val)} // ✅ categoryId 명시하여 호출
       onConfirm={onConfirmRestaurant}
       onClose={onClose}

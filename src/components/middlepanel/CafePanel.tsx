@@ -39,7 +39,7 @@ const CafePanel: React.FC<{
       categoryId="cafe"
       selectedKeywords={selectedKeywords}
       onToggleKeyword={onToggleKeyword}
-      directInputValue={directInputValues['cafe']} // ✅ 정확한 상태 전달
+      directInputValue={directInputValue} 
       onDirectInputChange={(val) => onDirectInputChange('cafe', val)} // ✅ categoryId 명시하여 호출
       onConfirm={onConfirmCafe}
       onClose={onClose}
