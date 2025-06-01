@@ -4,7 +4,6 @@ import RegionPanelHandler from './RegionPanelHandler';
 import CategoryResultHandler from './CategoryResultHandler';
 import LeftPanelDisplayLogic from './LeftPanelDisplayLogic';
 import DevDebugInfo from './DevDebugInfo';
-import MobileToggleablePanel from './MobileToggleablePanel';
 import { useLeftPanelOrchestrator } from '@/hooks/left-panel/useLeftPanelOrchestrator';
 import type { CategoryName } from '@/utils/categoryUtils';
 
@@ -23,18 +22,20 @@ const LeftPanel: React.FC = () => {
     categoryResultHandlers, 
   } = useLeftPanelOrchestrator();
 
+  // enhancedMainPanelProps가 null이 아닐 때만 TypeScript 타입을 수정하여 사용
   const typedMainPanelProps = enhancedMainPanelProps 
     ? {
         ...enhancedMainPanelProps,
         leftPanelContentProps: {
           ...enhancedMainPanelProps.leftPanelContentProps,
+          // activeMiddlePanelCategory를 CategoryName 타입으로 타입 변환
           activeMiddlePanelCategory: enhancedMainPanelProps.leftPanelContentProps.activeMiddlePanelCategory as CategoryName | null
         }
       }
     : null;
 
-  const panelContent = (
-    <>
+  return (
+    <div className="relative h-full">
       <LeftPanelDisplayLogic
         isGenerating={isActuallyGenerating}
         shouldShowItineraryView={shouldShowItineraryView}
@@ -61,23 +62,7 @@ const LeftPanel: React.FC = () => {
       />
       
       <DevDebugInfo {...devDebugInfoProps} />
-    </>
-  );
-
-  return (
-    <>
-      {/* 모바일 버전 */}
-      <div className="md:hidden">
-        <MobileToggleablePanel>
-          {panelContent}
-        </MobileToggleablePanel>
-      </div>
-
-      {/* 데스크톱 버전 */}
-      <div className="hidden md:block relative h-full w-[300px]">
-        {panelContent}
-      </div>
-    </>
+    </div>
   );
 };
 

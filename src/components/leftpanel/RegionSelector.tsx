@@ -1,21 +1,20 @@
-
 import React from 'react';
 
 interface RegionSelectorProps {
   selectedRegions: string[];
   onToggle: (region: string) => void;
   onClose: () => void;
-  onConfirm: (groupedRegion: string) => void;
+  onConfirm: (groupedRegion: string) => void; // 그룹화된 지역 문자열을 전달
 }
 
 const REGION_GROUPS = [
   {
     title: '제주시',
-    regions: ['제주', '애월', '조천', '구좌', '한경/한림'],
+    regions: ['제주시전체', '애월', '조천', '구좌', '한경/한림'],
   },
   {
     title: '서귀포시',
-    regions: ['서귀포', '중문', '안덕/대정', '남원/표선', '성산'],
+    regions: ['서귀포시전체', '중문', '안덕/대정', '남원/표선', '성산'],
   },
 ];
 
@@ -25,62 +24,9 @@ const RegionSelector: React.FC<RegionSelectorProps> = ({
   onClose,
   onConfirm,
 }) => {
-  const handleRegionToggle = (region: string) => {
-    if (region === '제주시전체') {
-      const jejuRegions = ['제주', '애월', '조천', '구좌', '한경/한림'];
-      const allJejuSelected = jejuRegions.every(r => selectedRegions.includes(r));
-      
-      if (allJejuSelected) {
-        // 모두 선택되어 있으면 모두 해제
-        jejuRegions.forEach(r => {
-          if (selectedRegions.includes(r)) {
-            onToggle(r);
-          }
-        });
-      } else {
-        // 하나라도 선택되지 않았으면 모두 선택
-        jejuRegions.forEach(r => {
-          if (!selectedRegions.includes(r)) {
-            onToggle(r);
-          }
-        });
-      }
-    } else if (region === '서귀포시전체') {
-      const seogwipoRegions = ['중문', '안덕/대정', '남원/표선', '성산'];
-      const allSeogwipoSelected = seogwipoRegions.every(r => selectedRegions.includes(r));
-      
-      if (allSeogwipoSelected) {
-        // 모두 선택되어 있으면 모두 해제
-        seogwipoRegions.forEach(r => {
-          if (selectedRegions.includes(r)) {
-            onToggle(r);
-          }
-        });
-      } else {
-        // 하나라도 선택되지 않았으면 모두 선택
-        seogwipoRegions.forEach(r => {
-          if (!selectedRegions.includes(r)) {
-            onToggle(r);
-          }
-        });
-      }
-    } else {
-      onToggle(region);
-    }
-  };
-
-  const isJejuEntireSelected = () => {
-    const jejuRegions = ['제주', '애월', '조천', '구좌', '한경/한림'];
-    return jejuRegions.every(r => selectedRegions.includes(r));
-  };
-
-  const isSeogwipoEntireSelected = () => {
-    const seogwipoRegions = ['서귀포', '중문', '안덕/대정', '남원/표선', '성산'];
-    return seogwipoRegions.every(r => selectedRegions.includes(r));
-  };
-
   return (
     <div className="space-y-6 p-4 bg-white border rounded-md shadow-inner">
+      {/* 헤더 */}
       <div className="flex justify-between items-center mb-2">
         <h2 className="text-md font-semibold">지역 선택</h2>
         <button onClick={onClose} className="text-sm text-gray-500 hover:text-black">
@@ -95,12 +41,11 @@ const RegionSelector: React.FC<RegionSelectorProps> = ({
           <h4 className="text-xs font-medium text-gray-500 mb-1">{group.title}</h4>
           <div className="flex flex-col gap-1">
             {group.regions.map((region) => {
-              let isSelected = false;
-              
+              const isSelected = selectedRegions.includes(region);
               return (
                 <button
                   key={region}
-                  onClick={() => handleRegionToggle(region)}
+                  onClick={() => onToggle(region)}
                   className={`w-full text-left px-3 py-1.5 text-xs rounded border transition ${
                     isSelected
                       ? 'bg-blue-600 text-white border-blue-600'
@@ -119,6 +64,7 @@ const RegionSelector: React.FC<RegionSelectorProps> = ({
         <button
           onClick={() => {
             if (selectedRegions.length > 0) {
+              // 그룹화된 지역 문자열 생성: "지역[지역1,지역2,...]"
               const groupedRegion = `지역[${selectedRegions.join(',')}]`;
               onConfirm(groupedRegion);
             } else {

@@ -12,8 +12,9 @@ import { useDebounceEffect } from './use-debounce-effect';
 const normalizeRegionName = (region: string): string => {
   // 지역명 매핑 테이블 - UI 지역명을 DB location 필드명으로 변환
   const regionMapping: Record<string, string> = {
-    '제주': '제주',
-    '서귀포': '서귀포',
+    '제주시내': '제주',
+    '서귀포시내': '서귀포',
+    // 아래 지역들은 DB와 UI가 동일하므로 변환 불필요
     '구좌': '구좌',
     '남원/표선': '남원/표선',
     '성산': '성산',
