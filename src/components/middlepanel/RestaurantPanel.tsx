@@ -1,4 +1,3 @@
-
 import React from 'react';
 import BaseKeywordPanel from './common/BaseKeywordPanel';
 import { KeywordOption } from '@/types/keyword';
@@ -23,15 +22,19 @@ const RestaurantPanel: React.FC<{
   selectedKeywords: string[];
   onToggleKeyword: (keyword: string) => void;
   directInputValue: string;
-  onDirectInputChange: (value: string) => void;
+  onDirectInputChange: (category: string, value: string) => void;
   onConfirmRestaurant: (finalKeywords: string[]) => void;
   onClose: () => void;
 }> = (props) => {
   return (
     <BaseKeywordPanel
-      {...props}
+      categoryId="restaurant"
+      selectedKeywords={props.selectedKeywords}
+      onToggleKeyword={props.onToggleKeyword}
+      directInputValue={props.directInputValue}
       onDirectInputChange={(val) => props.onDirectInputChange('restaurant', val)}
       onConfirm={props.onConfirmRestaurant}
+      onClose={props.onClose}
       categoryName="음식점"
       defaultKeywords={defaultKeywords}
     />

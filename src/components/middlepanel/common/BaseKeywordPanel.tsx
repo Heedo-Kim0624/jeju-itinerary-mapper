@@ -44,10 +44,10 @@ const BaseKeywordPanel: React.FC<KeywordPanelProps & { accommodationTypeUI?: Rea
   };
 
   const handleAddDirectInput = () => {
-    if (directInputValue.trim() !== '') {
+    if (directInputValue.trim() !== "") {
       const encoded = `__direct__${directInputValue.trim()}`;
-      onToggleKeyword(directInputValue.trim());
-      onDirectInputChange('');
+      onToggleKeyword(encoded); // ✅ 직접입력 키워드는 특수 prefix 붙여서 구분
+      onDirectInputChange(""); // 입력창 초기화
     }
   };
 
@@ -117,7 +117,7 @@ const BaseKeywordPanel: React.FC<KeywordPanelProps & { accommodationTypeUI?: Rea
 
       <KeywordInput
         value={directInputValue}
-        onChange={onDirectInputChange}
+        onChange={(val) => onDirectInputChange(categoryId, val)}
         onAdd={handleAddDirectInput}
       />
 

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import BaseKeywordPanel from './common/BaseKeywordPanel';
 import { KeywordOption } from '@/types/keyword';
@@ -20,15 +19,19 @@ const LandmarkPanel: React.FC<{
   selectedKeywords: string[];
   onToggleKeyword: (keyword: string) => void;
   directInputValue: string;
-  onDirectInputChange: (value: string) => void;
+  onDirectInputChange: (category: string, value: string) => void;
   onConfirmLandmark: (finalKeywords: string[]) => void;
   onClose: () => void;
 }> = (props) => {
   return (
     <BaseKeywordPanel
-      {...props}
+      categoryId="landmark"
+      selectedKeywords={props.selectedKeywords}
+      onToggleKeyword={props.onToggleKeyword}
+      directInputValue={props.directInputValue}
       onDirectInputChange={(val) => props.onDirectInputChange('landmark', val)}
       onConfirm={props.onConfirmLandmark}
+      onClose={props.onClose}
       categoryName="관광지"
       defaultKeywords={defaultKeywords}
     />
