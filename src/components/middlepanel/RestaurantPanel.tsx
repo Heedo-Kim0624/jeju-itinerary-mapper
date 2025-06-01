@@ -22,19 +22,30 @@ const RestaurantPanel: React.FC<{
   selectedKeywords: string[];
   onToggleKeyword: (keyword: string) => void;
   directInputValue: string;
-  onDirectInputChange: (category: string, value: string) => void;
+  onDirectInputChange: (categoryId: string, value: string) => void;
   onConfirmRestaurant: (finalKeywords: string[]) => void;
   onClose: () => void;
-}> = (props) => {
+}> = ({
+  selectedKeywords,
+  onToggleKeyword,
+  directInputValue,
+  onDirectInputChange,
+  onConfirmRestaurant,
+  onClose,
+}) => {
+  const handleInputChange = (value: string) => {
+    onDirectInputChange('restaurant', value);
+  };
+
   return (
     <BaseKeywordPanel
       categoryId="restaurant"
-      selectedKeywords={props.selectedKeywords}
-      onToggleKeyword={props.onToggleKeyword}
-      directInputValue={props.directInputValue}
-      onDirectInputChange={(val) => props.onDirectInputChange('restaurant', val)}
-      onConfirm={props.onConfirmRestaurant}
-      onClose={props.onClose}
+      selectedKeywords={selectedKeywords}
+      onToggleKeyword={onToggleKeyword}
+      directInputValue={directInputValue}
+      onDirectInputChange={handleInputChange}
+      onConfirm={onConfirmRestaurant}
+      onClose={onClose}
       categoryName="음식점"
       defaultKeywords={defaultKeywords}
     />

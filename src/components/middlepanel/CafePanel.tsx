@@ -19,19 +19,30 @@ const CafePanel: React.FC<{
   selectedKeywords: string[];
   onToggleKeyword: (keyword: string) => void;
   directInputValue: string;
-  onDirectInputChange: (category: string, value: string) => void;
+  onDirectInputChange: (categoryId: string, value: string) => void;
   onConfirmCafe: (finalKeywords: string[]) => void;
   onClose: () => void;
-}> = (props) => {
+}> = ({
+  selectedKeywords,
+  onToggleKeyword,
+  directInputValue,
+  onDirectInputChange,
+  onConfirmCafe,
+  onClose,
+}) => {
+  const handleInputChange = (value: string) => {
+    onDirectInputChange('cafe', value);
+  };
+
   return (
     <BaseKeywordPanel
       categoryId="cafe"
-      selectedKeywords={props.selectedKeywords}
-      onToggleKeyword={props.onToggleKeyword}
-      directInputValue={props.directInputValue}
-      onDirectInputChange={(val) => props.onDirectInputChange('cafe', val)}
-      onConfirm={props.onConfirmCafe}
-      onClose={props.onClose}
+      selectedKeywords={selectedKeywords}
+      onToggleKeyword={onToggleKeyword}
+      directInputValue={directInputValue}
+      onDirectInputChange={handleInputChange}
+      onConfirm={onConfirmCafe}
+      onClose={onClose}
       categoryName="카페"
       defaultKeywords={defaultKeywords}
     />

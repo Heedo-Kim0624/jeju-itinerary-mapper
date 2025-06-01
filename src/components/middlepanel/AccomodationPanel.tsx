@@ -69,8 +69,8 @@ const AccommodationPanel: React.FC<{
       categoryId="accommodation" // ✅ 카테고리 ID 전달 (직접입력에 필요)
       selectedKeywords={selectedKeywords}
       onToggleKeyword={onToggleKeyword}
-      directInputValue={directInputValues["accommodation"]} // ✅ 상태 연결
-      onDirectInputChange={(val) => onDirectInputChange("accommodation", val)} // ✅ 핸들러 지정
+      directInputValue={directInputValue} // ✅ 상태 연결
+      onDirectInputChange={(val) => onDirectInputChange(val)} // ✅ 직접 categoryId 고려하지 않음
       onConfirm={handleConfirm}
       onClose={onClose}
       categoryName="숙소"

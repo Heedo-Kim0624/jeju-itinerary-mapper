@@ -19,19 +19,30 @@ const LandmarkPanel: React.FC<{
   selectedKeywords: string[];
   onToggleKeyword: (keyword: string) => void;
   directInputValue: string;
-  onDirectInputChange: (category: string, value: string) => void;
+  onDirectInputChange: (categoryId: string, value: string) => void;
   onConfirmLandmark: (finalKeywords: string[]) => void;
   onClose: () => void;
-}> = (props) => {
+}> = ({
+  selectedKeywords,
+  onToggleKeyword,
+  directInputValue,
+  onDirectInputChange,
+  onConfirmLandmark,
+  onClose,
+}) => {
+  const handleInputChange = (value: string) => {
+    onDirectInputChange('landmark', value);
+  };
+
   return (
     <BaseKeywordPanel
       categoryId="landmark"
-      selectedKeywords={props.selectedKeywords}
-      onToggleKeyword={props.onToggleKeyword}
-      directInputValue={props.directInputValue}
-      onDirectInputChange={(val) => props.onDirectInputChange('landmark', val)}
-      onConfirm={props.onConfirmLandmark}
-      onClose={props.onClose}
+      selectedKeywords={selectedKeywords}
+      onToggleKeyword={onToggleKeyword}
+      directInputValue={directInputValue}
+      onDirectInputChange={handleInputChange}
+      onConfirm={onConfirmLandmark}
+      onClose={onClose}
       categoryName="관광지"
       defaultKeywords={defaultKeywords}
     />
