@@ -27,6 +27,7 @@ const CafePanel: React.FC<{
   return (
     <BaseKeywordPanel
       {...props}
+      onDirectInputChange={(val) => props.onDirectInputChange('cafe', val)}
       onConfirm={props.onConfirmCafe}
       categoryName="카페"
       defaultKeywords={defaultKeywords}

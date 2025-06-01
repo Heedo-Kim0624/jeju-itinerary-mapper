@@ -27,6 +27,7 @@ const LandmarkPanel: React.FC<{
   return (
     <BaseKeywordPanel
       {...props}
+      onDirectInputChange={(val) => props.onDirectInputChange('landmark', val)}
       onConfirm={props.onConfirmLandmark}
       categoryName="관광지"
       defaultKeywords={defaultKeywords}

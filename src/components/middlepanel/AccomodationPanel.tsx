@@ -69,7 +69,7 @@ const AccommodationPanel: React.FC<{
       selectedKeywords={selectedKeywords}
       onToggleKeyword={onToggleKeyword}
       directInputValue={directInputValue}
-      onDirectInputChange={onDirectInputChange}
+      onDirectInputChange={(val) => onDirectInputChange('accommodation', val)}
       onConfirm={handleConfirm}
       onClose={onClose}
       categoryName="숙소"
