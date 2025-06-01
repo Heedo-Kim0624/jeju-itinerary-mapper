@@ -10,11 +10,11 @@ interface RegionSelectorProps {
 const REGION_GROUPS = [
   {
     title: '제주시',
-    regions: ['제주시전체', '애월', '조천', '구좌', '한경/한림'],
+    regions: ['제주', '애월', '조천', '구좌', '한경/한림'],
   },
   {
     title: '서귀포시',
-    regions: ['서귀포시전체', '중문', '안덕/대정', '남원/표선', '성산'],
+    regions: ['서귀포', '중문', '안덕/대정', '남원/표선', '성산'],
   },
 ];
 
