@@ -45,6 +45,7 @@ const BaseKeywordPanel: React.FC<KeywordPanelProps & { accommodationTypeUI?: Rea
 
   const handleAddDirectInput = () => {
     if (directInputValue.trim() !== '') {
+      const encoded = `__direct__${directInputValue.trim()}`;
       onToggleKeyword(directInputValue.trim());
       onDirectInputChange('');
     }
@@ -56,11 +57,13 @@ const BaseKeywordPanel: React.FC<KeywordPanelProps & { accommodationTypeUI?: Rea
 
     const allKeywords: string[] = [];
     if (ranking.length > 0) {
-      const rankedString = `{${ranking.join(',')}}`;
+      const rankedString = `{${ranking.map(k => k.replace(/^__direct__/, '')).join(',')}}`;
       allKeywords.push(rankedString);
     }
 
-    const unrankedKeywords = selectedKeywords.filter((kw) => !ranking.includes(kw));
+    const unrankedKeywords = selectedKeywords
+      .filter(k => !ranking.includes(k))
+      .map(k => k.replace(/^__direct__/, ''));
     allKeywords.push(...unrankedKeywords);
 
     if (directInputValue.trim() !== '') {
@@ -122,7 +125,9 @@ const BaseKeywordPanel: React.FC<KeywordPanelProps & { accommodationTypeUI?: Rea
         <div className="mb-4">
           <h3 className="text-sm font-semibold mb-2">선택된 키워드 (순위 추가)</h3>
           <div className="flex flex-wrap gap-2">
-            {selectedKeywords.map((kw) => {
+            {selectedKeywords
+            .filter((kw) => !kw.startsWith('__direct__'))
+            .map((kw) => {
               const item = defaultKeywords.find((i) => i.eng === kw);
               const displayText = item ? item.kr : kw;
               return (

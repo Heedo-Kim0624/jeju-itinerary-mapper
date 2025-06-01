@@ -137,12 +137,12 @@ export const useCategoryResults = (
           toast.info(`선택한 지역(${regions.join(', ')})에 해당하는 장소를 찾을 수 없습니다.`);
         }
       }
-      
+      const filteredKeywords = keywords.filter(k => !k.startsWith('__direct__'));
       // 키워드 매칭 점수 계산 및 할당
-      if (keywords && keywords.length > 0) {
+      if (filteredKeywords.length > 0) {
         data = data.map(place => ({
           ...place,
-          weight: calculateKeywordScore(place, keywords)
+          weight: calculateKeywordScore(place, filteredKeywords)
         }));
         
         console.log(`[useCategoryResults] 키워드 매칭 점수 적용 완료. 키워드: ${keywords.join(', ')}`);
