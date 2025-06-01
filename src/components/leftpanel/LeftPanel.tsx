@@ -5,7 +5,9 @@ import CategoryResultHandler from './CategoryResultHandler';
 import LeftPanelDisplayLogic from './LeftPanelDisplayLogic';
 import DevDebugInfo from './DevDebugInfo';
 import { useLeftPanelOrchestrator } from '@/hooks/left-panel/useLeftPanelOrchestrator';
+import { useInputState } from '@/hooks/left-panel/use-input-state';
 import type { CategoryName } from '@/utils/categoryUtils';
+
 
 const LeftPanel: React.FC = () => {
   const {
@@ -21,7 +23,7 @@ const LeftPanel: React.FC = () => {
     devDebugInfoProps,
     categoryResultHandlers, 
   } = useLeftPanelOrchestrator();
-
+  const { directInputValues, onDirectInputChange } = useInputState();
   // enhancedMainPanelProps가 null이 아닐 때만 TypeScript 타입을 수정하여 사용
   const typedMainPanelProps = enhancedMainPanelProps 
     ? {
