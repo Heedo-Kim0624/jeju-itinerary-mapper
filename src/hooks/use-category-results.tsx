@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Place } from '@/types/supabase';
@@ -48,29 +49,6 @@ export const useCategoryResults = (
 
   // 지역명 표준화 적용
   const normalizedRegions = normalizeRegions(regions);
-
-  // 지역 필터링 함수
-  const filterByRegion = (places: Place[], selectedRegions: string[]): Place[] => {
-    if (!selectedRegions || selectedRegions.length === 0) {
-      return places;
-    }
-
-    // undefined 방어 로직 추가
-    if (!places || !Array.isArray(places)) {
-      console.warn('[useCategoryResults] places가 유효한 배열이 아닙니다:', places);
-      return [];
-    }
-
-    return places.filter(place => {
-      // 주소 필드가 없으면 포함시키지 않음
-      if (!place || !place.address) return false;
-      
-      // 선택된 지역 중 하나라도 주소에 포함되면 결과에 포함
-      return selectedRegions.some(region => 
-        place.address.includes(region)
-      );
-    });
-  };
 
   // 키워드 기반 가중치 계산
   const calculateKeywordScore = (place: Place, keywords: string[]): number => {
@@ -124,19 +102,19 @@ export const useCategoryResults = (
 
       let data: Place[] = [];
       
-      // 카테고리에 따라 적절한 서비스 함수 호출
+      // 카테고리에 따라 적절한 서비스 함수 호출 - 정규화된 지역 전달
       switch (category) {
         case '숙소':
-          data = await fetchAccommodations();
+          data = await fetchAccommodations(normalizedRegions);
           break;
         case '관광지':
-          data = await fetchLandmarks();
+          data = await fetchLandmarks(normalizedRegions);
           break;
         case '음식점':
-          data = await fetchRestaurants();
+          data = await fetchRestaurants(normalizedRegions);
           break;
         case '카페':
-          data = await fetchCafes();
+          data = await fetchCafes(normalizedRegions);
           break;
         default:
           throw new Error('지원하지 않는 카테고리입니다.');
@@ -148,33 +126,11 @@ export const useCategoryResults = (
         data = [];
       }
 
-      // 지역으로 필터링 (표준화된 지역명 사용)
-      data = filterByRegion(data, normalizedRegions);
-      
-      console.log(`[useCategoryResults] ${data.length}개의 장소 로드됨. 지역 필터링 후.`);
+      console.log(`[useCategoryResults] ${data.length}개의 장소 로드됨. Supabase에서 지역 필터링 완료.`);
       
       // 결과가 없을 경우 디버깅 로그 추가
       if (data.length === 0 && normalizedRegions.length > 0) {
         console.warn(`[useCategoryResults] 지역 필터링 후 결과가 없습니다. 지역: ${normalizedRegions.join(', ')}`);
-        
-        // 지역 필터 없이 재시도 (디버깅 목적)
-        let allData: Place[] = [];
-        switch (category) {
-          case '숙소':
-            allData = await fetchAccommodations();
-            break;
-          case '관광지':
-            allData = await fetchLandmarks();
-            break;
-          case '음식점':
-            allData = await fetchRestaurants();
-            break;
-          case '카페':
-            allData = await fetchCafes();
-            break;
-        }
-        
-        console.log(`[useCategoryResults] 지역 필터 없이 총 ${allData.length}개 장소 확인됨`);
         
         // 사용자에게 알림
         if (regions.length > 0) {
@@ -211,6 +167,7 @@ export const useCategoryResults = (
         console.log(`[useCategoryResults] 샘플 추천 장소 (최대 3개):`, 
           recommendedData.slice(0, 3).map(p => ({ 
             이름: p.name, 
+            지역: p.location,
             가중치: p.weight, 
             매칭키워드: keywords.filter(k => 
               (p.name || '').toLowerCase().includes((k || '').toLowerCase()) || 
