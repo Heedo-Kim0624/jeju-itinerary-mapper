@@ -8,6 +8,7 @@ import KeywordRanking from './KeywordRanking';
 import { toast } from 'sonner';
 
 const BaseKeywordPanel: React.FC<KeywordPanelProps & { accommodationTypeUI?: React.ReactNode }> = ({
+  categoryId,
   selectedKeywords,
   onToggleKeyword,
   directInputValue,
